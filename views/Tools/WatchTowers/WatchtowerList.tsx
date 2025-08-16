@@ -22,7 +22,6 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import Base64Utils from '../../../utils/Base64Utils';
 
 import Add from '../../../assets/images/SVG/Add.svg';
-
 interface WatchtowersProps {
     navigation: StackNavigationProp<any, any>;
 }
@@ -192,7 +191,7 @@ export default class WatchTowers extends React.Component<
     );
 
     renderEmptyState = () => {
-        const { searchQuery, error } = this.state;
+        const { searchQuery } = this.state;
 
         return (
             <View style={styles.emptyContainer}>
@@ -200,27 +199,21 @@ export default class WatchTowers extends React.Component<
                     name="radio-tower"
                     type="octicon"
                     size={50}
-                    color={
-                        error
-                            ? themeColor('error')
-                            : themeColor('secondaryText')
-                    }
+                    color={themeColor('secondaryText')}
                     containerStyle={styles.emptyIcon}
                 />
                 <Text
                     style={[
                         styles.emptyText,
                         {
-                            color: error
-                                ? themeColor('error')
-                                : themeColor('secondaryText')
+                            color: themeColor('secondaryText')
                         }
                     ]}
                 >
-                    {error
-                        ? error
-                        : searchQuery.length > 0
-                        ? localeString('views.Settings.Contacts.noAddress')
+                    {searchQuery.length > 0
+                        ? localeString(
+                              'views.Tools.watchtowers.noWatchtowersSearch'
+                          )
                         : localeString('views.Tools.watchtowers.noWatchtowers')}
                 </Text>
             </View>
@@ -229,7 +222,8 @@ export default class WatchTowers extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { loading, searchQuery, refreshing, error } = this.state;
+        const { loading, searchQuery, refreshing, error, watchtowers } =
+            this.state;
         const filteredWatchtowers = this.getFilteredWatchtowers();
         const AddButton = () => (
             <TouchableOpacity
@@ -242,12 +236,12 @@ export default class WatchTowers extends React.Component<
                     height="30"
                     style={{
                         alignSelf: 'center',
-                        marginLeft: 8,
-                        marginTop: -4
+                        marginLeft: 8
                     }}
                 />
             </TouchableOpacity>
         );
+
         return (
             <Screen>
                 <Header
@@ -271,64 +265,90 @@ export default class WatchTowers extends React.Component<
                     navigation={navigation}
                 />
                 <View style={styles.container}>
-                    {!error && (
-                        <SearchBar
-                            placeholder={localeString('general.search')}
-                            // @ts-ignore:next-line
-                            onChangeText={this.handleSearch}
-                            value={searchQuery}
-                            inputStyle={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                            placeholderTextColor={themeColor('secondaryText')}
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                borderTopWidth: 0,
-                                borderBottomWidth: 0,
-                                paddingHorizontal: 0,
-                                marginBottom: 10
-                            }}
-                            inputContainerStyle={{
-                                borderRadius: 15,
-                                backgroundColor: themeColor('secondary')
-                            }}
-                            // @ts-ignore:next-line
-                            searchIcon={{
-                                importantForAccessibility:
-                                    'no-hide-descendants',
-                                accessibilityElementsHidden: true
-                            }}
-                        />
-                    )}
-
-                    {filteredWatchtowers.length > 0 && !this.state.error ? (
-                        <FlatList
-                            data={filteredWatchtowers}
-                            renderItem={this.renderItem}
-                            keyExtractor={(item) => item.pubkey}
-                            refreshControl={
-                                <RefreshControl
-                                    refreshing={refreshing}
-                                    onRefresh={this.onRefresh}
-                                    tintColor={themeColor('text')}
-                                    colors={[themeColor('highlight')]}
-                                />
-                            }
-                            ItemSeparatorComponent={() => (
-                                <Divider
-                                    style={[
-                                        styles.divider,
-                                        {
-                                            backgroundColor:
-                                                themeColor('border')
-                                        }
-                                    ]}
-                                />
-                            )}
-                        />
-                    ) : (
+                    {error ? (
+                        <View style={styles.emptyContainer}>
+                            <Icon
+                                name="radio-tower"
+                                type="octicon"
+                                size={50}
+                                color={themeColor('error')}
+                                containerStyle={styles.emptyIcon}
+                            />
+                            <Text
+                                style={[
+                                    styles.emptyText,
+                                    {
+                                        color: themeColor('error')
+                                    }
+                                ]}
+                            >
+                                {error}
+                            </Text>
+                        </View>
+                    ) : watchtowers.length === 0 ? (
                         this.renderEmptyState()
+                    ) : (
+                        <>
+                            <SearchBar
+                                placeholder={localeString('general.search')}
+                                // @ts-ignore:next-line
+                                onChangeText={this.handleSearch}
+                                value={searchQuery}
+                                inputStyle={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                                placeholderTextColor={themeColor(
+                                    'secondaryText'
+                                )}
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    borderTopWidth: 0,
+                                    borderBottomWidth: 0,
+                                    paddingHorizontal: 0,
+                                    marginBottom: 10
+                                }}
+                                inputContainerStyle={{
+                                    borderRadius: 15,
+                                    backgroundColor: themeColor('secondary')
+                                }}
+                                // @ts-ignore:next-line
+                                searchIcon={{
+                                    importantForAccessibility:
+                                        'no-hide-descendants',
+                                    accessibilityElementsHidden: true
+                                }}
+                            />
+
+                            {filteredWatchtowers.length > 0 ? (
+                                <FlatList
+                                    data={filteredWatchtowers}
+                                    renderItem={this.renderItem}
+                                    keyExtractor={(item) => item.pubkey}
+                                    refreshControl={
+                                        <RefreshControl
+                                            refreshing={refreshing}
+                                            onRefresh={this.onRefresh}
+                                            tintColor={themeColor('text')}
+                                            colors={[themeColor('highlight')]}
+                                        />
+                                    }
+                                    ItemSeparatorComponent={() => (
+                                        <Divider
+                                            style={[
+                                                styles.divider,
+                                                {
+                                                    backgroundColor:
+                                                        themeColor('border')
+                                                }
+                                            ]}
+                                        />
+                                    )}
+                                />
+                            ) : (
+                                this.renderEmptyState()
+                            )}
+                        </>
                     )}
                 </View>
             </Screen>
@@ -338,12 +358,14 @@ export default class WatchTowers extends React.Component<
 
 const styles = StyleSheet.create({
     container: {
-        padding: 10
+        padding: 10,
+        flex: 1
     },
     emptyContainer: {
         flex: 1,
         justifyContent: 'center',
-        alignItems: 'center'
+        alignItems: 'center',
+        minHeight: 300
     },
     emptyIcon: {
         marginBottom: 16,
@@ -364,6 +386,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
+        height: '100%',
         gap: 4
     },
     watchtowerIcon: {

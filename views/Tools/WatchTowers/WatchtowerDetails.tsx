@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { Text, View, StyleSheet, ScrollView } from 'react-native';
 import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -254,7 +254,13 @@ export default class WatchTowerDetails extends React.Component<
                                         (session: any, index: number) => (
                                             <View
                                                 key={index}
-                                                style={styles.sessionItem}
+                                                style={{
+                                                    marginBottom: 10,
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    padding: 16,
+                                                    borderRadius: 8
+                                                }}
                                             >
                                                 <KeyValue
                                                     keyValue={localeString(
@@ -293,14 +299,7 @@ export default class WatchTowerDetails extends React.Component<
                                 }
                                 onPress={this.deactivateWatchtower}
                                 disabled={loading}
-                                containerStyle={styles.button}
-                                buttonStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 8
-                                }}
-                                titleStyle={{
-                                    color: themeColor('text')
-                                }}
+                                secondary
                             />
                         ) : (
                             <Button
@@ -313,14 +312,7 @@ export default class WatchTowerDetails extends React.Component<
                                 }
                                 onPress={this.activateWatchtower}
                                 disabled={loading}
-                                containerStyle={styles.button}
-                                buttonStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 8
-                                }}
-                                titleStyle={{
-                                    color: themeColor('success')
-                                }}
+                                secondary
                             />
                         )}
 
@@ -334,7 +326,6 @@ export default class WatchTowerDetails extends React.Component<
                             }
                             onPress={this.deleteWatchtower}
                             disabled={loading}
-                            containerStyle={styles.button}
                             buttonStyle={{
                                 backgroundColor: themeColor('delete')
                             }}
@@ -367,22 +358,13 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '400',
         marginBottom: 16,
         fontFamily: 'PPNeueMontreal-Book'
-    },
-    sessionItem: {
-        marginBottom: 16,
-        padding: 16,
-        borderRadius: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.03)'
     },
     buttonContainer: {
         padding: 20,
         paddingTop: 10,
         gap: 12
-    },
-    button: {
-        marginHorizontal: 0
     }
 });

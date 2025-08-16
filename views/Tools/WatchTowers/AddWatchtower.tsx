@@ -160,7 +160,11 @@ export default class AddWatchtower extends React.Component<
                         backgroundColor: themeColor('background')
                     }}
                 >
-                    {error && <ErrorMessage message={error} />}
+                    {error && (
+                        <View style={styles.descriptionContainer}>
+                            <ErrorMessage message={error} />
+                        </View>
+                    )}
 
                     <View style={styles.inputContainer}>
                         <Text
@@ -169,7 +173,9 @@ export default class AddWatchtower extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString('views.OpenChannel.nodePubkey')}
+                            {localeString(
+                                'views.Tools.watchtowers.serverPubkey'
+                            )}
                         </Text>
                         <TextInput
                             style={{
