@@ -284,33 +284,48 @@ export default class ChannelsStore {
         if (type === 'peer') {
             filtered = (items as Peer[]).filter(
                 (peer) =>
-                    peer.alias?.toLowerCase().includes(query) ||
-                    peer.pubkey?.toLowerCase().includes(query) ||
                     this.nodes[peer.pubkey]?.alias
                         ?.toLowerCase()
-                        .includes(query)
+                        .includes(query) ||
+                    peer.alias?.toLowerCase().includes(query) ||
+                    peer.pubkey?.toLowerCase().includes(query)
             );
         }
 
         const sorted = filtered.sort((a: any, b: any) => {
             const param = this.sort?.param;
             const dir = this.sort?.dir;
-            const type = this.sort?.type;
+            const sortType = this.sort?.type;
+            const isPeerType = type === 'peer';
 
-            if (!param || !dir || !type) return 0;
+            if (!param || !dir || !sortType) return 0;
 
-            const aVal = a[param]?.toString().toLowerCase() || '';
-            const bVal = b[param]?.toString().toLowerCase() || '';
+            const getSortValue = (item: any) => {
+                if (isPeerType && param === 'alias') {
+                    return (
+                        this.nodes[item.pubkey]?.alias ||
+                        item.alias ||
+                        item.pubkey ||
+                        ''
+                    )
+                        .toString()
+                        .toLowerCase();
+                }
 
-            if (type === 'numeric') {
+                return item[param]?.toString().toLowerCase() || '';
+            };
+
+            const aVal = getSortValue(a);
+            const bVal = getSortValue(b);
+
+            if (sortType === 'numeric') {
                 const aNum = Number(aVal) || 0;
                 const bNum = Number(bVal) || 0;
                 return dir === 'DESC' ? bNum - aNum : aNum - bNum;
             } else {
                 if (!aVal && !bVal) return 0;
-                if (!aVal) return 1;
-                if (!bVal) return -1;
-
+                if (!aVal) return dir === 'DESC' ? -1 : 1;
+                if (!bVal) return dir === 'DESC' ? 1 : -1;
                 return dir === 'DESC'
                     ? bVal.localeCompare(aVal)
                     : aVal.localeCompare(bVal);
