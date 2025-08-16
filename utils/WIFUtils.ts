@@ -70,9 +70,9 @@ export class WIFUtils {
 
     baseUrl(network: string) {
         if (network === 'mainnet') {
-            return 'https://blockstream.info/api';
+            return 'https://mempool.space/api';
         } else if (network === 'testnet') {
-            return 'https://blockstream.info/testnet/api';
+            return 'https://mempool.space/testnet/api';
         }
     }
 }
