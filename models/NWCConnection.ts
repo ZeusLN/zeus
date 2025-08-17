@@ -2,19 +2,26 @@ import { computed } from 'mobx';
 import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 import BaseModel from './BaseModel';
 
+export type PermissionsType = 'full_access' | 'read_only' | 'custom';
+export type BudgetRenewalType =
+    | 'never'
+    | 'daily'
+    | 'weekly'
+    | 'monthly'
+    | 'yearly';
+
 export interface NWCConnectionData {
     id: string;
     name: string;
     icon?: any;
     description?: string;
     pubkey: string;
-    permissions: string[];
+    permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
-    isolated?: boolean;
     totalSpendSats: number;
     maxAmountSats?: number;
-    budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    budgetRenewal?: BudgetRenewalType;
     expiresAt?: Date;
     lastBudgetReset?: Date;
     metadata?: any;
@@ -29,10 +36,9 @@ export default class NWCConnection extends BaseModel {
     permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
-    isolated?: boolean;
     totalSpendSats: number;
     maxAmountSats?: number;
-    budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+    budgetRenewal?: BudgetRenewalType;
     expiresAt?: Date;
     lastBudgetReset?: Date;
     metadata?: any;
@@ -108,7 +114,7 @@ export default class NWCConnection extends BaseModel {
         }
 
         if (!this.lastBudgetReset) {
-            return true; // First time, needs reset
+            return true;
         }
 
         const now = new Date();
