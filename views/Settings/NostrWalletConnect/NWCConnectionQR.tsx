@@ -67,6 +67,9 @@ export default class NWCConnectionQR extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
+                    onBack={() => {
+                        navigation.pop();
+                    }}
                     centerComponent={{
                         text: localeString(
                             'views.Settings.NostrWalletConnect.connectionSecret'
@@ -128,7 +131,6 @@ export default class NWCConnectionQR extends React.Component<
                         <Button
                             title={localeString('general.close')}
                             onPress={() => {
-                                NostrWalletConnectStore.stopWaitingForConnection();
                                 navigation.navigate('NostrWalletConnect');
                             }}
                             secondary
