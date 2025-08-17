@@ -19,10 +19,7 @@ import KeyValue from '../../../components/KeyValue';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import DateTimeUtils from '../../../utils/DateTimeUtils';
-import {
-    getFullAccessPermissions,
-    getPermissionDescription
-} from '../../../utils/NostrConnectUtils';
+import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 
@@ -333,12 +330,16 @@ export default class NWCConnectionDetails extends React.Component<
                                         </Body>
                                         <Body>
                                             ({connection.permissions.length} of{' '}
-                                            {getFullAccessPermissions().length})
+                                            {
+                                                NostrConnectUtils.getFullAccessPermissions()
+                                                    .length
+                                            }
+                                            )
                                         </Body>
                                     </View>
 
                                     <View style={styles.permissionsList}>
-                                        {getFullAccessPermissions().map(
+                                        {NostrConnectUtils.getFullAccessPermissions().map(
                                             (permission, index) => {
                                                 const isActive =
                                                     connection.permissions.includes(
@@ -382,7 +383,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                                 }
                                                             ]}
                                                         >
-                                                            {getPermissionDescription(
+                                                            {NostrConnectUtils.getPermissionDescription(
                                                                 permission
                                                             )}
                                                         </Text>
