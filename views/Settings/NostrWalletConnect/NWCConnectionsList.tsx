@@ -72,8 +72,13 @@ export default class NWCConnectionsList extends React.Component<
     loadSettings = async () => {
         try {
             this.setState({
-                connectionsLoading: false,
+                connectionsLoading: true,
                 error: ''
+            });
+
+            await this.props.NostrWalletConnectStore.refreshConnections();
+            this.setState({
+                connectionsLoading: false
             });
         } catch (error: any) {
             this.setState({
@@ -177,7 +182,9 @@ export default class NWCConnectionsList extends React.Component<
                                     { color: themeColor('text') }
                                 ]}
                             >
-                                {`${connection.remainingBudget.toLocaleString()} sats`}
+                                {`${connection.remainingBudget.toLocaleString()} ${localeString(
+                                    'general.sats'
+                                )}`}
                             </Text>
                             <View style={styles.budgetBarContainer}>
                                 <View
@@ -229,7 +236,9 @@ export default class NWCConnectionsList extends React.Component<
                                         { color: themeColor('secondaryText') }
                                     ]}
                                 >
-                                    {`${connection.totalSpendSats.toLocaleString()} / ${connection.maxAmountSats.toLocaleString()} sats`}
+                                    {`${connection.totalSpendSats.toLocaleString()} / ${connection.maxAmountSats.toLocaleString()} ${localeString(
+                                        'general.sats'
+                                    )}`}
                                     {connection.budgetRenewal !== 'never'
                                         ? ` (${connection.budgetRenewal})`
                                         : ''}
@@ -302,6 +311,9 @@ export default class NWCConnectionsList extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
+                    onBack={() => {
+                        navigation.popTo('Settings');
+                    }}
                     centerComponent={{
                         text: localeString(
                             'views.Settings.NostrWalletConnect.title'
