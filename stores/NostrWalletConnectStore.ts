@@ -172,7 +172,10 @@ export default class NostrWalletConnectStore {
 
     private async loadCashuSetting(): Promise<void> {
         try {
-            if (!this.settingsStore.settings.ecash.enableCashu) {
+            const cashuEnabled =
+                BackendUtils.supportsCashuWallet() &&
+                this.settingsStore.settings.ecash.enableCashu;
+            if (!cashuEnabled) {
                 runInAction(() => {
                     this.cashuEnabled = false;
                 });
