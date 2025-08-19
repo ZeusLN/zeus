@@ -134,6 +134,7 @@ export default class LndHub extends LND {
             settingsStore.username === 'invoice'
         );
     };
+    supportsWatchtowerClient = () => false;
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsPendingChannels = () => false;
