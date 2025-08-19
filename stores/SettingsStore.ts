@@ -427,7 +427,7 @@ export const localeMigrationMapping: { [oldLocale: string]: string } = {
     Polski: 'pl',
     Türkçe: 'tr',
     'magyar nyelv': 'hu',
-    简化字: 'zh',
+    简体中文: 'zh',
     Nederlands: 'nl',
     Bokmål: 'nb',
     Svenska: 'sv',
