@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { inject, observer } from 'mobx-react';
+import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import TextInput from '../../../components/TextInput';
 import Text from '../../../components/Text';
@@ -10,8 +10,9 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
-import SettingsStore from '../../../stores/SettingsStore';
 import BackendUtils from '../../../utils/BackendUtils';
+import ValidationUtils from '../../../utils/ValidationUtils';
+import NodeUriUtils from '../../../utils/NodeUriUtils';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -20,7 +21,6 @@ import Scan from '../../../assets/images/SVG/Scan.svg';
 
 interface AddWatchtowerProps {
     navigation: StackNavigationProp<any, any>;
-    SettingsStore: SettingsStore;
 }
 
 interface AddWatchtowerState {
@@ -32,7 +32,6 @@ interface AddWatchtowerState {
     isAddressValid: boolean;
 }
 
-@inject('SettingsStore')
 @observer
 export default class AddWatchtower extends React.Component<
     AddWatchtowerProps,
@@ -48,13 +47,11 @@ export default class AddWatchtower extends React.Component<
     };
 
     validateWatchtowerData = (text: string) => {
-        const watchtowerRegex = /^([a-fA-F0-9]{66})@([a-zA-Z0-9.-]+):(\d+)$/;
-        const match = text.match(watchtowerRegex);
-        if (match) {
-            const [, pubkey, host, port] = match;
+        if (NodeUriUtils.isValidNodeUri(text)) {
+            const { pubkey, host } = NodeUriUtils.processNodeUri(text);
             this.setState({
                 pubkey,
-                address: `${host}:${port}`,
+                address: host,
                 error: '',
                 isPubkeyValid: true,
                 isAddressValid: true
@@ -69,16 +66,6 @@ export default class AddWatchtower extends React.Component<
         return false;
     };
 
-    validatePubkey = (pubkey: string) => {
-        const pubkeyRegex = /^[a-fA-F0-9]{66}$/;
-        return pubkey === '' || pubkeyRegex.test(pubkey);
-    };
-
-    validateAddress = (address: string) => {
-        const addressRegex = /^[a-zA-Z0-9.-]+:\d+$/;
-        return address === '' || addressRegex.test(address);
-    };
-
     handleScan = () => {
         this.props.navigation.navigate('HandleAnythingQRScanner', {
             handleScannedData: this.validateWatchtowerData
@@ -90,7 +77,7 @@ export default class AddWatchtower extends React.Component<
         const { pubkey, address } = this.state;
         this.setState({ error: '' });
 
-        if (!pubkey || pubkey.trim() === '') {
+        if (!pubkey) {
             this.setState({
                 error: localeString(
                     'views.Tools.watchtowers.addWatchtower.pubkeyRequired'
@@ -99,7 +86,7 @@ export default class AddWatchtower extends React.Component<
             return;
         }
 
-        if (!address || address.trim() === '') {
+        if (!address) {
             this.setState({
                 error: localeString(
                     'views.Settings.AddEditNode.serverAddressRequired'
@@ -116,7 +103,6 @@ export default class AddWatchtower extends React.Component<
             this.setState({ loading: false });
             navigation.goBack();
         } catch (error: any) {
-            console.log('error', error);
             this.setState({
                 loading: false,
                 error: error.message || localeString('general.unknown_error')
@@ -175,7 +161,11 @@ export default class AddWatchtower extends React.Component<
                         backgroundColor: themeColor('background')
                     }}
                 >
-                    {error && <ErrorMessage message={error} />}
+                    {error && (
+                        <View style={styles.descriptionContainer}>
+                            <ErrorMessage message={error} />
+                        </View>
+                    )}
 
                     <View style={styles.inputContainer}>
                         <Text
@@ -184,7 +174,9 @@ export default class AddWatchtower extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString('views.OpenChannel.nodePubkey')}
+                            {localeString(
+                                'views.Tools.watchtowers.serverPubkey'
+                            )}
                         </Text>
                         <TextInput
                             style={{
@@ -193,7 +185,8 @@ export default class AddWatchtower extends React.Component<
                             }}
                             value={pubkey}
                             onChangeText={(text: string) => {
-                                const isValid = this.validatePubkey(text);
+                                const isValid =
+                                    ValidationUtils.validateNodePubkey(text);
                                 this.setState({
                                     pubkey: text,
                                     error: '',
@@ -219,9 +212,7 @@ export default class AddWatchtower extends React.Component<
                                 color: themeColor('text')
                             }}
                         >
-                            {localeString(
-                                'views.Settings.AddEditNode.serverAddress'
-                            )}
+                            {localeString('views.OpenChannel.host')}
                         </Text>
                         <TextInput
                             style={{
@@ -235,7 +226,8 @@ export default class AddWatchtower extends React.Component<
                             }
                             value={address}
                             onChangeText={(text: string) => {
-                                const isValid = this.validateAddress(text);
+                                const isValid =
+                                    ValidationUtils.validateNodeHost(text);
                                 this.setState({
                                     address: text,
                                     error: '',

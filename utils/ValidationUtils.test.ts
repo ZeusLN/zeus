@@ -325,3 +325,123 @@ describe('hasValidPairingPhraseCharsAndWordcount', () => {
         ).toBe(false);
     });
 });
+
+describe('validateNodePubkey', () => {
+    it('accepts valid 66-character hex pubkeys', () => {
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f283686619'
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '03a0434d9e47f3c86235477c7b1ae6ae5d3442d49b1943c2b752a68e2a47e247c7'
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9'
+            )
+        ).toBe(true);
+    });
+
+    it('rejects invalid pubkeys', () => {
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f28368661'
+            )
+        ).toBe(false);
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f2836866199'
+            )
+        ).toBe(false);
+        expect(ValidationUtils.validateNodePubkey('not-a-pubkey')).toBe(false);
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f28368661 '
+            )
+        ).toBe(false);
+    });
+
+    it('accepts empty string', () => {
+        expect(ValidationUtils.validateNodePubkey('')).toBe(false);
+    });
+
+    it('accepts case insensitive hex characters', () => {
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02eec7245d6b7d2ccb30380bfbe2a3648cd7a942653f5aa340edcea1f283686619'
+            )
+        ).toBe(true);
+        expect(
+            ValidationUtils.validateNodePubkey(
+                '02EEC7245D6B7D2CCB30380BFBE2A3648CD7A942653F5AA340EDCEA1F283686619'
+            )
+        ).toBe(true);
+    });
+});
+
+describe('validateNodeHost', () => {
+    it('accepts valid host addresses without port', () => {
+        expect(ValidationUtils.validateNodeHost('example.com')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('subdomain.example.com')).toBe(
+            true
+        );
+        expect(ValidationUtils.validateNodeHost('node.example.org')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('localhost')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('192.168.1.1')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('10.0.0.1')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('2001:db8::1')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('2001:db8:0:0:0:0:0:1')).toBe(
+            true
+        );
+        expect(ValidationUtils.validateNodeHost('::1')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('fe80::1%eth0')).toBe(true);
+    });
+
+    it('accepts valid host addresses with port', () => {
+        expect(ValidationUtils.validateNodeHost('example.com:8080')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('node.example.org:9735')).toBe(
+            true
+        );
+        expect(ValidationUtils.validateNodeHost('localhost:10009')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('192.168.1.1:9735')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('2001:db8::1:9735')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('[2001:db8::1]:9735')).toBe(
+            true
+        );
+        expect(ValidationUtils.validateNodeHost('[::1]:8080')).toBe(true);
+        expect(ValidationUtils.validateNodeHost('[fe80::1%eth0]:10009')).toBe(
+            true
+        );
+    });
+
+    it('rejects invalid host addresses', () => {
+        expect(ValidationUtils.validateNodeHost('example.com:99999')).toBe(
+            false
+        );
+        expect(ValidationUtils.validateNodeHost('example.com:0')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('example.com:abc')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('example.com:')).toBe(false);
+        expect(ValidationUtils.validateNodeHost(':8080')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('example com')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('example@com')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('2001:db8::1:99999')).toBe(
+            false
+        );
+        expect(ValidationUtils.validateNodeHost('[2001:db8::1]:99999')).toBe(
+            false
+        );
+        expect(ValidationUtils.validateNodeHost('[2001:db8::1]:0')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('[2001:db8::1]:abc')).toBe(
+            false
+        );
+        expect(ValidationUtils.validateNodeHost('2001:db8::1]')).toBe(false);
+        expect(ValidationUtils.validateNodeHost('[2001:db8::1')).toBe(false);
+    });
+
+    it('accepts empty string', () => {
+        expect(ValidationUtils.validateNodeHost('')).toBe(false);
+    });
+});
