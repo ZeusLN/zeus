@@ -196,7 +196,7 @@ open class Lnd {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let lndPath = applicationSupport.appendingPathComponent(lndDir, isDirectory: true)
 
-    var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" " + args
+    var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" --wtclient.active" + args
     if (isTorEnabled) {
       lndArgs += " --tor.active"
     }
