@@ -247,6 +247,7 @@ import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
+import Watchtowers from './views/Tools/WatchTowers/WatchtowerList';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
@@ -1024,6 +1025,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             DeveloperTools
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Watchtowers" // @ts-ignore:next-line
+                                                        component={Watchtowers}
                                                     />
                                                     <Stack.Screen
                                                         name="Chantools" // @ts-ignore:next-line
