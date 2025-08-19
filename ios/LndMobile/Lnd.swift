@@ -132,7 +132,7 @@ open class Lnd {
     "WalletKitNextAddr": { bytes, cb in LndmobileWalletKitNextAddr(bytes, cb) },
     "WalletKitSignMessageWithAddr": { bytes, cb in LndmobileWalletKitSignMessageWithAddr(bytes, cb) },
     "WalletKitVerifyMessageWithAddr": { bytes, cb in LndmobileWalletKitVerifyMessageWithAddr(bytes, cb) },
-  
+    
     // derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
     "SignMessage": { bytes, cb in LndmobileSignMessage(bytes, cb) },
@@ -143,6 +143,16 @@ open class Lnd {
     "AutopilotModifyStatus": { bytes, cb in LndmobileAutopilotModifyStatus(bytes, cb) },
     "AutopilotQueryScores": { bytes, cb in LndmobileAutopilotQueryScores(bytes, cb) },
     "AutopilotSetScores": { bytes, cb in LndmobileAutopilotSetScores(bytes, cb) },
+
+     // watchtower client
+    "WatchtowerClientAddTower": { bytes, cb in LndmobileWatchtowerClientAddTower(bytes, cb) },
+    "WatchtowerClientRemoveTower": { bytes, cb in LndmobileWatchtowerClientRemoveTower(bytes, cb) },
+    "WatchtowerClientDeactivateTower": { bytes, cb in LndmobileWatchtowerClientDeactivateTower(bytes, cb) },
+    "WatchtowerClientListTowers": { bytes, cb in LndmobileWatchtowerClientListTowers(bytes, cb) },
+    "WatchtowerClientGetTowerInfo": { bytes, cb in LndmobileWatchtowerClientGetTowerInfo(bytes, cb) },
+    "WatchtowerClientStats": { bytes, cb in LndmobileWatchtowerClientStats(bytes, cb) },
+    "WatchtowerClientPolicy": { bytes, cb in LndmobileWatchtowerClientPolicy(bytes, cb) },
+    "WatchtowerClientTerminateSession": { bytes, cb in LndmobileWatchtowerClientTerminateSession(bytes, cb) }
   ]
 
   static let streamMethods: [String: (Data?, (any LndmobileRecvStreamProtocol)?) -> Void] = [
