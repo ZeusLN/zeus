@@ -599,6 +599,57 @@ export default class LightningNodeConnect {
         }
     };
 
+    getWatchtowerInfo = async (pubkey: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .getTowerInfo({
+                pubkey,
+                includeSessions: true
+            })
+            .then((data: any) => snakeize(data));
+
+    listWatchtowers = async (includeSessions = true) =>
+        await this.lnc.lnd.watchtowerClient
+            .listTowers({
+                includeSessions,
+                excludeExhaustedSessions: false
+            })
+            .then((data: any) => snakeize(data));
+
+    removeWatchtower = async (pubkey: string, address?: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .removeTower({
+                pubkey,
+                address
+            })
+            .then((data: any) => snakeize(data));
+
+    deactivateWatchtower = async (pubkey: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .deactivateTower({
+                pubkey
+            })
+            .then((data: any) => snakeize(data));
+
+    terminateWatchtowerSession = async (sessionId: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .terminateSession({
+                sessionId
+            })
+            .then((data: any) => snakeize(data));
+
+    getWatchtowerStats = async () =>
+        await this.lnc.lnd.watchtowerClient
+            .stats({})
+            .then((data: any) => snakeize(data));
+
+    getWatchtowerPolicy = async (policyType: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .policy({
+                policyType
+            })
+            .then((data: any) => snakeize(data));
+
+    supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsAddressMessageSigning = () => true;
