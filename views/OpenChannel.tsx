@@ -34,6 +34,7 @@ import handleAnything from '../utils/handleAnything';
 import NFCUtils from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
+import ValidationUtils from '../utils/ValidationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -85,6 +86,8 @@ interface OpenChannelState {
     // external account funding
     account: string;
     additionalChannels: Array<AdditionalChannel>;
+    isNodePubkeyValid: boolean;
+    isNodeHostValid: boolean;
 }
 
 @inject(
@@ -124,7 +127,9 @@ export default class OpenChannel extends React.Component<
                 props.ChannelsStore.channelsView === ChannelsView.Peers,
             advancedSettingsToggle: false,
             account: 'default',
-            additionalChannels: []
+            additionalChannels: [],
+            isNodePubkeyValid: false,
+            isNodeHostValid: false
         };
     }
 
@@ -327,7 +332,9 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel,
             connectPeerOnly,
             advancedSettingsToggle,
-            additionalChannels
+            additionalChannels,
+            isNodePubkeyValid,
+            isNodeHostValid
         } = this.state;
         const { implementation } = SettingsStore;
 
@@ -530,11 +537,20 @@ export default class OpenChannel extends React.Component<
                                         )}
                                     </Text>
                                     <TextInput
+                                        textColor={
+                                            isNodePubkeyValid
+                                                ? themeColor('text')
+                                                : themeColor('error')
+                                        }
                                         placeholder={'0A...'}
                                         value={node_pubkey_string}
                                         onChangeText={(text: string) =>
                                             this.setState({
-                                                node_pubkey_string: text
+                                                node_pubkey_string: text,
+                                                isNodePubkeyValid:
+                                                    ValidationUtils.validateNodePubkey(
+                                                        text
+                                                    )
                                             })
                                         }
                                         locked={openingChannel}
@@ -551,12 +567,23 @@ export default class OpenChannel extends React.Component<
                                         {localeString('views.OpenChannel.host')}
                                     </Text>
                                     <TextInput
+                                        textColor={
+                                            isNodeHostValid
+                                                ? themeColor('text')
+                                                : themeColor('error')
+                                        }
                                         placeholder={localeString(
                                             'views.OpenChannel.hostPort'
                                         )}
                                         value={host}
                                         onChangeText={(text: string) =>
-                                            this.setState({ host: text })
+                                            this.setState({
+                                                host: text,
+                                                isNodeHostValid:
+                                                    ValidationUtils.validateNodeHost(
+                                                        text
+                                                    )
+                                            })
                                         }
                                         locked={openingChannel}
                                     />
@@ -1085,7 +1112,10 @@ export default class OpenChannel extends React.Component<
                                     loading ||
                                     (!connectPeerOnly &&
                                         (sat_per_vbyte === '0' ||
-                                            !sat_per_vbyte))
+                                            !sat_per_vbyte)) ||
+                                    (channelDestination === 'Custom' &&
+                                        (!isNodePubkeyValid ||
+                                            !isNodeHostValid))
                                 }
                             />
                         </View>
