@@ -64,7 +64,7 @@ and
 - [x] Point of Sale (Standalone and Square integration)
 - [x] Lightning address receive
 - [x] Taproot support 
-- [ ] Connect a watchtower
+- [x] Connect a watchtower
 - [ ] Advanced security center
 - [x] Batch on-chain transactions
 - [x] Batch channel opens
