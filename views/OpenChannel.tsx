@@ -34,6 +34,7 @@ import handleAnything from '../utils/handleAnything';
 import NFCUtils from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
+import ValidationUtils from '../utils/ValidationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -85,6 +86,8 @@ interface OpenChannelState {
     // external account funding
     account: string;
     additionalChannels: Array<AdditionalChannel>;
+    isNodePubkeyValid: boolean;
+    isNodeHostValid: boolean;
 }
 
 @inject(
@@ -124,7 +127,9 @@ export default class OpenChannel extends React.Component<
                 props.ChannelsStore.channelsView === ChannelsView.Peers,
             advancedSettingsToggle: false,
             account: 'default',
-            additionalChannels: []
+            additionalChannels: [],
+            isNodePubkeyValid: true,
+            isNodeHostValid: true
         };
     }
 
@@ -327,7 +332,9 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel,
             connectPeerOnly,
             advancedSettingsToggle,
-            additionalChannels
+            additionalChannels,
+            isNodePubkeyValid,
+            isNodeHostValid
         } = this.state;
         const { implementation } = SettingsStore;
 
@@ -344,6 +351,9 @@ export default class OpenChannel extends React.Component<
         const { confirmedBlockchainBalance } = BalanceStore;
 
         const loading = connectingToPeer || openingChannel;
+
+        const isInvalidPeer = !isNodePubkeyValid || !isNodeHostValid;
+        const isInvalidFeeRate = sat_per_vbyte === '0' || !sat_per_vbyte;
 
         if (funded_psbt)
             navigation.navigate('PSBT', {
@@ -466,6 +476,7 @@ export default class OpenChannel extends React.Component<
                                     errorMsgPeer ||
                                     localeString('general.error')
                                 }
+                                dismissable
                             />
                         )}
 
@@ -530,13 +541,23 @@ export default class OpenChannel extends React.Component<
                                         )}
                                     </Text>
                                     <TextInput
+                                        textColor={
+                                            isNodePubkeyValid
+                                                ? themeColor('text')
+                                                : themeColor('error')
+                                        }
                                         placeholder={'0A...'}
                                         value={node_pubkey_string}
                                         onChangeText={(text: string) =>
                                             this.setState({
-                                                node_pubkey_string: text
+                                                node_pubkey_string: text,
+                                                isNodePubkeyValid:
+                                                    ValidationUtils.validateNodePubkey(
+                                                        text
+                                                    )
                                             })
                                         }
+                                        autoCapitalize="none"
                                         locked={openingChannel}
                                     />
                                 </>
@@ -551,13 +572,25 @@ export default class OpenChannel extends React.Component<
                                         {localeString('views.OpenChannel.host')}
                                     </Text>
                                     <TextInput
+                                        textColor={
+                                            isNodeHostValid
+                                                ? themeColor('text')
+                                                : themeColor('error')
+                                        }
                                         placeholder={localeString(
                                             'views.OpenChannel.hostPort'
                                         )}
                                         value={host}
                                         onChangeText={(text: string) =>
-                                            this.setState({ host: text })
+                                            this.setState({
+                                                host: text,
+                                                isNodeHostValid:
+                                                    ValidationUtils.validateNodeHost(
+                                                        text
+                                                    )
+                                            })
                                         }
+                                        autoCapitalize="none"
                                         locked={openingChannel}
                                     />
                                 </>
@@ -1062,7 +1095,7 @@ export default class OpenChannel extends React.Component<
                                     name: 'swap-horiz',
                                     size: 25,
                                     color:
-                                        sat_per_vbyte === '0' || !sat_per_vbyte
+                                        isInvalidFeeRate || isInvalidPeer
                                             ? themeColor('secondaryText')
                                             : themeColor('background')
                                 }}
@@ -1083,9 +1116,8 @@ export default class OpenChannel extends React.Component<
                                 }}
                                 disabled={
                                     loading ||
-                                    (!connectPeerOnly &&
-                                        (sat_per_vbyte === '0' ||
-                                            !sat_per_vbyte))
+                                    (!connectPeerOnly && isInvalidFeeRate) ||
+                                    isInvalidPeer
                                 }
                             />
                         </View>
