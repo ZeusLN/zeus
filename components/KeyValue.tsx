@@ -23,6 +23,7 @@ interface KeyValueProps {
     value?: any;
     color?: string;
     indicatorColor?: string;
+    valueIndicatorColor?: string;
     sensitive?: boolean;
     infoModalText?: string | Array<string>;
     infoModalLink?: string;
@@ -45,6 +46,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             value,
             color,
             indicatorColor,
+            valueIndicatorColor,
             sensitive,
             infoModalText,
             infoModalLink,
@@ -124,14 +126,27 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         }
 
         const ValueBase = (
-            <Text
-                style={{
-                    color: color || themeColor('text'),
-                    fontFamily: 'PPNeueMontreal-Book'
-                }}
-            >
-                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {valueIndicatorColor && (
+                    <View
+                        style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: 12 / 2,
+                            backgroundColor: valueIndicatorColor,
+                            marginRight: 8
+                        }}
+                    />
+                )}
+                <Text
+                    style={{
+                        color: color || themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+                </Text>
+            </View>
         );
 
         let Value: any;

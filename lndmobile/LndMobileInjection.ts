@@ -110,8 +110,20 @@ import {
     invoicesrpc,
     autopilotrpc,
     routerrpc,
-    walletrpc
+    walletrpc,
+    wtclientrpc
 } from '../proto/lightning';
+// watchtowers
+import {
+    WatchtowerClientAddTower,
+    WatchtowerClientRemoveTower,
+    WatchtowerClientListTowers,
+    WatchtowerClientGetTowerInfo,
+    WatchtowerClientGetStats,
+    WatchtowerClientGetPolicy,
+    WatchtowerClientDeactivateTower,
+    WatchtowerClientTerminateSession
+} from './wtclient';
 // @ts-ignore:next-line
 import type { WorkInfo } from './LndMobile.d.ts';
 import { OutPoint } from '../models/TransactionRequest';
@@ -594,6 +606,33 @@ export interface ILndMobileInjections {
             isTestnet?: boolean;
         }) => Promise<string>;
     };
+    wtclient: {
+        WatchtowerClientAddTower: (
+            pubkey: string,
+            address: string
+        ) => Promise<wtclientrpc.AddTowerResponse>;
+        WatchtowerClientRemoveTower: (
+            pubkey: string,
+            address?: string
+        ) => Promise<wtclientrpc.RemoveTowerResponse>;
+        WatchtowerClientListTowers: (
+            includeSessions?: boolean
+        ) => Promise<wtclientrpc.ListTowersResponse>;
+        WatchtowerClientGetTowerInfo: (
+            pubkey: string,
+            includeSessions?: boolean
+        ) => Promise<wtclientrpc.Tower>;
+        WatchtowerClientGetStats: () => Promise<wtclientrpc.StatsResponse>;
+        WatchtowerClientGetPolicy: (
+            policyType?: wtclientrpc.PolicyType
+        ) => Promise<wtclientrpc.PolicyResponse>;
+        WatchtowerClientDeactivateTower: (
+            pubkey: string
+        ) => Promise<wtclientrpc.DeactivateTowerResponse>;
+        WatchtowerClientTerminateSession: (
+            sessionId: string
+        ) => Promise<wtclientrpc.TerminateSessionResponse>;
+    };
 }
 
 // @ts-ignore:next-line
@@ -708,5 +747,15 @@ export default {
         createClaimTransaction,
         createReverseClaimTransaction,
         createRefundTransaction
+    },
+    wtclient: {
+        WatchtowerClientAddTower,
+        WatchtowerClientRemoveTower,
+        WatchtowerClientListTowers,
+        WatchtowerClientGetTowerInfo,
+        WatchtowerClientGetStats,
+        WatchtowerClientGetPolicy,
+        WatchtowerClientDeactivateTower,
+        WatchtowerClientTerminateSession
     }
 } as ILndMobileInjections;

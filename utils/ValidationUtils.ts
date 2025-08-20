@@ -79,12 +79,89 @@ const hasValidPairingPhraseCharsAndWordcount = (phrase: string): boolean => {
     return normalizedPhrase.split(' ').length === 10;
 };
 
+const validateNodePubkey = (pubkey: string): boolean => {
+    if (pubkey === '') return false;
+    const pubkeyRegex = /^[a-fA-F0-9]{66}$/;
+    return pubkeyRegex.test(pubkey);
+};
+
+const validateNodeHost = (host: string): boolean => {
+    if (!host) return false;
+
+    let portMatch = null;
+    if (host.startsWith('[') && host.includes(']:')) {
+        portMatch = host.match(/^(.+):(\d+)$/);
+    } else if (!host.includes('::')) {
+        portMatch = host.match(/^([^:]+):(\d+)$/);
+    }
+
+    if (portMatch) {
+        const port = parseInt(portMatch[2]);
+        if (port < 1 || port > 65535) return false;
+        host = portMatch[1];
+        if (!host) return false;
+    }
+    const ipv4Regex =
+        /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$/;
+
+    if (host.startsWith('[') && host.endsWith(']')) {
+        const content = host.slice(1, -1);
+        const [ipv6Part, zoneId] = content.split('%');
+        return (
+            isValidIPv6(ipv6Part) &&
+            (!zoneId || /^[a-zA-Z0-9._-]+$/.test(zoneId))
+        );
+    }
+
+    if (host.includes(':')) {
+        const [ipv6Part, zoneId] = host.split('%');
+        return (
+            isValidIPv6(ipv6Part) &&
+            (!zoneId || /^[a-zA-Z0-9._-]+$/.test(zoneId))
+        );
+    }
+
+    return ipv4Regex.test(host) || hostnameRegex.test(host);
+};
+
+const isValidIPv6 = (ipv6: string): boolean => {
+    if (!ipv6) return false;
+
+    const parts = ipv6.split(':');
+    if (parts.length < 3 || parts.length > 8) return false;
+
+    const hasCompression = ipv6.includes('::');
+    if (hasCompression && ipv6.split('::').length > 2) return false;
+
+    if (hasCompression) {
+        const [before, after] = ipv6.split('::');
+        const beforeParts = before ? before.split(':').filter((p) => p) : [];
+        const afterParts = after ? after.split(':').filter((p) => p) : [];
+
+        if (beforeParts.length + afterParts.length > 6) return false;
+
+        return beforeParts.every(isValidHex) && afterParts.every(isValidHex);
+    } else {
+        if (parts.length !== 8) return false;
+        return parts.every(isValidHex);
+    }
+};
+
+const isValidHex = (part: string): boolean => {
+    if (!part) return false;
+    if (part.length > 4) return false;
+    return /^[0-9a-fA-F]+$/.test(part);
+};
+
 const ValidationUtils = {
     isValidServerAddress,
     isValidPort,
     hasValidRuneChars,
     hasValidMacaroonChars,
-    hasValidPairingPhraseCharsAndWordcount
+    hasValidPairingPhraseCharsAndWordcount,
+    validateNodePubkey,
+    validateNodeHost
 };
 
 export default ValidationUtils;

@@ -383,7 +383,12 @@ class LndMobile extends ReactContextBaseJavaModule {
       // If Tor isn't active, make sure we aren't
       // listening at all
       params += " --nolisten";
+     
+      
     }
+     // Enable watchtower client
+     params += " --wtclient.active";
+     
     bundle.putString(
       "args",
       params + " " + args
