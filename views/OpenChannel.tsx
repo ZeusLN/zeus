@@ -128,8 +128,8 @@ export default class OpenChannel extends React.Component<
             advancedSettingsToggle: false,
             account: 'default',
             additionalChannels: [],
-            isNodePubkeyValid: false,
-            isNodeHostValid: false
+            isNodePubkeyValid: true,
+            isNodeHostValid: true
         };
     }
 
@@ -352,6 +352,9 @@ export default class OpenChannel extends React.Component<
 
         const loading = connectingToPeer || openingChannel;
 
+        const isInvalidPeer = !isNodePubkeyValid || !isNodeHostValid;
+        const isInvalidFeeRate = sat_per_vbyte === '0' || !sat_per_vbyte;
+
         if (funded_psbt)
             navigation.navigate('PSBT', {
                 psbt: funded_psbt
@@ -473,6 +476,7 @@ export default class OpenChannel extends React.Component<
                                     errorMsgPeer ||
                                     localeString('general.error')
                                 }
+                                dismissable
                             />
                         )}
 
@@ -553,6 +557,7 @@ export default class OpenChannel extends React.Component<
                                                     )
                                             })
                                         }
+                                        autoCapitalize="none"
                                         locked={openingChannel}
                                     />
                                 </>
@@ -585,6 +590,7 @@ export default class OpenChannel extends React.Component<
                                                     )
                                             })
                                         }
+                                        autoCapitalize="none"
                                         locked={openingChannel}
                                     />
                                 </>
@@ -1089,7 +1095,7 @@ export default class OpenChannel extends React.Component<
                                     name: 'swap-horiz',
                                     size: 25,
                                     color:
-                                        sat_per_vbyte === '0' || !sat_per_vbyte
+                                        isInvalidFeeRate || isInvalidPeer
                                             ? themeColor('secondaryText')
                                             : themeColor('background')
                                 }}
@@ -1110,12 +1116,8 @@ export default class OpenChannel extends React.Component<
                                 }}
                                 disabled={
                                     loading ||
-                                    (!connectPeerOnly &&
-                                        (sat_per_vbyte === '0' ||
-                                            !sat_per_vbyte)) ||
-                                    (channelDestination === 'Custom' &&
-                                        (!isNodePubkeyValid ||
-                                            !isNodeHostValid))
+                                    (!connectPeerOnly && isInvalidFeeRate) ||
+                                    isInvalidPeer
                                 }
                             />
                         </View>
