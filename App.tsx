@@ -247,9 +247,9 @@ import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
-import Watchtowers from './views/Tools/WatchTowers/WatchtowerList';
-import AddWatchtower from './views/Tools/WatchTowers/AddWatchtower';
-import WatchtowerDetails from './views/Tools/WatchTowers/WatchtowerDetails';
+import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
+import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
+import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
