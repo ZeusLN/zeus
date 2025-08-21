@@ -184,37 +184,6 @@ function AmountDisplay({
     };
 
     const renderCurrencyAmount = () => {
-        const commonContent = (
-            <>
-                {unit !== 'BTC' && roundAmount && (
-                    <ApproximateSymbol accessible={accessible} />
-                )}
-                {amount !== 'N/A' && unit === 'fiat' && (
-                    <FiatSymbol accessible />
-                )}
-                {space ? <TextSpace /> : <Spacer width={1} />}
-                <Body
-                    jumbo={jumboText}
-                    defaultSize={defaultTextSize}
-                    color={color}
-                    colorOverride={colorOverride}
-                    accessible={accessible}
-                >
-                    {negative ? '-' : ''}
-                    {amount === 'N/A' && fiatRatesLoading ? (
-                        <LoadingIndicator size={20} />
-                    ) : unit === 'BTC' ? (
-                        formatBitcoinWithSpaces(amount)
-                    ) : (
-                        amount.toString()
-                    )}
-                </Body>
-                {unit === 'BTC' && amount !== 'N/A' && (
-                    <FiatSymbol accessible />
-                )}
-            </>
-        );
-
         const feeSection = fee && (
             <>
                 <Spacer width={2} />
@@ -232,21 +201,83 @@ function AmountDisplay({
             </>
         );
 
-        return (
-            <Row
-                style={styles.row}
-                accessible={accessible}
-                accessibilityLabel={accessibilityLabel}
-            >
-                {!rtl && pending && <Pending />}
-                <View style={styles.textContainer}>
-                    {rtl && feeSection}
-                    {commonContent}
-                    {!rtl && feeSection}
-                </View>
-                {rtl && pending && <Pending />}
-            </Row>
-        );
+        if (rtl) {
+            return (
+                <Row
+                    style={styles.row}
+                    accessible={accessible}
+                    accessibilityLabel={accessibilityLabel}
+                >
+                    <View style={styles.textContainer}>
+                        {feeSection}
+                        {unit === 'BTC' && roundAmount && <RoundingIndicator />}
+                        {unit === 'fiat' && <ApproximateSymbol accessible />}
+                        {unit === 'BTC' && amount !== 'N/A' && (
+                            <FiatSymbol accessible />
+                        )}
+                        {space ? <TextSpace /> : <Spacer width={1} />}
+                        <Body
+                            jumbo={jumboText}
+                            defaultSize={defaultTextSize}
+                            color={color}
+                            colorOverride={colorOverride}
+                            accessible={accessible}
+                        >
+                            {negative ? '-' : ''}
+                            {amount === 'N/A' && fiatRatesLoading ? (
+                                <LoadingIndicator size={20} />
+                            ) : unit === 'BTC' ? (
+                                formatBitcoinWithSpaces(amount)
+                            ) : (
+                                amount.toString()
+                            )}
+                        </Body>
+                        {amount !== 'N/A' && unit === 'fiat' && (
+                            <FiatSymbol accessible />
+                        )}
+                    </View>
+                    {pending && <Pending />}
+                </Row>
+            );
+        } else {
+            return (
+                <Row
+                    style={styles.row}
+                    accessible={accessible}
+                    accessibilityLabel={accessibilityLabel}
+                >
+                    {pending && <Pending />}
+                    <View style={styles.textContainer}>
+                        {unit === 'BTC' && roundAmount && <RoundingIndicator />}
+                        {unit === 'fiat' && <ApproximateSymbol accessible />}
+                        {unit === 'BTC' && amount !== 'N/A' && (
+                            <FiatSymbol accessible />
+                        )}
+                        {amount !== 'N/A' && unit === 'fiat' && (
+                            <FiatSymbol accessible />
+                        )}
+                        {space ? <TextSpace /> : <Spacer width={1} />}
+                        <Body
+                            jumbo={jumboText}
+                            defaultSize={defaultTextSize}
+                            color={color}
+                            colorOverride={colorOverride}
+                            accessible={accessible}
+                        >
+                            {negative ? '-' : ''}
+                            {amount === 'N/A' && fiatRatesLoading ? (
+                                <LoadingIndicator size={20} />
+                            ) : unit === 'BTC' ? (
+                                formatBitcoinWithSpaces(amount)
+                            ) : (
+                                amount.toString()
+                            )}
+                        </Body>
+                        {feeSection}
+                    </View>
+                </Row>
+            );
+        }
     };
 
     switch (unit) {
