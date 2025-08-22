@@ -120,6 +120,8 @@ export default class CashuStore {
     @observable public proofsToUse?: Proof[];
     @observable public meltQuote?: MeltQuoteResponse;
     @observable public noteKey?: string;
+    @observable public paymentStartTime?: number;
+    @observable public paymentDuration?: number;
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable loadingFeeEstimate = false;
@@ -191,6 +193,8 @@ export default class CashuStore {
         this.error = false;
         this.paymentError = false;
         this.paymentErrorMsg = undefined;
+        this.paymentStartTime = undefined;
+        this.paymentDuration = undefined;
     };
 
     getLndDir = () => {
@@ -1459,6 +1463,7 @@ export default class CashuStore {
     @action
     public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
         this.loading = true;
+        this.paymentStartTime = Date.now();
 
         const mintUrl = this.selectedMintUrl;
 
@@ -1589,6 +1594,11 @@ export default class CashuStore {
             );
 
             this.paymentPreimage = meltResponse.quote.payment_preimage!!;
+
+            if (this.paymentStartTime) {
+                this.paymentDuration =
+                    (Date.now() - this.paymentStartTime) / 1000;
+            }
 
             const payment = new CashuPayment({
                 ...this.payReq,
