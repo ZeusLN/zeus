@@ -57,6 +57,8 @@ export default class TransactionsStore {
     @observable txid: string | null;
     @observable status: string | number | null;
     @observable noteKey: string;
+    @observable paymentStartTime: number | null = null;
+    @observable paymentDuration: number | null = null;
 
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
@@ -101,6 +103,8 @@ export default class TransactionsStore {
         this.broadcast_txid = '';
         this.broadcast_err = null;
         this.funded_psbt = '';
+        this.paymentStartTime = null;
+        this.paymentDuration = null;
     };
 
     public getTransactions = async () => {
@@ -463,6 +467,8 @@ export default class TransactionsStore {
         amp,
         timeout_seconds
     }: SendPaymentReq) => {
+        this.paymentStartTime = Date.now();
+        this.paymentDuration = null;
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -590,6 +596,11 @@ export default class TransactionsStore {
             result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
                 keySendPreimageType
             ] != null;
+
+        const isSuccess = status === 'complete' || status === 'SUCCEEDED';
+        if (isSuccess && this.paymentStartTime && !this.paymentDuration) {
+            this.paymentDuration = (Date.now() - this.paymentStartTime) / 1000;
+        }
 
         // TODO add message for in-flight transactions
         if (
