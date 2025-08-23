@@ -16,6 +16,7 @@ export interface NWCConnectionData {
     icon?: any;
     description?: string;
     pubkey: string;
+    relayUrl: string;
     permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
@@ -33,6 +34,7 @@ export default class NWCConnection extends BaseModel {
     icon?: any;
     description?: string;
     pubkey: string;
+    relayUrl: string;
     permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
