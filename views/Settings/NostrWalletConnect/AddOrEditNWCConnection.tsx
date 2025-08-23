@@ -188,6 +188,16 @@ export default class AddOrEditNWCConnection extends React.Component<
         );
     };
 
+    isRelayChanged = () => {
+        const { originalConnection } = this.state;
+        if (!originalConnection) return false;
+
+        return (
+            this.state.selectedRelayUrl !==
+            (originalConnection.relayUrl || DEFAULT_NOSTR_RELAYS[0])
+        );
+    };
+
     updateStateWithChangeTracking = (newState: any) => {
         this.setState(newState, () => {
             if (this.state.originalConnection) {
@@ -276,6 +286,86 @@ export default class AddOrEditNWCConnection extends React.Component<
             expiryDays,
             showCustomExpiryInput
         });
+    };
+
+    regenerateConnection = async () => {
+        const {
+            connectionName,
+            selectedRelayUrl,
+            selectedPermissions,
+            maxAmountSats,
+            selectedBudgetRenewalIndex,
+            expiryDays
+        } = this.state;
+
+        const { NostrWalletConnectStore, route, navigation } = this.props;
+        const { connectionId } = route.params ?? {};
+
+        if (!connectionId) {
+            this.setState({
+                error: 'Connection ID not found for regeneration'
+            });
+            return;
+        }
+
+        this.setState({ loading: true, error: '' });
+
+        try {
+            await NostrWalletConnectStore.deleteConnection(connectionId);
+            const budgetRenewal =
+                NostrConnectUtils.getBudgetRenewalOptions()[
+                    selectedBudgetRenewalIndex
+                ].key;
+            const params: any = {
+                name: connectionName.trim(),
+                relayUrl: selectedRelayUrl,
+                permissions: selectedPermissions,
+                budgetRenewal
+            };
+            if (maxAmountSats) {
+                const budget = parseInt(maxAmountSats, 10);
+                if (isNaN(budget) || budget < -1) {
+                    this.setState({
+                        error: localeString(
+                            'views.Settings.NostrWalletConnect.validation.budgetAmountInvalid'
+                        )
+                    });
+                    return;
+                }
+                params.budgetAmount = budget;
+            }
+
+            if (expiryDays && expiryDays.trim()) {
+                const days = parseInt(expiryDays, 10);
+                if (isNaN(days) || days <= 0) {
+                    this.setState({
+                        error: localeString(
+                            'views.Settings.NostrWalletConnect.validation.expiryDaysInvalid'
+                        )
+                    });
+                    return;
+                }
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + days);
+                params.expiresAt = expiryDate;
+            }
+
+            const nostrUrl = await NostrWalletConnectStore.createConnection(
+                params
+            );
+            if (nostrUrl) {
+                const createdConnection =
+                    NostrWalletConnectStore.connections[0];
+                navigation.navigate('NWCConnectionQR', {
+                    connectionId: createdConnection.id,
+                    nostrUrl
+                });
+            }
+        } catch (error) {
+            this.setState({ error: (error as Error).message, loading: false });
+        } finally {
+            this.setState({ loading: false });
+        }
     };
 
     createConnection = async () => {
@@ -569,6 +659,25 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 onPress={this.clearErrors}
                             />
                         )}
+                        {route.params?.isEdit && this.isRelayChanged() && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('warning'),
+                                    borderColor: themeColor('secondary'),
+                                    borderWidth: 1,
+                                    padding: 10,
+                                    borderRadius: 8,
+                                    marginHorizontal: 10,
+                                    marginTop: 10
+                                }}
+                            >
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'views.Settings.NostrWalletConnect.relayChangeWarning'
+                                    )}
+                                </Text>
+                            </View>
+                        )}
                         {/* Connection Name */}
                         <View style={styles.section}>
                             <View style={styles.sectionTitleContainer}>
@@ -846,12 +955,22 @@ export default class AddOrEditNWCConnection extends React.Component<
                         <Button
                             title={
                                 route.params?.isEdit
-                                    ? 'Update Connection'
+                                    ? this.isRelayChanged()
+                                        ? localeString(
+                                              'views.Settings.NostrWalletConnect.regenerateConnection'
+                                          )
+                                        : localeString(
+                                              'views.Settings.NostrWalletConnect.updateConnection'
+                                          )
                                     : localeString(
                                           'views.Settings.NostrWalletConnect.createConnection'
                                       )
                             }
-                            onPress={this.createConnection}
+                            onPress={
+                                route.params?.isEdit && this.isRelayChanged()
+                                    ? this.regenerateConnection
+                                    : this.createConnection
+                            }
                             secondary={
                                 !this.isFormValid() ||
                                 (route.params?.isEdit && !this.state.hasChanges)
