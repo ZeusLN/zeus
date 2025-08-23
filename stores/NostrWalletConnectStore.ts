@@ -9,6 +9,8 @@ import 'websocket-polyfill';
 import { action, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
 import { getPublicKey, generatePrivateKey } from 'nostr-tools';
+import { Platform } from 'react-native';
+import { Notifications } from 'react-native-notifications';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
@@ -66,6 +68,7 @@ interface WalletServiceKeys {
 
 export interface CreateConnectionParams {
     name: string;
+    relayUrl: string;
     permissions?: Nip47SingleMethod[];
     budgetAmount?: number;
     budgetRenewal?: BudgetRenewalType;
@@ -169,7 +172,6 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-
     private async loadCashuSetting(): Promise<void> {
         try {
             const cashuEnabled =
@@ -192,7 +194,6 @@ export default class NostrWalletConnectStore {
             });
         }
     }
-
     @action
     public async setCashuEnabled(enabled: boolean): Promise<void> {
         try {
@@ -317,13 +318,11 @@ export default class NostrWalletConnectStore {
             if (!this.walletServiceKeys?.privateKey) {
                 throw new Error(`Wallet service key not found`);
             }
-
             await this.nwcWalletService.publishWalletServiceInfoEvent(
                 this.walletServiceKeys.privateKey,
                 NostrConnectUtils.getFullAccessPermissions(),
                 NostrConnectUtils.getNotifications()
             );
-
             await this.subscribeToAllConnections();
         } catch (error: any) {
             console.error('Failed to start NWC service:', error);
@@ -509,6 +508,7 @@ export default class NostrWalletConnectStore {
                 id: connectionId,
                 name: params.name.trim(),
                 pubkey: connectionPublicKey,
+                relayUrl: this.currentRelayUrl,
                 permissions:
                     params.permissions ||
                     NostrConnectUtils.getFullAccessPermissions(),
@@ -862,6 +862,10 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.activeSubscriptions.set(connection.id, unsubscribe);
             });
+
+            console.log(
+                `NWC: Successfully subscribed to connection ${connection.name}`
+            );
         } catch (error) {
             console.error(
                 `Failed to subscribe to connection ${connection.name}:`,
@@ -921,12 +925,13 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
         this.markConnectionUsed(connection.id);
-
+        console.log('cashuEnabled', this.cashuEnabled);
         try {
             const balance = this.cashuEnabled
                 ? this.cashuStore.totalBalanceSats
                 : (await this.balanceStore.getLightningBalance(true))
                       ?.lightningBalance;
+            console.log('balance', balance);
             return {
                 result: {
                     balance: Number(balance) * 1000
@@ -951,7 +956,6 @@ export default class NostrWalletConnectStore {
         request: Nip47PayInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
         this.markConnectionUsed(connection.id);
-
         try {
             if (this.cashuEnabled) {
                 await this.cashuStore.getPayReq(request.invoice);
@@ -983,6 +987,12 @@ export default class NostrWalletConnectStore {
                     await this.cashuStore.payLnInvoiceFromEcash({
                         amount: invoice?.getAmount.toString()
                     });
+                if (cashuInvoice?.preimage) {
+                    this.showPaymentSentNotification(
+                        Number(invoice?.getAmount),
+                        connection.name
+                    );
+                }
                 return {
                     result: {
                         preimage: cashuInvoice?.preimage,
@@ -1081,6 +1091,7 @@ export default class NostrWalletConnectStore {
 
             if (result.result && result.result.status === 'SUCCEEDED') {
                 await this.trackSpending(connection.id, amountSats);
+                this.showPaymentSentNotification(amountSats, connection.name);
                 return {
                     result: {
                         preimage: result.result.payment_preimage,
@@ -1092,6 +1103,7 @@ export default class NostrWalletConnectStore {
 
             if (result.payment_preimage && !result.payment_error) {
                 await this.trackSpending(connection.id, amountSats);
+                this.showPaymentSentNotification(amountSats, connection.name);
                 return {
                     result: {
                         preimage: result.payment_preimage,
@@ -1140,6 +1152,10 @@ export default class NostrWalletConnectStore {
                             'Failed to create Cashu invoice - no payment request returned'
                         );
                     }
+                    this.setupCashuInvoicePaymentListener(
+                        connection.name,
+                        request.amount
+                    );
                     return {
                         result: {
                             type: 'incoming',
@@ -1170,6 +1186,13 @@ export default class NostrWalletConnectStore {
                 memo: request.description || '',
                 expiry: request.expiry || 3600
             });
+
+            // Set up a listener to detect when this invoice is paid
+            this.setupInvoicePaymentListener(
+                invoice.r_hash,
+                connection.name,
+                request.amount
+            );
 
             return {
                 result: {
@@ -1434,6 +1457,7 @@ export default class NostrWalletConnectStore {
             });
 
             await this.trackSpending(connection.id, amountSats);
+            this.showPaymentSentNotification(amountSats, connection.name);
 
             return {
                 result: {
@@ -1580,5 +1604,133 @@ export default class NostrWalletConnectStore {
         }
 
         return { isValid: true };
+    }
+
+    private showPaymentSentNotification(
+        amountSats: number,
+        connectionName: string
+    ): void {
+        const value = amountSats.toString();
+        const value_commas = value.replace(
+            /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+            ','
+        );
+
+        const title = 'Payment Sent via Nostr Wallet Connect';
+        const body = `Sent ${value_commas} ${
+            value_commas === '1' ? 'sat' : 'sats'
+        } via ${connectionName}`;
+
+        if (Platform.OS === 'android') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body
+            });
+        }
+
+        if (Platform.OS === 'ios') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body,
+                sound: 'chime.aiff'
+            });
+        }
+    }
+
+    private showPaymentReceivedNotification(
+        amountSats: number,
+        connectionName: string
+    ): void {
+        const value = amountSats.toString();
+        const value_commas = value.replace(
+            /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+            ','
+        );
+
+        const title = 'Payment Received via Nostr Wallet Connect';
+        const body = `Received ${value_commas} ${
+            value_commas === '1' ? 'sat' : 'sats'
+        } via ${connectionName}`;
+
+        if (Platform.OS === 'android') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body
+            });
+        }
+
+        if (Platform.OS === 'ios') {
+            // @ts-ignore:next-line
+            Notifications.postLocalNotification({
+                title,
+                body,
+                sound: 'chime.aiff'
+            });
+        }
+    }
+
+    private setupInvoicePaymentListener(
+        paymentHash: string,
+        connectionName: string,
+        amountMsats: number
+    ): void {
+        // Check for invoice settlement every 3 seconds for up to 5 minutes
+        const checkInterval = setInterval(async () => {
+            try {
+                const invoice = await BackendUtils.lookupInvoice({
+                    r_hash: paymentHash
+                });
+
+                if (invoice.settled || invoice.state === 'SETTLED') {
+                    clearInterval(checkInterval);
+                    this.showPaymentReceivedNotification(
+                        Math.floor(amountMsats / 1000),
+                        connectionName
+                    );
+                }
+            } catch (error) {
+                console.error('Error checking invoice settlement:', error);
+            }
+        }, 3000);
+
+        setTimeout(() => {
+            clearInterval(checkInterval);
+        }, 5 * 60 * 1000);
+    }
+
+    private setupCashuInvoicePaymentListener(
+        connectionName: string,
+        amountMsats: number
+    ): void {
+        const checkInterval = setInterval(async () => {
+            try {
+                const invoice = await this.cashuStore.checkInvoicePaid(
+                    undefined,
+                    undefined,
+                    false,
+                    true
+                );
+
+                if (invoice?.isPaid) {
+                    clearInterval(checkInterval);
+                    this.showPaymentReceivedNotification(
+                        Math.floor(amountMsats / 1000),
+                        connectionName
+                    );
+                }
+            } catch (error) {
+                console.error(
+                    'Error checking Cashu invoice settlement:',
+                    error
+                );
+            }
+        }, 3000);
+
+        setTimeout(() => {
+            clearInterval(checkInterval);
+        }, 5 * 60 * 1000);
     }
 }
