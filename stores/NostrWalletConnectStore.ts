@@ -19,17 +19,15 @@ import NostrConnectUtils from '../utils/NostrConnectUtils';
 
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Transaction from '../models/Transaction';
+import Invoice from '../models/Invoice';
 
 import Storage from '../storage';
 
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
 import BalanceStore from './BalanceStore';
 import NodeInfoStore from './NodeInfoStore';
-import InvoicesStore from './InvoicesStore';
-import PaymentsStore from './PaymentsStore';
 import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
-
 import type {
     Nip47GetInfoResponse,
     Nip47GetBalanceResponse,
@@ -49,6 +47,7 @@ import type {
     NWCWalletServiceRequestHandler,
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk/dist/nwc';
+import bolt11 from 'bolt11';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
@@ -78,7 +77,6 @@ export default class NostrWalletConnectStore {
     @observable public error = false;
     @observable public errorMessage = '';
     @observable public connections: NWCConnection[] = [];
-    @observable public nwcWalletServiceKeyPair: nwc.NWCWalletServiceKeyPair;
     @observable private nwcWalletServices: Map<string, nwc.NWCWalletService> =
         new Map();
     @observable private activeSubscriptions: Map<string, () => void> =
@@ -98,8 +96,6 @@ export default class NostrWalletConnectStore {
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
     nodeInfoStore: NodeInfoStore;
-    invoicesStore: InvoicesStore;
-    paymentsStore: PaymentsStore;
     transactionsStore: TransactionsStore;
     cashuStore: CashuStore;
 
@@ -1101,7 +1097,7 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
         this.markConnectionUsed(connection.id);
-        console.log('cashuEnabled', this.cashuEnabled);
+        console.log('handleGetBalance', connection.id);
         try {
             const balance = this.cashuEnabled
                 ? this.cashuStore.totalBalanceSats
@@ -1135,45 +1131,126 @@ export default class NostrWalletConnectStore {
         console.log('handlePayInvoice', connection.id);
         try {
             if (this.cashuEnabled) {
-                await this.cashuStore.getPayReq(request.invoice);
-                const invoice = this.cashuStore.payReq;
-                const validation = this.validateCashuInvoice(invoice);
-                if (!validation.isValid) {
+                if (!this.cashuStore.selectedMintUrl) {
                     return {
                         result: undefined,
                         error: {
-                            code: 'INVALID_INVOICE',
-                            message:
-                                validation.error ||
-                                localeString(
-                                    'views.Settings.NostrWalletConnect.errors.failedToGetInvoice'
-                                )
+                            code: 'INTERNAL_ERROR',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.noCashuMintSelected'
+                            )
                         }
                     };
                 }
-                if (this.cashuStore.getPayReqError) {
+
+                await this.cashuStore.getPayReq(request.invoice);
+                const invoice = this.cashuStore.payReq;
+                const error = this.cashuStore.getPayReqError;
+
+                if (error) {
                     return {
                         result: undefined,
                         error: {
                             code: 'INVALID_INVOICE',
-                            message: this.cashuStore.getPayReqError
+                            message: error
+                        }
+                    };
+                }
+                if (!invoice) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVALID_INVOICE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.failedToDecodeInvoice'
+                            )
+                        }
+                    };
+                }
+                if (!invoice) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVALID_INVOICE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invoiceNotFound'
+                            )
+                        }
+                    };
+                }
+                if (invoice.isPaid) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVALID_INVOICE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invoiceAlreadyPaid'
+                            )
+                        }
+                    };
+                }
+                if (invoice.isExpired) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVALID_INVOICE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invoiceExpired'
+                            )
+                        }
+                    };
+                }
+                if (
+                    !invoice.getPaymentRequest ||
+                    invoice.getPaymentRequest.trim() === ''
+                ) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVALID_INVOICE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invalidPaymentRequest'
+                            )
+                        }
+                    };
+                }
+                let amount = 0;
+                if ((invoice as any).satoshis) {
+                    amount = (invoice as any).satoshis;
+                } else if ((invoice as any).millisatoshis) {
+                    amount = Number((invoice as any).millisatoshis) / 1000;
+                } else {
+                    amount = invoice.getAmount || 0;
+                }
+                console.log('amount', amount);
+                console.log('invoice.satoshis', (invoice as any).satoshis);
+                console.log(
+                    'invoice.millisatoshis',
+                    (invoice as any).millisatoshis
+                );
+                console.log('invoice.getAmount', invoice.getAmount);
+                if (!amount || amount <= 0) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVALID_INVOICE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invalidAmount'
+                            )
                         }
                     };
                 }
                 const cashuInvoice =
                     await this.cashuStore.payLnInvoiceFromEcash({
-                        amount: invoice?.getAmount.toString()
+                        amount: amount.toString()
                     });
                 if (cashuInvoice?.preimage) {
-                    this.showPaymentSentNotification(
-                        Number(invoice?.getAmount),
-                        connection.name
-                    );
+                    this.showPaymentSentNotification(amount, connection.name);
                 }
                 return {
                     result: {
                         preimage: cashuInvoice?.preimage,
-                        fees_paid: cashuInvoice?.fees_paid || 0
+                        fees_paid: (cashuInvoice?.fee || 0) * 1000 // Convert satoshis to millisatoshis
                     },
                     error: undefined
                 };
@@ -1317,7 +1394,6 @@ export default class NostrWalletConnectStore {
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
-        console.log('handleMakeInvoice', connection.id);
         try {
             if (this.cashuEnabled) {
                 try {
@@ -1330,22 +1406,75 @@ export default class NostrWalletConnectStore {
                             'Failed to create Cashu invoice - no payment request returned'
                         );
                     }
-                    this.setupCashuInvoicePaymentListener(
-                        connection.name,
-                        request.amount
-                    );
+                    let paymentHash = '';
+                    let descriptionHash = '';
+                    try {
+                        const decoded = bolt11.decode(
+                            cashuInvoice.paymentRequest
+                        );
+                        for (const tag of decoded.tags) {
+                            if (tag.tagName === 'payment_hash') {
+                                paymentHash = String(tag.data);
+                            } else if (tag.tagName === 'purpose_commit_hash') {
+                                descriptionHash = String(tag.data);
+                            }
+                        }
+                    } catch (decodeError) {
+                        console.warn(
+                            'Failed to decode bolt11 invoice for payment hash:',
+                            decodeError
+                        );
+                    }
+                    const quoteId = this.cashuStore.quoteId;
+                    let isPaid = false;
+                    if (quoteId) {
+                        try {
+                            const processedQuoteId =
+                                this.convertQuoteIdToHex(quoteId);
+                            const paymentCheck =
+                                await this.cashuStore.checkInvoicePaid(
+                                    processedQuoteId,
+                                    undefined,
+                                    false,
+                                    true
+                                );
+                            isPaid = paymentCheck?.isPaid || false;
+                        } catch (checkError) {
+                            console.warn(
+                                'Failed to check initial payment status:',
+                                checkError
+                            );
+                        }
+                    }
+
+                    if (!isPaid) {
+                        this.setupCashuInvoicePaymentListener(
+                            connection.name,
+                            request.amount,
+                            quoteId
+                        );
+                    } else {
+                        // Show notification for immediate payment
+                        this.showPaymentReceivedNotification(
+                            Math.floor(request.amount / 1000),
+                            connection.name
+                        );
+                    }
+
                     return {
                         result: {
                             type: 'incoming',
-                            state: 'settled',
+                            state: isPaid ? 'settled' : 'pending',
                             invoice: cashuInvoice.paymentRequest,
                             description: request.description || '',
-                            description_hash: '',
+                            description_hash: descriptionHash,
                             preimage: '',
-                            payment_hash: '',
+                            payment_hash: paymentHash,
                             amount: request.amount,
                             fees_paid: 0,
-                            settled_at: Math.floor(Date.now() / 1000),
+                            settled_at: isPaid
+                                ? Math.floor(Date.now() / 1000)
+                                : 0,
                             created_at: Math.floor(Date.now() / 1000),
                             expires_at:
                                 Math.floor(Date.now() / 1000) +
@@ -1365,7 +1494,6 @@ export default class NostrWalletConnectStore {
                 expiry: request.expiry || 3600
             });
 
-            // Set up a listener to detect when this invoice is paid
             this.setupInvoicePaymentListener(
                 invoice.r_hash,
                 connection.name,
@@ -1375,7 +1503,7 @@ export default class NostrWalletConnectStore {
             return {
                 result: {
                     type: 'incoming' as const,
-                    state: 'settled' as const,
+                    state: 'pending' as const, // pending for regular invoices
                     invoice: invoice.payment_request,
                     description: request.description || '',
                     description_hash: invoice.description_hash,
@@ -1383,7 +1511,7 @@ export default class NostrWalletConnectStore {
                     payment_hash: invoice.r_hash,
                     amount: request.amount,
                     fees_paid: 0,
-                    settled_at: Math.floor(Date.now() / 1000),
+                    settled_at: 0, // Will be set when payment is received
                     created_at: Math.floor(Date.now() / 1000),
                     expires_at:
                         Math.floor(Date.now() / 1000) + (request.expiry || 3600)
@@ -1408,88 +1536,117 @@ export default class NostrWalletConnectStore {
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
-        console.log('handleLookupInvoice', connection.id);
         try {
             let paymentHash = request.payment_hash!;
+            paymentHash = this.convertPaymentHashToHex(paymentHash);
+            if (this.cashuEnabled) {
+                const cashuInvoices = this.cashuStore.invoices || [];
+                const matchingInvoice = cashuInvoices.find((inv) => {
+                    try {
+                        const decoded = bolt11.decode(inv.getPaymentRequest);
+                        const invPaymentHash = decoded.tags.find(
+                            (tag) => tag.tagName === 'payment_hash'
+                        )?.data;
+                        return String(invPaymentHash) === paymentHash;
+                    } catch {
+                        return false;
+                    }
+                });
+                if (matchingInvoice) {
+                    if (
+                        this.cashuStore.selectedMintUrl !==
+                        matchingInvoice.mintUrl
+                    ) {
+                        await this.cashuStore.setSelectedMint(
+                            matchingInvoice.mintUrl
+                        );
+                    }
+                    let cashuInvoice;
+                    let isPaid = matchingInvoice.isPaid;
+                    let amtSat = matchingInvoice.getAmount || 0;
 
-            if (
-                typeof paymentHash === 'string' &&
-                paymentHash.startsWith('{')
-            ) {
-                try {
-                    let hashObj;
-                    if (paymentHash.includes('=>')) {
-                        const jsonString = paymentHash
-                            .replace(/=>/g, ':')
-                            .replace(/"(\d+)":/g, '$1:')
-                            .replace(/(\d+):/g, '"$1":');
-                        hashObj = JSON.parse(jsonString);
-                    } else {
-                        hashObj = JSON.parse(paymentHash);
+                    if (!isPaid) {
+                        cashuInvoice = await this.cashuStore.checkInvoicePaid(
+                            matchingInvoice.quote
+                        );
+                        console.log(
+                            'handleLookupInvoice - cashuInvoice:',
+                            cashuInvoice
+                        );
+                        isPaid = cashuInvoice?.isPaid || false;
+                        amtSat = cashuInvoice?.amtSat || 0;
                     }
 
-                    const hashArray = Object.keys(hashObj)
-                        .sort((a, b) => parseInt(a) - parseInt(b))
-                        .map((key) => hashObj[key]);
-                    paymentHash = Base64Utils.bytesToHex(hashArray);
-                } catch (error) {
-                    console.log(
-                        'Failed to convert hash payment hash to hex:',
-                        error
-                    );
-                }
-            } else if (
-                typeof paymentHash === 'string' &&
-                (paymentHash.includes('+') ||
-                    paymentHash.includes('/') ||
-                    paymentHash.includes('='))
-            ) {
-                try {
-                    paymentHash = Base64Utils.base64ToHex(paymentHash);
-                } catch (error) {
-                    console.log(
-                        'Failed to convert base64 payment hash to hex:',
-                        error
-                    );
-                }
-            }
-            const invoice = this.cashuEnabled
-                ? await this.cashuStore.checkInvoicePaid(paymentHash)
-                : await BackendUtils.lookupInvoice({
-                      r_hash: paymentHash
-                  });
-
-            return {
-                result: {
-                    type: 'incoming' as const,
-                    state:
-                        invoice.settled || invoice.state === 'SETTLED'
+                    const result = {
+                        type: 'incoming' as const,
+                        state: isPaid
                             ? ('settled' as const)
                             : ('pending' as const),
-                    invoice: invoice.payment_request || '',
-                    description: invoice.memo || '',
-                    description_hash: invoice.description_hash || '',
-                    preimage: invoice.r_preimage || '',
-                    payment_hash: invoice.r_hash || request.payment_hash!,
-                    amount: Math.floor(Number(invoice.value_msat) || 0),
-                    fees_paid: 0,
-                    settled_at:
-                        invoice.settle_date && invoice.settle_date !== '0'
-                            ? Math.floor(Number(invoice.settle_date))
+                        invoice:
+                            cashuInvoice?.paymentRequest ||
+                            matchingInvoice.getPaymentRequest,
+                        description: '',
+                        description_hash: '',
+                        preimage: '',
+                        payment_hash: request.payment_hash!,
+                        amount: Math.floor(amtSat * 1000),
+                        fees_paid: 0,
+                        settled_at: isPaid
+                            ? Math.floor(Date.now() / 1000)
                             : Math.floor(Date.now() / 1000),
-                    created_at: invoice.creation_date
-                        ? Math.floor(Number(invoice.creation_date))
+                        created_at: Math.floor(Date.now() / 1000),
+                        expires_at: Math.floor(Date.now() / 1000) + 3600
+                    };
+                    return {
+                        result,
+                        error: undefined
+                    };
+                } else {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'NOT_FOUND',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invoiceNotFound'
+                            )
+                        }
+                    };
+                }
+            } else {
+                const rawInvoice = await BackendUtils.lookupInvoice({
+                    r_hash: paymentHash
+                });
+                const invoice = new Invoice(rawInvoice);
+                const result = {
+                    type: 'incoming' as const,
+                    state: invoice.isPaid
+                        ? ('settled' as const)
+                        : invoice.isExpired
+                        ? ('failed' as const)
+                        : ('pending' as const),
+                    invoice: invoice.getPaymentRequest,
+                    description: invoice.getMemo || '',
+                    description_hash: invoice.getDescriptionHash,
+                    preimage: invoice.getRPreimage,
+                    payment_hash: invoice.getRHash || request.payment_hash!,
+                    amount: Math.floor(invoice.getAmount * 1000), // Convert to msats
+                    fees_paid: 0,
+                    settled_at: invoice.isPaid
+                        ? Math.floor(invoice.settleDate.getTime() / 1000)
                         : Math.floor(Date.now() / 1000),
-                    expires_at:
-                        invoice.creation_date && invoice.expiry
-                            ? Math.floor(
-                                  Number(invoice.creation_date) +
-                                      Number(invoice.expiry)
-                              )
-                            : Math.floor(Date.now() / 1000) + 3600
-                },
-                error: undefined
-            };
+                    created_at: Math.floor(
+                        invoice.getCreationDate.getTime() / 1000
+                    ),
+                    expires_at: invoice.isExpired
+                        ? Math.floor(Date.now() / 1000) + 3600
+                        : Math.floor(invoice.getCreationDate.getTime() / 1000) +
+                          (Number(invoice.expiry) || 3600)
+                };
+                return {
+                    result,
+                    error: undefined
+                };
+            }
         } catch (error) {
             return {
                 result: undefined,
@@ -1855,36 +2012,6 @@ export default class NostrWalletConnectStore {
         }
     };
 
-    private validateCashuInvoice(invoice: any): {
-        isValid: boolean;
-        error?: string;
-    } {
-        if (!invoice) {
-            return { isValid: false, error: 'Invoice not found' };
-        }
-        if (invoice.isPaid) {
-            return { isValid: false, error: 'Invoice already paid' };
-        }
-        if (invoice.isExpired) {
-            return { isValid: false, error: 'Invoice expired' };
-        }
-        if (
-            !invoice.getPaymentRequest ||
-            invoice.getPaymentRequest.trim() === ''
-        ) {
-            return { isValid: false, error: 'Invalid payment request' };
-        }
-        const amount = invoice.getAmount || invoice.amount;
-        if (!amount || amount <= 0) {
-            return { isValid: false, error: 'Invalid amount' };
-        }
-        if (!invoice.getRHash && !invoice.payment_hash) {
-            return { isValid: false, error: 'Missing payment hash' };
-        }
-
-        return { isValid: true };
-    }
-
     private showPaymentSentNotification(
         amountSats: number,
         connectionName: string
@@ -1958,8 +2085,10 @@ export default class NostrWalletConnectStore {
         // Check for invoice settlement every 3 seconds for up to 5 minutes
         const checkInterval = setInterval(async () => {
             try {
+                const processedPaymentHash =
+                    this.convertPaymentHashToHex(paymentHash);
                 const invoice = await BackendUtils.lookupInvoice({
-                    r_hash: paymentHash
+                    r_hash: processedPaymentHash
                 });
 
                 if (invoice.settled || invoice.state === 'SETTLED') {
@@ -1981,12 +2110,33 @@ export default class NostrWalletConnectStore {
 
     private setupCashuInvoicePaymentListener(
         connectionName: string,
-        amountMsats: number
+        amountMsats: number,
+        quoteId?: string
     ): void {
+        if (!quoteId) {
+            console.warn(
+                'setupCashuInvoicePaymentListener: No quote ID provided, skipping listener setup'
+            );
+            return;
+        }
+        console.log(
+            `setupCashuInvoicePaymentListener: Setting up listener for quote ID: ${quoteId}`
+        );
+        console.log(
+            `setupCashuInvoicePaymentListener: Quote ID type: ${typeof quoteId}, length: ${
+                quoteId?.length
+            }`
+        );
+
         const checkInterval = setInterval(async () => {
             try {
+                console.log(
+                    `Checking Cashu invoice status for quote ID: ${quoteId}`
+                );
+
+                const processedQuoteId = this.convertQuoteIdToHex(quoteId);
                 const invoice = await this.cashuStore.checkInvoicePaid(
-                    undefined,
+                    processedQuoteId,
                     undefined,
                     false,
                     true
@@ -1994,6 +2144,7 @@ export default class NostrWalletConnectStore {
 
                 if (invoice?.isPaid) {
                     clearInterval(checkInterval);
+                    console.log(`Cashu invoice paid for quote ID: ${quoteId}`);
                     this.showPaymentReceivedNotification(
                         Math.floor(amountMsats / 1000),
                         connectionName
@@ -2004,11 +2155,23 @@ export default class NostrWalletConnectStore {
                     'Error checking Cashu invoice settlement:',
                     error
                 );
+                if (
+                    error instanceof Error &&
+                    error.message.includes('encoding/hex')
+                ) {
+                    console.error(
+                        `Hex encoding error for quote ID: ${quoteId}`
+                    );
+                    clearInterval(checkInterval);
+                }
             }
         }, 3000);
 
         setTimeout(() => {
             clearInterval(checkInterval);
+            console.log(
+                `Cashu invoice listener timeout for quote ID: ${quoteId}`
+            );
         }, 5 * 60 * 1000);
     }
     private isRestrictedRelay(relayUrl: string): boolean {
@@ -2071,6 +2234,62 @@ export default class NostrWalletConnectStore {
 
     private shouldRetryRelay(relayUrl: string): boolean {
         const failures = this.relayFailureCounts.get(relayUrl) || 0;
-        return failures < 5; // Max 5 attempts per relay
+        return failures < 5;
+    }
+
+    private convertQuoteIdToHex(quoteId: string): string {
+        try {
+            if (
+                quoteId.includes('+') ||
+                quoteId.includes('/') ||
+                quoteId.includes('=')
+            ) {
+                return Base64Utils.base64ToHex(quoteId);
+            }
+        } catch (error) {
+            console.warn(
+                'Failed to convert quote ID from base64 to hex:',
+                error
+            );
+        }
+        return quoteId;
+    }
+
+    private convertPaymentHashToHex(paymentHash: string): string {
+        try {
+            if (
+                typeof paymentHash === 'string' &&
+                paymentHash.startsWith('{')
+            ) {
+                let hashObj;
+                if (paymentHash.includes('=>')) {
+                    const jsonString = paymentHash
+                        .replace(/=>/g, ':')
+                        .replace(/"(\d+)":/g, '$1:')
+                        .replace(/(\d+):/g, '"$1":');
+                    hashObj = JSON.parse(jsonString);
+                } else {
+                    hashObj = JSON.parse(paymentHash);
+                }
+
+                const hashArray = Object.keys(hashObj)
+                    .sort((a, b) => parseInt(a) - parseInt(b))
+                    .map((key) => hashObj[key]);
+                return Base64Utils.bytesToHex(hashArray);
+            }
+            if (
+                typeof paymentHash === 'string' &&
+                (paymentHash.includes('+') ||
+                    paymentHash.includes('/') ||
+                    paymentHash.includes('='))
+            ) {
+                return Base64Utils.base64ToHex(paymentHash);
+            }
+
+            return paymentHash;
+        } catch (error) {
+            console.warn('Failed to convert payment hash to hex:', error);
+            return paymentHash;
+        }
     }
 }
