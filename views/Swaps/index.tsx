@@ -1502,7 +1502,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             value:
                                                                 outputSats.toString() ||
                                                                 '0',
-                                                            expiry: '3600'
+                                                            expirySeconds:
+                                                                '3600'
                                                         }
                                                     );
 
