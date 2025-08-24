@@ -225,7 +225,7 @@ export default class RefundSwap extends React.Component<
                                                 {
                                                     memo: '',
                                                     value: '0',
-                                                    expiry: '3600'
+                                                    expirySeconds: '3600'
                                                 }
                                             );
                                             if (InvoicesStore.onChainAddress) {

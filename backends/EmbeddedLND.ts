@@ -110,7 +110,7 @@ export default class EmbeddedLND extends LND {
             amount: data.value ? Number(data.value) : undefined,
             amount_msat: data.value_msat ? Number(data.value_msat) : undefined,
             memo: data.memo,
-            expiry: data.expiry,
+            expiry: data.expiry_seconds,
             is_amp: data.is_amp,
             is_blinded: data.is_blinded,
             is_private: data.private,
