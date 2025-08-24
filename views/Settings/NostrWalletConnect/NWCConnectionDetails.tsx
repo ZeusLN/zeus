@@ -311,6 +311,12 @@ export default class NWCConnectionDetails extends React.Component<
                                         )}
                                         value={connection.pubkey}
                                     />
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'nostr.relayUrl'
+                                        )}
+                                        value={connection.relayUrl}
+                                    />
 
                                     {connection.description && (
                                         <KeyValue
