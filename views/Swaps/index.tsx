@@ -24,6 +24,7 @@ import {
 } from '../../components/SuccessErrorMessage';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import ModalBox from '../../components/ModalBox';
+import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -46,6 +47,7 @@ import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
 import FeeStore from '../../stores/FeeStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import LSPStore from '../../stores/LSPStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -70,6 +72,7 @@ interface SwapProps {
     SettingsStore: SettingsStore;
     FeeStore: FeeStore;
     NodeInfoStore: NodeInfoStore;
+    LSPStore: LSPStore;
 }
 
 interface SwapState {
@@ -92,6 +95,8 @@ interface SwapState {
     seedPhrase?: string[];
     isModalVisible: boolean;
     showRescueKeyBtn: boolean;
+    enableLSP: boolean;
+    flowLspNotConfigured: boolean;
 }
 
 @inject(
@@ -101,7 +106,8 @@ interface SwapState {
     'FiatStore',
     'SettingsStore',
     'FeeStore',
-    'NodeInfoStore'
+    'NodeInfoStore',
+    'LSPStore'
 )
 @observer
 export default class Swap extends React.PureComponent<SwapProps, SwapState> {
@@ -124,9 +130,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         lastUsedKey: 0,
         seedPhrase: [],
         isModalVisible: false,
-        showRescueKeyBtn: false
+        showRescueKeyBtn: false,
+        enableLSP: true,
+        flowLspNotConfigured: true
     };
 
+    private isNavigatingToLSPFees = false;
     private _unsubscribe?: () => void;
 
     checkIsValid = () => {
@@ -207,7 +216,17 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     };
 
     async UNSAFE_componentWillMount() {
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+
+        const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
+
         this.props.SwapStore.getSwapFees();
+        this.setState({
+            enableLSP: settings?.enableLSP,
+            flowLspNotConfigured
+        });
     }
 
     async componentDidMount() {
@@ -234,10 +253,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         initEccLib(ecc);
         SwapStore.ECPair = ECPairFactory(ecc);
 
-        const unsubBlur = this.props.navigation.addListener(
-            'blur',
-            this.resetFields
-        );
+        const unsubBlur = this.props.navigation.addListener('blur', () => {
+            if (this.isNavigatingToLSPFees) {
+                this.isNavigatingToLSPFees = false;
+                return;
+            }
+            this.resetFields();
+        });
         const unsubFocus = this.props.navigation.addListener(
             'focus',
             async () => {
@@ -404,6 +426,24 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         ) {
             this.checkIsValid();
         }
+
+        if (
+            (prevState.outputSats !== this.state.outputSats ||
+                prevState.enableLSP !== this.state.enableLSP) &&
+            this.state.enableLSP &&
+            !this.state.reverse &&
+            !this.state.flowLspNotConfigured
+        ) {
+            const { LSPStore } = this.props;
+            const outputSats = new BigNumber(this.state.outputSats);
+            if (outputSats.isGreaterThan(0)) {
+                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000);
+            } else {
+                LSPStore.resetFee();
+            }
+        } else if (prevState.enableLSP && !this.state.enableLSP) {
+            this.props.LSPStore.resetFee();
+        }
     }
 
     componentWillUnmount() {
@@ -536,7 +576,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             navigation,
             InvoicesStore,
             FiatStore,
-            SettingsStore
+            SettingsStore,
+            LSPStore
         } = this.props;
         const {
             reverse,
@@ -552,15 +593,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             fetchingInvoice,
             fee,
             feeSettingToggle,
-            showRescueKeyBtn
+            showRescueKeyBtn,
+            enableLSP,
+            flowLspNotConfigured
         } = this.state;
         const { subInfo, reverseInfo, loading, apiError, clearError } =
             SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
+        const { zeroConfFee } = LSPStore;
 
         const { fiatRates } = FiatStore;
-        const { settings } = SettingsStore;
+        const { settings, updateSettings } = SettingsStore;
         const { fiat } = settings;
 
         const fiatEntry =
@@ -785,7 +829,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             | number
                                                     ) => {
                                                         this.setState({
-                                                            error: ''
+                                                            error: '',
+                                                            invoice: ''
                                                         });
 
                                                         // remove commas
@@ -1003,7 +1048,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 | number
                                                         ) => {
                                                             this.setState({
-                                                                error: ''
+                                                                error: '',
+                                                                invoice: ''
                                                             });
 
                                                             // remove commas
@@ -1434,6 +1480,158 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         </View>
                                     </Row>
                                 </View>
+                                {BackendUtils.supportsFlowLSP() &&
+                                    !flowLspNotConfigured &&
+                                    !reverse && (
+                                        <View
+                                            style={{
+                                                paddingHorizontal: 20,
+                                                flexDirection: 'column',
+                                                marginBottom: 15
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent:
+                                                        'space-between',
+                                                    alignItems: 'center',
+                                                    marginBottom:
+                                                        zeroConfFee !==
+                                                            undefined &&
+                                                        invoice &&
+                                                        enableLSP
+                                                            ? 8
+                                                            : 0
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book',
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 16
+                                                    }}
+                                                    infoModalText={[
+                                                        localeString(
+                                                            'views.Receive.lspSwitchExplainer1'
+                                                        ),
+                                                        localeString(
+                                                            'views.Receive.lspSwitchExplainer2'
+                                                        )
+                                                    ]}
+                                                    infoModalAdditionalButtons={[
+                                                        {
+                                                            title: localeString(
+                                                                'general.learnMore'
+                                                            ),
+                                                            callback: () =>
+                                                                navigation.navigate(
+                                                                    'LspExplanationOverview'
+                                                                )
+                                                        }
+                                                    ]}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.LSP.enableLSP'
+                                                    )}
+                                                </Text>
+
+                                                <Switch
+                                                    value={enableLSP}
+                                                    onValueChange={async () => {
+                                                        this.setState({
+                                                            enableLSP:
+                                                                !enableLSP,
+                                                            invoice: '',
+                                                            error: ''
+                                                        });
+                                                        SwapStore.apiError = '';
+                                                        await updateSettings({
+                                                            enableLSP:
+                                                                !enableLSP
+                                                        });
+                                                    }}
+                                                />
+                                            </View>
+                                            {zeroConfFee !== undefined &&
+                                                enableLSP &&
+                                                invoice && (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            this.isNavigatingToLSPFees =
+                                                                true;
+                                                            navigation.navigate(
+                                                                new BigNumber(
+                                                                    zeroConfFee
+                                                                ).gt(1000)
+                                                                    ? 'LspExplanationFees'
+                                                                    : 'LspExplanationRouting'
+                                                            );
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'secondary'
+                                                                    ),
+                                                                borderRadius: 10,
+                                                                top: 10,
+                                                                padding: 15,
+                                                                borderWidth: 0.5
+                                                            }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Medium',
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    ),
+                                                                    marginBottom: 5
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    new BigNumber(
+                                                                        zeroConfFee
+                                                                    ).gt(1000)
+                                                                        ? 'views.Receive.lspExplainer'
+                                                                        : 'views.Receive.lspExplainerRouting'
+                                                                )}
+                                                            </Text>
+                                                            <Amount
+                                                                sats={
+                                                                    zeroConfFee
+                                                                }
+                                                                fixedUnits="sats"
+                                                            />
+                                                            <Text
+                                                                style={{
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Medium',
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontSize: 15,
+                                                                    top: 5,
+                                                                    textAlign:
+                                                                        'right'
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'general.tapToLearnMore'
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                )}
+                                        </View>
+                                    )}
+
                                 <View>
                                     <TextInput
                                         onChangeText={(text: string) => {
