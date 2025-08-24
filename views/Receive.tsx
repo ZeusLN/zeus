@@ -3390,7 +3390,11 @@ export default class Receive extends React.Component<
                                                             value:
                                                                 satAmount.toString() ||
                                                                 '0',
-                                                            expiry: expirySeconds,
+                                                            expiry:
+                                                                lspIsActive
+                                                                    ? LOCKED_EXPIRY_SECONDS
+                                                                    : expirySeconds ||
+                                                                      '3600',
                                                             lnurl,
                                                             ampInvoice:
                                                                 lspIsActive
