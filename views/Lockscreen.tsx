@@ -37,6 +37,7 @@ interface LockscreenProps {
             deletePin: boolean;
             deleteDuressPin: boolean;
             pendingNavigation?: { screen: string; params?: any };
+            shareIntentData?: { qrData?: string; base64Image?: string };
         }
     >;
 }
@@ -85,7 +86,23 @@ export default class Lockscreen extends React.Component<
     }
 
     proceed = (targetScreen?: string, navigationParams?: any) => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
+        const shareIntentData = route.params?.shareIntentData;
+
+        if (shareIntentData) {
+            if (SettingsStore.settings.selectNodeOnStartup) {
+                navigation.replace('Wallets', {
+                    fromStartup: true,
+                    shareIntentData
+                });
+            } else {
+                navigation.replace('Wallet', {
+                    shareIntentData
+                });
+            }
+            return;
+        }
+
         if (targetScreen) {
             navigation.popTo(targetScreen, { ...navigationParams });
         } else if (SettingsStore.settings.selectNodeOnStartup) {
@@ -258,7 +275,16 @@ export default class Lockscreen extends React.Component<
                 // Only handle wallet selection when NOT modifying security
                 this.resetAuthenticationAttempts();
 
-                navigation.replace('Wallets', { fromStartup: true });
+                const shareIntentData = route.params?.shareIntentData;
+
+                if (shareIntentData) {
+                    navigation.replace('Wallets', {
+                        fromStartup: true,
+                        shareIntentData
+                    });
+                } else {
+                    navigation.replace('Wallets', { fromStartup: true });
+                }
                 return;
             } else if (
                 !(

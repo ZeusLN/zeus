@@ -5,7 +5,6 @@ import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 import {
     processSharedQRImageFast,
-    setPendingShareIntent,
     getPendingShareIntent,
     hasPendingShareIntent
 } from './ShareIntentProcessor';
@@ -16,6 +15,8 @@ class LinkingUtils {
 
     handleInitialUrl = (navigation: StackNavigationProp<any, any>) =>
         Linking.getInitialURL().then(async (url) => {
+            this.shareIntentProcessed = false;
+
             if (url) {
                 this.handleDeepLink(url, navigation);
                 return;
@@ -34,20 +35,27 @@ class LinkingUtils {
                     if (shareIntentResult && shareIntentResult.success) {
                         this.shareIntentProcessed = true;
 
-                        const requiresAuthentication =
-                            settingsStore.loginRequired();
+                        const requiresAuth = settingsStore.loginRequired();
                         const requiresWalletSelection =
                             settingsStore.settings?.selectNodeOnStartup;
 
-                        if (requiresAuthentication || requiresWalletSelection) {
-                            setPendingShareIntent(shareIntentResult.params);
-                            return;
-                        } else {
-                            navigation.navigate(
-                                'ShareIntentProcessing',
-                                shareIntentResult.params
+                        // Clear the Android share intent immediately to prevent reprocessing
+                        try {
+                            await NativeModules.MobileTools.clearSharedIntent();
+                        } catch (clearError) {
+                            console.warn(
+                                '[LinkingUtils] Failed to clear share intent:',
+                                clearError
                             );
                         }
+
+                        // Always show processing screen immediately for share intents
+                        // Background sync and authentication will be handled by the processing screen
+                        navigation.navigate('ShareIntentProcessing', {
+                            ...shareIntentResult.params,
+                            requiresAuth,
+                            requiresWalletSelection
+                        });
                     }
                 }
             }
