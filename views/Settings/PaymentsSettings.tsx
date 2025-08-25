@@ -30,6 +30,8 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
+    autoPayEnabled: boolean;
+    autoPayThreshold: string;
     mounted?: boolean;
 }
 
@@ -47,6 +49,8 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
+        autoPayEnabled: false,
+        autoPayThreshold: '0',
         mounted: false
     };
 
@@ -65,6 +69,9 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
+            autoPayEnabled: settings?.payments?.autoPayEnabled || false,
+            autoPayThreshold:
+                settings?.payments?.autoPayThreshold?.toString() || '0',
             mounted: true
         });
     }
@@ -86,7 +93,9 @@ export default class PaymentsSettings extends React.Component<
             enableMempoolRates,
             timeoutSeconds,
             preferredMempoolRate,
-            slideToPayThreshold
+            slideToPayThreshold,
+            autoPayEnabled,
+            autoPayThreshold
         } = this.state;
         const { SettingsStore } = this.props;
         const { updateSettings, settings, implementation } = SettingsStore;
@@ -372,27 +381,119 @@ export default class PaymentsSettings extends React.Component<
                             />
                         </View>
                     </View>
-                    <View style={{ marginTop: 20 }}>
-                        <DropdownSetting
-                            title={localeString(
-                                'views.Settings.Payments.preferredMempoolRate'
-                            )}
-                            selectedValue={preferredMempoolRate}
-                            onValueChange={async (value: string) => {
-                                this.setState({
+
+                    <DropdownSetting
+                        title={localeString(
+                            'views.Settings.Payments.preferredMempoolRate'
+                        )}
+                        selectedValue={preferredMempoolRate}
+                        onValueChange={async (value: string) => {
+                            this.setState({
+                                preferredMempoolRate: value
+                            });
+                            await updateSettings({
+                                payments: {
+                                    ...settings.payments,
                                     preferredMempoolRate: value
-                                });
-                                await updateSettings({
-                                    payments: {
-                                        ...settings.payments,
-                                        preferredMempoolRate: value
-                                    }
-                                });
-                            }}
-                            values={MEMPOOL_RATES_KEYS}
-                            disabled={!enableMempoolRates}
-                        />
+                                }
+                            });
+                        }}
+                        values={MEMPOOL_RATES_KEYS}
+                        disabled={!enableMempoolRates}
+                    />
+
+                    {/* Auto-Pay Settings */}
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.enableQuickPayPaste'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 13,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 5
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.quickPayPasteExplainer'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                            <Switch
+                                value={autoPayEnabled}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        autoPayEnabled: !autoPayEnabled
+                                    });
+                                    await updateSettings({
+                                        payments: {
+                                            ...settings.payments,
+                                            autoPayEnabled: !autoPayEnabled
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
                     </View>
+
+                    {autoPayEnabled && (
+                        <View style={{ marginTop: 20 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.quickPayThreshold'
+                                ) + ' (sats)'}
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                value={autoPayThreshold.toString()}
+                                onChangeText={async (text: string) => {
+                                    const threshold = parseInt(text) || 0;
+                                    this.setState({
+                                        autoPayThreshold: threshold.toString()
+                                    });
+                                    await updateSettings({
+                                        payments: {
+                                            ...settings.payments,
+                                            autoPayThreshold: threshold
+                                        }
+                                    });
+                                }}
+                                style={{
+                                    marginTop: 10
+                                }}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 5,
+                                    fontStyle: 'italic'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.quickPayThresholdDescription'
+                                )}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </Screen>
         );
