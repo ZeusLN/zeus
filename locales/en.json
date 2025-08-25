@@ -214,6 +214,7 @@
     "components.QRCodeScanner.noCameraFound": "No camera device found",
     "components.QRCodeScanner.notRecognized": "QR code could not be recognized",
     "utils.shareIntent.noQRFound": "No QR code found in shared image",
+    "utils.shareIntent.invalidImage": "Invalid image shared. Please share a valid QR code image.",
     "utils.shareIntent.processingError": "Error processing shared image",
     "utils.shareIntent.processing": "Processing shared image...",
     "utils.shareIntent.extractingQR": "Extracting QR code from image",
