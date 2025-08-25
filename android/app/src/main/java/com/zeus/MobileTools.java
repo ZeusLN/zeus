@@ -5,9 +5,17 @@ import android.nfc.NfcAdapter;
 import android.nfc.NdefMessage;
 import android.nfc.tech.Ndef;
 import android.nfc.NdefRecord;
+import android.content.Intent;
+import android.net.Uri;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
 
 import java.util.Arrays;
 import java.io.UnsupportedEncodingException;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -78,5 +86,71 @@ class MobileTools extends ReactContextBaseJavaModule {
       }
     }
     promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void getSharedImageBase64(Promise promise) {
+    try {
+      Intent intent = getReactApplicationContext()
+          .getCurrentActivity().getIntent();
+
+      android.util.Log.d(TAG, "Intent action: " + intent.getAction());
+      android.util.Log.d(TAG, "Intent type: " + intent.getType());
+
+      if (Intent.ACTION_SEND.equals(intent.getAction()) && 
+          intent.getType() != null && intent.getType().startsWith("image/")) {
+        
+        Uri imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        android.util.Log.d(TAG, "Image URI: " + imageUri);
+        
+        if (imageUri != null) {
+          InputStream inputStream = getReactApplicationContext()
+              .getContentResolver().openInputStream(imageUri);
+          
+          if (inputStream != null) {
+            Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
+            inputStream.close();
+            
+            if (bitmap != null) {
+              ByteArrayOutputStream baos = new ByteArrayOutputStream();
+              bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+              byte[] imageBytes = baos.toByteArray();
+              String base64String = Base64.encodeToString(imageBytes, Base64.DEFAULT);
+              
+              android.util.Log.d(TAG, "Successfully converted image to base64, length: " + base64String.length());
+              promise.resolve(base64String);
+              return;
+            }
+          }
+        }
+      }
+      android.util.Log.d(TAG, "No valid shared image found");
+      promise.resolve(null);
+    } catch (Exception e) {
+      android.util.Log.e(TAG, "Error processing shared image", e);
+      promise.reject("SHARE_ERROR", e.getMessage());
+    }
+  }
+
+  @ReactMethod
+  public void clearSharedIntent(Promise promise) {
+    try {
+      Intent intent = getReactApplicationContext()
+          .getCurrentActivity().getIntent();
+      
+      android.util.Log.d(TAG, "Clearing shared intent data");
+      
+      // Clear the intent action and extras to prevent reprocessing
+      if (Intent.ACTION_SEND.equals(intent.getAction())) {
+        intent.setAction(null);
+        intent.removeExtra(Intent.EXTRA_STREAM);
+        android.util.Log.d(TAG, "Shared intent data cleared");
+      }
+      
+      promise.resolve(true);
+    } catch (Exception e) {
+      android.util.Log.e(TAG, "Error clearing shared intent", e);
+      promise.reject("CLEAR_ERROR", e.getMessage());
+    }
   }
 }

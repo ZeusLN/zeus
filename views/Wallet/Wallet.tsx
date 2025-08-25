@@ -92,6 +92,7 @@ interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
     navigation: StackNavigationProp<any, any>;
+    route?: any;
     AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     CashuStore: CashuStore;
@@ -117,6 +118,7 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
+    pendingShareIntent?: { qrData?: string; base64Image?: string };
 }
 
 @inject(
@@ -153,7 +155,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         super(props);
         this.state = {
             unlocked: false,
-            initialLoad: true
+            initialLoad: true,
+            pendingShareIntent: undefined
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -204,7 +207,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.handleBackButton.bind(this)
         );
 
-        const { SettingsStore } = this.props;
+        const { SettingsStore, route } = this.props;
+
+        const shareIntentData = route?.params?.shareIntentData;
+        if (shareIntentData) {
+            this.setState({ pendingShareIntent: shareIntentData });
+            if (route.params) {
+                delete route.params.shareIntentData;
+            }
+        }
 
         if (
             this.state.initialLoad ||
@@ -335,6 +346,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 navigation.navigate('IntroSplash');
             }
         });
+
+        setTimeout(() => {
+            this.processPendingShareIntent();
+        }, 100);
     }
 
     async fetchData() {
@@ -617,6 +632,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);
+
+            try {
+                LinkingUtils.processPendingShareIntent(this.props.navigation);
+            } catch (error) {
+                console.error('Error processing pending share intent:', error);
+            }
         }
 
         if (BackendUtils.supportsFlowLSP()) {
@@ -657,7 +678,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         SettingsStore.fetchLock = false;
+
+        // Process pending share intent after wallet is fully loaded and synced
+        this.processPendingShareIntent();
     }
+
+    processPendingShareIntent = () => {
+        if (this.state.pendingShareIntent) {
+            const { navigation } = this.props;
+            const shareIntentData = this.state.pendingShareIntent;
+
+            this.setState({ pendingShareIntent: undefined });
+
+            navigation.navigate('ShareIntentProcessing', shareIntentData);
+        }
+    };
 
     handleOpenURL = (event: any) => {
         const { navigation } = this.props;
