@@ -37,6 +37,7 @@ import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { calculateTaxSats } from '../../utils/PosUtils';
 
 import { version } from './../../package.json';
 
@@ -819,11 +820,6 @@ export default class StandalonePosPane extends React.PureComponent<
                                     onPress={async () => {
                                         if (!currentOrder) return;
 
-                                        console.log(
-                                            'currentOrder->',
-                                            currentOrder
-                                        );
-
                                         await PosStore.saveStandaloneOrder(
                                             currentOrder
                                         );
@@ -879,105 +875,13 @@ export default class StandalonePosPane extends React.PureComponent<
                                                       )
                                                       .toFixed(0);
 
-                                        const calculateTaxSats = () => {
-                                            const hasIndividualTaxRates =
-                                                lineItems?.some(
-                                                    (item: any) =>
-                                                        item.taxPercentage
-                                                );
-
-                                            if (hasIndividualTaxRates) {
-                                                let totalTaxSats =
-                                                    new BigNumber(0);
-                                                lineItems?.forEach(
-                                                    (item: any) => {
-                                                        const itemTaxRate =
-                                                            item.taxPercentage ||
-                                                            taxPercentage ||
-                                                            '0';
-
-                                                        const validTaxRate =
-                                                            itemTaxRate || '0';
-
-                                                        const fiatPriced =
-                                                            item
-                                                                .base_price_money
-                                                                .amount > 0;
-                                                        let itemSubtotalSats: string;
-
-                                                        if (fiatPriced) {
-                                                            let fiatAmount =
-                                                                new BigNumber(
-                                                                    item.base_price_money.amount
-                                                                ).multipliedBy(
-                                                                    item.quantity
-                                                                );
-                                                            itemSubtotalSats =
-                                                                fiatAmount
-                                                                    .div(rate)
-                                                                    .multipliedBy(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .integerValue(
-                                                                        BigNumber.ROUND_HALF_UP
-                                                                    )
-                                                                    .toFixed(0);
-                                                        } else {
-                                                            itemSubtotalSats =
-                                                                new BigNumber(
-                                                                    item
-                                                                        .base_price_money
-                                                                        .sats ||
-                                                                        0
-                                                                )
-                                                                    .multipliedBy(
-                                                                        item.quantity
-                                                                    )
-                                                                    .toFixed(0);
-                                                        }
-
-                                                        const itemTaxSats =
-                                                            new BigNumber(
-                                                                itemSubtotalSats
-                                                            )
-                                                                .multipliedBy(
-                                                                    new BigNumber(
-                                                                        validTaxRate
-                                                                    )
-                                                                )
-                                                                .dividedBy(100)
-                                                                .integerValue(
-                                                                    BigNumber.ROUND_HALF_UP
-                                                                )
-                                                                .toFixed(0);
-
-                                                        totalTaxSats =
-                                                            totalTaxSats.plus(
-                                                                itemTaxSats
-                                                            );
-                                                    }
-                                                );
-
-                                                return totalTaxSats.toFixed(0);
-                                            } else {
-                                                return new BigNumber(
-                                                    subTotalSats || 0
-                                                )
-                                                    .multipliedBy(
-                                                        new BigNumber(
-                                                            taxPercentage || '0'
-                                                        )
-                                                    )
-                                                    .dividedBy(100)
-                                                    .integerValue(
-                                                        BigNumber.ROUND_HALF_UP
-                                                    )
-                                                    .toFixed(0);
-                                            }
-                                        };
-
                                         const taxSats = Number(
-                                            calculateTaxSats()
+                                            calculateTaxSats(
+                                                lineItems,
+                                                subTotalSats,
+                                                rate,
+                                                taxPercentage
+                                            )
                                         );
 
                                         const totalSats = new BigNumber(
