@@ -448,6 +448,7 @@ export default class PaymentRequest extends React.Component<
             ChannelsStore,
             LnurlPayStore,
             SettingsStore,
+            NodeInfoStore,
             navigation
         } = this.props;
         const {
@@ -1320,95 +1321,99 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                     </>
                                 )}
-                                {enableDonations && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                donationsToggle:
-                                                    !donationsToggle
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10,
-                                                paddingHorizontal:
-                                                    donationAmount == 0
-                                                        ? 0
-                                                        : !donationsToggle
-                                                        ? 30
-                                                        : 0
+                                {enableDonations &&
+                                    NodeInfoStore!.nodeInfo.isMainNet && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({
+                                                    donationsToggle:
+                                                        !donationsToggle
+                                                });
                                             }}
                                         >
-                                            <Row justify="space-around">
-                                                <View style={{ width: '95%' }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.PaymentRequest.donateToZEUS'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {donationsToggle ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
+                                            <View
+                                                style={{
+                                                    marginTop: 10,
+                                                    marginBottom: 10,
+                                                    paddingHorizontal:
+                                                        donationAmount == 0
+                                                            ? 0
+                                                            : !donationsToggle
+                                                            ? 30
+                                                            : 0
+                                                }}
+                                            >
+                                                <Row justify="space-around">
                                                     <View
-                                                        style={{
-                                                            flexDirection:
-                                                                'row',
-                                                            justifyContent:
-                                                                'center'
-                                                        }}
+                                                        style={{ width: '95%' }}
                                                     >
-                                                        {donationAmount > 0 && (
-                                                            <Row
-                                                                style={{
-                                                                    marginRight: 6
-                                                                }}
-                                                            >
-                                                                <Text
-                                                                    style={{
-                                                                        color: themeColor(
-                                                                            'highlight'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {`${numberWithCommas(
-                                                                        donationAmount
-                                                                    )} ${localeString(
-                                                                        'general.sats'
-                                                                    )}`}
-                                                                </Text>
-                                                                <Text
-                                                                    style={{
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {` (${donationPercentage}%)`}
-                                                                </Text>
-                                                            </Row>
-                                                        )}
-                                                        <CaretRight
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.PaymentRequest.donateToZEUS'
+                                                            )}
+                                                        />
+                                                    </View>
+                                                    {donationsToggle ? (
+                                                        <CaretDown
                                                             fill={themeColor(
                                                                 'text'
                                                             )}
                                                             width="20"
                                                             height="20"
                                                         />
-                                                    </View>
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
+                                                    ) : (
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+                                                                justifyContent:
+                                                                    'center'
+                                                            }}
+                                                        >
+                                                            {donationAmount >
+                                                                0 && (
+                                                                <Row
+                                                                    style={{
+                                                                        marginRight: 6
+                                                                    }}
+                                                                >
+                                                                    <Text
+                                                                        style={{
+                                                                            color: themeColor(
+                                                                                'highlight'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {`${numberWithCommas(
+                                                                            donationAmount
+                                                                        )} ${localeString(
+                                                                            'general.sats'
+                                                                        )}`}
+                                                                    </Text>
+                                                                    <Text
+                                                                        style={{
+                                                                            color: themeColor(
+                                                                                'secondaryText'
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        {` (${donationPercentage}%)`}
+                                                                    </Text>
+                                                                </Row>
+                                                            )}
+                                                            <CaretRight
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="20"
+                                                                height="20"
+                                                            />
+                                                        </View>
+                                                    )}
+                                                </Row>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
                                 {donationsToggle && enableDonations && (
                                     <>
                                         <Row justify="center">
