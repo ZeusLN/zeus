@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
 import SettingsStore, { MEMPOOL_RATES_KEYS } from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -21,6 +22,7 @@ import AmountInput from '../../components/AmountInput';
 interface PaymentsSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface PaymentsSettingsState {
@@ -31,12 +33,12 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
-    mounted?: boolean;
     enableDonations: boolean;
     donationPercentage: number;
+    mounted?: boolean;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore')
 @observer
 export default class PaymentsSettings extends React.Component<
     PaymentsSettingsProps,
@@ -50,9 +52,9 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
-        mounted: false,
         enableDonations: false,
-        donationPercentage: 5
+        donationPercentage: 5,
+        mounted: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -70,10 +72,10 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
-            mounted: true,
             enableDonations: settings?.payments?.enableDonations || false,
             donationPercentage:
-                settings?.payments?.defaultDonationPercentage || 5
+                settings?.payments?.defaultDonationPercentage || 5,
+            mounted: true
         });
     }
 
@@ -98,7 +100,10 @@ export default class PaymentsSettings extends React.Component<
             enableDonations,
             donationPercentage
         } = this.state;
-        const { SettingsStore } = this.props;
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { nodeInfo } = NodeInfoStore;
+        const { isMainNet } = nodeInfo;
+
         const { updateSettings, settings, implementation } = SettingsStore;
 
         return (
@@ -403,42 +408,46 @@ export default class PaymentsSettings extends React.Component<
                             disabled={!enableMempoolRates}
                         />
                     </View>
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            marginTop: 16,
-                            marginBottom: 16
-                        }}
-                    >
-                        <Text
+                    {isMainNet && (
+                        <View
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('secondaryText'),
-                                flex: 1
+                                flexDirection: 'row',
+                                marginTop: 16,
+                                marginBottom: 16
                             }}
                         >
-                            {localeString(
-                                'views.PaymentRequest.enableDonations'
-                            )}
-                        </Text>
-                        <View>
-                            <Switch
-                                value={enableDonations}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        enableDonations: !enableDonations
-                                    });
-                                    await updateSettings({
-                                        payments: {
-                                            ...settings.payments,
-                                            enableDonations: !enableDonations
-                                        }
-                                    });
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('secondaryText'),
+                                    flex: 1
                                 }}
-                            />
+                            >
+                                {localeString(
+                                    'views.PaymentRequest.enableDonations'
+                                )}
+                            </Text>
+                            <View>
+                                <Switch
+                                    value={enableDonations}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            enableDonations: !enableDonations
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                enableDonations:
+                                                    !enableDonations
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
                         </View>
-                    </View>
-                    {enableDonations && (
+                    )}
+
+                    {enableDonations && isMainNet && (
                         <>
                             <View
                                 style={{
