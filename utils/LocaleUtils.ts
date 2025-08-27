@@ -160,7 +160,7 @@ export const formatInlineNoun = (text: string): string => {
     return text;
 };
 
-export const bridgeJavaStrings = async (locale: string) => {
+export const bridgeJavaStrings = (locale: string) => {
     const neededTranslations: { [key: string]: string } = {};
     JAVA_LAYER_STRINGS.forEach((key) => {
         neededTranslations[key] = localeString(key);

@@ -69,7 +69,6 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
-    Settings,
     INTERFACE_KEYS
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
@@ -87,6 +86,8 @@ import Temple from '../../assets/images/SVG/Temple.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
 
 import { version } from '../../package.json';
+
+const Tab = createBottomTabNavigator();
 
 interface WalletProps {
     enterSetup: any;
@@ -117,6 +118,7 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
+    loading: boolean;
 }
 
 @inject(
@@ -153,7 +155,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         super(props);
         this.state = {
             unlocked: false,
-            initialLoad: true
+            initialLoad: true,
+            loading: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -269,16 +272,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
-    async startListeners() {
+    startListeners() {
         Linking.addEventListener('url', this.handleOpenURL);
     }
 
     async getSettingsAndNavigate() {
-        const { SettingsStore, navigation } = this.props;
-        const { posStatus, setPosStatus, initialStart } = SettingsStore;
+        try {
+            this.setState({ loading: true });
+            const { SettingsStore, navigation } = this.props;
+            const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
-        // This awaits on settings, so should await on Tor being bootstrapped before making requests
-        await SettingsStore.getSettings().then(async (settings: Settings) => {
+            // This awaits on settings, so should await on Tor being bootstrapped before making requests
+            const settings = await SettingsStore.getSettings();
             if (Platform.OS === 'android') {
                 const locale = settings.locale || 'en';
                 bridgeJavaStrings(locale);
@@ -306,7 +311,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     this.startListeners();
                     this.setState({ unlocked: true });
                 }
-                this.fetchData();
+                await this.fetchData();
             } else if (loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (
@@ -330,11 +335,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     this.startListeners();
                     this.setState({ unlocked: true });
                 }
-                this.fetchData();
+                await this.fetchData();
             } else {
                 navigation.navigate('IntroSplash');
             }
-        });
+        } finally {
+            this.setState({ loading: false });
+        }
     }
 
     async fetchData() {
@@ -667,7 +674,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     };
 
     render() {
-        const Tab = createBottomTabNavigator();
+        const { loading } = this.state;
         const {
             NodeInfoStore,
             BalanceStore,
@@ -720,6 +727,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         CashuStore={CashuStore}
                         SettingsStore={SettingsStore}
                         SyncStore={SyncStore}
+                        loading={loading}
                     />
 
                     {error && (
@@ -837,7 +845,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const KeypadScreen = () => {
             return (
                 <Screen>
-                    <KeypadPane navigation={navigation} />
+                    <KeypadPane navigation={navigation} loading={loading} />
                 </Screen>
             );
         };
@@ -1020,7 +1028,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     zIndex: 1
                                 }}
                             >
-                                <WalletHeader navigation={navigation} loading />
+                                <WalletHeader
+                                    navigation={navigation}
+                                    connecting
+                                />
                             </View>
                             <View
                                 style={{
