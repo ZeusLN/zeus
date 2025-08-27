@@ -76,75 +76,97 @@ const JAVA_LAYER_STRINGS = [
     'androidNotification.shutdown'
 ];
 
-export function localeString(localeString: string): any {
+export function localeString(
+    localeString: string,
+    substitutions?: { [key: string]: string | number }
+): any {
     const { settings } = settingsStore;
     const { locale } = settings;
 
-    switch (locale) {
-        case 'es':
-            return Spanish[localeString] || English[localeString];
-        case 'pt':
-            return BrazilianPortuguese[localeString] || English[localeString];
-        case 'tr':
-            return Turkish[localeString] || English[localeString];
-        case 'sk':
-            return Slovak[localeString] || English[localeString];
-        case 'cs':
-            return Czech[localeString] || English[localeString];
-        case 'de':
-            return German[localeString] || English[localeString];
-        case 'el':
-            return Greek[localeString] || English[localeString];
-        case 'nb':
-            return NorwegianBokmal[localeString] || English[localeString];
-        case 'sv':
-            return Swedish[localeString] || English[localeString];
-        case 'th':
-            return Thai[localeString] || English[localeString];
-        case 'uk':
-            return Ukranian[localeString] || English[localeString];
-        case 'ro':
-            return Romanian[localeString] || English[localeString];
-        case 'pl':
-            return Polish[localeString] || English[localeString];
-        case 'fa':
-            return Persian[localeString] || English[localeString];
-        case 'fr':
-            return French[localeString] || English[localeString];
-        case 'nl':
-            return Dutch[localeString] || English[localeString];
-        case 'hu':
-            return Hungarian[localeString] || English[localeString];
-        case 'sw':
-            return Swahili[localeString] || English[localeString];
-        case 'zh':
-            return SimplifiedChinese[localeString] || English[localeString];
-        case 'sl':
-            return Slovenian[localeString] || English[localeString];
-        case 'ru':
-            return Russian[localeString] || English[localeString];
-        case 'fi':
-            return Finnish[localeString] || English[localeString];
-        case 'it':
-            return Italian[localeString] || English[localeString];
-        case 'vi':
-            return Vietnamese[localeString] || English[localeString];
-        case 'jp':
-            return Japanese[localeString] || English[localeString];
-        case 'he':
-            return Hebrew[localeString] || English[localeString];
-        case 'hr':
-            return Croatian[localeString] || English[localeString];
-        case 'ko':
-            return Korean[localeString] || English[localeString];
-        case 'hi_IN':
-            return Hindi[localeString] || English[localeString];
-        case 'zh_TW':
-            return TaiwaneseMandarin[localeString] || English[localeString];
+    let translation: string;
+    const getString = () => {
+        switch (locale) {
+            case 'es':
+                return Spanish[localeString] || English[localeString];
+            case 'pt':
+                return (
+                    BrazilianPortuguese[localeString] || English[localeString]
+                );
+            case 'tr':
+                return Turkish[localeString] || English[localeString];
+            case 'sk':
+                return Slovak[localeString] || English[localeString];
+            case 'cs':
+                return Czech[localeString] || English[localeString];
+            case 'de':
+                return German[localeString] || English[localeString];
+            case 'el':
+                return Greek[localeString] || English[localeString];
+            case 'nb':
+                return NorwegianBokmal[localeString] || English[localeString];
+            case 'sv':
+                return Swedish[localeString] || English[localeString];
+            case 'th':
+                return Thai[localeString] || English[localeString];
+            case 'uk':
+                return Ukranian[localeString] || English[localeString];
+            case 'ro':
+                return Romanian[localeString] || English[localeString];
+            case 'pl':
+                return Polish[localeString] || English[localeString];
+            case 'fa':
+                return Persian[localeString] || English[localeString];
+            case 'fr':
+                return French[localeString] || English[localeString];
+            case 'nl':
+                return Dutch[localeString] || English[localeString];
+            case 'hu':
+                return Hungarian[localeString] || English[localeString];
+            case 'sw':
+                return Swahili[localeString] || English[localeString];
+            case 'zh':
+                return SimplifiedChinese[localeString] || English[localeString];
+            case 'sl':
+                return Slovenian[localeString] || English[localeString];
+            case 'ru':
+                return Russian[localeString] || English[localeString];
+            case 'fi':
+                return Finnish[localeString] || English[localeString];
+            case 'it':
+                return Italian[localeString] || English[localeString];
+            case 'vi':
+                return Vietnamese[localeString] || English[localeString];
+            case 'jp':
+                return Japanese[localeString] || English[localeString];
+            case 'he':
+                return Hebrew[localeString] || English[localeString];
+            case 'hr':
+                return Croatian[localeString] || English[localeString];
+            case 'ko':
+                return Korean[localeString] || English[localeString];
+            case 'hi_IN':
+                return Hindi[localeString] || English[localeString];
+            case 'zh_TW':
+                return TaiwaneseMandarin[localeString] || English[localeString];
 
-        default:
-            return English[localeString];
+            default:
+                return English[localeString];
+        }
+    };
+
+    translation = getString();
+
+    if (substitutions && translation) {
+        Object.keys(substitutions).forEach((subKey) => {
+            const regex = new RegExp(`{{${subKey}}}`, 'g');
+            translation = translation.replace(
+                regex,
+                String(substitutions[subKey])
+            );
+        });
     }
+
+    return translation;
 }
 
 export const languagesWithNounCapitalization = ['de', 'pl', 'cs', 'sk'];
