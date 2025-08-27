@@ -286,7 +286,7 @@ export default class CLNRest {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
             amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
-            expiry: Number(data.expiry),
+            expiry: Number(data.expiry_seconds),
             exposeprivatechannels: true
         });
 

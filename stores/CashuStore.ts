@@ -1731,7 +1731,7 @@ export default class CashuStore {
                 )}${decoded.memo ? `: ${decoded.memo}` : ''}`;
 
                 const invoiceParams = {
-                    expiry: '3600',
+                    expirySeconds: '3600',
                     routeHints: true,
                     noLsp: true
                 };
@@ -1980,7 +1980,7 @@ export default class CashuStore {
                 'stores.CashuStore.autoSweep'
             )} ${mintUrl}`;
             const invoiceParams = {
-                expiry: '3600',
+                expirySeconds: '3600',
                 routeHints: true,
                 noLsp: true
             };
