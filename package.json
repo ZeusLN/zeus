@@ -145,7 +145,7 @@
     "readable-stream": "1.0.33",
     "rn-qr-generator": "1.4.3",
     "scrypt-js": "3.0.1",
-    "sha.js": "2.4.11",
+    "sha.js": "2.4.12",
     "socket.io-client": "4.7.2",
     "stream-browserify": "1.0.0",
     "text-encoding": "0.7.0",
