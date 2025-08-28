@@ -64,6 +64,7 @@ import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 import OnChainAddresses from './views/OnChainAddresses';
+import DonateToZEUS from './views/DonateToZEUS';
 
 import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
@@ -1211,6 +1212,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             RedeemWithdrawalRequest
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="DonateToZEUS" // @ts-ignore:next-line
+                                                        component={DonateToZEUS}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

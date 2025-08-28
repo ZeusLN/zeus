@@ -59,6 +59,10 @@ export default class NodeInfo extends BaseModel {
         );
     }
 
+    @computed public get isMainNet(): boolean {
+        return !this.isTestNet && !this.isRegTest && !this.isSigNet;
+    }
+
     @computed public get currentBlockHeight(): Number {
         return this.block_height || this.blockheight || 0;
     }
