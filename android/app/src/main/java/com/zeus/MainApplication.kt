@@ -29,6 +29,7 @@ class MainApplication : Application(), ReactApplication {
                 add(LndMobileToolsPackage())
                 add(LndMobileScheduledSyncPackage())
                 add(LncPackage())
+                add(NostrConnectPackage())
                 // add(new ZeusTorPackage());
             }
 
