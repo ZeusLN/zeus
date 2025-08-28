@@ -111,7 +111,8 @@ export default class CashuSendingLightning extends React.Component<
             payReq,
             paymentPreimage,
             paymentErrorMsg,
-            noteKey
+            noteKey,
+            paymentDuration
         } = CashuStore;
         const payment_hash = payReq && payReq.payment_hash;
         const { storedNotes } = this.state;
@@ -181,6 +182,26 @@ export default class CashuSendingLightning extends React.Component<
                                                 'views.SendingLightning.success'
                                             )}
                                         </Text>
+                                        {paymentDuration !== undefined && (
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    marginTop: 10,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {`${localeString(
+                                                    'views.SendingLightning.paymentDuration'
+                                                )} ${paymentDuration.toFixed(
+                                                    2
+                                                )} ${localeString(
+                                                    'models.Invoice.seconds'
+                                                )}`}
+                                            </Text>
+                                        )}
                                     </View>
                                 </>
                             )}

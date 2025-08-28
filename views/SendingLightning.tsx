@@ -172,7 +172,8 @@ export default class SendingLightning extends React.Component<
             payment_preimage,
             payment_error,
             isIncomplete,
-            noteKey
+            noteKey,
+            paymentDuration
         } = TransactionsStore;
         const { implementation } = SettingsStore;
         const { storedNotes, currentPayment } = this.state;
@@ -251,6 +252,28 @@ export default class SendingLightning extends React.Component<
                                                 'views.SendingLightning.success'
                                             )}
                                         </Text>
+                                        {paymentDuration !== null && (
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    marginTop: 10,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.SendingLightning.paymentSettled',
+                                                    {
+                                                        seconds:
+                                                            paymentDuration.toFixed(
+                                                                2
+                                                            )
+                                                    }
+                                                )}
+                                            </Text>
+                                        )}
                                     </View>
                                 </>
                             )}
