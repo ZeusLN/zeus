@@ -262,7 +262,7 @@ export default class WIFSweeper extends React.Component<
                                                 value:
                                                     SweepStore.onChainBalance.toString() ??
                                                     '10',
-                                                expiry: '3600'
+                                                expirySeconds: '3600'
                                             }
                                         );
                                         if (InvoicesStore.onChainAddress) {

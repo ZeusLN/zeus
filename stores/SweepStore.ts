@@ -9,6 +9,7 @@ import ecc from '../zeus_modules/noble_ecc';
 
 import NodeInfoStore from './NodeInfoStore';
 import wifUtils, { AddressType } from '../utils/WIFUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 export default class SweepStore {
     @observable loading: boolean = false;
@@ -54,7 +55,7 @@ export default class SweepStore {
             `${wifUtils.baseUrl(network)}/address/${address}/utxo`
         );
         if (!res.ok) {
-            throw new Error(`Error fetching UTXOs`);
+            throw new Error(localeString(`Error fetching UTXOs`));
         }
 
         const utxos = await res.json();
@@ -107,7 +108,7 @@ export default class SweepStore {
             }
         }
 
-        throw new Error('No UTXOs found for the given private key.');
+        throw new Error(localeString('views.Sweep.noUtxosFound'));
     }
 
     @action
@@ -149,7 +150,11 @@ export default class SweepStore {
                         `${wifUtils.baseUrl(networkStr)}/tx/${txid}/hex`
                     );
                     if (!res.ok)
-                        throw new Error(`Failed to fetch tx hex for ${txid}`);
+                        throw new Error(
+                            localeString(
+                                `views.Sweep.failedToFetchTxHex:${txid}`
+                            )
+                        );
 
                     const rawTxHex = await res.text();
 
@@ -170,16 +175,19 @@ export default class SweepStore {
                     );
                     if (!res.ok)
                         throw new Error(
-                            `Failed to fetch tx details for ${txid}`
+                            localeString(
+                                `views.Sweep.failedToFetchTxDetails:${txid}`
+                            )
                         );
 
                     const tx = await res.json();
-                    console.log(tx);
                     const output = tx.vout[vout];
 
                     if (!output)
                         throw new Error(
-                            `Output ${vout} not found in tx ${txid}`
+                            localeString(
+                                `views.Sweep.outputNotFound:${vout}:${txid}`
+                            )
                         );
 
                     const scriptPubKeyHex = output.scriptpubkey;
@@ -188,7 +196,9 @@ export default class SweepStore {
                     const privKeyBuf = Buffer.from(this.privateKey, 'hex');
                     const fullPub = ecc.pointFromScalar(privKeyBuf, true);
                     if (!fullPub) {
-                        throw new Error('Failed to derive public key');
+                        throw new Error(
+                            localeString('views.Sweep.failedToDerivePubkey')
+                        );
                     }
                     const pubkey = Buffer.from(fullPub);
 
@@ -214,7 +224,9 @@ export default class SweepStore {
                     );
                     if (!res.ok)
                         throw new Error(
-                            `Failed to fetch tx details for ${txid}`
+                            localeString(
+                                `views.Sweep.failedToFetchTxDetails:${txid}`
+                            )
                         );
 
                     const tx = await res.json();
@@ -222,7 +234,9 @@ export default class SweepStore {
 
                     if (!output)
                         throw new Error(
-                            `Output index ${vout} not found in tx ${txid}`
+                            localeString(
+                                `views.Sweep.outputIndexNotFound:${vout}:${txid}`
+                            )
                         );
 
                     const value = Math.round(output.value);
@@ -245,35 +259,53 @@ export default class SweepStore {
 
                 const fullPub = ecc.pointFromScalar(privKeyBuf, true);
                 if (!fullPub) {
-                    throw new Error('Failed to derive Taproot pubkey');
+                    throw new Error(
+                        localeString('views.Sweep.failedToDeriveTaprootPubkey')
+                    );
                 }
 
-                const internalXOnly = Buffer.from(
-                    toXOnly(Buffer.from(fullPub))
-                );
-                this.tapInternalKey = internalXOnly;
+                const internalXOnly = toXOnly(Buffer.from(fullPub));
+                this.tapInternalKey = Buffer.from(internalXOnly);
 
                 for (const utxo of this.utxos) {
                     const { txid, vout, value } = utxo;
-                    totalSats += value;
 
-                    const script = bitcoin.payments.p2tr({
-                        internalPubkey: internalXOnly,
-                        network: this.network
-                    }).output!;
+                    const res = await fetch(
+                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
+                    );
+                    if (!res.ok) {
+                        throw new Error(
+                            localeString(
+                                `views.Sweep.failedToFetchTxDetails:${txid}`
+                            )
+                        );
+                    }
+                    const tx = await res.json();
+
+                    const output = tx.vout[vout];
+                    if (!output) {
+                        throw new Error(
+                            localeString(
+                                `views.Sweep.outputIndexNotFound:${vout}:${txid}`
+                            )
+                        );
+                    }
+
+                    const scriptPubKeyHex = output.scriptpubkey;
 
                     this.psbt.addInput({
                         hash: txid,
                         index: vout,
                         witnessUtxo: {
-                            script,
-                            value
+                            script: Buffer.from(scriptPubKeyHex, 'hex'),
+                            value: Number(value)
                         },
-                        tapInternalKey: internalXOnly
+                        tapInternalKey: this.tapInternalKey
                     });
+
+                    totalSats += Number(value);
                 }
             }
-            console.log(JSON.stringify(this.psbt));
             this.onChainBalance = totalSats;
             console.log('onChainBalance', this.onChainBalance);
         } catch (err: any) {
@@ -298,16 +330,18 @@ export default class SweepStore {
         const tweak = this.tapTweakHash(xOnlyPub);
 
         const tweaked = ecc.privateAdd(privateKey, tweak);
-        if (!tweaked) throw new Error('Invalid tweaked key');
+        if (!tweaked)
+            throw new Error(localeString('views.Sweep.invalidTweakedKey'));
         const tweakedKey = Buffer.from(tweaked);
 
         const tweakedPoint = ecc.xOnlyPointAddTweak(xOnlyPub, tweak);
-        if (!tweakedPoint) throw new Error('Failed to tweak public key');
+        if (!tweakedPoint)
+            throw new Error(localeString('views.Sweep.failedToTweakPubkey'));
 
         const { xOnlyPubkey, parity } = tweakedPoint;
         const finalPubKey = Buffer.concat([
             Buffer.from([parity ? 0x03 : 0x02]),
-            xOnlyPubkey
+            Buffer.from(xOnlyPubkey)
         ]);
 
         return {
@@ -315,7 +349,7 @@ export default class SweepStore {
             sign: (hash: Buffer) => Buffer.from(ecc.sign(hash, tweakedKey)),
             signSchnorr: (hash: Buffer) =>
                 Buffer.from(ecc.signSchnorr(hash, tweakedKey)),
-            getPublicKey: () => xOnlyPubkey
+            getPublicKey: () => Buffer.from(xOnlyPubkey)
         };
     }
 
@@ -326,15 +360,21 @@ export default class SweepStore {
             const isTaproot = this.addressType === 'p2tr';
             const privateKey = Buffer.from(this.privateKey, 'hex');
 
-            let signer: any;
+            let signer: bitcoin.Signer;
 
             if (isTaproot) {
                 const fullPub = ecc.pointFromScalar(privateKey, true);
-                if (!fullPub) throw new Error('Failed to derive pubkey');
+                if (!fullPub)
+                    throw new Error(
+                        localeString('views.Sweep.failedToDerivePubkey')
+                    );
                 signer = this.tweakSigner(privateKey, Buffer.from(fullPub));
             } else {
                 const fullPub = ecc.pointFromScalar(privateKey, true);
-                if (!fullPub) throw new Error('Failed to derive pubkey');
+                if (!fullPub)
+                    throw new Error(
+                        localeString('views.Sweep.failedToDerivePubkey')
+                    );
 
                 signer = {
                     publicKey: Buffer.from(fullPub),
@@ -343,9 +383,7 @@ export default class SweepStore {
                 };
             }
 
-            const base = 10_000_000;
-            const txBuildCounter = Date.now() % 10_000;
-            this.psbt.setLocktime(base + txBuildCounter);
+            this.psbt.setLocktime(0);
 
             const dummyPsbt = bitcoin.Psbt.fromBuffer(this.psbt.toBuffer(), {
                 network: this.network
@@ -358,12 +396,10 @@ export default class SweepStore {
 
             if (isTaproot) {
                 for (let i = 0; i < dummyPsbt.inputCount; i++) {
-                    // console.log('Signer: ', JSON.stringify(signer));
                     dummyPsbt.signTaprootInput(i, signer);
                 }
             } else {
                 for (let i = 0; i < dummyPsbt.inputCount; i++) {
-                    // console.log('Signer: ', JSON.stringify(signer));
                     dummyPsbt.signInput(i, signer);
                 }
             }
@@ -377,7 +413,9 @@ export default class SweepStore {
             this.valueToSend = this.onChainBalance - this.fee;
 
             if (this.valueToSend <= 0)
-                throw new Error('Insufficient funds after fees');
+                throw new Error(
+                    localeString('views.Sweep.insufficientFundsAfterFees')
+                );
 
             this.psbt.addOutput({
                 address: this.destination,
