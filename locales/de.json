@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "Zahlung ist in Zustellung. Es kann sein, dass sie in Kürze abgeschlossen ist oder dass sie fehlschlägt. Schau in die Verlaufsansicht, um den Status zu prüfen.",
     "views.SendingLightning.isZaplocker": "Zaplocker-Zahlung ist in Zustellung. Es kann sein, dass sie in Kürze abgeschlossen ist, ansonsten wird sie innerhalb 24 Stunden an dich zurück gesendet. Schau in die Verlaufsansicht, um den Status zu prüfen.",
     "views.SendingLightning.paymentTimedOut": "Zahlung hat Zeitlimit überschritten. Es kann sein, dass sie noch in Zustellung ist, was bedeutet, dass sie in Kürze abgeschlossen sein könnte oder fehlschlägt. Schau in die Verlaufsansicht, um den Status zu prüfen.",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "Transaktion wird erstellt",
     "views.SendingOnChain.broadcasting": "Transaktion senden",
     "views.SendingOnChain.success": "Transaktion erfolgreich gesendet",
