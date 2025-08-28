@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "支付正在進行中，可能會馬上完成，也可能最後會失敗。請從異動紀錄頁面追蹤進度。",
     "views.SendingLightning.isZaplocker": "Zaplocker 支付正在進行中，可能很快就會完成，不然資金會在 24 小時內返還給你。請從「異動紀錄」畫面追蹤進度。",
     "views.SendingLightning.paymentTimedOut": "支付逾時，但可能還在進行中。也許會馬上完成，也可能最後會失敗。請從活動頁面追蹤進度。",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "正在製作交易資料",
     "views.SendingOnChain.broadcasting": "正在廣播交易",
     "views.SendingOnChain.success": "交易傳送成功",
