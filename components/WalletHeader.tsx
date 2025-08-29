@@ -23,6 +23,7 @@ import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
+import TransactionsStore from '../stores/TransactionsStore';
 
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -142,18 +143,87 @@ const MenuBadge = ({
     </TouchableOpacity>
 );
 
+const checkAutoPayAndProcess = async (
+    invoice: string,
+    navigation: StackNavigationProp<any, any>,
+    settingsStore: SettingsStore,
+    transactionsStore: TransactionsStore
+) => {
+    try {
+        const decodedInvoice = await BackendUtils.decodePaymentRequest([
+            invoice
+        ]);
+
+        if (!decodedInvoice) {
+            const response = await handleAnything(invoice);
+            const [route, props] = response;
+            navigation.navigate(route, props);
+            return;
+        }
+
+        const amount =
+            decodedInvoice.num_satoshis ||
+            (decodedInvoice.num_msat ? decodedInvoice.num_msat / 1000 : 0) ||
+            0;
+
+        const autoPayThreshold =
+            settingsStore.settings?.payments?.autoPayThreshold || 0;
+
+        if (
+            settingsStore.settings?.payments?.autoPayEnabled &&
+            amount > 0 &&
+            amount <= autoPayThreshold
+        ) {
+            transactionsStore.sendPayment({
+                payment_request: invoice
+            });
+
+            navigation.navigate('SendingLightning');
+        } else {
+            const response = await handleAnything(invoice);
+            const [route, props] = response;
+            navigation.navigate(route, props);
+        }
+    } catch (error) {
+        console.error('Error checking auto-pay:', error);
+        // Normal processing
+        const response = await handleAnything(invoice);
+        const [route, props] = response;
+        navigation.navigate(route, props);
+    }
+};
+
 const ClipboardBadge = ({
     navigation,
-    clipboard
+    clipboard,
+    settingsStore,
+    transactionsStore
 }: {
     navigation: StackNavigationProp<any, any>;
     clipboard: string;
+    settingsStore: SettingsStore;
+    transactionsStore: TransactionsStore;
 }) => (
     <TouchableOpacity
         onPress={async () => {
-            const response = await handleAnything(clipboard);
-            const [route, props] = response;
-            navigation.navigate(route, props);
+            const trimmedContent = clipboard.trim();
+
+            if (
+                trimmedContent.toLowerCase().startsWith('lnbc') ||
+                trimmedContent.toLowerCase().startsWith('lnbcrt') ||
+                trimmedContent.toLowerCase().startsWith('lntb')
+            ) {
+                await checkAutoPayAndProcess(
+                    trimmedContent,
+                    navigation,
+                    settingsStore,
+                    transactionsStore
+                );
+            } else {
+                const response = await handleAnything(clipboard);
+                const [route, props] = response;
+                navigation.navigate(route, props);
+            }
         }}
     >
         <ClipboardSVG fill={themeColor('text')} width="24" height="30" />
@@ -221,6 +291,7 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
+    TransactionsStore?: TransactionsStore;
     navigation: StackNavigationProp<any, any>;
     connecting?: boolean;
     loading?: boolean;
@@ -242,7 +313,8 @@ interface WalletHeaderState {
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
-    'SyncStore'
+    'SyncStore',
+    'TransactionsStore'
 )
 @observer
 export default class WalletHeader extends React.Component<
@@ -293,7 +365,8 @@ export default class WalletHeader extends React.Component<
             LightningAddressStore,
             ModalStore,
             PosStore,
-            SyncStore
+            SyncStore,
+            TransactionsStore
         } = this.props;
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
@@ -627,6 +700,10 @@ export default class WalletHeader extends React.Component<
                                         <ClipboardBadge
                                             navigation={navigation}
                                             clipboard={clipboard}
+                                            settingsStore={SettingsStore!}
+                                            transactionsStore={
+                                                TransactionsStore!
+                                            }
                                         />
                                     </View>
                                 )}
