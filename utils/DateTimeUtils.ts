@@ -39,6 +39,15 @@ class DateTimeUtils {
         return `${time} | ${monthAndDay}${year}`;
     };
 
+    formatDate = (date: Date) => {
+        const dateOptions: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        };
+        return date.toLocaleDateString('en-US', dateOptions);
+    };
+
     blocksToMonthsAndDays = (blocks: number) => {
         const blocksPerDay = 144;
         const daysPerMonth = 30;
