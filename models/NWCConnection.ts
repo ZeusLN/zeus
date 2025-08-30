@@ -1,5 +1,7 @@
 import { computed } from 'mobx';
 import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
+import { localeString } from '../utils/LocaleUtils';
+
 import BaseModel from './BaseModel';
 
 export type PermissionsType = 'full_access' | 'read_only' | 'custom';
@@ -16,6 +18,7 @@ export interface NWCConnectionData {
     icon?: any;
     description?: string;
     pubkey: string;
+    relayUrl: string;
     permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
@@ -33,6 +36,7 @@ export default class NWCConnection extends BaseModel {
     icon?: any;
     description?: string;
     pubkey: string;
+    relayUrl: string;
     permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
@@ -74,8 +78,9 @@ export default class NWCConnection extends BaseModel {
     }
 
     @computed public get statusText(): string {
-        if (this.isExpired) return 'Expired';
-        return 'Active';
+        if (this.isExpired)
+            return localeString('channel.expirationStatus.expired');
+        return localeString('general.active');
     }
 
     @computed public get hasRecentActivity(): boolean {

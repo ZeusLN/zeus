@@ -167,6 +167,16 @@
           android:value="Run Bitcoin Lightning Network node LND in order for the user to receive incoming payments"
         />
       </service>
+      <service
+        android:name=".NostrConnectService"
+        android:exported="false"
+        android:foregroundServiceType="specialUse"
+      >
+        <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Maintain Nostr Wallet Connect connections to enable background payments from external apps"
+        />
+      </service>
     </application>
 
     <!-- <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
