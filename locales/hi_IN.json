@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "भुगतान प्रगति पर है। यह तुरंत पूरा हो सकता है या विफल हो सकता है। इसकी प्रगति को ट्रैक करने के लिए गतिविधि व्यू देखें।",
     "views.SendingLightning.isZaplocker": "ज़ैपलॉकर भुगतान प्रगति पर है। यह तुरंत पूरा हो सकता है, अन्यथा 24 घंटे के भीतर फंड आपके पास वापस आ जाएंगे। इसकी प्रगति को ट्रैक करने के लिए गतिविधि व्यू देखें।",
     "views.SendingLightning.paymentTimedOut": "भुगतान का समय समाप्त हो गया है। यह ट्रांजिट में हो सकता है, जिसका अर्थ है कि यह तुरंत पूरा हो सकता है या विफल हो सकता है। इसकी प्रगति को ट्रैक करने के लिए गतिविधि व्यू देखें।",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "लेनदेन तैयार कर रहा है",
     "views.SendingOnChain.broadcasting": "लेनदेन प्रसारित कर रहा है",
     "views.SendingOnChain.success": "लेनदेन सफलतापूर्वक भेज दिया गया",

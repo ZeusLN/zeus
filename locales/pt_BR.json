@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "O pagamento está em trânsito. Ele pode ser concluído momentaneamente ou pode falhar. Verifique a visualização Activity para acompanhar seu progresso.",
     "views.SendingLightning.isZaplocker": "Pagamento Zaplocker em trânsito. Pode ser concluído momentaneamente, caso contrário, os fundos retornarão para você em 24 horas. Verifique a visualização Activity para acompanhar seu progresso.",
     "views.SendingLightning.paymentTimedOut": "Pagamento com tempo limite esgotado. Pode estar em trânsito, o que significa que pode ser concluído momentaneamente ou pode falhar. Verifique a visualização Activity para acompanhar seu progresso.",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "Elaborando transação",
     "views.SendingOnChain.broadcasting": "Transmitindo Transação",
     "views.SendingOnChain.success": "Transação enviada com sucesso",

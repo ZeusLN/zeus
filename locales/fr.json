@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "Le paiement est en cours de traitement. Il peut être effectué momentanément ou échouer. Consultez la vue Activité pour suivre sa progression.",
     "views.SendingLightning.isZaplocker": "Paiement Zaplocker en cours de transfert. Il peut être effectué momentanément, sinon les fonds vous seront restitués dans les 24 heures. Consultez la vue Activité pour suivre sa progression.",
     "views.SendingLightning.paymentTimedOut": "Le délai de paiement a expiré. Il est peut-être en cours de traitement, ce qui signifie qu'il peut être exécuté momentanément ou échouer. Consultez la vue Activité pour suivre sa progression.",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "Transaction d'artisanat",
     "views.SendingOnChain.broadcasting": "Diffusion de la transaction",
     "views.SendingOnChain.success": "Transaction envoyée avec succès",

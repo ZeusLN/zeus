@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "Platba právě probíhá. Během chvilky může být dokončena, nebo může selhat. Stav jejího průběhu můžete sledovat v sekci Aktivita.",
     "views.SendingLightning.isZaplocker": "Zaplocker platba právě probíhá. Během chvilky může být dokončena, jinak se vám prostředky během 24 hodin vrátí. Stav jejího průběhu můžete sledovat v sekci Aktivita.",
     "views.SendingLightning.paymentTimedOut": "Časový limit platby vypršel. Platba stále může být v přenosu, což znamená, že může být dokončena během chvilky, nebo může selhat. Stav jejího průběhu můžete sledovat v sekci Aktivita.",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "Zpracovávání transakce",
     "views.SendingOnChain.broadcasting": "Odesílání transakce",
     "views.SendingOnChain.success": "Transakce byla úspěšně odeslána",
