@@ -748,6 +748,7 @@
     "views.SendingLightning.inTransit": "Plata este în tranzit. Se poate finaliza pentru moment sau poate continua să eșueze. Verificați vizualizarea Activitate pentru a urmări progresul acesteia.",
     "views.SendingLightning.isZaplocker": "Plată Zaplocker în tranzit. Se poate finaliza pentru moment, altfel fondurile vi se vor întoarce înapoi în 24 de ore. Verificați vizualizarea Activitate pentru a urmări progresul acesteia.",
     "views.SendingLightning.paymentTimedOut": "Plata a expirat. Poate fi în tranzit, ceea ce înseamnă că se poate finaliza pentru moment sau poate eșua. Verificați vizualizarea Activitate pentru a urmări progresul acesteia.",
+    "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",
     "views.SendingOnChain.crafting": "Crearea tranzacției",
     "views.SendingOnChain.broadcasting": "Transmitere Tranzacție",
     "views.SendingOnChain.success": "Tranzacția a fost trimisă cu succes",
