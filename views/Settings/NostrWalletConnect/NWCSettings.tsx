@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, ScrollView, Text } from 'react-native';
+import { View, ScrollView, Text, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -14,6 +14,7 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import BackendUtils from '../../../utils/BackendUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
 
 interface NWCSettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -25,6 +26,7 @@ interface NWCSettingsState {
     loading: boolean;
     error: string | null;
     enableCashu: boolean;
+    persistentNWCService: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -38,14 +40,18 @@ export default class NWCSettings extends React.Component<
         this.state = {
             loading: false,
             error: null,
-            enableCashu: false
+            enableCashu: false,
+            persistentNWCService: false
         };
     }
 
     async UNSAFE_componentWillMount() {
         const { NostrWalletConnectStore } = this.props;
+
         this.setState({
-            enableCashu: NostrWalletConnectStore.cashuEnabled
+            enableCashu: NostrWalletConnectStore.cashuEnabled,
+            persistentNWCService:
+                NostrWalletConnectStore.persistentNWCServiceEnabled
         });
     }
 
@@ -65,9 +71,33 @@ export default class NWCSettings extends React.Component<
         }
     };
 
+    togglePersistentNWCService = async () => {
+        const { NostrWalletConnectStore } = this.props;
+        const currentPersistentNWCService = this.state.persistentNWCService;
+
+        this.setState({ loading: true, error: null });
+        try {
+            await NostrWalletConnectStore.setPersistentNWCServiceEnabled(
+                !currentPersistentNWCService
+            );
+            this.setState({
+                persistentNWCService: !currentPersistentNWCService
+            });
+            restartNeeded();
+        } catch (error) {
+            console.error('Failed to toggle persistent NWC service:', error);
+            this.setState({
+                error: 'Failed to update persistent service setting'
+            });
+        } finally {
+            this.setState({ loading: false });
+        }
+    };
+
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { loading, error, enableCashu } = this.state;
+        const { loading, error, enableCashu, persistentNWCService } =
+            this.state;
         const supportsCashu = BackendUtils.supportsCashuWallet();
 
         return (
@@ -106,6 +136,59 @@ export default class NWCSettings extends React.Component<
                             marginTop: 5
                         }}
                     >
+                        {Platform.OS === 'android' && (
+                            <View style={{ marginTop: 20 }}>
+                                <View style={{ flexDirection: 'row' }}>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 17
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.persistentNWCService'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center',
+                                            marginLeft: 5
+                                        }}
+                                    >
+                                        <Switch
+                                            value={persistentNWCService}
+                                            onValueChange={
+                                                this.togglePersistentNWCService
+                                            }
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress ||
+                                                loading
+                                            }
+                                        />
+                                    </View>
+                                </View>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 14,
+                                        marginTop: 8,
+                                        lineHeight: 20
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.NostrWalletConnect.persistentNWCServiceDescription'
+                                    )}
+                                </Text>
+                            </View>
+                        )}
+
                         {supportsCashu ? (
                             <View style={{ marginTop: 20 }}>
                                 <View style={{ flexDirection: 'row' }}>

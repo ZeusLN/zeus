@@ -11,6 +11,7 @@ import { nwc } from '@getalby/sdk';
 import { getPublicKey, generatePrivateKey } from 'nostr-tools';
 import { Platform, NativeModules } from 'react-native';
 import { Notifications } from 'react-native-notifications';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
@@ -53,9 +54,10 @@ export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
+export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 
 export const DEFAULT_NOSTR_RELAYS = [
-    'wss://nos.lol',
+    // 'wss://nos.lol',
     'wss://relay.snort.social',
     'wss://relay.getalby.com/v1',
     'wss://relay.damus.io'
@@ -97,7 +99,7 @@ export default class NostrWalletConnectStore {
     @observable public relayConnected: boolean = false;
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
     @observable public cashuEnabled: boolean = false;
-
+    @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private healthCheckInterval: any = null;
     @observable private connectionRetryInterval: any = null;
     @observable private lastConnectionAttempt: number = 0;
@@ -145,6 +147,7 @@ export default class NostrWalletConnectStore {
         this.relayConnectionAttempts = 0;
         this.lastConnectionAttempt = 0;
         this.cashuEnabled = false;
+        this.persistentNWCServiceEnabled = false;
     };
 
     private generateWalletServiceKeys(): WalletServiceKeys {
@@ -178,11 +181,9 @@ export default class NostrWalletConnectStore {
                 return newKeys;
             }
 
-            console.log('NWC: Successfully loaded wallet service keys');
             return keys;
         } catch (error) {
             console.error('Failed to load wallet service keys:', error);
-            console.log('NWC: Regenerating wallet service keys due to error');
             const keys = this.generateWalletServiceKeys();
             await this.saveWalletServiceKeys(keys);
             return keys;
@@ -225,6 +226,64 @@ export default class NostrWalletConnectStore {
             });
         }
     }
+
+    private async loadPersistentServiceSetting(): Promise<void> {
+        try {
+            const stored = await AsyncStorage.getItem(
+                NWC_PERSISTENT_SERVICE_ENABLED
+            );
+            runInAction(() => {
+                this.persistentNWCServiceEnabled = stored === 'true';
+            });
+        } catch (error) {
+            console.error(
+                'Failed to load persistent NWC service setting:',
+                error
+            );
+            runInAction(() => {
+                this.persistentNWCServiceEnabled = false;
+            });
+        }
+    }
+
+    @action
+    public async setPersistentNWCServiceEnabled(
+        enabled: boolean
+    ): Promise<void> {
+        try {
+            await AsyncStorage.setItem(
+                NWC_PERSISTENT_SERVICE_ENABLED,
+                enabled.toString()
+            );
+
+            runInAction(() => {
+                this.persistentNWCServiceEnabled = enabled;
+            });
+
+            // Stop background service if disabling persistent service
+            if (!enabled && Platform.OS === 'android') {
+                try {
+                    const { NostrConnectModule } = NativeModules;
+                    await NostrConnectModule.stopNostrConnectService();
+                } catch (serviceError) {
+                    console.warn(
+                        'NWC: Failed to stop background service:',
+                        serviceError
+                    );
+                }
+            }
+        } catch (error) {
+            console.error(
+                'Failed to save persistent NWC service setting:',
+                error
+            );
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.failedToSavePersistentServiceSetting'
+                )
+            );
+        }
+    }
     @action
     public async setCashuEnabled(enabled: boolean): Promise<void> {
         try {
@@ -255,7 +314,7 @@ export default class NostrWalletConnectStore {
 
     @action
     public initializeServiceWithRetry = async () => {
-        const maxAttempts = Platform.OS === 'android' ? 5 : 10; // Fewer attempts on Android
+        const maxAttempts = 5;
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             console.log(
                 `Attempting to connect to NWC relay ${
@@ -268,6 +327,15 @@ export default class NostrWalletConnectStore {
             try {
                 let successfulRelays = 0;
                 for (const relayUrl of DEFAULT_NOSTR_RELAYS) {
+                    // Skip if this relay is already initialized
+                    if (this.nwcWalletServices.has(relayUrl)) {
+                        console.log(
+                            `NWC: Relay ${relayUrl} already initialized, skipping`
+                        );
+                        successfulRelays++;
+                        continue;
+                    }
+
                     try {
                         console.log(
                             'Initializing NWC Wallet Service for relay:',
@@ -281,7 +349,7 @@ export default class NostrWalletConnectStore {
                         );
                         successfulRelays++;
                     } catch (relayError) {
-                        console.error(
+                        console.warn(
                             `Failed to initialize relay ${relayUrl}:`,
                             relayError
                         );
@@ -300,7 +368,7 @@ export default class NostrWalletConnectStore {
                 });
                 return;
             } catch (error: any) {
-                console.error(`Failed to connect to relay:`, error);
+                console.warn(`Failed to connect to relay:`, error);
 
                 if (attempt === maxAttempts - 1) {
                     runInAction(() => {
@@ -335,6 +403,7 @@ export default class NostrWalletConnectStore {
 
         try {
             await this.initializeWalletServiceKeys();
+            await this.loadPersistentServiceSetting();
             await this.loadCashuSetting();
             await this.loadConnections();
             await this.checkAndResetAllBudgetsOnInit();
@@ -373,7 +442,12 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            await this.initializePlatformService();
+            const hasActiveConnections = this.activeConnections.length > 0;
+
+            if (hasActiveConnections && this.persistentNWCServiceEnabled) {
+                await this.initializePlatformService();
+            }
+
             await this.verifyServiceHealth();
             const successfulPublishes = await this.publishToAllRelays();
             if (successfulPublishes === 0) {
@@ -389,7 +463,9 @@ export default class NostrWalletConnectStore {
 
             await this.subscribeToAllConnections();
 
-            this.setupPlatformSpecificMonitoring();
+            if (hasActiveConnections && this.persistentNWCServiceEnabled) {
+                this.setupPlatformSpecificMonitoring();
+            }
         } catch (error: any) {
             console.error('Failed to start NWC service:', error);
             runInAction(() => {
@@ -413,37 +489,40 @@ export default class NostrWalletConnectStore {
             try {
                 const { NostrConnectModule } = NativeModules;
 
-                // Check if service is already running
-                const isRunning =
-                    await NostrConnectModule.isNostrConnectServiceRunning();
-                if (isRunning) {
-                    console.log(
-                        'NWC: Android background service already running'
-                    );
-                    return;
-                }
-
-                await NostrConnectModule.startNostrConnectService();
-
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-                const isNowRunning =
-                    await NostrConnectModule.isNostrConnectServiceRunning();
-
-                if (isNowRunning) {
-                    console.log(
-                        'NWC: Android background service started successfully'
-                    );
-                } else {
+                if (!NostrConnectModule) {
                     throw new Error(
-                        localeString(
-                            'views.Settings.NostrWalletConnect.serviceFailedToStart'
-                        )
+                        'NostrConnectModule not found in NativeModules'
                     );
                 }
+
+                await NostrConnectModule.initialize();
+                this.updateAndroidTranslationCache();
             } catch (serviceError) {
                 console.warn(
-                    'NWC: Failed to start Android background service:',
+                    'NWC: Failed to initialize Android service:',
                     serviceError
+                );
+            }
+        }
+    }
+
+    private updateAndroidTranslationCache(): void {
+        if (Platform.OS === 'android') {
+            try {
+                const { NostrConnectModule } = NativeModules;
+                const translations = {
+                    'androidNotification.nwcRunningBackground': localeString(
+                        'androidNotification.nwcRunningBackground'
+                    ),
+                    'androidNotification.nwcShutdown': localeString(
+                        'androidNotification.nwcShutdown'
+                    )
+                };
+                NostrConnectModule.updateTranslationCache('en', translations);
+            } catch (error) {
+                console.warn(
+                    'Failed to update Android translation cache:',
+                    error
                 );
             }
         }
@@ -703,8 +782,6 @@ export default class NostrWalletConnectStore {
             console.error(`NWC: Connection ${connectionId} not found`);
             return;
         }
-        const status = this.getServiceStatus();
-        console.log('NWC: Current service status:', status);
         this.attemptServiceRecovery();
     }
 
@@ -759,7 +836,6 @@ export default class NostrWalletConnectStore {
                     const { NostrConnectModule } =
                         require('react-native').NativeModules;
                     await NostrConnectModule.stopNostrConnectService();
-                    console.log('NWC: Android background service stopped');
                 } catch (serviceError) {
                     console.warn(
                         'NWC: Failed to stop Android background service:',
@@ -838,7 +914,6 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
-
         const connectionString = `nostr+walletconnect://${
             this.walletServiceKeys.publicKey
         }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
@@ -1439,11 +1514,18 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
         this.markConnectionUsed(connection.id);
+        console.log('calling handleGetBalance for connection', connection.name);
         try {
             const balance = this.cashuEnabled
                 ? this.cashuStore.totalBalanceSats
                 : (await this.balanceStore.getLightningBalance(true))
                       ?.lightningBalance;
+
+            this.showTestNotification(
+                `Balance check via ${connection.name}`,
+                `Balance: ${Number(balance) * 1000} msats`
+            );
+
             return {
                 result: {
                     balance: Number(balance) * 1000
@@ -2239,6 +2321,16 @@ export default class NostrWalletConnectStore {
         }
     };
 
+    // Test notification method for debugging
+    @action
+    public testNotification = (): void => {
+        console.log('Testing notification...');
+        this.showTestNotification(
+            'Test Notification',
+            'This is a test notification from Zeus'
+        );
+    };
+
     private showPaymentSentNotification(
         amountSats: number,
         connectionName: string
@@ -2301,6 +2393,42 @@ export default class NostrWalletConnectStore {
                 body,
                 sound: 'chime.aiff'
             });
+        }
+    }
+
+    private showTestNotification(title: string, body: string): void {
+        console.log('Attempting to show test notification:', {
+            title,
+            body,
+            platform: Platform.OS
+        });
+
+        if (Platform.OS === 'android') {
+            try {
+                // @ts-ignore:next-line
+                Notifications.postLocalNotification({
+                    title,
+                    body,
+                    sound: 'default'
+                });
+                console.log('Android notification posted successfully');
+            } catch (error) {
+                console.error('Failed to post Android notification:', error);
+            }
+        }
+
+        if (Platform.OS === 'ios') {
+            try {
+                // @ts-ignore:next-line
+                Notifications.postLocalNotification({
+                    title,
+                    body,
+                    sound: 'chime.aiff'
+                });
+                console.log('iOS notification posted successfully');
+            } catch (error) {
+                console.error('Failed to post iOS notification:', error);
+            }
         }
     }
 

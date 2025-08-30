@@ -1526,6 +1526,7 @@
     "views.Settings.NostrWalletConnect.failedToUpdateConnection": "Failed to update connection",
     "views.Settings.NostrWalletConnect.failedToStoreServiceKeys": "Failed to store service keys",
     "views.Settings.NostrWalletConnect.failedToSaveCashuSetting": "Failed to save Cashu setting",
+    "views.Settings.NostrWalletConnect.failedToSavePersistentServiceSetting": "Failed to save persistent service setting",
     "views.Settings.NostrWalletConnect.failedToInitializeRelays": "Failed to initialize any NWC relays",
     "views.Settings.NostrWalletConnect.walletServiceKeyNotFound": "Wallet service key not found",
     "views.Settings.NostrWalletConnect.failedToPublishToRelays": "Failed to publish wallet service info to any relay",
@@ -1597,6 +1598,8 @@
     "views.Settings.NostrWalletConnect.totalSpent": "Total Spent",
     "views.Settings.NostrWalletConnect.remainingBudget": "Remaining Budget",
     "views.Settings.NostrWalletConnect.nwcSettings": "NWC Settings",
+    "views.Settings.NostrWalletConnect.persistentNWCService": "Persistent Mode",
+    "views.Settings.NostrWalletConnect.persistentNWCServiceDescription": "Continue to run Nostr Wallet Connect service in the background even when the app is closed.",
     "views.Settings.NostrWalletConnect.chooseRelay": "Choose the Nostr relay for this connection",
     "views.LspExplanation.text1": "Zeus is a self-custodial lightning wallet. In order to send or receive a lightning payment, you must open a lightning payment channel, which has a setup fee.",
     "views.LspExplanation.text2": "Once the channel is set up, you'll only have to pay normal network fees until your channel exhausts its capacity.",
@@ -1864,5 +1867,7 @@
     "views.SwapSettings.failureReason": "Failure reason",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown",
-    "backends.NWC.permissionDenied": "Permission denied for this operation"
+    "backends.NWC.permissionDenied": "Permission denied for this operation",
+    "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
+    "androidNotification.nwcShutdown": "Stop Service"
 }

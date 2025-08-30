@@ -466,10 +466,14 @@ class LndMobile extends ReactContextBaseJavaModule {
     bundle.putByteArray("payload", Base64.decode(payloadStr, Base64.NO_WRAP));
     message.setData(bundle);
 
-    try {
-      lndMobileServiceMessenger.send(message);
-    } catch (RemoteException e) {
-      promise.reject(TAG, "Could not Send MSG_GRPC_COMMAND to LndMobileService", e);
+    if (lndMobileServiceMessenger != null) {
+      try {
+        lndMobileServiceMessenger.send(message);
+      } catch (RemoteException e) {
+        promise.reject(TAG, "Could not Send MSG_GRPC_COMMAND to LndMobileService", e);
+      }
+    } else {
+      promise.reject(TAG, "LndMobileService not connected");
     }
   }
 
