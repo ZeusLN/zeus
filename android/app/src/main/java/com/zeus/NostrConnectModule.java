@@ -67,7 +67,6 @@ public class NostrConnectModule extends ReactContextBaseJavaModule {
             if (getPersistentNWCServicesEnabled()) {
                 getReactApplicationContext().startForegroundService(intent);
             }
-            // Always bind to the service for connection management
             getReactApplicationContext().bindService(
                 intent,
                 nostrConnectServiceConnection,
