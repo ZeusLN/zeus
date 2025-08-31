@@ -189,7 +189,7 @@ export default class NWCSettings extends React.Component<
                             </View>
                         )}
 
-                        {supportsCashu ? (
+                        {BackendUtils.supportsCashuWallet() && supportsCashu && (
                             <View style={{ marginTop: 20 }}>
                                 <View style={{ flexDirection: 'row' }}>
                                     <View
@@ -238,31 +238,6 @@ export default class NWCSettings extends React.Component<
                                     {localeString(
                                         'views.Settings.NostrWalletConnect.cashuWalletDescription'
                                     )}
-                                </Text>
-                            </View>
-                        ) : (
-                            <View
-                                style={{
-                                    marginTop: 20,
-                                    alignItems: 'center',
-                                    paddingHorizontal: 20
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 16,
-                                        textAlign: 'center',
-                                        lineHeight: 24
-                                    }}
-                                >
-                                    {!supportsCashu
-                                        ? localeString(
-                                              'views.Settings.NostrWalletConnect.cashuNotSupported'
-                                          )
-                                        : localeString(
-                                              'views.Settings.NostrWalletConnect.noSettingsAvailable'
-                                          )}
                                 </Text>
                             </View>
                         )}
