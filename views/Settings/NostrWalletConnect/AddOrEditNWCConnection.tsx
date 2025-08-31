@@ -713,6 +713,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     justifyContent: 'space-between',
                                     marginHorizontal: 10,
                                     marginTop: 10,
+                                    gap: 5,
                                     marginBottom: 15,
                                     padding: 16,
                                     backgroundColor: themeColor('secondary'),
