@@ -30,7 +30,7 @@ import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Base64Utils from '../../utils/Base64Utils';
-import { splitQRs } from '../../utils/BbqrUtils';
+import { DEFAULT_SPLIT_OPTIONS, splitQRs } from '../../utils/BbqrUtils';
 import {
     getQRAnimationInterval,
     QRAnimationSpeed
@@ -135,13 +135,7 @@ export default class CashuTokenView extends React.Component<
         const input = Base64Utils.base64ToBytes(token);
         const fileType = 'U';
 
-        const splitResult = splitQRs(input, fileType, {
-            encoding: 'Z',
-            minSplit: 4,
-            maxSplit: 1295,
-            minVersion: 5,
-            maxVersion: 40
-        });
+        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
         const messageBuffer = Buffer.from(token, 'utf-8');
         const ur = UR.fromBuffer(messageBuffer);
         const encoder = new UREncoder(ur, 200, 0);
