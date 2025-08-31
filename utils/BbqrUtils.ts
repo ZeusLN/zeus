@@ -480,6 +480,15 @@ export function splitQRs(
 
 export const ENCODINGS = new Set(Object.keys(ENCODING_NAMES));
 
+// Default split options that can be reused across the application
+export const DEFAULT_SPLIT_OPTIONS: Required<SplitOptions> = {
+    encoding: 'Z', // Zlib compressed base32 encoding
+    minSplit: 1, // minimum number of parts to return
+    maxSplit: 1295, // maximum number of parts to return
+    minVersion: 5, // minimum QR code version
+    maxVersion: 40 // maximum QR code version
+} as const;
+
 export type JoinResult = {
     fileType: FileType;
     encoding: Encoding;
