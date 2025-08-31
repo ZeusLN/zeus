@@ -201,6 +201,15 @@ export default class CashuStore {
         return this.cashuWallets[this.selectedMintUrl]?.pubkey;
     }
 
+    public isProperlyConfigured(): boolean {
+        return (
+            this.mintUrls.length > 0 &&
+            !!this.selectedMintUrl &&
+            this.selectedMintUrl.trim() !== '' &&
+            !!this.cashuWallets[this.selectedMintUrl]
+        );
+    }
+
     calculateTotalBalance = async () => {
         let newTotalBalance = 0;
         Object.keys(this.cashuWallets).forEach((mintUrl: string) => {
@@ -864,6 +873,12 @@ export default class CashuStore {
         this.error_msg = undefined;
 
         try {
+            if (!this.isProperlyConfigured()) {
+                throw new Error(
+                    localeString('stores.CashuStore.notProperlyConfigured')
+                );
+            }
+
             if (!this.cashuWallets[this.selectedMintUrl].wallet) {
                 await this.initializeWallet(this.selectedMintUrl, true);
             }
@@ -982,6 +997,12 @@ export default class CashuStore {
         skipMintCheck?: boolean
     ) => {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
+
+        if (!this.isProperlyConfigured()) {
+            throw new Error(
+                localeString('stores.CashuStore.notProperlyConfigured')
+            );
+        }
 
         if (this.cashuWallets[mintUrl].errorConnecting) return;
         if (!this.cashuWallets[mintUrl].wallet) {
@@ -1350,6 +1371,12 @@ export default class CashuStore {
         this.feeEstimate = undefined;
 
         try {
+            if (!this.isProperlyConfigured()) {
+                throw new Error(
+                    localeString('stores.CashuStore.notProperlyConfigured')
+                );
+            }
+
             const data = await new Promise((resolve) => {
                 const decoded: any = bolt11.decode(bolt11Invoice || '');
                 for (let i = 0; i < decoded.tags.length; i++) {
