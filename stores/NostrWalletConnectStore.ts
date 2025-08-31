@@ -448,11 +448,9 @@ export default class NostrWalletConnectStore {
                 );
             }
             const hasActiveConnections = this.activeConnections.length > 0;
-
             if (hasActiveConnections && this.persistentNWCServiceEnabled) {
                 await this.initializePlatformService();
             }
-
             await this.verifyServiceHealth();
             const successfulPublishes = await this.publishToAllRelays();
             if (successfulPublishes === 0) {
@@ -751,6 +749,7 @@ export default class NostrWalletConnectStore {
             console.error('NWC: Service recovery failed:', error);
         }
     }
+
     public isServiceReady(): boolean {
         return (
             this.walletServiceKeys?.privateKey !== undefined &&
@@ -758,6 +757,10 @@ export default class NostrWalletConnectStore {
             !this.error
         );
     }
+    private isCashuProperlyConfigured(): boolean {
+        return this.cashuEnabled && this.cashuStore.isProperlyConfigured();
+    }
+
     public getServiceStatus(): {
         isReady: boolean;
         hasKeys: boolean;
@@ -1529,7 +1532,7 @@ export default class NostrWalletConnectStore {
         this.markConnectionUsed(connection.id);
         console.log('calling handleGetBalance for connection', connection.name);
         try {
-            const balance = this.cashuEnabled
+            const balance = this.isCashuProperlyConfigured()
                 ? this.cashuStore.totalBalanceSats
                 : (await this.balanceStore.getLightningBalance(true))
                       ?.lightningBalance;
@@ -1558,8 +1561,9 @@ export default class NostrWalletConnectStore {
         request: Nip47PayInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
         this.markConnectionUsed(connection.id);
+        console.log('calling handlePayInvoice for connection', connection.name);
         try {
-            if (this.cashuEnabled) {
+            if (this.isCashuProperlyConfigured()) {
                 if (!this.cashuStore.selectedMintUrl) {
                     return {
                         result: undefined,
@@ -1592,17 +1596,6 @@ export default class NostrWalletConnectStore {
                             code: 'INVALID_INVOICE',
                             message: localeString(
                                 'views.Settings.NostrWalletConnect.errors.failedToDecodeInvoice'
-                            )
-                        }
-                    };
-                }
-                if (!invoice) {
-                    return {
-                        result: undefined,
-                        error: {
-                            code: 'INVALID_INVOICE',
-                            message: localeString(
-                                'views.Settings.NostrWalletConnect.errors.invoiceNotFound'
                             )
                         }
                     };
@@ -1644,12 +1637,12 @@ export default class NostrWalletConnectStore {
                     };
                 }
                 let amount = 0;
-                if ((invoice as any).satoshis) {
+                if (invoice.getAmount && invoice.getAmount > 0) {
+                    amount = invoice.getAmount;
+                } else if ((invoice as any).satoshis) {
                     amount = (invoice as any).satoshis;
                 } else if ((invoice as any).millisatoshis) {
                     amount = Number((invoice as any).millisatoshis) / 1000;
-                } else {
-                    amount = invoice.getAmount || 0;
                 }
                 if (!amount || amount <= 0) {
                     return {
@@ -1662,11 +1655,44 @@ export default class NostrWalletConnectStore {
                         }
                     };
                 }
+                const currentBalance = this.cashuStore.totalBalanceSats || 0;
+                if (currentBalance < amount) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INSUFFICIENT_BALANCE',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.insufficientBalance'
+                            )
+                                .replace('{amount}', amount.toString())
+                                .replace('{balance}', currentBalance.toString())
+                        }
+                    };
+                }
+                const budgetValidation = await this.validateBudgetForPayment(
+                    connection.id,
+                    amount
+                );
+                if (!budgetValidation.canProceed) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'QUOTA_EXCEEDED',
+                            message:
+                                budgetValidation.error ||
+                                localeString(
+                                    'views.Settings.NostrWalletConnect.errors.budgetLimitExceeded'
+                                )
+                        }
+                    };
+                }
+
                 const cashuInvoice =
                     await this.cashuStore.payLnInvoiceFromEcash({
                         amount: amount.toString()
                     });
                 if (cashuInvoice?.preimage) {
+                    await this.trackSpending(connection.id, amount);
                     this.showPaymentSentNotification(amount, connection.name);
                 }
                 return {
@@ -1700,6 +1726,26 @@ export default class NostrWalletConnectStore {
                         }
                     };
                 }
+            }
+            const lightningBalance =
+                await this.balanceStore.getLightningBalance(true);
+            const currentLightningBalance =
+                lightningBalance?.lightningBalance || 0;
+            if (currentLightningBalance < amountSats) {
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'INSUFFICIENT_BALANCE',
+                        message: localeString(
+                            'views.Settings.NostrWalletConnect.errors.insufficientBalance'
+                        )
+                            .replace('{amount}', amountSats.toString())
+                            .replace(
+                                '{balance}',
+                                currentLightningBalance.toString()
+                            )
+                    }
+                };
             }
 
             const budgetValidation = await this.validateBudgetForPayment(
@@ -1816,13 +1862,18 @@ export default class NostrWalletConnectStore {
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
+        console.log(
+            'calling handleMakeInvoice for connection',
+            connection.name
+        );
         try {
-            if (this.cashuEnabled) {
+            if (this.isCashuProperlyConfigured()) {
                 try {
                     const cashuInvoice = await this.cashuStore.createInvoice({
                         value: Math.floor(request.amount / 1000).toString(),
                         memo: request.description || ''
                     });
+
                     if (!cashuInvoice || !cashuInvoice.paymentRequest) {
                         throw new Error(
                             localeString(
@@ -1830,8 +1881,13 @@ export default class NostrWalletConnectStore {
                             )
                         );
                     }
+
                     let paymentHash = '';
                     let descriptionHash = '';
+                    let expiryTime =
+                        Math.floor(Date.now() / 1000) +
+                        (request.expiry || 3600);
+
                     try {
                         const decoded = bolt11.decode(
                             cashuInvoice.paymentRequest
@@ -1841,6 +1897,12 @@ export default class NostrWalletConnectStore {
                                 paymentHash = String(tag.data);
                             } else if (tag.tagName === 'purpose_commit_hash') {
                                 descriptionHash = String(tag.data);
+                            } else if (tag.tagName === 'expire_time') {
+                                const invoiceExpiry = Number(tag.data);
+                                if (invoiceExpiry > 0 && decoded.timestamp) {
+                                    expiryTime =
+                                        decoded.timestamp + invoiceExpiry;
+                                }
                             }
                         }
                     } catch (decodeError) {
@@ -1849,39 +1911,17 @@ export default class NostrWalletConnectStore {
                             decodeError
                         );
                     }
-                    const quoteId = this.cashuStore.quoteId;
-                    let isPaid = false;
-                    if (quoteId) {
-                        try {
-                            const processedQuoteId =
-                                this.convertQuoteIdToHex(quoteId);
-                            const paymentCheck =
-                                await this.cashuStore.checkInvoicePaid(
-                                    processedQuoteId,
-                                    undefined,
-                                    false,
-                                    true
-                                );
-                            isPaid = paymentCheck?.isPaid || false;
-                        } catch (checkError) {
-                            console.warn(
-                                'Failed to check initial payment status:',
-                                checkError
-                            );
-                        }
-                    }
 
-                    if (isPaid) {
-                        this.showPaymentReceivedNotification(
-                            Math.floor(request.amount / 1000),
-                            connection.name
-                        );
-                    }
+                    this.showInvoiceCreatedNotification(
+                        Math.floor(request.amount / 1000),
+                        connection.name,
+                        request.description
+                    );
 
                     return {
                         result: {
-                            type: 'incoming',
-                            state: isPaid ? 'settled' : 'pending',
+                            type: 'incoming' as const,
+                            state: 'pending' as const,
                             invoice: cashuInvoice.paymentRequest,
                             description: request.description || '',
                             description_hash: descriptionHash,
@@ -1889,13 +1929,9 @@ export default class NostrWalletConnectStore {
                             payment_hash: paymentHash,
                             amount: request.amount,
                             fees_paid: 0,
-                            settled_at: isPaid
-                                ? Math.floor(Date.now() / 1000)
-                                : 0,
+                            settled_at: 0,
                             created_at: Math.floor(Date.now() / 1000),
-                            expires_at:
-                                Math.floor(Date.now() / 1000) +
-                                (request.expiry || 3600)
+                            expires_at: expiryTime
                         },
                         error: undefined
                     };
@@ -1912,6 +1948,14 @@ export default class NostrWalletConnectStore {
                 memo: request.description || '',
                 expiry: request.expiry || 3600
             });
+
+            // Show notification for invoice creation
+            this.showInvoiceCreatedNotification(
+                Math.floor(request.amount / 1000),
+                connection.name,
+                request.description
+            );
+
             return {
                 result: {
                     type: 'incoming' as const,
@@ -1948,11 +1992,15 @@ export default class NostrWalletConnectStore {
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
+        console.log(
+            'calling handleLookupInvoice for connection',
+            connection.name
+        );
         try {
             let paymentHash = this.convertPaymentHashToHex(
                 request.payment_hash!
             );
-            if (this.cashuEnabled) {
+            if (this.isCashuProperlyConfigured()) {
                 const cashuInvoices = this.cashuStore.invoices || [];
                 const matchingInvoice = cashuInvoices.find((inv) => {
                     try {
@@ -1976,35 +2024,38 @@ export default class NostrWalletConnectStore {
                     }
                     let cashuInvoice;
                     let isPaid = matchingInvoice.isPaid;
-                    let amtSat = matchingInvoice.getAmount || 0;
+                    let amtSat = matchingInvoice.getAmount;
 
                     if (!isPaid) {
                         cashuInvoice = await this.cashuStore.checkInvoicePaid(
                             matchingInvoice.quote
                         );
                         isPaid = cashuInvoice?.isPaid || false;
-                        amtSat = cashuInvoice?.amtSat || 0;
+                        amtSat =
+                            cashuInvoice?.amtSat || matchingInvoice.getAmount;
                     }
+
+                    const timestamp =
+                        Number(matchingInvoice.getTimestamp) ||
+                        Math.floor(Date.now() / 1000);
+                    const expiresAt =
+                        Number(matchingInvoice.expires_at) || timestamp + 3600;
 
                     const result = {
                         type: 'incoming' as const,
                         state: isPaid
                             ? ('settled' as const)
                             : ('pending' as const),
-                        invoice:
-                            cashuInvoice?.paymentRequest ||
-                            matchingInvoice.getPaymentRequest,
-                        description: '',
+                        invoice: matchingInvoice.getPaymentRequest,
+                        description: matchingInvoice.getMemo || '',
                         description_hash: '',
                         preimage: '',
                         payment_hash: request.payment_hash!,
-                        amount: Math.floor(amtSat * 1000),
+                        amount: Math.floor((amtSat || 0) * 1000),
                         fees_paid: 0,
-                        settled_at: isPaid
-                            ? Math.floor(Date.now() / 1000)
-                            : Math.floor(Date.now() / 1000),
-                        created_at: Math.floor(Date.now() / 1000),
-                        expires_at: Math.floor(Date.now() / 1000) + 3600
+                        settled_at: isPaid ? Math.floor(Date.now() / 1000) : 0,
+                        created_at: timestamp,
+                        expires_at: expiresAt
                     };
                     return {
                         result,
@@ -2042,7 +2093,7 @@ export default class NostrWalletConnectStore {
                     fees_paid: 0,
                     settled_at: invoice.isPaid
                         ? Math.floor(invoice.settleDate.getTime() / 1000)
-                        : Math.floor(Date.now() / 1000),
+                        : 0,
                     created_at: Math.floor(
                         invoice.getCreationDate.getTime() / 1000
                     ),
@@ -2074,46 +2125,167 @@ export default class NostrWalletConnectStore {
         request: Nip47ListTransactionsRequest
     ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
         this.markConnectionUsed(connection.id);
+        console.log(
+            'calling handleListTransactions for connection',
+            connection.name
+        );
         try {
-            await this.transactionsStore.getTransactions();
-            const transactions = this.transactionsStore.transactions;
+            let nip47Transactions: Nip47Transaction[] = [];
 
-            let nip47Transactions: Nip47Transaction[] = (
-                transactions || []
-            ).map((tx: Transaction) => {
-                const amount = Number(tx.amount);
-                const type: 'incoming' | 'outgoing' =
-                    amount >= 0 ? 'incoming' : 'outgoing';
-                const state: 'settled' | 'pending' | 'failed' =
-                    tx.num_confirmations > 0 ? 'settled' : 'pending';
-                const amountMsats = Math.abs(amount) * 1000;
-                const feesMsats = Math.floor(
-                    (Number(tx.total_fees) || 0) * 1000
-                );
-                const timestamp = Number(tx.time_stamp);
+            if (this.isCashuProperlyConfigured()) {
+                const cashuPayments = this.cashuStore.payments || [];
+                const cashuInvoices = this.cashuStore.invoices || [];
+                const receivedTokens = this.cashuStore.receivedTokens || [];
+                const sentTokens = this.cashuStore.sentTokens || [];
 
-                return {
-                    type,
-                    state,
-                    invoice: '',
-                    description: tx.note || '',
-                    description_hash: '',
-                    preimage: '',
-                    payment_hash: tx.tx_hash,
-                    amount: amountMsats,
-                    fees_paid: feesMsats,
-                    settled_at: timestamp,
-                    created_at: timestamp,
-                    expires_at: timestamp + 3600,
-                    metadata: {
-                        block_height: tx.block_height,
-                        block_hash: tx.block_hash,
-                        num_confirmations: tx.num_confirmations,
-                        dest_addresses: tx.dest_addresses,
-                        raw_tx_hex: tx.raw_tx_hex
+                // Convert Cashu  to NIP-47 transactions
+                const cashuPaymentTransactions: Nip47Transaction[] =
+                    cashuPayments.map((payment) => {
+                        const timestamp =
+                            Number(payment.getTimestamp) || Date.now() / 1000;
+                        return {
+                            type: 'outgoing' as const,
+                            state: 'settled' as const,
+                            invoice: payment.getPaymentRequest || '',
+                            description: payment.getMemo || '',
+                            description_hash: '',
+                            preimage: payment.getPreimage || '',
+                            payment_hash: payment.paymentHash || '',
+                            amount: Math.floor(
+                                (Number(payment.getAmount) || 0) * 1000
+                            ), // Convert to msats
+                            fees_paid: Math.floor(
+                                (Number(payment.getFee) || 0) * 1000
+                            ), // Convert to msats
+                            settled_at: Math.floor(timestamp),
+                            created_at: Math.floor(timestamp),
+                            expires_at: Math.floor(timestamp + 3600)
+                        };
+                    });
+
+                // Convert Cashu invoices to NIP-47 transactions
+                const cashuInvoiceTransactions: Nip47Transaction[] =
+                    cashuInvoices.map((invoice) => {
+                        const timestamp =
+                            Number(invoice.getTimestamp) || Date.now() / 1000;
+                        const expiresAt =
+                            Number(invoice.expires_at) || timestamp + 3600;
+                        return {
+                            type: 'incoming' as const,
+                            state: invoice.isPaid
+                                ? ('settled' as const)
+                                : ('pending' as const),
+                            invoice: invoice.getPaymentRequest || '',
+                            description: invoice.getMemo || '',
+                            description_hash: '',
+                            preimage: '',
+                            payment_hash: invoice.quote || '',
+                            amount: Math.floor((invoice.getAmount || 0) * 1000), // Convert to msats
+                            fees_paid: 0,
+                            settled_at: invoice.isPaid
+                                ? Math.floor(Date.now() / 1000)
+                                : 0,
+                            created_at: Math.floor(timestamp),
+                            expires_at: Math.floor(expiresAt)
+                        };
+                    });
+
+                // Convert received tokens to NIP-47 transactions
+                const receivedTokenTransactions: Nip47Transaction[] =
+                    receivedTokens.map((token) => {
+                        const receivedAt =
+                            Number(token.received_at) || Date.now() / 1000;
+                        const createdAt =
+                            Number(token.created_at) || receivedAt;
+                        return {
+                            type: 'incoming' as const,
+                            state: 'settled' as const,
+                            invoice: '',
+                            description: token.memo || 'Received Cashu token',
+                            description_hash: '',
+                            preimage: '',
+                            payment_hash: token.encodedToken || '',
+                            amount: Math.floor((token.getAmount || 0) * 1000), // Convert to msats
+                            fees_paid: 0,
+                            settled_at: Math.floor(receivedAt),
+                            created_at: Math.floor(createdAt),
+                            expires_at: Math.floor(createdAt + 3600)
+                        };
+                    });
+
+                // Convert sent tokens to NIP-47 transactions
+                const sentTokenTransactions: Nip47Transaction[] =
+                    sentTokens.map((token) => {
+                        const createdAt =
+                            Number(token.created_at) || Date.now() / 1000;
+                        return {
+                            type: 'outgoing' as const,
+                            state: token.spent
+                                ? ('settled' as const)
+                                : ('pending' as const),
+                            invoice: '',
+                            description: token.memo || 'Sent Cashu token',
+                            description_hash: '',
+                            preimage: '',
+                            payment_hash: token.encodedToken || '',
+                            amount: Math.floor((token.getAmount || 0) * 1000), // Convert to msats
+                            fees_paid: 0,
+                            settled_at: token.spent
+                                ? Math.floor(Date.now() / 1000)
+                                : 0,
+                            created_at: Math.floor(createdAt),
+                            expires_at: Math.floor(createdAt + 3600)
+                        };
+                    });
+
+                nip47Transactions = [
+                    ...cashuPaymentTransactions,
+                    ...cashuInvoiceTransactions,
+                    ...receivedTokenTransactions,
+                    ...sentTokenTransactions
+                ];
+                nip47Transactions.sort((a, b) => b.created_at - a.created_at);
+            } else {
+                await this.transactionsStore.getTransactions();
+                const transactions = this.transactionsStore.transactions;
+
+                nip47Transactions = (transactions || []).map(
+                    (tx: Transaction) => {
+                        const amount = Number(tx.amount);
+                        const type: 'incoming' | 'outgoing' =
+                            amount >= 0 ? 'incoming' : 'outgoing';
+                        const state: 'settled' | 'pending' | 'failed' =
+                            tx.num_confirmations > 0 ? 'settled' : 'pending';
+                        const amountMsats = Math.abs(amount) * 1000;
+                        const feesMsats = Math.floor(
+                            (Number(tx.total_fees) || 0) * 1000
+                        );
+                        const timestamp = Number(tx.time_stamp);
+
+                        return {
+                            type,
+                            state,
+                            invoice: '',
+                            description: tx.note || '',
+                            description_hash: '',
+                            preimage: '',
+                            payment_hash: tx.tx_hash,
+                            amount: amountMsats,
+                            fees_paid: feesMsats,
+                            settled_at: timestamp,
+                            created_at: timestamp,
+                            expires_at: timestamp + 3600,
+                            metadata: {
+                                block_height: tx.block_height,
+                                block_hash: tx.block_hash,
+                                num_confirmations: tx.num_confirmations,
+                                dest_addresses: tx.dest_addresses,
+                                raw_tx_hex: tx.raw_tx_hex
+                            }
+                        };
                     }
-                };
-            });
+                );
+            }
 
             if (request.type && request.type.trim() !== '') {
                 nip47Transactions = nip47Transactions.filter(
@@ -2175,6 +2347,7 @@ export default class NostrWalletConnectStore {
         request: Nip47PayKeysendRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
+        console.log('calling handlePayKeysend for connection', connection.name);
         try {
             const amountSats = Math.floor(request.amount / 1000);
             const budgetValidation = await this.validateBudgetForPayment(
@@ -2196,10 +2369,24 @@ export default class NostrWalletConnectStore {
                 };
             }
 
-            const result = await BackendUtils.payLightningInvoice({
-                payment_request: request.pubkey,
-                amt: request.amount
-            });
+            let result;
+            if (this.isCashuProperlyConfigured()) {
+                // For Cashu, keysend is not supported, return an error
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'NOT_IMPLEMENTED',
+                        message: localeString(
+                            'views.Settings.NostrWalletConnect.errors.keysendNotSupportedForCashu'
+                        )
+                    }
+                };
+            } else {
+                result = await BackendUtils.payLightningInvoice({
+                    payment_request: request.pubkey,
+                    amt: request.amount
+                });
+            }
 
             await this.trackSpending(connection.id, amountSats);
             this.showPaymentSentNotification(amountSats, connection.name);
@@ -2241,8 +2428,42 @@ export default class NostrWalletConnectStore {
         request: Nip47SignMessageRequest
     ): NWCWalletServiceResponsePromise<Nip47SignMessageResponse> {
         this.markConnectionUsed(connection.id);
+        console.log(
+            'calling handleSignMessage for connection',
+            connection.name
+        );
         try {
-            const signature = await BackendUtils.signMessage(request.message);
+            let signature: string;
+
+            if (this.isCashuProperlyConfigured()) {
+                const selectedMintUrl = this.cashuStore.selectedMintUrl;
+                const wallet = this.cashuStore.cashuWallets[selectedMintUrl];
+
+                if (!wallet || !wallet.wallet) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INTERNAL_ERROR',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.cashuWalletNotInitialized'
+                            )
+                        }
+                    };
+                }
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'NOT_IMPLEMENTED',
+                        message: localeString(
+                            'views.Settings.NostrWalletConnect.errors.signMessageNotSupportedForCashu'
+                        )
+                    }
+                };
+            } else {
+                // For Lightning, use the backend signing
+                signature = await BackendUtils.signMessage(request.message);
+            }
+
             return {
                 result: {
                     message: request.message,
@@ -2361,9 +2582,10 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private showPaymentReceivedNotification(
+    private showInvoiceCreatedNotification(
         amountSats: number,
-        connectionName: string
+        connectionName: string,
+        description?: string
     ): void {
         const value = amountSats.toString();
         const value_commas = value.replace(
@@ -2371,10 +2593,14 @@ export default class NostrWalletConnectStore {
             ','
         );
 
-        const title = 'Payment Received via Nostr Wallet Connect';
-        const body = `Received ${value_commas} ${
-            value_commas === '1' ? 'sat' : 'sats'
-        } via ${connectionName}`;
+        const title = 'Invoice Created via Nostr Wallet Connect';
+        const body = description
+            ? `Invoice for ${value_commas} ${
+                  value_commas === '1' ? 'sat' : 'sats'
+              } created by ${connectionName}: ${description}`
+            : `Invoice for ${value_commas} ${
+                  value_commas === '1' ? 'sat' : 'sats'
+              } created by ${connectionName}`;
 
         if (Platform.OS === 'android') {
             // @ts-ignore:next-line
@@ -2392,32 +2618,6 @@ export default class NostrWalletConnectStore {
                 sound: 'chime.aiff'
             });
         }
-    }
-
-    private convertQuoteIdToHex(quoteId: string): string {
-        try {
-            if (!quoteId || typeof quoteId !== 'string') {
-                console.warn(
-                    'convertQuoteIdToHex: Invalid quote ID input:',
-                    quoteId
-                );
-                return '';
-            }
-
-            if (
-                quoteId.includes('+') ||
-                quoteId.includes('/') ||
-                quoteId.includes('=')
-            ) {
-                return Base64Utils.base64ToHex(quoteId);
-            }
-        } catch (error) {
-            console.warn(
-                'Failed to convert quote ID from base64 to hex:',
-                error
-            );
-        }
-        return quoteId || '';
     }
 
     private convertPaymentHashToHex(

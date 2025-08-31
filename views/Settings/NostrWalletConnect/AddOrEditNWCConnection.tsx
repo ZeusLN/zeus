@@ -687,16 +687,21 @@ export default class AddOrEditNWCConnection extends React.Component<
                         {route.params?.isEdit && this.isRelayChanged() && (
                             <View
                                 style={{
-                                    backgroundColor: themeColor('warning'),
+                                    backgroundColor: themeColor('secondary'),
                                     borderColor: themeColor('secondary'),
                                     borderWidth: 1,
                                     padding: 10,
+                                    marginBottom: 10,
                                     borderRadius: 8,
                                     marginHorizontal: 10,
                                     marginTop: 10
                                 }}
                             >
-                                <Text style={{ color: themeColor('text') }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('highlight')
+                                    }}
+                                >
                                     {localeString(
                                         'views.Settings.NostrWalletConnect.relayChangeWarning'
                                     )}
