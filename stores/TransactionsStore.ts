@@ -50,6 +50,7 @@ export default class TransactionsStore {
     @observable transaction: Transaction | null;
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
+    @observable payment_fee: string | null;
     @observable isIncomplete: boolean | null;
     @observable payment_hash: any;
     @observable payment_error: any;
@@ -576,6 +577,7 @@ export default class TransactionsStore {
         this.noteKey = payment.getNoteKey;
         this.payment_preimage = payment.getPreimage;
         this.payment_hash = payment.paymentHash;
+        this.payment_fee = payment.getFee;
         this.isIncomplete = payment.isIncomplete;
 
         const implementation = this.settingsStore.implementation;

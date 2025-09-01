@@ -91,5 +91,7 @@ export const nostrWalletConnectStore = new NostrWalletConnectStore(
     balanceStore,
     nodeInfoStore,
     transactionsStore,
-    cashuStore
+    cashuStore,
+    invoicesStore,
+    messageSignStore
 );
