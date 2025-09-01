@@ -30,6 +30,15 @@ export interface NWCConnectionData {
     metadata?: any;
 }
 
+const BUDGET_RENEWAL_MS = {
+    daily: 24 * 60 * 60 * 1000,
+    weekly: 7 * 24 * 60 * 60 * 1000,
+    monthly: 30 * 24 * 60 * 60 * 1000,
+    yearly: 365 * 24 * 60 * 60 * 1000
+} as const;
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
 export default class NWCConnection extends BaseModel {
     id: string;
     name: string;
@@ -50,43 +59,45 @@ export default class NWCConnection extends BaseModel {
     constructor(data?: NWCConnectionData) {
         super(data);
 
-        if (this.totalSpendSats === undefined) {
-            this.totalSpendSats = 0;
-        } else {
-            this.totalSpendSats = Number(this.totalSpendSats);
-        }
+        this.totalSpendSats = Number(this.totalSpendSats || 0);
+        this.maxAmountSats =
+            this.maxAmountSats !== undefined
+                ? Number(this.maxAmountSats)
+                : undefined;
 
-        if (this.createdAt && typeof this.createdAt === 'string') {
-            this.createdAt = new Date(this.createdAt);
-        }
-        if (this.lastUsed && typeof this.lastUsed === 'string') {
-            this.lastUsed = new Date(this.lastUsed);
-        }
-        if (this.expiresAt && typeof this.expiresAt === 'string') {
-            this.expiresAt = new Date(this.expiresAt);
-        }
-        if (this.lastBudgetReset && typeof this.lastBudgetReset === 'string') {
-            this.lastBudgetReset = new Date(this.lastBudgetReset);
-        }
-        if (this.maxAmountSats !== undefined) {
-            this.maxAmountSats = Number(this.maxAmountSats);
-        }
+        this.normalizeDates();
     }
+
+    private normalizeDates(): void {
+        const dateFields = [
+            'createdAt',
+            'lastUsed',
+            'expiresAt',
+            'lastBudgetReset'
+        ] as const;
+
+        dateFields.forEach((field) => {
+            const value = (this as any)[field];
+            if (value && typeof value === 'string') {
+                (this as any)[field] = new Date(value);
+            }
+        });
+    }
+
     @computed public get isExpired(): boolean {
-        if (!this.expiresAt) return false;
-        return new Date() > this.expiresAt;
+        return this.expiresAt ? new Date() > this.expiresAt : false;
     }
 
     @computed public get statusText(): string {
-        if (this.isExpired)
-            return localeString('channel.expirationStatus.expired');
-        return localeString('general.active');
+        return this.isExpired
+            ? localeString('channel.expirationStatus.expired')
+            : localeString('general.active');
     }
 
     @computed public get hasRecentActivity(): boolean {
         if (!this.lastUsed) return false;
-        const dayAgo = new Date();
-        dayAgo.setDate(dayAgo.getDate() - 1);
+
+        const dayAgo = new Date(Date.now() - ONE_DAY_MS);
         return this.lastUsed > dayAgo;
     }
 
@@ -95,8 +106,9 @@ export default class NWCConnection extends BaseModel {
     }
 
     @computed public get budgetLimitReached(): boolean {
-        if (!this.hasBudgetLimit) return false;
-        return this.totalSpendSats >= this.maxAmountSats!;
+        return (
+            this.hasBudgetLimit && this.totalSpendSats >= this.maxAmountSats!
+        );
     }
 
     @computed public get remainingBudget(): number {
@@ -118,37 +130,26 @@ export default class NWCConnection extends BaseModel {
             return false;
         }
 
+        // If no last reset, needs reset
         if (!this.lastBudgetReset) {
             return true;
         }
+        const timeDiff = Date.now() - this.lastBudgetReset.getTime();
+        const renewalMs = BUDGET_RENEWAL_MS[this.budgetRenewal];
 
-        const now = new Date();
-        const lastReset = this.lastBudgetReset;
+        return timeDiff >= renewalMs;
+    }
 
-        switch (this.budgetRenewal) {
-            case 'daily':
-                const oneDayAgo = new Date(now);
-                oneDayAgo.setDate(oneDayAgo.getDate() - 1);
-                return lastReset <= oneDayAgo;
+    @computed public get isActive(): boolean {
+        return !this.isExpired;
+    }
 
-            case 'weekly':
-                const oneWeekAgo = new Date(now);
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                return lastReset <= oneWeekAgo;
+    @computed public get displayName(): string {
+        return this.name || this.pubkey.slice(0, 8) + '...';
+    }
 
-            case 'monthly':
-                const oneMonthAgo = new Date(now);
-                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-                return lastReset <= oneMonthAgo;
-
-            case 'yearly':
-                const oneYearAgo = new Date(now);
-                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                return lastReset <= oneYearAgo;
-
-            default:
-                return false;
-        }
+    @computed public get permissionsCount(): number {
+        return this.permissions?.length || 0;
     }
 
     public canSpend(amountSats: number): boolean {
@@ -159,5 +160,29 @@ export default class NWCConnection extends BaseModel {
     public resetBudget(): void {
         this.totalSpendSats = 0;
         this.lastBudgetReset = new Date();
+    }
+
+    public addSpending(amountSats: number): void {
+        this.totalSpendSats += amountSats;
+    }
+
+    public hasPermission(permission: Nip47SingleMethod): boolean {
+        return this.permissions?.includes(permission) || false;
+    }
+
+    public getDaysUntilExpiry(): number | null {
+        if (!this.expiresAt) return null;
+
+        const now = new Date();
+        const timeDiff = this.expiresAt.getTime() - now.getTime();
+        return Math.ceil(timeDiff / ONE_DAY_MS);
+    }
+
+    public getDaysSinceLastUsed(): number | null {
+        if (!this.lastUsed) return null;
+
+        const now = new Date();
+        const timeDiff = now.getTime() - this.lastUsed.getTime();
+        return Math.floor(timeDiff / ONE_DAY_MS);
     }
 }
