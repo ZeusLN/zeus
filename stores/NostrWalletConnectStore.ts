@@ -421,7 +421,7 @@ export default class NostrWalletConnectStore {
             await this.loadPersistentServiceSetting();
             await this.loadCashuSetting();
             await this.loadConnections();
-            await this.checkAndResetAllBudgetsOnInit();
+            await this.checkAndResetAllBudgets();
             await this.startService();
 
             runInAction(() => {
@@ -1151,14 +1151,12 @@ export default class NostrWalletConnectStore {
 
             runInAction(() => {
                 const oldBudgetRenewal = connection.budgetRenewal;
-                const oldMaxAmountSats = connection.maxAmountSats;
                 const newBudgetRenewal = updates.budgetRenewal;
                 const newMaxAmountSats = updates.maxAmountSats;
 
                 Object.assign(connection, updates);
 
-                const hadBudget =
-                    oldMaxAmountSats !== undefined && oldMaxAmountSats > 0;
+                const hadBudget = connection.hasBudgetLimit;
                 const hasBudget =
                     newMaxAmountSats !== undefined && newMaxAmountSats > 0;
                 const budgetRenewalChanged =
@@ -1166,13 +1164,12 @@ export default class NostrWalletConnectStore {
                     newBudgetRenewal !== oldBudgetRenewal;
 
                 if (!hadBudget && hasBudget) {
-                    connection.lastBudgetReset = new Date();
+                    connection.resetBudget();
                 } else if (hadBudget && !hasBudget) {
                     connection.lastBudgetReset = undefined;
                     connection.totalSpendSats = 0;
                 } else if (hasBudget && budgetRenewalChanged) {
-                    connection.lastBudgetReset = new Date();
-                    connection.totalSpendSats = 0;
+                    connection.resetBudget();
                 }
             });
 
@@ -1197,7 +1194,7 @@ export default class NostrWalletConnectStore {
     };
 
     @action
-    public markConnectionUsed = async (connectionId: string) => {
+    private markConnectionUsed = async (connectionId: string) => {
         const connection = this.connections.find((c) => c.id === connectionId);
         if (connection) {
             const wasNeverUsed = !connection.lastUsed;
@@ -1237,102 +1234,78 @@ export default class NostrWalletConnectStore {
     };
 
     @action
-    public checkAndResetBudgetIfNeeded = async (
-        connectionId: string
+    private manageBudget = async (
+        connectionId: string,
+        amountSats: number,
+        operation: 'validate' | 'track' | 'reset' = 'validate'
     ): Promise<void> => {
         const connection = this.getConnection(connectionId);
-        if (!connection) return;
-
+        if (!connection) {
+            if (operation === 'validate') {
+                throw new Error(
+                    localeString(
+                        'views.Settings.NostrWalletConnect.connectionNotFound'
+                    )
+                );
+            }
+            return;
+        }
+        let needsSave = false;
         if (connection.needsBudgetReset) {
             connection.resetBudget();
+            needsSave = true;
+        }
+        switch (operation) {
+            case 'validate':
+                if (
+                    connection.hasBudgetLimit &&
+                    !connection.canSpend(amountSats)
+                ) {
+                    const remainingBudget = connection.remainingBudget;
+                    const error = new Error(
+                        localeString(
+                            'views.Settings.NostrWalletConnect.errors.paymentExceedsBudget'
+                        )
+                            .replace('{amount}', amountSats.toString())
+                            .replace('{remaining}', remainingBudget.toString())
+                    );
+                    (error as any).code = 'QUOTA_EXCEEDED';
+                    throw error;
+                }
+                break;
+            case 'track':
+                connection.addSpending(amountSats);
+                needsSave = true;
+                break;
+        }
+        if (needsSave) {
             await this.saveConnections();
         }
     };
 
     @action
-    public checkAndResetAllBudgetsOnInit = async (): Promise<void> => {
-        await this.checkAndResetAllBudgets();
-    };
-
-    @action
-    public checkAndResetAllBudgets = async (): Promise<void> => {
-        let budgetsReset = 0;
+    private checkAndResetAllBudgets = async (): Promise<void> => {
+        let needsSave = false;
 
         runInAction(() => {
             for (const connection of this.connections) {
                 if (connection.needsBudgetReset) {
-                    budgetsReset++;
                     connection.resetBudget();
+                    needsSave = true;
                 }
             }
         });
 
-        if (budgetsReset > 0) {
+        if (needsSave) {
             await this.saveConnections();
         }
     };
-
-    @action
-    public trackSpending = async (
-        connectionId: string,
-        amountSats: number
-    ): Promise<void> => {
-        const connection = this.getConnection(connectionId);
-        if (!connection) return;
-
-        await this.checkAndResetBudgetIfNeeded(connectionId);
-
-        connection.totalSpendSats =
-            Number(connection.totalSpendSats) + Number(amountSats);
-        await this.saveConnections();
-    };
-    @action
-    private validateBudgetForPayment = async (
-        connectionId: string,
-        amountSats: number
-    ): Promise<void> => {
-        const connection = this.getConnection(connectionId);
-        if (!connection) {
-            throw new Error(
-                localeString(
-                    'views.Settings.NostrWalletConnect.connectionNotFound'
-                )
-            );
-        }
-        await this.checkAndResetBudgetIfNeeded(connectionId);
-
-        if (!connection.hasBudgetLimit) {
-            return;
-        }
-
-        if (!connection.canSpend(amountSats)) {
-            const remainingBudget = connection.remainingBudget;
-            const error = new Error(
-                localeString(
-                    'views.Settings.NostrWalletConnect.errors.paymentExceedsBudget'
-                )
-                    .replace('{amount}', amountSats.toString())
-                    .replace('{remaining}', remainingBudget.toString())
-            );
-            (error as any).code = 'QUOTA_EXCEEDED';
-            throw error;
-        }
-    };
-
     private async subscribeToAllConnections(): Promise<void> {
-        const activeConnections = this.connections.filter((c) => !c.isExpired);
+        const activeConnections = this.connections.filter((c) => c.isActive);
         for (const connection of activeConnections) {
             await this.subscribeToConnection(connection);
         }
     }
-
-    private hasPermission(
-        connection: NWCConnection,
-        permission: Nip47SingleMethod
-    ): boolean {
-        return connection.permissions.includes(permission);
-    }
-
     private async subscribeToConnection(
         connection: NWCConnection
     ): Promise<void> {
@@ -1360,41 +1333,41 @@ export default class NostrWalletConnectStore {
             );
             const handler: NWCWalletServiceRequestHandler = {};
 
-            if (this.hasPermission(connection, 'get_info')) {
+            if (connection.hasPermission('get_info')) {
                 handler.getInfo = () => this.handleGetInfo(connection);
             }
 
-            if (this.hasPermission(connection, 'get_balance')) {
+            if (connection.hasPermission('get_balance')) {
                 handler.getBalance = () => this.handleGetBalance(connection);
             }
 
-            if (this.hasPermission(connection, 'pay_invoice')) {
+            if (connection.hasPermission('pay_invoice')) {
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.handlePayInvoice(connection, request);
             }
 
-            if (this.hasPermission(connection, 'make_invoice')) {
+            if (connection.hasPermission('make_invoice')) {
                 handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
                     this.handleMakeInvoice(connection, request);
             }
 
-            if (this.hasPermission(connection, 'lookup_invoice')) {
+            if (connection.hasPermission('lookup_invoice')) {
                 handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
                     this.handleLookupInvoice(connection, request);
             }
 
-            if (this.hasPermission(connection, 'list_transactions')) {
+            if (connection.hasPermission('list_transactions')) {
                 handler.listTransactions = (
                     request: Nip47ListTransactionsRequest
                 ) => this.handleListTransactions(connection, request);
             }
 
-            if (this.hasPermission(connection, 'pay_keysend')) {
+            if (connection.hasPermission('pay_keysend')) {
                 handler.payKeysend = (request: Nip47PayKeysendRequest) =>
                     this.handlePayKeysend(connection, request);
             }
 
-            if (this.hasPermission(connection, 'sign_message')) {
+            if (connection.hasPermission('sign_message')) {
                 handler.signMessage = (request: Nip47SignMessageRequest) =>
                     this.handleSignMessage(connection, request);
             }
@@ -1453,6 +1426,7 @@ export default class NostrWalletConnectStore {
                 result: {
                     alias:
                         nodeInfo?.alias ||
+                        connection.displayName ||
                         localeString(
                             'views.Settings.NostrWalletConnect.zeusWallet'
                         ),
@@ -1597,14 +1571,14 @@ export default class NostrWalletConnectStore {
                         }
                     };
                 }
-                await this.validateBudgetForPayment(connection.id, amount);
+                await this.manageBudget(connection.id, amount, 'validate');
 
                 const cashuInvoice =
                     await this.cashuStore.payLnInvoiceFromEcash({
                         amount: amount.toString()
                     });
                 if (cashuInvoice?.preimage) {
-                    await this.trackSpending(connection.id, amount);
+                    await this.manageBudget(connection.id, amount, 'track');
                     this.showPaymentSentNotification(amount, connection.name);
                 }
                 return {
@@ -1660,8 +1634,7 @@ export default class NostrWalletConnectStore {
                 };
             }
 
-            await this.validateBudgetForPayment(connection.id, amountSats);
-            console.log('sending payment', request.invoice);
+            await this.manageBudget(connection.id, amountSats, 'validate');
             await this.transactionsStore.sendPayment({
                 payment_request: request.invoice,
                 fee_limit_sat: '1000',
@@ -1676,9 +1649,7 @@ export default class NostrWalletConnectStore {
             }
             const preimage = this.transactionsStore.payment_preimage;
             const fees_paid = this.transactionsStore.payment_fee;
-            console.log('preimage', preimage);
-            console.log('fees_paid', fees_paid);
-            await this.trackSpending(connection.id, amountSats);
+            await this.manageBudget(connection.id, amountSats, 'track');
             return {
                 result: {
                     preimage: preimage || '',
@@ -2157,7 +2128,7 @@ export default class NostrWalletConnectStore {
         console.log('calling handlePayKeysend for connection', connection.name);
         try {
             const amountSats = Math.floor(request.amount / 1000);
-            await this.validateBudgetForPayment(connection.id, amountSats);
+            await this.manageBudget(connection.id, amountSats, 'validate');
 
             let result;
             if (this.isCashuProperlyConfigured()) {
@@ -2175,7 +2146,7 @@ export default class NostrWalletConnectStore {
                     amount: request.amount.toString()
                 });
             }
-            await this.trackSpending(connection.id, amountSats);
+            await this.manageBudget(connection.id, amountSats, 'track');
             this.showPaymentSentNotification(amountSats, connection.name);
             return {
                 result: {
@@ -2269,7 +2240,7 @@ export default class NostrWalletConnectStore {
     };
 
     public get activeConnections(): NWCConnection[] {
-        return this.connections.filter((c) => !c.isExpired);
+        return this.connections.filter((c) => c.isActive);
     }
 
     public get expiredConnections(): NWCConnection[] {
