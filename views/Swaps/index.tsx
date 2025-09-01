@@ -1206,14 +1206,133 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         >
                                             <TouchableOpacity
                                                 onPress={() => {
+                                                    const {
+                                                        FiatStore,
+                                                        SettingsStore
+                                                    } = this.props;
+                                                    const { fiatRates } =
+                                                        FiatStore;
+                                                    const { settings } =
+                                                        SettingsStore;
+                                                    const { fiat } = settings;
+
+                                                    const fiatEntry =
+                                                        fiat && fiatRates
+                                                            ? fiatRates.filter(
+                                                                  (entry) =>
+                                                                      entry.code ===
+                                                                      fiat
+                                                              )[0]
+                                                            : null;
+                                                    const rate =
+                                                        fiat &&
+                                                        fiatRates &&
+                                                        fiatEntry
+                                                            ? fiatEntry.rate
+                                                            : 0;
+
                                                     UnitsStore.changeUnits();
-                                                    this.setState({
-                                                        inputSats: 0,
-                                                        outputSats: 0,
-                                                        serviceFeeSats: 0,
-                                                        inputFiat: '',
-                                                        outputFiat: ''
-                                                    });
+                                                    const newUnit =
+                                                        UnitsStore.units;
+
+                                                    this.setState(
+                                                        (prevState) => {
+                                                            const currentInputSats =
+                                                                new BigNumber(
+                                                                    prevState.inputSats ||
+                                                                        0
+                                                                );
+                                                            const currentOutputSats =
+                                                                new BigNumber(
+                                                                    prevState.outputSats ||
+                                                                        0
+                                                                );
+                                                            let newInputDisplayAmount =
+                                                                '';
+                                                            let newOutputDisplayAmount =
+                                                                '';
+
+                                                            if (
+                                                                newUnit ===
+                                                                    'fiat' &&
+                                                                rate > 0
+                                                            ) {
+                                                                if (
+                                                                    currentInputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newInputDisplayAmount =
+                                                                        currentInputSats
+                                                                            .div(
+                                                                                SATS_PER_BTC
+                                                                            )
+                                                                            .times(
+                                                                                rate
+                                                                            )
+                                                                            .toFixed(
+                                                                                2
+                                                                            );
+                                                                }
+                                                                if (
+                                                                    currentOutputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newOutputDisplayAmount =
+                                                                        currentOutputSats
+                                                                            .div(
+                                                                                SATS_PER_BTC
+                                                                            )
+                                                                            .times(
+                                                                                rate
+                                                                            )
+                                                                            .toFixed(
+                                                                                2
+                                                                            );
+                                                                }
+                                                            } else if (
+                                                                newUnit ===
+                                                                'BTC'
+                                                            ) {
+                                                                if (
+                                                                    currentInputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newInputDisplayAmount =
+                                                                        currentInputSats
+                                                                            .div(
+                                                                                SATS_PER_BTC
+                                                                            )
+                                                                            .toFixed(
+                                                                                8
+                                                                            );
+                                                                }
+                                                                if (
+                                                                    currentOutputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newOutputDisplayAmount =
+                                                                        currentOutputSats
+                                                                            .div(
+                                                                                SATS_PER_BTC
+                                                                            )
+                                                                            .toFixed(
+                                                                                8
+                                                                            );
+                                                                }
+                                                            }
+
+                                                            return {
+                                                                inputFiat:
+                                                                    newInputDisplayAmount,
+                                                                outputFiat:
+                                                                    newOutputDisplayAmount
+                                                            };
+                                                        }
+                                                    );
                                                 }}
                                                 style={{
                                                     marginLeft: 10,
