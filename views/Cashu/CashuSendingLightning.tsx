@@ -25,6 +25,7 @@ import { Row } from '../../components/layout/Row';
 import CashuStore from '../../stores/CashuStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -49,6 +50,7 @@ interface CashuSendingLightningProps {
     CashuStore: CashuStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     route: Route<
         'CashuSendingLightning',
         {
@@ -71,7 +73,7 @@ interface CashuSendingLightningState {
     showZaplockerWarning: boolean;
 }
 
-@inject('CashuStore', 'LnurlPayStore')
+@inject('CashuStore', 'LnurlPayStore', 'NodeInfoStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -119,7 +121,7 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentDidUpdate() {
-        const { CashuStore, route } = this.props;
+        const { CashuStore, NodeInfoStore, route } = this.props;
         const { donationIsPaid } = this.state;
         const { donationAmount, enableDonations } = route.params;
 
@@ -132,6 +134,7 @@ export default class CashuSendingLightning extends React.Component<
         }
 
         if (
+            NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
             !this.state.wasSuccessful &&
             enableDonations &&

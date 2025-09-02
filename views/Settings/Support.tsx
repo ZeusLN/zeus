@@ -10,6 +10,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import { nodeInfoStore } from '../../stores/Stores';
+
 interface SupportProps {
     navigation: StackNavigationProp<any, any>;
 }
@@ -27,6 +29,10 @@ function Support(props: SupportProps) {
     );
 
     const ABOUT_ITEMS = [
+        {
+            label: localeString('views.PaymentRequest.donateToZEUS'),
+            path: 'DonateToZEUS'
+        },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
             label: localeString('views.Settings.Support.store'),
@@ -52,7 +58,11 @@ function Support(props: SupportProps) {
                 navigation={navigation}
             />
             <FlatList
-                data={ABOUT_ITEMS}
+                data={ABOUT_ITEMS.filter(
+                    (item) =>
+                        item.path !== 'DonateToZEUS' ||
+                        nodeInfoStore.nodeInfo.isMainNet
+                )}
                 renderItem={({ item }) => (
                     <ListItem
                         containerStyle={{
