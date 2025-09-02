@@ -25,7 +25,7 @@ import Screen from '../components/Screen';
 import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
-import { splitQRs } from '../utils/BbqrUtils';
+import { DEFAULT_SPLIT_OPTIONS, splitQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -93,14 +93,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
 
         const fileType = 'T'; // 'T' is for Transaction
 
-        const splitResult = splitQRs(input, fileType, {
-            // these are optional - default values are shown
-            encoding: 'Z', // Zlib compressed base32 encoding
-            minSplit: 4, // minimum number of parts to return
-            maxSplit: 1295, // maximum number of parts to return
-            minVersion: 5, // minimum QR code version
-            maxVersion: 40 // maximum QR code version
-        });
+        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
 
         // bc-ur
 

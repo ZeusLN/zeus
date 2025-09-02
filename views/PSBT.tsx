@@ -17,7 +17,7 @@ import Screen from '../components/Screen';
 import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
-import { splitQRs } from '../utils/BbqrUtils';
+import { splitQRs, DEFAULT_SPLIT_OPTIONS } from '../utils/BbqrUtils';
 import {
     getQRAnimationInterval,
     QRAnimationSpeed
@@ -116,14 +116,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         const fileType = 'P'; // 'P' is for PSBT
 
-        const splitResult = splitQRs(input, fileType, {
-            // these are optional - default values are shown
-            encoding: 'Z', // Zlib compressed base32 encoding
-            minSplit: 4, // minimum number of parts to return
-            maxSplit: 1295, // maximum number of parts to return
-            minVersion: 5, // minimum QR code version
-            maxVersion: 40 // maximum QR code version
-        });
+        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
 
         // bc-ur
 
