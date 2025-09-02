@@ -546,7 +546,7 @@ export default class Receive extends React.Component<
                     ? `${receiverName}:  ${memo}`
                     : memo || '',
                 value: amount || '0',
-                expiry: lspIsActive
+                expirySeconds: lspIsActive
                     ? LOCKED_EXPIRY_SECONDS
                     : expirySeconds || '3600',
                 ampInvoice: lspIsActive ? false : ampInvoice || false,
@@ -697,7 +697,7 @@ export default class Receive extends React.Component<
                                 ? `${receiverName}:  ${memo}`
                                 : memo,
                             value: satAmount.toString(),
-                            expiry: '3600',
+                            expirySeconds: '3600',
                             lnurl: lnurlParams,
                             noLsp: !lspIsActive
                         })
@@ -3390,7 +3390,7 @@ export default class Receive extends React.Component<
                                                             value:
                                                                 satAmount.toString() ||
                                                                 '0',
-                                                            expiry: expirySeconds,
+                                                            expirySeconds,
                                                             lnurl,
                                                             ampInvoice:
                                                                 lspIsActive

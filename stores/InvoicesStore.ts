@@ -241,7 +241,7 @@ export default class InvoicesStore {
     public createUnifiedInvoice = ({
         memo,
         value,
-        expiry = '3600',
+        expirySeconds = '3600',
         lnurl,
         ampInvoice,
         blindedPaths,
@@ -253,7 +253,7 @@ export default class InvoicesStore {
     }: {
         memo: string;
         value: string;
-        expiry: string;
+        expirySeconds: string;
         lnurl?: LNURLWithdrawParams;
         ampInvoice?: boolean;
         blindedPaths?: boolean;
@@ -267,7 +267,7 @@ export default class InvoicesStore {
         return this.createInvoice({
             memo,
             value,
-            expiry,
+            expirySeconds,
             lnurl,
             ampInvoice,
             blindedPaths,
@@ -320,7 +320,7 @@ export default class InvoicesStore {
     public createInvoice = async ({
         memo,
         value,
-        expiry = '3600',
+        expirySeconds = '3600',
         lnurl,
         ampInvoice,
         blindedPaths,
@@ -332,7 +332,7 @@ export default class InvoicesStore {
     }: {
         memo: string;
         value: string;
-        expiry: string;
+        expirySeconds: string;
         lnurl?: LNURLWithdrawParams;
         ampInvoice?: boolean;
         blindedPaths?: boolean;
@@ -352,7 +352,7 @@ export default class InvoicesStore {
         const req: any = {
             memo,
             value,
-            expiry
+            expirySeconds
         };
 
         if (ampInvoice) req.is_amp = true;
