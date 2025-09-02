@@ -1748,7 +1748,7 @@ export default class NostrWalletConnectStore {
             const invoice = await this.invoicesStore.createInvoice({
                 value: Math.floor(request.amount / 1000).toString(),
                 memo: request.description || '',
-                expiry: String(request.expiry || 3600)
+                expirySeconds: String(request.expiry || 3600)
             });
 
             this.showInvoiceCreatedNotification(
