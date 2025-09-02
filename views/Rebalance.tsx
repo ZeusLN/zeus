@@ -41,7 +41,7 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import CloseIcon from '../assets/images/SVG/Close.svg';
 
 const REBALANCE_CONSTANTS = {
-    DEFAULT_FEE_LIMIT: '100',
+    DEFAULT_FEE_LIMIT: '1000',
     DEFAULT_TIMEOUT: '120',
     DEFAULT_SLIDER_VALUE: 0,
     MAX_PAYMENT_PARTS: 5,
@@ -56,6 +56,7 @@ type ChannelType = 'source' | 'destination';
 
 interface RebalanceProps {
     navigation: StackNavigationProp<any, any>;
+    route?: any;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
@@ -122,7 +123,7 @@ export default class Rebalance extends React.Component<
     }
 
     componentDidMount() {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, navigation, route } = this.props;
 
         this.cleanupPaymentListener();
 
@@ -130,12 +131,88 @@ export default class Rebalance extends React.Component<
             ChannelsStore.getChannels();
         }
 
+        const params = route?.params as any;
+        if (params) {
+            if (params.restoreRebalanceState) {
+                this.restoreRebalanceState(params.restoreRebalanceState);
+                return;
+            }
+
+            if (params.showAdvanced) {
+                this.setState({ showAdvanced: true });
+            }
+
+            if (params.feeLimit) {
+                this.setState({ feeLimit: params.feeLimit });
+            }
+            if (params.timeoutSeconds) {
+                this.setState({ timeoutSeconds: params.timeoutSeconds });
+            }
+
+            let sourceChannelSelected = false;
+            let destinationChannelSelected = false;
+
+            if (params.sourceChannel) {
+                this.handleChannelSelect(params.sourceChannel, 'source');
+                sourceChannelSelected = true;
+            }
+            if (params.destinationChannel) {
+                this.handleChannelSelect(
+                    params.destinationChannel,
+                    'destination'
+                );
+                destinationChannelSelected = true;
+            }
+
+            if (
+                params.rebalanceAmount &&
+                sourceChannelSelected &&
+                destinationChannelSelected
+            ) {
+                setTimeout(() => {
+                    this.setState(
+                        {
+                            rebalanceAmount: params.rebalanceAmount,
+                            balanceSliderValue:
+                                params.balanceSliderValue ||
+                                params.rebalanceAmount
+                        },
+                        () => {
+                            this.updateProjectedBalances();
+                        }
+                    );
+                }, 100); // Small delay to ensure channels are properly selected
+            }
+        }
+
         const unsubscribe = navigation.addListener('focus', () => {
             ChannelsStore.getChannels();
+            this.setState({ executing: false });
+
+            if (route?.params) {
+                navigation.setParams({});
+            }
         });
 
         this.navigationUnsubscribe = unsubscribe;
     }
+
+    private restoreRebalanceState = (
+        restoredState: Partial<RebalanceState>
+    ) => {
+        console.log('Restoring rebalance state:', restoredState);
+
+        this.setState(restoredState as RebalanceState, () => {
+            const maxAmount = this.getMaxRebalanceAmount();
+            this.setState({ maxAmount }, () => {
+                this.updateProjectedBalances();
+            });
+
+            this.props.navigation.setParams({
+                restoreRebalanceState: undefined
+            });
+        });
+    };
 
     componentWillUnmount() {
         this.cleanupPaymentListener();
@@ -266,18 +343,30 @@ export default class Rebalance extends React.Component<
             : Number(channel.receivingCapacity) || 0;
 
         if (capacity <= 0) {
-            const channelTypeLabel = isSource ? 'source' : 'destination';
+            const channelTypeLabel = isSource
+                ? localeString('views.Settings.Currency.source')
+                : localeString('general.destination');
             const liquidityType = isSource
-                ? 'outbound liquidity'
-                : 'inbound capacity';
+                ? localeString('views.Rebalance.liquidityType.outbound')
+                : localeString('views.Rebalance.liquidityType.inbound');
             const actionRequired = isSource
-                ? 'available outbound capacity to send funds from'
-                : 'available inbound capacity to receive funds';
+                ? localeString('views.Rebalance.actionRequired.outbound')
+                : localeString('views.Rebalance.actionRequired.inbound');
+
+            const errorMessage = `${localeString(
+                'views.Rebalance.error.insufficientCapacityPrefix'
+            )} ${channelTypeLabel.toLowerCase()} ${localeString(
+                'views.Rebalance.error.channel'
+            )} "${channel.displayName}" ${localeString(
+                'views.Rebalance.error.hasInsufficient'
+            )} ${liquidityType}.\n\n${localeString(
+                'views.Rebalance.error.rebalancingRequires'
+            )} ${actionRequired}.`;
 
             this.createAlert(
-                'Channel Selection Error',
-                `The selected ${channelTypeLabel} channel "${channel.displayName}" has insufficient ${liquidityType}.\n\nFor rebalancing to work, you need to select a channel with ${actionRequired}.`,
-                [{ text: 'Got it' }]
+                localeString('views.Rebalance.error.channelSelection'),
+                errorMessage,
+                [{ text: localeString('general.ok') }]
             );
             return false;
         }
@@ -457,113 +546,199 @@ export default class Rebalance extends React.Component<
         }
     };
 
-    // CLN Rest circular rebalancing implementation with fallback mechanism
+    // CLN Rest circular rebalancing implementation
     private executeClnRestRebalance = async (
         invoiceData: any
     ): Promise<any> => {
         const {
             selectedSourceChannel,
+            selectedDestinationChannel,
             feeLimit,
             timeoutSeconds,
             rebalanceAmount
         } = this.state;
         const { NodeInfoStore } = this.props;
 
-        if (!selectedSourceChannel) {
-            throw new Error('Source channel not selected');
+        // Both channels required for circular rebalancing
+        if (!selectedSourceChannel || !selectedDestinationChannel) {
+            throw new Error(
+                'Both source and destination channels must be selected'
+            );
         }
 
         const ownNodePubkey =
             NodeInfoStore.nodeInfo?.identity_pubkey ||
             NodeInfoStore.nodeInfo?.id;
+        let layerCreated = false;
 
-        if (!ownNodePubkey) {
-            throw new Error(
-                'Could not get own node pubkey for circular rebalancing'
-            );
-        }
+        try {
+            await BackendUtils.askReneCreateLayer({
+                layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
+            });
+            layerCreated = true;
 
-        // Try direction /1 first, then fallback to /0
-        const directions = ['/1', '/0'];
-        let lastError: Error | null = null;
+            const channelsResponse = await BackendUtils.getChannels();
 
-        for (const direction of directions) {
-            let layerCreated = false;
-
-            try {
-                // Create new layer
-                await BackendUtils.askReneCreateLayer({
-                    layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
-                });
-                layerCreated = true;
-
-                // Update channel to force alternative routing with current direction
-                await BackendUtils.askReneUpdateChannel({
-                    short_channel_id_dir:
-                        selectedSourceChannel.short_channel_id + direction,
-                    layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME,
-                    enabled: false
-                });
-
-                // Get routes using the layer
-                await BackendUtils.getRoutes({
-                    source: selectedSourceChannel.remotePubkey,
-                    destination: ownNodePubkey,
-                    amount_msat: rebalanceAmount * 1000,
-                    maxfee_msat: Number(feeLimit) * 1000,
-                    layers: [REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME],
-                    final_cltv: REBALANCE_CONSTANTS.DEFAULT_FINAL_CLTV
-                });
-
-                // Execute payment using the same invoice for both attempts
-                const paymentData = await BackendUtils.payLightningInvoice({
-                    payment_request: invoiceData.bolt11,
-                    amount_msat: rebalanceAmount * 1000,
-                    maxfeepercent: Math.max(
-                        REBALANCE_CONSTANTS.MIN_FEE_PERCENT,
-                        (Number(feeLimit) / rebalanceAmount) * 100
-                    ),
-                    retry_for: Number(timeoutSeconds),
-                    exclude: [],
-                    localinvreqid: null,
-                    description: `Circular rebalance ${rebalanceAmount} sats (direction ${direction})`
-                });
-
-                return paymentData;
-            } catch (error: any) {
-                console.error(
-                    `CLN Rest circular rebalancing failed with direction ${direction}:`,
-                    error
+            let allChannels = [];
+            if (
+                channelsResponse &&
+                channelsResponse.channels &&
+                Array.isArray(channelsResponse.channels)
+            ) {
+                allChannels = channelsResponse.channels;
+            } else {
+                throw new Error(
+                    'Invalid channels response format - expected { channels: [] }'
                 );
-                lastError = error;
+            }
 
-                // If this was the first direction (/1) and it failed, prepare for fallback
-                if (direction === '/1' && directions.indexOf('/0') !== -1) {
-                    console.log(
-                        'Direction /1 failed, attempting fallback to /0 with same invoice'
-                    );
-                }
-            } finally {
-                if (layerCreated) {
-                    try {
-                        await BackendUtils.askReneRemoveLayer({
-                            layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
-                        });
-                    } catch (cleanupError) {
-                        console.error(
-                            `Error cleaning up askrene layer for direction ${direction}:`,
-                            cleanupError
-                        );
+            const channelUpdates = [];
+
+            for (const channel of allChannels) {
+                if (
+                    channel.short_channel_id !==
+                    selectedDestinationChannel.short_channel_id
+                ) {
+                    const remotePubkey =
+                        channel.remote_pubkey || channel.remotePubkey;
+                    if (!remotePubkey) {
+                        console.warn('Channel missing remote pubkey:', channel);
+                        continue;
                     }
+
+                    const outgoingDirection =
+                        ownNodePubkey < remotePubkey ? '0' : '1';
+                    const incomingDirection =
+                        ownNodePubkey < remotePubkey ? '1' : '0';
+
+                    channelUpdates.push({
+                        short_channel_id_dir: `${channel.short_channel_id}/${outgoingDirection}`,
+                        enabled: false
+                    });
+                    channelUpdates.push({
+                        short_channel_id_dir: `${channel.short_channel_id}/${incomingDirection}`,
+                        enabled: false
+                    });
+                }
+            }
+
+            await this.batchUpdateChannels(
+                channelUpdates,
+                REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
+            );
+
+            const sourceRemotePubkey =
+                selectedSourceChannel.remote_pubkey ||
+                selectedSourceChannel.remotePubkey;
+            if (!sourceRemotePubkey) {
+                throw new Error('Source channel missing remote pubkey');
+            }
+
+            const routeResponse = await BackendUtils.getRoutes({
+                source: sourceRemotePubkey,
+                destination: ownNodePubkey,
+                amount_msat: rebalanceAmount * 1000,
+                maxfee_msat: Number(feeLimit) * 1000,
+                layers: [REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME],
+                final_cltv: invoiceData.min_final_cltv_expiry || 144
+            });
+
+            if (!routeResponse.routes || routeResponse.routes.length === 0) {
+                throw new Error('No route found for circular rebalancing');
+            }
+
+            const partialRoute = routeResponse.routes[0].path;
+            const completeRoute = [];
+
+            completeRoute.push({
+                amount_msat: partialRoute[0].amount_msat,
+                delay: partialRoute[0].delay,
+                id: sourceRemotePubkey,
+                channel: selectedSourceChannel.short_channel_id
+            });
+
+            for (let i = 0; i < partialRoute.length; i++) {
+                const hop = partialRoute[i];
+                completeRoute.push({
+                    amount_msat:
+                        i === partialRoute.length - 1
+                            ? routeResponse.routes[0].amount_msat
+                            : partialRoute[i + 1].amount_msat,
+                    delay:
+                        i === partialRoute.length - 1
+                            ? routeResponse.routes[0].final_cltv
+                            : partialRoute[i + 1].delay,
+                    id: hop.next_node_id,
+                    channel: hop.short_channel_id_dir.split('/')[0]
+                });
+            }
+
+            await BackendUtils.sendPay({
+                route: completeRoute,
+                payment_hash: invoiceData.payment_hash,
+                payment_secret: invoiceData.payment_secret,
+                bolt11: invoiceData.bolt11
+            });
+
+            const waitResponse = await BackendUtils.waitSendPay({
+                payment_hash: invoiceData.payment_hash,
+                timeout: Number(timeoutSeconds)
+            });
+
+            console.log('Payment completed successfully:', waitResponse);
+            return waitResponse;
+        } catch (error: any) {
+            console.error('CLN circular rebalancing failed:', error);
+            throw error;
+        } finally {
+            // Cleanup layer
+            if (layerCreated) {
+                try {
+                    await BackendUtils.askReneRemoveLayer({
+                        layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
+                    });
+                } catch (cleanupError) {
+                    console.error(
+                        'Error cleaning up askrene layer:',
+                        cleanupError
+                    );
                 }
             }
         }
+    };
 
-        throw new Error(
-            `Circular rebalancing failed with both directions (/1 and /0). Last error: ${
-                lastError?.message || 'Unknown error'
-            }`
-        );
+    private batchUpdateChannels = async (
+        updates: Array<{
+            short_channel_id_dir: string;
+            enabled?: boolean;
+        }>,
+        layer: string
+    ): Promise<void> => {
+        const CHUNK_SIZE = 10;
+
+        for (let i = 0; i < updates.length; i += CHUNK_SIZE) {
+            const chunk = updates.slice(i, i + CHUNK_SIZE);
+
+            const chunkPromises = chunk.map((update) =>
+                BackendUtils.askReneUpdateChannel({
+                    short_channel_id_dir: update.short_channel_id_dir,
+                    layer,
+                    enabled: update.enabled ?? false
+                }).catch((error: any) => {
+                    console.warn(
+                        `Failed to update ${update.short_channel_id_dir}:`,
+                        error
+                    );
+                    return null;
+                })
+            );
+
+            await Promise.all(chunkPromises);
+
+            if (i + CHUNK_SIZE < updates.length) {
+                await new Promise((resolve) => setTimeout(resolve, 50));
+            }
+        }
     };
 
     // LND rebalancing implementation
@@ -572,16 +747,17 @@ export default class Rebalance extends React.Component<
             selectedSourceChannel,
             selectedDestinationChannel,
             feeLimit,
-            timeoutSeconds
+            timeoutSeconds,
+            rebalanceAmount
         } = this.state;
 
         if (!selectedSourceChannel || !selectedDestinationChannel) {
             throw new Error('Channels not selected for LND rebalancing');
         }
 
-        return BackendUtils.payLightningInvoice({
+        const result = await BackendUtils.payLightningInvoice({
             payment_request: invoiceData.payment_request,
-            outgoing_chan_id: Number(selectedSourceChannel.channelId),
+            outgoing_chan_ids: [selectedSourceChannel.channelId],
             last_hop_pubkey: Buffer.from(
                 selectedDestinationChannel.remotePubkey,
                 'hex'
@@ -589,8 +765,12 @@ export default class Rebalance extends React.Component<
             fee_limit_sat: Number(feeLimit),
             allow_self_payment: true,
             timeout_seconds: Number(timeoutSeconds),
-            max_parts: REBALANCE_CONSTANTS.MAX_PAYMENT_PARTS
+            max_parts: REBALANCE_CONSTANTS.MAX_PAYMENT_PARTS,
+            cltv_limit: 1000,
+            max_shard_size_msat: rebalanceAmount * 1000
         });
+
+        return result;
     };
 
     // Payment result handling
@@ -726,7 +906,7 @@ export default class Rebalance extends React.Component<
     };
 
     // Reset the entire component state to initial values
-    private resetComponentState = () => {
+    public resetComponentState = () => {
         this.setState({
             selectedSourceChannel: null,
             selectedDestinationChannel: null,
@@ -830,18 +1010,27 @@ export default class Rebalance extends React.Component<
                             text: localeString(
                                 'views.PaymentRequest.timeout.showAdvanced'
                             ),
-                            onPress: () => this.setState({ showAdvanced: true })
+                            onPress: () => {
+                                this.props.TransactionsStore.loading = false;
+                                // Navigate back to Rebalance screen with advanced settings open
+                                this.props.navigation.navigate('Rebalance', {
+                                    showAdvanced: true,
+                                    sourceChannel:
+                                        this.state.selectedSourceChannel,
+                                    destinationChannel:
+                                        this.state.selectedDestinationChannel,
+                                    rebalanceAmount: this.state.rebalanceAmount,
+                                    balanceSliderValue:
+                                        this.state.balanceSliderValue,
+                                    feeLimit: this.state.feeLimit,
+                                    timeoutSeconds: this.state.timeoutSeconds
+                                });
+                            }
                         },
                         {
                             text: localeString('general.ok'),
                             onPress: () => {
                                 this.props.TransactionsStore.loading = false;
-                                const rebalanceData =
-                                    this.createRebalanceResult(
-                                        false,
-                                        error.message
-                                    );
-                                this.navigateToSendingRebalance(rebalanceData);
                             }
                         }
                     ]
@@ -903,8 +1092,6 @@ export default class Rebalance extends React.Component<
             error.message || localeString('views.Rebalance.error.generic');
         const rebalanceData = this.createRebalanceResult(false, errorMessage);
         this.navigateToSendingRebalance(rebalanceData);
-
-        this.resetComponentState();
     };
 
     executeRebalanceWithParameters = async () => {
@@ -950,6 +1137,7 @@ export default class Rebalance extends React.Component<
             this.handlePaymentResult(result);
         } catch (error: any) {
             this.props.TransactionsStore.loading = false;
+            console.log(`Rebalance error: ${JSON.stringify(error)}`);
             this.handleRebalanceError(error);
             this.cleanupPaymentListener();
         }
@@ -1172,7 +1360,12 @@ export default class Rebalance extends React.Component<
                         { backgroundColor: themeColor('highlight') }
                     ]}
                 >
-                    <Text style={styles.rebalanceAmountLabel}>
+                    <Text
+                        style={{
+                            ...styles.rebalanceAmountLabel,
+                            color: themeColor('background')
+                        }}
+                    >
                         {localeString('views.Rebalance.rebalanceAmount') +
                             ' : '}
                     </Text>
@@ -1438,9 +1631,29 @@ export default class Rebalance extends React.Component<
     };
 
     private navigateToSendingRebalance = (rebalanceData: any) => {
-        this.props.navigation.navigate('SendingLightning', {
+        const currentRebalanceState = {
+            selectedSourceChannel: this.state.selectedSourceChannel,
+            selectedDestinationChannel: this.state.selectedDestinationChannel,
+            rebalanceAmount: this.state.rebalanceAmount,
+            maxAmount: this.state.maxAmount,
+            feeLimit: this.state.feeLimit,
+            timeoutSeconds: this.state.timeoutSeconds,
+            showAdvanced: this.state.showAdvanced,
+            executing: false,
+            projectedSourceBalance: this.state.projectedSourceBalance,
+            projectedDestinationBalance: this.state.projectedDestinationBalance,
+            adjustedSourceBalance: this.state.adjustedSourceBalance,
+            adjustedDestinationBalance: this.state.adjustedDestinationBalance,
+            originalSourceBalance: this.state.originalSourceBalance,
+            originalDestinationBalance: this.state.originalDestinationBalance,
+            totalBalance: this.state.totalBalance,
+            balanceSliderValue: this.state.balanceSliderValue
+        };
+
+        this.props.navigation.replace('SendingLightning', {
             rebalanceData,
-            isRebalance: true
+            isRebalance: true,
+            currentRebalanceState
         });
 
         this.setState({ executing: false });
@@ -1528,61 +1741,18 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'PPNeueMontreal-Book'
     },
-    description: {
-        fontSize: 14,
-        marginBottom: 15,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     channelInfo: {
         padding: 6,
         borderRadius: 10,
         marginTop: 5
     },
-    channelName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    amountContainer: {
-        alignItems: 'center'
-    },
-    amountText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    slider: {
-        width: '100%',
-        height: 40
-    },
-    sliderLabel: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    projectionContainer: {
-        gap: 20
-    },
-    projectionChannel: {
-        padding: 15,
-        borderRadius: 10
-    },
-    projectionLabel: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
+
     inputContainer: {
         marginBottom: 8
     },
     inputLabel: {
         fontSize: 14,
         fontFamily: 'PPNeueMontreal-Book'
-    },
-    textInput: {
-        fontSize: 16
     },
     buttonContainer: {
         marginTop: 30,
@@ -1619,7 +1789,7 @@ const styles = StyleSheet.create({
         marginBottom: 15
     },
     rebalanceAmountLabel: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         fontFamily: 'PPNeueMontreal-Book'
     },
