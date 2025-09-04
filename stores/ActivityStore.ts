@@ -12,9 +12,12 @@ import PaymentsStore from './PaymentsStore';
 import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
+import SwapStore from './SwapStore';
 
 import BackendUtils from './../utils/BackendUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
+
+import Swap from '../models/Swap';
 
 import Storage from '../storage';
 
@@ -27,6 +30,7 @@ export interface Filter {
     onChain: boolean;
     cashu: boolean;
     sent: boolean;
+    swaps: boolean;
     received: boolean;
     unpaid: boolean;
     inTransit: boolean;
@@ -46,6 +50,7 @@ export const DEFAULT_FILTERS = {
     onChain: true,
     cashu: true,
     sent: true,
+    swaps: true,
     received: true,
     unpaid: true,
     inTransit: false,
@@ -65,10 +70,10 @@ export const DEFAULT_FILTERS = {
 export default class ActivityStore {
     @observable public error = false;
     @observable public activity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest
+        Invoice | Payment | Transaction | WithdrawalRequest | Swap
     > = [];
     @observable public filteredActivity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest
+        Invoice | Payment | Transaction | WithdrawalRequest | Swap
     > = [];
     @observable public filters: Filter = DEFAULT_FILTERS;
     settingsStore: SettingsStore;
@@ -76,19 +81,22 @@ export default class ActivityStore {
     invoicesStore: InvoicesStore;
     transactionsStore: TransactionsStore;
     cashuStore: CashuStore;
+    swapStore: SwapStore;
 
     constructor(
         settingsStore: SettingsStore,
         paymentsStore: PaymentsStore,
         invoicesStore: InvoicesStore,
         transactionsStore: TransactionsStore,
-        cashuStore: CashuStore
+        cashuStore: CashuStore,
+        swapStore: SwapStore
     ) {
         this.settingsStore = settingsStore;
         this.paymentsStore = paymentsStore;
         this.transactionsStore = transactionsStore;
         this.invoicesStore = invoicesStore;
         this.cashuStore = cashuStore;
+        this.swapStore = swapStore;
     }
 
     public resetFilters = async () => {
@@ -114,7 +122,8 @@ export default class ActivityStore {
             maximumAmount: undefined,
             startDate: undefined,
             endDate: undefined,
-            memo: ''
+            memo: '',
+            swaps: true
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -173,9 +182,11 @@ export default class ActivityStore {
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
         const withdrawalRequests = this.invoicesStore.withdrawalRequests;
+        const swaps = this.swapStore.swaps;
 
         let additions = payments.concat(invoices);
         additions = additions.concat(withdrawalRequests);
+        additions = additions.concat(swaps);
         if (BackendUtils.supportsOnchainSends()) {
             additions = additions.concat(transactions);
         }
@@ -232,6 +243,7 @@ export default class ActivityStore {
             await this.invoicesStore.getWithdrawalRequests();
             await this.invoicesStore.getRedeemedWithdrawalRequests();
         }
+        await this.swapStore.fetchAndUpdateSwaps();
         const sortedActivity = await this.getSortedActivity();
 
         runInAction(() => {
