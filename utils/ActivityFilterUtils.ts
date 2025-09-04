@@ -6,12 +6,13 @@ import Transaction from '../models/Transaction';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
+import Swap from '../models/Swap';
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<Invoice | Payment | Transaction>,
+        activities: Array<Invoice | Payment | Transaction | Swap>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction> {
+    ): Array<Invoice | Payment | Transaction | Swap> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -37,6 +38,12 @@ class ActivityFilterUtils {
                         activity instanceof CashuPayment ||
                         activity instanceof CashuToken
                     )
+            );
+        }
+
+        if (filter.swaps == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => !(activity instanceof Swap)
             );
         }
 
@@ -171,15 +178,23 @@ class ActivityFilterUtils {
             const memoFilter = filter.memo.toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
-                let note = activity.getNote
-                    ? activity.getNote.toLowerCase()
-                    : '';
+                let note = '';
                 let memo = '';
                 if (activity instanceof Invoice) {
+                    note = activity.getNote
+                        ? activity.getNote.toLowerCase()
+                        : '';
                     memo = activity.memo ? activity.memo.toLowerCase() : '';
                 } else if (activity instanceof Payment) {
+                    note = activity.getNote
+                        ? activity.getNote.toLowerCase()
+                        : '';
                     memo = activity.getMemo
                         ? activity.getMemo.toLowerCase()
+                        : '';
+                } else if (activity.constructor === Object) {
+                    note = activity.getNote
+                        ? activity.getNote.toLowerCase()
                         : '';
                 }
                 return note.includes(memoFilter) || memo.includes(memoFilter);

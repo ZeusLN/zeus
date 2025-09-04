@@ -1715,6 +1715,8 @@
     "zeuspay.enableEcash": "Enable ecash",
     "zeuspay.getChannel": "Get channel",
     "views.Swaps.title": "Swaps",
+    "views.Swaps.submarine": "Submarine swap",
+    "views.Swaps.reverse": "Reverse swap",
     "views.Swaps.create": "Create atomic swap",
     "views.Swaps.initiate": "Initiate swap",
     "views.Swaps.refundSwap": "Refund swap",

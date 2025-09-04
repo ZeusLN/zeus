@@ -6,6 +6,7 @@ import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
+import Swap from '../../models/Swap';
 
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
@@ -21,7 +22,7 @@ import {
 } from '../../utils/ActivityCsvUtils';
 
 interface ActivityProps {
-    filteredActivity: Array<Invoice | Payment | Transaction>;
+    filteredActivity: Array<Invoice | Payment | Transaction | Swap>;
     isVisible: boolean;
     closeModal: () => void;
 }
