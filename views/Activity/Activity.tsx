@@ -21,6 +21,7 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
+import ActivityToCsv from './ActivityToCsv';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -39,11 +40,12 @@ import SettingsStore from '../../stores/SettingsStore';
 import NotesStore from '../../stores/NotesStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+
 import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import CashuToken from '../../models/CashuToken';
-import ActivityToCsv from './ActivityToCsv';
+import { SwapType } from '../../models/Swap';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -236,6 +238,25 @@ const ActivityListItem = React.memo(
                           'general.unconfirmed'
                       )}`
                     : localeString('general.onchain');
+        } else if (item.model === localeString('views.Swaps.title')) {
+            displayName =
+                item.type === SwapType.Submarine
+                    ? localeString('views.Swaps.submarine')
+                    : localeString('views.Swaps.reverse');
+            subTitle = (
+                <Text>
+                    {item?.imported
+                        ? `${localeString('views.Swaps.SwapsPane.imported')}: `
+                        : ''}
+                    {item.type === SwapType.Submarine
+                        ? `${localeString('general.onchain')} → ${localeString(
+                              'general.lightning'
+                          )}  🔗 → ⚡`
+                        : `${localeString(
+                              'general.lightning'
+                          )} → ${localeString('general.onchain')}  ⚡ → 🔗`}
+                </Text>
+            );
         }
 
         return (
@@ -507,6 +528,10 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.Cashu.CashuPayment.title'))
             return 'warning';
 
+        if (item.model === localeString('views.Swaps.title')) {
+            return 'text';
+        }
+
         if (item.model === localeString('cashu.token')) {
             return item.sent
                 ? item.spent
@@ -566,6 +591,14 @@ export default class Activity extends React.PureComponent<
         }
         if (item.model === localeString('views.Payment.title')) {
             navigation.navigate('Payment', { payment: item });
+        }
+        if (item.model === localeString('views.Swaps.title')) {
+            navigation.navigate('SwapDetails', {
+                swapData: item,
+                keys: item.keys,
+                endpoint: item.endpoint,
+                invoice: item.invoice
+            });
         }
     };
 
