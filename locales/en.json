@@ -1126,6 +1126,7 @@
     "views.Activity.requestedPaymentAmp": "Requested Payment (AMP)",
     "views.Activity.expiredRequested": "Expired Request",
     "views.Activity.channelOperation": "Self send or Channel operation",
+    "views.Activity.withdrew": "You withdrew",
     "views.ActivityFilter.title": "Filter Activity",
     "views.ActivityFilter.set": "Set",
     "views.ActivityFilter.edit": "Edit",
