@@ -16,7 +16,10 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
+import ActivityStore, {
+    DEFAULT_FILTERS,
+    Filter
+} from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Header from '../../components/Header';
@@ -79,6 +82,7 @@ export default class ActivityFilter extends React.Component<
             lightning,
             onChain,
             cashu,
+            swaps,
             sent,
             received,
             unpaid,
@@ -195,6 +199,13 @@ export default class ActivityFilter extends React.Component<
                 var: 'cashu',
                 type: 'Toggle',
                 condition: BackendUtils.supportsCashuWallet()
+            },
+            {
+                label: localeString('views.Swaps.title'),
+                value: swaps,
+                var: 'swaps',
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('general.sent'),
@@ -364,10 +375,66 @@ export default class ActivityFilter extends React.Component<
                                                     value={item.value}
                                                     onValueChange={async () => {
                                                         const newFilters: any =
-                                                            filters;
-                                                        const index = `${item.var}`;
-                                                        newFilters[index] =
-                                                            !filters[index];
+                                                            {
+                                                                ...filters
+                                                            };
+                                                        const toggledFilterKey =
+                                                            item.var as keyof Filter;
+                                                        const primaryFilterKeys: (keyof Filter)[] =
+                                                            [
+                                                                'lightning',
+                                                                'onChain',
+                                                                'cashu',
+                                                                'swaps'
+                                                            ];
+
+                                                        const isTurningOn =
+                                                            !newFilters[
+                                                                toggledFilterKey
+                                                            ];
+                                                        newFilters[
+                                                            toggledFilterKey
+                                                        ] = isTurningOn;
+
+                                                        if (
+                                                            primaryFilterKeys.includes(
+                                                                toggledFilterKey
+                                                            ) &&
+                                                            isTurningOn
+                                                        ) {
+                                                            primaryFilterKeys.forEach(
+                                                                (typeKey) => {
+                                                                    if (
+                                                                        typeKey !==
+                                                                        toggledFilterKey
+                                                                    ) {
+                                                                        newFilters[
+                                                                            typeKey
+                                                                        ] = false;
+                                                                    }
+                                                                }
+                                                            );
+                                                        }
+
+                                                        const allPrimaryFilterOff =
+                                                            primaryFilterKeys.every(
+                                                                (typeKey) =>
+                                                                    !newFilters[
+                                                                        typeKey
+                                                                    ]
+                                                            );
+                                                        if (
+                                                            allPrimaryFilterOff
+                                                        ) {
+                                                            primaryFilterKeys.forEach(
+                                                                (typeKey) => {
+                                                                    newFilters[
+                                                                        typeKey
+                                                                    ] = true;
+                                                                }
+                                                            );
+                                                        }
+
                                                         await setFilters(
                                                             newFilters,
                                                             locale
