@@ -1334,18 +1334,15 @@ export default class PaymentRequest extends React.Component<
                                             <View
                                                 style={{
                                                     marginTop: 10,
-                                                    marginBottom: 10,
-                                                    paddingHorizontal:
-                                                        donationAmount == 0
-                                                            ? 0
-                                                            : !donationsToggle
-                                                            ? 30
-                                                            : 0
+                                                    marginBottom: 10
                                                 }}
                                             >
                                                 <Row justify="space-around">
                                                     <View
-                                                        style={{ width: '95%' }}
+                                                        style={{
+                                                            flex: 1,
+                                                            marginRight: 10
+                                                        }}
                                                     >
                                                         <KeyValue
                                                             keyValue={localeString(
@@ -1366,7 +1363,7 @@ export default class PaymentRequest extends React.Component<
                                                             style={{
                                                                 flexDirection:
                                                                     'row',
-                                                                justifyContent:
+                                                                alignItems:
                                                                     'center'
                                                             }}
                                                         >
