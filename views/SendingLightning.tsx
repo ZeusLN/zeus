@@ -31,6 +31,7 @@ import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
+import NodeInfoStore from '../stores/NodeInfoStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import BackendUtils from '../utils/BackendUtils';
@@ -61,6 +62,7 @@ interface SendingLightningProps {
         }
     >;
     TransactionsStore: TransactionsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface SendingLightningState {
@@ -84,7 +86,8 @@ interface SendingLightningState {
     'LnurlPayStore',
     'PaymentsStore',
     'SettingsStore',
-    'TransactionsStore'
+    'TransactionsStore',
+    'NodeInfoStore'
 )
 @observer
 export default class SendingLightning extends React.Component<
@@ -139,7 +142,8 @@ export default class SendingLightning extends React.Component<
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
-        const { TransactionsStore, BalanceStore, route } = this.props;
+        const { TransactionsStore, BalanceStore, NodeInfoStore, route } =
+            this.props;
 
         const { donationIsPaid } = TransactionsStore;
 
@@ -156,6 +160,7 @@ export default class SendingLightning extends React.Component<
         }
 
         if (
+            NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
             enableDonations &&
             donationAmount &&
