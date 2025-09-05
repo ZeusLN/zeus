@@ -4,12 +4,13 @@ buildscript {
         minSdkVersion = 28
         compileSdkVersion = 35
         targetSdkVersion = 35
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "26.2.11394342"
         kotlinVersion = "1.9.22"
     }
     subprojects { subproject ->
-        afterEvaluate{
-            if((subproject.plugins.hasPlugin('android') || subproject.plugins.hasPlugin('android-library'))) {
+        afterEvaluate {
+            if ((subproject.plugins.hasPlugin('com.android.application') || 
+                 subproject.plugins.hasPlugin('com.android.library'))) {
                 android {
                     compileSdkVersion rootProject.ext.compileSdkVersion
                     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -22,22 +23,20 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle")
+        classpath("com.android.tools.build:gradle:8.3.2")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
         classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.4")
 
         // LN address notifications
         classpath("com.google.gms:google-services:4.3.15")
-
-        // NOTE: Do not place your application dependencies here; they belong
-        // in the individual module build.gradle files
     }
 }
 
 allprojects {
     repositories {
-        jcenter()
+        google()
+        mavenCentral()
         flatDir {
             dirs("lndmobile")
         }
