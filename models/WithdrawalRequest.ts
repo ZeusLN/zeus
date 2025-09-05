@@ -22,12 +22,14 @@ export default class WithdrawalRequest extends BaseModel {
     public invreq_metadata: string;
     public type: string;
     public amount_received_msat: number;
+    public amount_msat: number;
     public description: string;
     public payment_hash: string;
     public payment_preimage: string;
     public status: string;
     public redeem?: boolean;
     public paid_at: number;
+    public expires_at: number;
 
     @computed public get model(): string {
         return localeString('general.withdrawalRequest');
@@ -36,7 +38,8 @@ export default class WithdrawalRequest extends BaseModel {
     @computed public get getAmount(): number {
         return (
             Number(this.invreq_amount_msat) / 1000 ||
-            this.amount_received_msat / 1000
+            this.amount_received_msat / 1000 ||
+            this.amount_msat / 1000
         );
     }
 
@@ -49,10 +52,18 @@ export default class WithdrawalRequest extends BaseModel {
     }
 
     @computed public get getTimestamp(): number {
-        return this.paid_at;
+        return this.paid_at || this.expires_at;
     }
 
     @computed public get getDisplayTimeShort(): string {
         return dateTimeUtils.listFormattedDateShort(this.getTimestamp);
+    }
+
+    @computed public get isExpired(): boolean {
+        return this.status === 'expired';
+    }
+
+    @computed public get isPaid(): boolean {
+        return this.status === 'paid';
     }
 }
