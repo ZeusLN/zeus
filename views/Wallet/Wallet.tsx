@@ -77,6 +77,7 @@ import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
 import NotesStore from '../../stores/NotesStore';
 import SwapStore from '../../stores/SwapStore';
+import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -113,6 +114,7 @@ interface WalletProps {
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
     LnurlPayStore: LnurlPayStore;
+    NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
 interface WalletState {
@@ -141,7 +143,8 @@ interface WalletState {
     'ChannelBackupStore',
     'LightningAddressStore',
     'NotesStore',
-    'SwapStore'
+    'SwapStore',
+    'NostrWalletConnectStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -363,7 +366,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LightningAddressStore,
             LnurlPayStore,
             NotesStore,
-            SwapStore
+            SwapStore,
+            NostrWalletConnectStore
         } = this.props;
         const {
             settings,
@@ -640,6 +644,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.initChannelAcceptor();
         }
 
+        if (connecting) {
+            try {
+                NostrWalletConnectStore.initializeServiceWithRetry();
+            } catch (error) {
+                console.warn(
+                    'Failed to initialize Nostr Wallet Connect service:',
+                    error
+                );
+            }
+        }
         if (implementation === 'embedded-lnd' && settings?.ecash?.enableCashu) {
             // Check Cashu balance for upgrade prompts
             CashuStore.checkAndShowUpgradeModal(
