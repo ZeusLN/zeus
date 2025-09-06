@@ -872,4 +872,5 @@ export default class LND {
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
     supportsAddressMessageSigning = () => true;
+    supportsAddressMessageVerification = () => true;
 }
