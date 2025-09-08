@@ -83,6 +83,7 @@ export default class ActivityFilter extends React.Component<
             onChain,
             cashu,
             swaps,
+            lsps1,
             sent,
             received,
             unpaid,
@@ -204,6 +205,13 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('views.Swaps.title'),
                 value: swaps,
                 var: 'swaps',
+                type: 'Toggle',
+                condition: true
+            },
+            {
+                label: localeString('views.LSPS1.lsps1Orders'),
+                value: lsps1,
+                var: 'lsps1',
                 type: 'Toggle',
                 condition: true
             },
