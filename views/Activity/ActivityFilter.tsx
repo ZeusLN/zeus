@@ -4,7 +4,8 @@ import {
     Text,
     View,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    TouchableOpacity
 } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -27,6 +28,9 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
+
 interface ActivityFilterProps {
     navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
@@ -38,6 +42,7 @@ interface ActivityFilterState {
     setEndDate: boolean;
     workingStartDate: any;
     workingEndDate: any;
+    servicesExpanded: boolean;
 }
 
 @inject('ActivityStore', 'SettingsStore')
@@ -50,7 +55,20 @@ export default class ActivityFilter extends React.Component<
         setStartDate: false,
         setEndDate: false,
         workingStartDate: new Date(),
-        workingEndDate: new Date()
+        workingEndDate: new Date(),
+        servicesExpanded: false
+    };
+
+    handleToggle = async (toggledFilterKey: keyof Filter) => {
+        const { ActivityStore, SettingsStore } = this.props;
+        const { filters, setFilters } = ActivityStore;
+        const locale = SettingsStore.settings.locale;
+
+        const newFilters: Filter = { ...filters };
+
+        newFilters[toggledFilterKey] = !filters[toggledFilterKey];
+
+        await setFilters(newFilters, locale);
     };
 
     renderSeparator = () => (
@@ -64,11 +82,15 @@ export default class ActivityFilter extends React.Component<
 
     render() {
         const { navigation, ActivityStore, SettingsStore } = this.props;
-        const { setStartDate, setEndDate, workingStartDate, workingEndDate } =
-            this.state;
+        const {
+            setStartDate,
+            setEndDate,
+            workingStartDate,
+            workingEndDate,
+            servicesExpanded
+        } = this.state;
         const locale = SettingsStore.settings.locale;
         const {
-            setFilters,
             filters,
             setAmountFilter,
             setMaximumAmountFilter,
@@ -202,18 +224,25 @@ export default class ActivityFilter extends React.Component<
                 condition: BackendUtils.supportsCashuWallet()
             },
             {
-                label: localeString('views.Swaps.title'),
-                value: swaps,
-                var: 'swaps',
-                type: 'Toggle',
-                condition: true
-            },
-            {
-                label: localeString('views.LSPS1.lsps1Orders'),
-                value: lsps1,
-                var: 'lsps1',
-                type: 'Toggle',
-                condition: true
+                label: localeString('views.ActivityFilter.services'),
+                type: 'Services',
+                condition: true,
+                children: [
+                    {
+                        label: localeString('views.Swaps.title'),
+                        value: swaps,
+                        var: 'swaps',
+                        type: 'Toggle',
+                        condition: true
+                    },
+                    {
+                        label: localeString('views.LSPS1.lsps1Orders'),
+                        value: lsps1,
+                        var: 'lsps1',
+                        type: 'Toggle',
+                        condition: true
+                    }
+                ]
             },
             {
                 label: localeString('general.sent'),
@@ -353,6 +382,124 @@ export default class ActivityFilter extends React.Component<
                     <ScrollView>
                         {FILTERS.map((item, index) => {
                             if (!item.condition) return null;
+                            if (item.type === 'Services') {
+                                return (
+                                    <React.Fragment key={item.label}>
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                this.setState({
+                                                    servicesExpanded:
+                                                        !servicesExpanded
+                                                })
+                                            }
+                                        >
+                                            <ListItem
+                                                containerStyle={{
+                                                    borderBottomWidth: 0,
+                                                    backgroundColor:
+                                                        'transparent'
+                                                }}
+                                            >
+                                                <ListItem.Title
+                                                    style={{
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {item.label}
+                                                </ListItem.Title>
+                                                <View
+                                                    style={{
+                                                        marginLeft: 'auto'
+                                                    }}
+                                                >
+                                                    {servicesExpanded ? (
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width={24}
+                                                            height={24}
+                                                        />
+                                                    ) : (
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width={24}
+                                                            height={24}
+                                                        />
+                                                    )}
+                                                </View>
+                                            </ListItem>
+                                        </TouchableOpacity>
+
+                                        {servicesExpanded && (
+                                            <View style={{ paddingLeft: 20 }}>
+                                                {this.renderSeparator()}
+                                                {item.children?.map(
+                                                    (child, childIndex) => (
+                                                        <React.Fragment
+                                                            key={child.var}
+                                                        >
+                                                            <ListItem
+                                                                containerStyle={{
+                                                                    borderBottomWidth: 0,
+                                                                    backgroundColor:
+                                                                        'transparent'
+                                                                }}
+                                                            >
+                                                                <ListItem.Title
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        ),
+                                                                        fontFamily:
+                                                                            'PPNeueMontreal-Book'
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        child.label
+                                                                    }
+                                                                </ListItem.Title>
+                                                                <View
+                                                                    style={{
+                                                                        marginLeft:
+                                                                            'auto'
+                                                                    }}
+                                                                >
+                                                                    <Switch
+                                                                        value={
+                                                                            filters[
+                                                                                child
+                                                                                    .var
+                                                                            ]
+                                                                        }
+                                                                        onValueChange={() =>
+                                                                            this.handleToggle(
+                                                                                child.var as keyof Filter
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </View>
+                                                            </ListItem>
+                                                            {childIndex <
+                                                                item.children
+                                                                    .length -
+                                                                    1 &&
+                                                                this.renderSeparator()}
+                                                        </React.Fragment>
+                                                    )
+                                                )}
+                                            </View>
+                                        )}
+                                        {this.renderSeparator()}
+                                    </React.Fragment>
+                                );
+                            }
 
                             return (
                                 <React.Fragment key={index}>
@@ -381,73 +528,11 @@ export default class ActivityFilter extends React.Component<
                                             >
                                                 <Switch
                                                     value={item.value}
-                                                    onValueChange={async () => {
-                                                        const newFilters: any =
-                                                            {
-                                                                ...filters
-                                                            };
-                                                        const toggledFilterKey =
-                                                            item.var as keyof Filter;
-                                                        const primaryFilterKeys: (keyof Filter)[] =
-                                                            [
-                                                                'lightning',
-                                                                'onChain',
-                                                                'cashu',
-                                                                'swaps'
-                                                            ];
-
-                                                        const isTurningOn =
-                                                            !newFilters[
-                                                                toggledFilterKey
-                                                            ];
-                                                        newFilters[
-                                                            toggledFilterKey
-                                                        ] = isTurningOn;
-
-                                                        if (
-                                                            primaryFilterKeys.includes(
-                                                                toggledFilterKey
-                                                            ) &&
-                                                            isTurningOn
-                                                        ) {
-                                                            primaryFilterKeys.forEach(
-                                                                (typeKey) => {
-                                                                    if (
-                                                                        typeKey !==
-                                                                        toggledFilterKey
-                                                                    ) {
-                                                                        newFilters[
-                                                                            typeKey
-                                                                        ] = false;
-                                                                    }
-                                                                }
-                                                            );
-                                                        }
-
-                                                        const allPrimaryFilterOff =
-                                                            primaryFilterKeys.every(
-                                                                (typeKey) =>
-                                                                    !newFilters[
-                                                                        typeKey
-                                                                    ]
-                                                            );
-                                                        if (
-                                                            allPrimaryFilterOff
-                                                        ) {
-                                                            primaryFilterKeys.forEach(
-                                                                (typeKey) => {
-                                                                    newFilters[
-                                                                        typeKey
-                                                                    ] = true;
-                                                                }
-                                                            );
-                                                        }
-
-                                                        await setFilters(
-                                                            newFilters,
-                                                            locale
-                                                        );
-                                                    }}
+                                                    onValueChange={() =>
+                                                        this.handleToggle(
+                                                            item.var as keyof Filter
+                                                        )
+                                                    }
                                                 />
                                             </View>
                                         )}
