@@ -283,6 +283,9 @@ const ActivityListItem = React.memo(
                           )} → ${localeString('general.onchain')}  ⚡ → 🔗`}
                 </Text>
             );
+        } else if (item.model === 'LSPS1Order') {
+            displayName = localeString('views.LSPS1.type');
+            subTitle = `${localeString('general.state')}: ${item.state}`;
         }
 
         return (
@@ -567,6 +570,19 @@ export default class Activity extends React.PureComponent<
             return 'text';
         }
 
+        if (item.model === 'LSPS1Order') {
+            switch (item.state) {
+                case 'CREATED':
+                    return 'highlight';
+                case 'COMPLETED':
+                    return 'success';
+                case 'FAILED':
+                    return 'warning';
+                default:
+                    return 'text';
+            }
+        }
+
         if (item.model === localeString('cashu.token')) {
             return item.sent
                 ? item.spent
@@ -622,6 +638,24 @@ export default class Activity extends React.PureComponent<
             }
             return;
         }
+        if (item.model === localeString('views.Swaps.title')) {
+            navigation.navigate('SwapDetails', {
+                swapData: item,
+                keys: item.keys,
+                endpoint: item.endpoint,
+                invoice: item.invoice
+            });
+        }
+
+        if (item.model === 'LSPS1Order') {
+            const orderShouldUpdate =
+                item.state === 'FAILED' || item.state === 'COMPLETED';
+            navigation.navigate('LSPS1Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
 
         if (item.model === localeString('general.withdrawalRequest')) {
             navigation.navigate('WithdrawalRequestView', {
@@ -645,14 +679,6 @@ export default class Activity extends React.PureComponent<
         }
         if (item.model === localeString('views.Payment.title')) {
             navigation.navigate('Payment', { payment: item });
-        }
-        if (item.model === localeString('views.Swaps.title')) {
-            navigation.navigate('SwapDetails', {
-                swapData: item,
-                keys: item.keys,
-                endpoint: item.endpoint,
-                invoice: item.invoice
-            });
         }
     };
 
