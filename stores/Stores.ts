@@ -78,7 +78,8 @@ export const activityStore = new ActivityStore(
     invoicesStore,
     transactionsStore,
     cashuStore,
-    swapStore
+    swapStore,
+    nodeInfoStore
 );
 export const lightningAddressStore = new LightningAddressStore(
     cashuStore,
