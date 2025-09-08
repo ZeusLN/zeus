@@ -1,11 +1,7 @@
 import { action, observable, runInAction } from 'mobx';
 
 // LN
-import Payment from './../models/Payment';
 import Invoice from './../models/Invoice';
-import WithdrawalRequest from '../models/WithdrawalRequest';
-// on-chain
-import Transaction from './../models/Transaction';
 
 import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
@@ -13,13 +9,15 @@ import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
 import SwapStore from './SwapStore';
+import NodeInfoStore from './NodeInfoStore';
 
 import BackendUtils from './../utils/BackendUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
-
-import Swap from '../models/Swap';
+import DateTimeUtils from '../utils/DateTimeUtils';
 
 import Storage from '../storage';
+
+import { LSPS_ORDERS_KEY } from './LSPStore';
 
 export const LEGACY_ACTIVITY_FILTERS_KEY = 'zeus-activity-filters';
 export const ACTIVITY_FILTERS_KEY = 'zeus-activity-filters-v2';
@@ -31,6 +29,7 @@ export interface Filter {
     cashu: boolean;
     sent: boolean;
     swaps: boolean;
+    lsps1: boolean;
     received: boolean;
     unpaid: boolean;
     inTransit: boolean;
@@ -51,6 +50,7 @@ export const DEFAULT_FILTERS = {
     cashu: true,
     sent: true,
     swaps: true,
+    lsps1: true,
     received: true,
     unpaid: true,
     inTransit: false,
@@ -69,12 +69,8 @@ export const DEFAULT_FILTERS = {
 
 export default class ActivityStore {
     @observable public error = false;
-    @observable public activity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest | Swap
-    > = [];
-    @observable public filteredActivity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest | Swap
-    > = [];
+    @observable public activity: Array<any> = [];
+    @observable public filteredActivity: Array<any> = [];
     @observable public filters: Filter = DEFAULT_FILTERS;
     settingsStore: SettingsStore;
     paymentsStore: PaymentsStore;
@@ -82,6 +78,7 @@ export default class ActivityStore {
     transactionsStore: TransactionsStore;
     cashuStore: CashuStore;
     swapStore: SwapStore;
+    nodeInfoStore: NodeInfoStore;
 
     constructor(
         settingsStore: SettingsStore,
@@ -89,7 +86,8 @@ export default class ActivityStore {
         invoicesStore: InvoicesStore,
         transactionsStore: TransactionsStore,
         cashuStore: CashuStore,
-        swapStore: SwapStore
+        swapStore: SwapStore,
+        nodeInfoStore: NodeInfoStore
     ) {
         this.settingsStore = settingsStore;
         this.paymentsStore = paymentsStore;
@@ -97,6 +95,7 @@ export default class ActivityStore {
         this.invoicesStore = invoicesStore;
         this.cashuStore = cashuStore;
         this.swapStore = swapStore;
+        this.nodeInfoStore = nodeInfoStore;
     }
 
     public resetFilters = async () => {
@@ -110,6 +109,8 @@ export default class ActivityStore {
             lightning: true,
             onChain: true,
             cashu: true,
+            swaps: true,
+            lsps1: true,
             sent: false,
             received: true,
             unpaid: false,
@@ -122,8 +123,7 @@ export default class ActivityStore {
             maximumAmount: undefined,
             startDate: undefined,
             endDate: undefined,
-            memo: '',
-            swaps: true
+            memo: ''
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -176,6 +176,49 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
+    private async getLSPS1Orders(): Promise<any[]> {
+        try {
+            const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
+            if (!responseArrayString) return [];
+
+            const responseArray = JSON.parse(responseArrayString);
+            const decodedResponses = responseArray.map((res: string) =>
+                JSON.parse(res)
+            );
+
+            const currentNodeId = this.nodeInfoStore.nodeInfo.nodeId;
+            const selectedOrders = decodedResponses.filter(
+                (res: any) => res.clientPubkey === currentNodeId
+            );
+
+            return selectedOrders.map((res: any) => {
+                const orderData = res?.order?.result || res?.order;
+                const createdAt = orderData?.created_at;
+                const timestamp = createdAt
+                    ? new Date(createdAt).getTime() / 1000
+                    : 0;
+
+                return {
+                    model: 'LSPS1Order',
+                    id: orderData?.order_id,
+                    state: orderData?.order_state,
+                    service: res?.service || 'LSPS1',
+                    getAmount: Number(orderData?.lsp_balance_sat) || 0,
+                    getTimestamp: timestamp,
+                    getDate: new Date(createdAt),
+                    getDisplayTimeShort:
+                        DateTimeUtils.listFormattedDateShort(timestamp)
+                };
+            });
+        } catch (error) {
+            console.error(
+                'Error fetching LSP Orders for activity list:',
+                error
+            );
+            return [];
+        }
+    }
+
     getSortedActivity = async () => {
         const activity: any[] = [];
         const payments = this.paymentsStore.payments;
@@ -183,10 +226,13 @@ export default class ActivityStore {
         const invoices = this.invoicesStore.invoices;
         const withdrawalRequests = this.invoicesStore.withdrawalRequests;
         const swaps = this.swapStore.swaps;
+        const lsps1Orders = await this.getLSPS1Orders();
 
         let additions = payments.concat(invoices);
         additions = additions.concat(withdrawalRequests);
         additions = additions.concat(swaps);
+        additions = additions.concat(lsps1Orders);
+
         if (BackendUtils.supportsOnchainSends()) {
             additions = additions.concat(transactions);
         }
