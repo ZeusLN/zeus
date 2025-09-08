@@ -193,13 +193,15 @@ export default class CashuSendingLightning extends React.Component<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                {`${localeString(
-                                                    'views.SendingLightning.paymentDuration'
-                                                )} ${paymentDuration.toFixed(
-                                                    2
-                                                )} ${localeString(
-                                                    'models.Invoice.seconds'
-                                                )}`}
+                                                {localeString(
+                                                    'views.SendingLightning.paymentSettled',
+                                                    {
+                                                        seconds:
+                                                            paymentDuration.toFixed(
+                                                                2
+                                                            )
+                                                    }
+                                                )}
                                             </Text>
                                         )}
                                     </View>
