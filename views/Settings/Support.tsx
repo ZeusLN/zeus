@@ -31,7 +31,8 @@ function Support(props: SupportProps) {
     const ABOUT_ITEMS = [
         {
             label: localeString('views.PaymentRequest.donateToZEUS'),
-            path: 'DonateToZEUS'
+            path: 'DonateToZEUS',
+            condition: nodeInfoStore.nodeInfo.isMainNet
         },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
@@ -58,10 +59,8 @@ function Support(props: SupportProps) {
                 navigation={navigation}
             />
             <FlatList
-                data={ABOUT_ITEMS.filter(
-                    (item) =>
-                        item.path !== 'DonateToZEUS' ||
-                        nodeInfoStore.nodeInfo.isMainNet
+                data={ABOUT_ITEMS.filter((item) =>
+                    item.condition !== undefined ? item.condition : true
                 )}
                 renderItem={({ item }) => (
                     <ListItem
