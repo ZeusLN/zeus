@@ -11,11 +11,9 @@ import Swap from '../models/Swap';
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<
-            Invoice | Payment | Transaction | WithdrawalRequest | Swap
-        >,
+        activities: Array<any>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction | WithdrawalRequest | Swap> {
+    ): Array<any> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -48,6 +46,12 @@ class ActivityFilterUtils {
         if (filter.swaps == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) => !(activity instanceof Swap)
+            );
+        }
+
+        if (filter.lsps1 == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS1Order'
             );
         }
 
