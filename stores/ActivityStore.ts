@@ -42,6 +42,17 @@ export interface Filter {
     startDate?: Date;
     endDate?: Date;
     memo: string;
+    swapState: {
+        created: boolean;
+        successful: boolean;
+        failed: boolean;
+        refunded: boolean;
+    };
+    lsps1OrderState: {
+        CREATED: boolean;
+        COMPLETED: boolean;
+        FAILED: boolean;
+    };
 }
 
 export const DEFAULT_FILTERS = {
@@ -64,7 +75,18 @@ export const DEFAULT_FILTERS = {
     maximumAmount: undefined,
     startDate: undefined,
     endDate: undefined,
-    memo: ''
+    memo: '',
+    swapState: {
+        created: true,
+        successful: true,
+        failed: true,
+        refunded: true
+    },
+    lsps1OrderState: {
+        CREATED: true,
+        COMPLETED: true,
+        FAILED: true
+    }
 };
 
 export default class ActivityStore {
@@ -123,7 +145,9 @@ export default class ActivityStore {
             maximumAmount: undefined,
             startDate: undefined,
             endDate: undefined,
-            memo: ''
+            memo: '',
+            swapState: { ...DEFAULT_FILTERS.swapState },
+            lsps1OrderState: { ...DEFAULT_FILTERS.lsps1OrderState }
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -333,7 +357,18 @@ export default class ActivityStore {
                         ? new Date(value)
                         : value
                 );
-                this.filters = { ...DEFAULT_FILTERS, ...parsedFilters };
+                this.filters = {
+                    ...DEFAULT_FILTERS,
+                    ...parsedFilters,
+                    swapState: {
+                        ...DEFAULT_FILTERS.swapState,
+                        ...(parsedFilters.swapState || {})
+                    },
+                    lsps1OrderState: {
+                        ...DEFAULT_FILTERS.lsps1OrderState,
+                        ...(parsedFilters.lsps1OrderState || {})
+                    }
+                };
             } else {
                 console.log('No activity filters stored');
                 this.filters = DEFAULT_FILTERS;
@@ -347,7 +382,18 @@ export default class ActivityStore {
 
     @action
     public setFilters = async (filters: Filter, locale?: string) => {
-        this.filters = { ...DEFAULT_FILTERS, ...filters };
+        this.filters = {
+            ...DEFAULT_FILTERS,
+            ...filters,
+            swapState: {
+                ...DEFAULT_FILTERS.swapState,
+                ...filters.swapState
+            },
+            lsps1OrderState: {
+                ...DEFAULT_FILTERS.lsps1OrderState,
+                ...filters.lsps1OrderState
+            }
+        };
         this.filteredActivity = ActivityFilterUtils.filterActivities(
             this.activity,
             this.filters
