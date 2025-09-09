@@ -203,7 +203,7 @@ export default class ActivityStore {
             activity.map(async (item: any) => {
                 let timestamp: number;
 
-                if (item.bolt12) {
+                if (!item.getTimestamp && item.bolt12) {
                     const ts = await Storage.getItem(
                         `withdrawalRequest_${item.bolt12}`
                     );

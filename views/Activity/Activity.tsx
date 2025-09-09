@@ -130,7 +130,11 @@ const ActivityListItem = React.memo(
 
         if (item instanceof WithdrawalRequest) {
             displayName = item.redeem
-                ? 'You withdrew'
+                ? item.isPaid
+                    ? localeString('views.Activity.withdrew')
+                    : item.isExpired
+                    ? localeString('views.Activity.expiredRequested')
+                    : localeString('views.Activity.pendingWithdrawal')
                 : item.used
                 ? localeString('views.Activity.outgoingWithdrawal')
                 : localeString('views.Activity.pendingWithdrawal');
@@ -558,6 +562,10 @@ export default class Activity extends React.PureComponent<
         }
 
         if (item.model === localeString('general.withdrawalRequest')) {
+            if (item.isExpired && !item.isPaid) {
+                return 'text';
+            }
+
             if (item.active && !item.isPaid) {
                 return 'highlight';
             }
