@@ -1477,9 +1477,7 @@ export default class CashuStore {
     }) => {
         if (isDonationPayment) {
             console.log('STARTING DONATION PAYMENT PROCESS');
-        }
-
-        if (!isDonationPayment) {
+        } else {
             this.loading = true;
             this.paymentStartTime = Date.now();
         }
