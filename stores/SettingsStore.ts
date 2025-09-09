@@ -392,7 +392,7 @@ export const LOCALE_KEYS = [
     { key: 'pl', value: 'Polski' },
     { key: 'tr', value: 'Türkçe' },
     { key: 'hu', value: 'magyar nyelv' },
-    { key: 'zh', value: '简化字' },
+    { key: 'zh', value: '简体中文' },
     { key: 'nl', value: 'Nederlands' },
     { key: 'nb', value: 'Bokmål' },
     { key: 'sv', value: 'Svenska' },
