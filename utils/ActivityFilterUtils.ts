@@ -7,7 +7,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import WithdrawalRequest from '../models/WithdrawalRequest';
-import Swap from '../models/Swap';
+import Swap, { SwapState } from '../models/Swap';
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -47,12 +47,59 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter(
                 (activity) => !(activity instanceof Swap)
             );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (!(activity instanceof Swap)) return true;
+
+                const status = activity.status;
+                if (
+                    filter.swapState.created &&
+                    (status === SwapState.Created ||
+                        status === SwapState.InvoiceSet)
+                )
+                    return true;
+                if (
+                    filter.swapState.successful &&
+                    (status === SwapState.InvoiceSettled ||
+                        status === SwapState.TransactionClaimed)
+                )
+                    return true;
+                if (
+                    filter.swapState.failed &&
+                    (status === SwapState.InvoiceFailedToPay ||
+                        status === SwapState.SwapExpired ||
+                        status === SwapState.TransactionFailed ||
+                        status === SwapState.TransactionLockupFailed)
+                )
+                    return true;
+                if (
+                    filter.swapState.refunded &&
+                    status === SwapState.TransactionRefunded
+                )
+                    return true;
+
+                return false;
+            });
         }
 
         if (filter.lsps1 == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) => activity.model !== 'LSPS1Order'
             );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS1Order') return true;
+
+                const state = activity.state;
+                if (filter.lsps1OrderState.CREATED && state === 'CREATED')
+                    return true;
+                if (filter.lsps1OrderState.COMPLETED && state === 'COMPLETED')
+                    return true;
+                if (filter.lsps1OrderState.FAILED && state === 'FAILED')
+                    return true;
+
+                return false;
+            });
         }
 
         if (filter.sent == false) {
