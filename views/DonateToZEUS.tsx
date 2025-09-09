@@ -70,6 +70,7 @@ export default class DonateToZEUS extends React.Component<
                                 type: 'feather',
                                 color: themeColor('background')
                             }}
+                            containerStyle={{ paddingBottom: 4 }}
                         />
                         <CopyButton
                             title={localeString('views.Receive.copyAddress')}
@@ -84,8 +85,7 @@ export default class DonateToZEUS extends React.Component<
 
 const styles = StyleSheet.create({
     button: {
-        paddingTop: 12,
-        paddingBottom: 12,
+        paddingTop: 20,
         width: '100%',
         alignSelf: 'center'
     }
