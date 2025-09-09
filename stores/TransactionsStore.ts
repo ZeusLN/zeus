@@ -608,8 +608,6 @@ export default class TransactionsStore {
             data.no_inflight_updates = true;
         }
 
-        console.log('Sending payment silently with data:', data);
-
         const payFunc = BackendUtils.payLightningInvoice;
 
         if (this.settingsStore.implementation === 'lightning-node-connect') {
@@ -618,7 +616,6 @@ export default class TransactionsStore {
             return payFunc(data)
                 .then((response: any) => {
                     const result = response.result || response;
-                    console.log('Payment response:', result);
                     return result;
                 })
                 .catch((err: any) => {
