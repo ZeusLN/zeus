@@ -1347,8 +1347,13 @@ export default class CashuStore {
     };
 
     @action
-    public getPayReq = async (bolt11Invoice: string) => {
-        this.loading = true;
+    public getPayReq = async (
+        bolt11Invoice: string,
+        isDonationPayment: boolean = false
+    ) => {
+        if (!isDonationPayment) {
+            this.loading = true;
+        }
         this.payReq = undefined;
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
@@ -1394,7 +1399,9 @@ export default class CashuStore {
             runInAction(() => {
                 this.payReq = new Invoice(data);
                 this.getPayReqError = undefined;
-                this.loading = false;
+                if (!isDonationPayment) {
+                    this.loading = false;
+                }
             });
 
             this.proofsToUse = proofsToUse;
@@ -1461,9 +1468,19 @@ export default class CashuStore {
     };
 
     @action
-    public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
-        this.loading = true;
-        this.paymentStartTime = Date.now();
+    public payLnInvoiceFromEcash = async ({
+        amount,
+        isDonationPayment = false
+    }: {
+        amount?: string;
+        isDonationPayment?: boolean;
+    }) => {
+        if (isDonationPayment) {
+            console.log('STARTING DONATION PAYMENT PROCESS');
+        } else {
+            this.loading = true;
+            this.paymentStartTime = Date.now();
+        }
 
         const mintUrl = this.selectedMintUrl;
 
@@ -1528,7 +1545,9 @@ export default class CashuStore {
                     proofsToSend = result.proofsToSend;
                     proofsToKeep = result.proofsToKeep;
                     newCounterValue = result.newCounterValue;
-                    success = true;
+                    if (!isDonationPayment) {
+                        success = true;
+                    }
                     console.log(
                         `payLnInvoiceFromEcash: Attempt ${
                             attempt + 1
@@ -1548,7 +1567,7 @@ export default class CashuStore {
             }
 
             if (
-                !success ||
+                (!isDonationPayment && !success) ||
                 proofsToSend === undefined ||
                 proofsToKeep === undefined ||
                 newCounterValue === undefined
@@ -1593,7 +1612,11 @@ export default class CashuStore {
                     CashuUtils.sumProofsValue(meltResponse?.change)
             );
 
-            this.paymentPreimage = meltResponse.quote.payment_preimage!!;
+            const paymentPreimage = meltResponse.quote.payment_preimage!!;
+
+            if (!isDonationPayment) {
+                this.paymentPreimage = paymentPreimage;
+            }
 
             if (this.paymentStartTime) {
                 this.paymentDuration =
@@ -1607,11 +1630,13 @@ export default class CashuStore {
                 meltResponse,
                 amount: meltResponse.quote.amount,
                 fee: realFee,
-                payment_preimage: this.paymentPreimage,
+                payment_preimage: paymentPreimage,
                 mintUrl
             });
 
-            this.noteKey = payment.getNoteKey;
+            if (!isDonationPayment) {
+                this.noteKey = payment.getNoteKey;
+            }
 
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);
             // store Ecash payment
@@ -1628,7 +1653,9 @@ export default class CashuStore {
                 this.cashuWallets[mintUrl].balanceSats - amountToPay
             );
 
-            this.loading = false;
+            if (!isDonationPayment) {
+                this.loading = false;
+            }
 
             return payment;
         } catch (err: any) {

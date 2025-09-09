@@ -6,8 +6,11 @@ import {
     View,
     TouchableOpacity
 } from 'react-native';
+import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Slider from '@react-native-community/slider';
+import { ButtonGroup } from 'react-native-elements';
 
 import Amount from '../../components/Amount';
 import AmountInput from '../../components/AmountInput';
@@ -34,6 +37,11 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
+import {
+    calculateDonationAmount,
+    findDonationPercentageIndex
+} from '../../utils/DonationUtils';
 
 import { Row } from '../../components/layout/Row';
 
@@ -63,6 +71,10 @@ interface CashuPaymentRequestState {
     satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
+    donationsToggle: boolean;
+    donationPercentage: any;
+    donationAmount: any;
+    selectedIndex: number | null;
 }
 
 @inject(
@@ -80,12 +92,47 @@ export default class CashuPaymentRequest extends React.Component<
 > {
     listener: any;
     isComponentMounted: boolean = false;
+    payReqDisposer: any;
     state = {
         customAmount: '',
         satAmount: '',
         zaplockerToggle: false,
-        slideToPayThreshold: 10000
+        slideToPayThreshold: 10000,
+        donationsToggle: false,
+        donationPercentage: 0,
+        donationAmount: 0,
+        selectedIndex: null
     };
+
+    async componentDidMount() {
+        const { SettingsStore, CashuStore } = this.props;
+        const settings = await SettingsStore.getSettings();
+        const { defaultDonationPercentage } = settings.payments;
+
+        this.payReqDisposer = reaction(
+            () => CashuStore.payReq,
+            (payReq) => {
+                if (payReq?.getRequestAmount) {
+                    const requestAmount = payReq.getRequestAmount;
+                    const donationAmount = calculateDonationAmount(
+                        requestAmount,
+                        Number(defaultDonationPercentage) || 0
+                    );
+                    const index = findDonationPercentageIndex(
+                        Number(defaultDonationPercentage) || 0,
+                        [5, 10, 20]
+                    );
+
+                    this.setState({
+                        donationAmount,
+                        selectedIndex: index,
+                        donationPercentage:
+                            Number(defaultDonationPercentage) || 0
+                    });
+                }
+            }
+        );
+    }
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
@@ -110,13 +157,23 @@ export default class CashuPaymentRequest extends React.Component<
     sendPayment = ({
         amount // used only for no-amount invoices
     }: SendPaymentReq) => {
-        const { CashuStore, navigation } = this.props;
+        const { CashuStore, SettingsStore, navigation } = this.props;
+        const { settings } = SettingsStore;
+
+        const enableDonations = settings?.payments?.enableDonations;
+        const { donationAmount } = this.state;
 
         CashuStore.payLnInvoiceFromEcash({
             amount: amount ? amount : undefined
         });
 
-        navigation.navigate('CashuSendingLightning');
+        navigation.navigate('CashuSendingLightning', {
+            enableDonations,
+            ...(enableDonations &&
+                donationAmount > 0 && {
+                    donationAmount: donationAmount.toString()
+                })
+        });
     };
 
     triggerPayment = () => {
@@ -138,8 +195,14 @@ export default class CashuPaymentRequest extends React.Component<
     render() {
         const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
             this.props;
-        const { customAmount, zaplockerToggle, slideToPayThreshold } =
-            this.state;
+        const {
+            customAmount,
+            zaplockerToggle,
+            slideToPayThreshold,
+            donationsToggle,
+            donationAmount,
+            donationPercentage
+        } = this.state;
         const {
             payReq,
             paymentRequest,
@@ -174,12 +237,14 @@ export default class CashuPaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
 
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
 
         const noBalance = totalBalanceSats === 0;
+
+        const enableDonations = settings?.payments?.enableDonations;
 
         const showZaplockerWarning =
             isZaplocker ||
@@ -199,6 +264,59 @@ export default class CashuPaymentRequest extends React.Component<
             >
                 <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
             </TouchableOpacity>
+        );
+
+        const donationPercentageOptions = [5, 10, 20];
+
+        const handleButtonPress = (index: number) => {
+            const percentage = donationPercentageOptions[index];
+            const donationAmount = calculateDonationAmount(
+                requestAmount ?? 0,
+                percentage
+            );
+            this.setState({
+                donationPercentage: percentage,
+                donationAmount,
+                selectedIndex: index
+            });
+        };
+
+        const handleSliderChange = (value: number) => {
+            const donationAmount = calculateDonationAmount(
+                requestAmount ?? 0,
+                value
+            );
+            const index = findDonationPercentageIndex(
+                value,
+                donationPercentageOptions
+            );
+
+            this.setState({
+                donationPercentage: value,
+                donationAmount,
+                selectedIndex: index
+            });
+        };
+
+        const renderButton = (label: string, index: number) => () =>
+            (
+                <Text
+                    style={{
+                        fontFamily: 'PPNeueMontreal-Book',
+                        color:
+                            this.state.selectedIndex === index
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    {label}
+                </Text>
+            );
+
+        const buttons: any = donationPercentageOptions.map(
+            (percent, index) => ({
+                element: renderButton(`${percent}%`, index)
+            })
         );
 
         return (
@@ -519,6 +637,196 @@ export default class CashuPaymentRequest extends React.Component<
                                         }
                                     />
                                 )}
+                                {enableDonations && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            this.setState({
+                                                donationsToggle:
+                                                    !donationsToggle
+                                            });
+                                        }}
+                                    >
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            <Row justify="space-around">
+                                                <View
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 10
+                                                    }}
+                                                >
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.PaymentRequest.donateToZEUS'
+                                                        )}
+                                                    />
+                                                </View>
+                                                {donationsToggle ? (
+                                                    <CaretDown
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <View
+                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+                                                            alignItems: 'center'
+                                                        }}
+                                                    >
+                                                        {donationAmount > 0 && (
+                                                            <Row
+                                                                style={{
+                                                                    marginRight: 6
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'highlight'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {`${numberWithCommas(
+                                                                        donationAmount
+                                                                    )} ${localeString(
+                                                                        'general.sats'
+                                                                    )}`}
+                                                                </Text>
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {` (${donationPercentage}%)`}
+                                                                </Text>
+                                                            </Row>
+                                                        )}
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    </View>
+                                                )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                {donationsToggle && enableDonations && (
+                                    <>
+                                        <Row justify="center">
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.PaymentRequest.supportZeus'
+                                                )}
+                                            </Text>
+                                        </Row>
+                                        <ButtonGroup
+                                            selectedIndex={
+                                                this.state.selectedIndex
+                                            }
+                                            onPress={handleButtonPress}
+                                            buttons={buttons}
+                                            selectedButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
+                                            }}
+                                            containerStyle={{
+                                                marginTop: 20,
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary')
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                        />
+
+                                        <Slider
+                                            style={{
+                                                width: '100%',
+                                                height: 40
+                                            }}
+                                            minimumValue={0}
+                                            maximumValue={100}
+                                            step={1}
+                                            value={donationPercentage}
+                                            onValueChange={handleSliderChange}
+                                            minimumTrackTintColor={themeColor(
+                                                'highlight'
+                                            )}
+                                            maximumTrackTintColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                        />
+                                        <Row justify="flex-end">
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${donationPercentage}% `}
+                                            </Text>
+                                        </Row>
+                                        <Row justify="flex-end">
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                            >
+                                                {numberWithCommas(
+                                                    donationAmount
+                                                ) +
+                                                    ` ${localeString(
+                                                        'general.sats'
+                                                    )}`}
+                                            </Text>
+                                        </Row>
+                                        <Row justify="center">
+                                            <Text
+                                                style={{
+                                                    ...styles.labelSecondary,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {`${numberWithCommas(
+                                                    requestAmount || 0
+                                                )} + ${numberWithCommas(
+                                                    donationAmount
+                                                )} = ${numberWithCommas(
+                                                    (requestAmount || 0) +
+                                                        donationAmount
+                                                )} ${localeString(
+                                                    'general.sats'
+                                                )}`}
+                                            </Text>
+                                        </Row>
+                                    </>
+                                )}
                             </View>
                         )}
                     </ScrollView>
@@ -528,7 +836,7 @@ export default class CashuPaymentRequest extends React.Component<
                     !loading &&
                     !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (
-                        <View style={{ bottom: 10 }}>
+                        <View style={{ bottom: 10, top: 6 }}>
                             <View
                                 style={{
                                     alignSelf: 'center',

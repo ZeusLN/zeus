@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Slider from '@react-native-community/slider';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -9,6 +10,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
 import SettingsStore, { MEMPOOL_RATES_KEYS } from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -20,6 +22,7 @@ import AmountInput from '../../components/AmountInput';
 interface PaymentsSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface PaymentsSettingsState {
@@ -30,10 +33,12 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
+    enableDonations: boolean;
+    donationPercentage: number;
     mounted?: boolean;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore')
 @observer
 export default class PaymentsSettings extends React.Component<
     PaymentsSettingsProps,
@@ -47,6 +52,8 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
+        enableDonations: false,
+        donationPercentage: 5,
         mounted: false
     };
 
@@ -65,6 +72,9 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
+            enableDonations: settings?.payments?.enableDonations || false,
+            donationPercentage:
+                settings?.payments?.defaultDonationPercentage || 5,
             mounted: true
         });
     }
@@ -86,9 +96,14 @@ export default class PaymentsSettings extends React.Component<
             enableMempoolRates,
             timeoutSeconds,
             preferredMempoolRate,
-            slideToPayThreshold
+            slideToPayThreshold,
+            enableDonations,
+            donationPercentage
         } = this.state;
-        const { SettingsStore } = this.props;
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { nodeInfo } = NodeInfoStore;
+        const { isMainNet } = nodeInfo;
+
         const { updateSettings, settings, implementation } = SettingsStore;
 
         return (
@@ -340,7 +355,7 @@ export default class PaymentsSettings extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            marginTop: 20
+                            marginTop: 16
                         }}
                     >
                         <Text
@@ -372,7 +387,7 @@ export default class PaymentsSettings extends React.Component<
                             />
                         </View>
                     </View>
-                    <View style={{ marginTop: 20 }}>
+                    <View style={{ marginTop: 12 }}>
                         <DropdownSetting
                             title={localeString(
                                 'views.Settings.Payments.preferredMempoolRate'
@@ -393,6 +408,105 @@ export default class PaymentsSettings extends React.Component<
                             disabled={!enableMempoolRates}
                         />
                     </View>
+                    {isMainNet && (
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 16,
+                                marginBottom: 16
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('secondaryText'),
+                                    flex: 1
+                                }}
+                            >
+                                {localeString(
+                                    'views.PaymentRequest.enableDonations'
+                                )}
+                            </Text>
+                            <View>
+                                <Switch
+                                    value={enableDonations}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            enableDonations: !enableDonations
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                enableDonations:
+                                                    !enableDonations
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {enableDonations && isMainNet && (
+                        <>
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between'
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.defaultDonationPercentage'
+                                    )}
+                                </Text>
+                                <Text
+                                    style={{ color: themeColor('highlight') }}
+                                >
+                                    {this.state.donationPercentage.toString()}%
+                                </Text>
+                            </View>
+                            <View>
+                                <Slider
+                                    style={{
+                                        width: '100%',
+                                        height: 40,
+                                        marginTop: 10
+                                    }}
+                                    minimumValue={0}
+                                    maximumValue={100}
+                                    step={1}
+                                    value={donationPercentage}
+                                    onValueChange={(value: number) => {
+                                        this.setState({
+                                            donationPercentage: value
+                                        });
+                                    }}
+                                    onSlidingComplete={async (
+                                        value: number
+                                    ) => {
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                defaultDonationPercentage: value
+                                            }
+                                        });
+                                    }}
+                                    minimumTrackTintColor={themeColor(
+                                        'highlight'
+                                    )}
+                                    maximumTrackTintColor={themeColor(
+                                        'secondaryText'
+                                    )}
+                                />
+                            </View>
+                        </>
+                    )}
                 </View>
             </Screen>
         );

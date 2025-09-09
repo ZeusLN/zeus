@@ -854,9 +854,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString(
-                                    'views.Settings.Support.titleAlt'
-                                )}
+                                {localeString('views.Settings.Support.title')}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon stroke={forwardArrowColor} />

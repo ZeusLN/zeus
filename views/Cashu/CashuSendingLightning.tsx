@@ -5,10 +5,13 @@ import {
     NativeEventSubscription,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import LnurlPaySuccess from '../LnurlPay/Success';
 
@@ -21,8 +24,8 @@ import { Row } from '../../components/layout/Row';
 
 import CashuStore from '../../stores/CashuStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
-import PaymentsStore from '../../stores/PaymentsStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -33,21 +36,44 @@ import Storage from '../../storage';
 import Clock from '../../assets/images/SVG/Clock.svg';
 import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
+import Gift from '../../assets/images/SVG/gift.svg';
+
 import CopyBox from '../../components/CopyBox';
+import KeyValue from '../../components/KeyValue';
+import Amount from '../../components/Amount';
+import ModalBox from '../../components/ModalBox';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Header from '../../components/Header';
 
 interface CashuSendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     LnurlPayStore: LnurlPayStore;
-    PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
+    route: Route<
+        'CashuSendingLightning',
+        {
+            donationAmount?: string;
+            enableDonations: boolean;
+        }
+    >;
 }
 
 interface CashuSendingLightningState {
     storedNotes: string;
+    wasSuccessful: boolean;
+    paymentType: string;
+    payingDonation: boolean;
+    showDonationInfo: boolean;
+    donationHandled: boolean;
+    donationPreimage: string;
+    amountDonated: number | null;
+    donationIsPaid: boolean;
+    showZaplockerWarning: boolean;
 }
 
-@inject('CashuStore', 'LnurlPayStore', 'PaymentsStore')
+@inject('CashuStore', 'LnurlPayStore', 'NodeInfoStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -58,7 +84,16 @@ export default class CashuSendingLightning extends React.Component<
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
-            storedNotes: ''
+            storedNotes: '',
+            payingDonation: false,
+            showDonationInfo: false,
+            donationHandled: false,
+            donationPreimage: '',
+            amountDonated: null,
+            wasSuccessful: false,
+            paymentType: 'main',
+            donationIsPaid: false,
+            showZaplockerWarning: false
         };
     }
 
@@ -84,6 +119,290 @@ export default class CashuSendingLightning extends React.Component<
             this.handleBackPress.bind(this)
         );
     }
+
+    componentDidUpdate() {
+        const { CashuStore, NodeInfoStore, route } = this.props;
+        const { donationIsPaid } = this.state;
+        const { donationAmount, enableDonations } = route.params;
+
+        const wasSuccessful = this.successfullySent(CashuStore);
+
+        if (wasSuccessful && !this.state.wasSuccessful) {
+            this.setState({ wasSuccessful: true });
+        } else if (!wasSuccessful && this.state.wasSuccessful) {
+            this.setState({ wasSuccessful: false });
+        }
+
+        if (
+            NodeInfoStore!.nodeInfo.isMainNet &&
+            wasSuccessful &&
+            !this.state.wasSuccessful &&
+            enableDonations &&
+            donationAmount &&
+            !donationIsPaid
+        ) {
+            this.handleDonationPayment(donationAmount);
+        }
+    }
+
+    handleDonationPayment = async (donationAmount: string) => {
+        const { CashuStore } = this.props;
+        this.setState({ payingDonation: true, paymentType: 'donation' });
+
+        try {
+            const paymentRequest = await this.loadLnurl(donationAmount);
+            if (!paymentRequest) {
+                this.setState({ payingDonation: false });
+                return;
+            }
+
+            console.log(
+                'Initiating donation payment with amount:',
+                donationAmount
+            );
+            const isDonationPayment = true;
+            await CashuStore.getPayReq(paymentRequest, isDonationPayment);
+
+            const donationPayment = await CashuStore.payLnInvoiceFromEcash({
+                amount: donationAmount.toString(),
+                isDonationPayment
+            });
+
+            if (
+                !donationPayment ||
+                donationPayment?.meltResponse?.quote?.state !== 'PAID'
+            ) {
+                console.log('Donation payment failed.');
+                this.setState({ donationHandled: false });
+                return;
+            }
+
+            const amountDonated = donationPayment?.amount;
+            const paymentPreimage = donationPayment?.payment_preimage;
+
+            this.setState({
+                donationHandled: true,
+                donationIsPaid: true,
+                amountDonated: parseFloat(amountDonated?.toString() || '0'),
+                donationPreimage: paymentPreimage || ''
+            });
+        } catch (error) {
+            console.error('Failed to pay donation invoice:', error);
+            this.setState({ donationHandled: false });
+        } finally {
+            this.setState({ payingDonation: false });
+        }
+    };
+
+    loadLnurl = async (donationAmount: string) => {
+        const donationAddress = 'tips@pay.zeusln.app';
+        const [username, bolt11Domain] = donationAddress.split('@');
+        const url = bolt11Domain.includes('.onion')
+            ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
+            : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+
+        try {
+            const response = await ReactNativeBlobUtil.fetch('GET', url);
+            const lnurlData = response.json();
+            const amount = parseFloat(donationAmount) * 1000;
+            const callbackUrl = `${lnurlData.callback}?amount=${amount}`;
+
+            const invoiceResponse = await ReactNativeBlobUtil.fetch(
+                'GET',
+                callbackUrl
+            );
+            const invoiceData = invoiceResponse.json();
+
+            return invoiceData.pr;
+        } catch (err) {
+            console.error('loadLnurl error:', err);
+            return null;
+        }
+    };
+
+    renderInfoModal = () => {
+        const {
+            showDonationInfo,
+            donationHandled,
+            amountDonated,
+            donationPreimage
+        } = this.state;
+
+        return (
+            <ModalBox
+                isOpen={showDonationInfo}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        showDonationInfo: false
+                    });
+                }}
+                position="center"
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        {donationHandled ? (
+                            <>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('text'),
+                                        marginBottom: 12,
+                                        fontSize: 18,
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.PaymentRequest.thankYouForDonation'
+                                    )}
+                                </Text>
+                                <View
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: -10
+                                    }}
+                                >
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.amountDonated'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={amountDonated?.toString()}
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                </View>
+                                {donationPreimage && (
+                                    <View
+                                        style={{
+                                            width: '100%',
+                                            marginTop: 16
+                                        }}
+                                    >
+                                        <CopyBox
+                                            heading={localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )}
+                                            headingCopied={`${localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )} ${localeString(
+                                                'components.ExternalLinkModal.copied'
+                                            )}`}
+                                            theme="dark"
+                                            URL={donationPreimage}
+                                        />
+                                    </View>
+                                )}
+                            </>
+                        ) : (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    fontSize: 18,
+                                    marginBottom: 20,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'views.SendingLightning.donationFailed'
+                                )}
+                            </Text>
+                        )}
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() =>
+                                this.setState({ showDonationInfo: false })
+                            }
+                            containerStyle={{
+                                marginTop: 18
+                            }}
+                            tertiary
+                        />
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
+
+    renderZaplockerWarningModal = () => {
+        const { showZaplockerWarning } = this.state;
+
+        return (
+            <ModalBox
+                isOpen={showZaplockerWarning}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        showZaplockerWarning: false
+                    });
+                }}
+                position="center"
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('text'),
+                                fontSize: 18,
+                                marginBottom: 20,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.SendingLightning.isZaplocker')}
+                        </Text>
+
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() =>
+                                this.setState({ showZaplockerWarning: false })
+                            }
+                            containerStyle={{
+                                marginTop: 18
+                            }}
+                            tertiary
+                        />
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
 
     private handleBackPress(): boolean {
         const { CashuStore, navigation } = this.props;
@@ -115,13 +434,35 @@ export default class CashuSendingLightning extends React.Component<
             paymentDuration
         } = CashuStore;
         const payment_hash = payReq && payReq.payment_hash;
-        const { storedNotes } = this.state;
+        const { storedNotes, donationHandled, paymentType, payingDonation } =
+            this.state;
 
         const success = this.successfullySent(CashuStore);
         const windowSize = Dimensions.get('window');
 
         return (
             <Screen>
+                <Header
+                    rightComponent={
+                        !loading &&
+                        LnurlPayStore.isZaplocker &&
+                        (!success || !!paymentError) ? (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    this.setState({
+                                        showZaplockerWarning: true
+                                    })
+                                }
+                            >
+                                <Clock color={themeColor('bitcoin')} />
+                            </TouchableOpacity>
+                        ) : (
+                            <></>
+                        )
+                    }
+                />
+                {this.renderZaplockerWarningModal()}
+                {this.renderInfoModal()}
                 {loading && (
                     <View
                         style={{
@@ -143,6 +484,36 @@ export default class CashuSendingLightning extends React.Component<
                         >
                             {localeString('views.SendingLightning.sending')}
                         </Text>
+                    </View>
+                )}
+                {paymentType === 'donation' && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 10,
+                            zIndex: 1
+                        }}
+                    >
+                        {payingDonation ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    this.setState({ showDonationInfo: true })
+                                }
+                            >
+                                <Gift
+                                    fill={
+                                        donationHandled
+                                            ? themeColor('highlight')
+                                            : themeColor('error')
+                                    }
+                                    width={30}
+                                    height={30}
+                                />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
                 {!loading && (
@@ -207,41 +578,6 @@ export default class CashuSendingLightning extends React.Component<
                                     </View>
                                 </>
                             )}
-                            {LnurlPayStore.isZaplocker &&
-                                (!success || !!paymentError) && (
-                                    <View
-                                        style={{
-                                            padding: 20,
-                                            marginTop: 10,
-                                            marginBottom: 10,
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <Clock
-                                            color={themeColor('bitcoin')}
-                                            width={windowSize.height * 0.2}
-                                            height={windowSize.height * 0.2}
-                                        />
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize:
-                                                    windowSize.width *
-                                                    windowSize.scale *
-                                                    0.014,
-                                                marginTop:
-                                                    windowSize.height * 0.03,
-                                                textAlign: 'center'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.SendingLightning.isZaplocker'
-                                            )}
-                                        </Text>
-                                    </View>
-                                )}
                             {(!!paymentError || !!paymentErrorMsg) &&
                                 !LnurlPayStore.isZaplocker && (
                                     <View style={{ alignItems: 'center' }}>

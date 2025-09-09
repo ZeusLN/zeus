@@ -59,6 +59,7 @@ export default class TransactionsStore {
     @observable noteKey: string;
     @observable paymentStartTime: number | null = null;
     @observable paymentDuration: number | null = null;
+    @observable donationIsPaid: boolean = false;
 
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
@@ -569,6 +570,57 @@ export default class TransactionsStore {
                 })
                 .catch((err: Error) => {
                     this.handlePaymentError(err);
+                });
+        }
+    };
+
+    public sendPaymentSilently = async ({
+        payment_request,
+        fee_limit_sat,
+        max_parts,
+        timeout_seconds
+    }: {
+        payment_request: string;
+        fee_limit_sat?: number;
+        max_parts?: string;
+        timeout_seconds?: number;
+    }) => {
+        const data: any = {};
+
+        if (payment_request) {
+            data.payment_request = payment_request;
+        }
+
+        if (max_parts) {
+            data.max_parts = max_parts || '16';
+        }
+
+        // payment timeout and fee limit for LND and CLN
+        if (
+            BackendUtils.isLNDBased() ||
+            this.settingsStore.implementation === 'cln-rest'
+        ) {
+            data.fee_limit_sat = Number(fee_limit_sat) || 100;
+            data.timeout_seconds = Number(timeout_seconds) || 60;
+        }
+
+        if (this.settingsStore.enableTor) {
+            data.no_inflight_updates = true;
+        }
+
+        const payFunc = BackendUtils.payLightningInvoice;
+
+        if (this.settingsStore.implementation === 'lightning-node-connect') {
+            return payFunc(data);
+        } else {
+            return payFunc(data)
+                .then((response: any) => {
+                    const result = response.result || response;
+                    return result;
+                })
+                .catch((err: any) => {
+                    console.error('Payment error:', err);
+                    throw err;
                 });
         }
     };
