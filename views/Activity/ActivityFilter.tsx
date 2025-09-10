@@ -72,33 +72,60 @@ export default class ActivityFilter extends React.Component<
         const { filters, setFilters } = ActivityStore;
         const locale = SettingsStore.settings.locale;
 
-        const newFilters: Filter = { ...filters };
+        const newFilters = JSON.parse(JSON.stringify(filters));
 
-        if (Array.isArray(path)) {
+        if (path === 'services') {
+            const isTurningOn = !(filters.swaps || filters.lsps1);
+            newFilters.swaps = isTurningOn;
+            newFilters.lsps1 = isTurningOn;
+
+            Object.keys(newFilters.swapState).forEach((key) => {
+                (newFilters.swapState as any)[key] = isTurningOn;
+            });
+            Object.keys(newFilters.lsps1OrderState).forEach((key) => {
+                (newFilters.lsps1OrderState as any)[key] = isTurningOn;
+            });
+
+            if (!isTurningOn) {
+                this.setState((prevState) => ({
+                    expandedSections: {
+                        ...prevState.expandedSections,
+                        swaps: false,
+                        lsps1: false
+                    }
+                }));
+            }
+        } else if (Array.isArray(path)) {
             const [parent, child] = path as [keyof Filter, string];
+            const isTurningOn = !filters[parent]?.[child];
+            newFilters[parent][child] = isTurningOn;
 
-            newFilters[parent] = {
-                ...filters[parent],
-                [child]: !filters[parent]?.[child]
-            };
+            if (isTurningOn) {
+                if (parent === 'swapState') newFilters.swaps = true;
+                if (parent === 'lsps1OrderState') newFilters.lsps1 = true;
+            } else {
+                const allChildrenOff = Object.values(newFilters[parent]).every(
+                    (item) => item === false
+                );
+                if (allChildrenOff) {
+                    if (parent === 'swapState') newFilters.swaps = false;
+                    if (parent === 'lsps1OrderState') newFilters.lsps1 = false;
+                }
+            }
         } else {
             const key = path as keyof Filter;
-            const isTurningOff = filters[key] === true;
+            const isTurningOn = !filters[key];
+            newFilters[key] = isTurningOn;
 
-            newFilters[key] = !filters[key];
-
-            if (isTurningOff) {
-                if (key === 'swaps' && newFilters.swapState) {
-                    Object.keys(newFilters.swapState).forEach((subKey) => {
-                        (newFilters.swapState as any)[subKey] = false;
-                    });
-                } else if (key === 'lsps1' && newFilters.lsps1OrderState) {
-                    Object.keys(newFilters.lsps1OrderState).forEach(
-                        (subKey) => {
-                            (newFilters.lsps1OrderState as any)[subKey] = false;
-                        }
-                    );
-                }
+            if (key === 'swaps') {
+                Object.keys(newFilters.swapState).forEach((key) => {
+                    (newFilters.swapState as any)[key] = isTurningOn;
+                });
+            }
+            if (key === 'lsps1') {
+                Object.keys(newFilters.lsps1OrderState).forEach((key) => {
+                    (newFilters.lsps1OrderState as any)[key] = isTurningOn;
+                });
             }
         }
 
@@ -502,20 +529,10 @@ export default class ActivityFilter extends React.Component<
                                                         'transparent'
                                                 }}
                                             >
-                                                <ListItem.Title
-                                                    style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {item.label}
-                                                </ListItem.Title>
                                                 <View
                                                     style={{
-                                                        marginLeft: 'auto'
+                                                        marginRight: 0,
+                                                        justifyContent: 'center'
                                                     }}
                                                 >
                                                     {expandedSections.services ? (
@@ -536,6 +553,27 @@ export default class ActivityFilter extends React.Component<
                                                         />
                                                     )}
                                                 </View>
+                                                <ListItem.Content>
+                                                    <ListItem.Title
+                                                        style={{
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
+                                                        }}
+                                                    >
+                                                        {item.label}
+                                                    </ListItem.Title>
+                                                </ListItem.Content>
+                                                <Switch
+                                                    value={swaps || lsps1}
+                                                    onValueChange={() =>
+                                                        this.handleToggle(
+                                                            'services'
+                                                        )
+                                                    }
+                                                />
                                             </ListItem>
                                         </TouchableOpacity>
 
@@ -566,23 +604,11 @@ export default class ActivityFilter extends React.Component<
                                                                                 'transparent'
                                                                         }}
                                                                     >
-                                                                        <ListItem.Title
-                                                                            style={{
-                                                                                color: themeColor(
-                                                                                    'text'
-                                                                                ),
-                                                                                fontFamily:
-                                                                                    'PPNeueMontreal-Book'
-                                                                            }}
-                                                                        >
-                                                                            {
-                                                                                child.label
-                                                                            }
-                                                                        </ListItem.Title>
                                                                         <View
                                                                             style={{
-                                                                                marginLeft:
-                                                                                    'auto'
+                                                                                marginRight: 0,
+                                                                                justifyContent:
+                                                                                    'center'
                                                                             }}
                                                                         >
                                                                             {isChildExpanded ? (
@@ -611,6 +637,22 @@ export default class ActivityFilter extends React.Component<
                                                                                 />
                                                                             )}
                                                                         </View>
+                                                                        <ListItem.Content>
+                                                                            <ListItem.Title
+                                                                                style={{
+                                                                                    color: themeColor(
+                                                                                        'text'
+                                                                                    ),
+                                                                                    fontFamily:
+                                                                                        'PPNeueMontreal-Book'
+                                                                                }}
+                                                                            >
+                                                                                {
+                                                                                    child.label
+                                                                                }
+                                                                            </ListItem.Title>
+                                                                        </ListItem.Content>
+
                                                                         <Switch
                                                                             value={
                                                                                 filters[
