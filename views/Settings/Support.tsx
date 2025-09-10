@@ -34,6 +34,13 @@ function Support(props: SupportProps) {
             path: 'DonateToZEUS',
             condition: nodeInfoStore.nodeInfo.isMainNet
         },
+        {
+            label: localeString(
+                'views.Settings.Payments.defaultDonationPercentage'
+            ),
+            path: 'ChangeDonationSettings',
+            condition: nodeInfoStore.nodeInfo.isMainNet
+        },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
             label: localeString('views.Settings.Support.store'),
