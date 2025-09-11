@@ -1199,7 +1199,7 @@
     "views.ActivityFilter.swapState.successful": "Successful",
     "views.ActivityFilter.swapState.failed": "Failed",
     "views.ActivityFilter.swapState.refunded": "Refunded",
-    "views.ActivityFilter.lsps1OrderState.completed": "Completed",
+    "views.ActivityFilter.lsps1State.completed": "Completed",
     "views.ActivityToCsv.title": "Download Activity",
     "views.ActivityToCsv.csvDownloaded": "CSV file has been downloaded",
     "views.ActivityToCsv.csvDownloadFailed": "Failed to download CSV file",
