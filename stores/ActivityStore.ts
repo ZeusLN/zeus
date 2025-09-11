@@ -30,6 +30,7 @@ export interface Filter {
     sent: boolean;
     swaps: boolean;
     lsps1: boolean;
+    lsps7: boolean;
     received: boolean;
     unpaid: boolean;
     inTransit: boolean;
@@ -48,7 +49,12 @@ export interface Filter {
         failed: boolean;
         refunded: boolean;
     };
-    lsps1OrderState: {
+    lsps1State: {
+        CREATED: boolean;
+        COMPLETED: boolean;
+        FAILED: boolean;
+    };
+    lsps7State: {
         CREATED: boolean;
         COMPLETED: boolean;
         FAILED: boolean;
@@ -62,6 +68,7 @@ export const DEFAULT_FILTERS = {
     sent: true,
     swaps: true,
     lsps1: true,
+    lsps7: true,
     received: true,
     unpaid: true,
     inTransit: false,
@@ -82,7 +89,12 @@ export const DEFAULT_FILTERS = {
         failed: true,
         refunded: true
     },
-    lsps1OrderState: {
+    lsps1State: {
+        CREATED: true,
+        COMPLETED: true,
+        FAILED: true
+    },
+    lsps7State: {
         CREATED: true,
         COMPLETED: true,
         FAILED: true
@@ -133,6 +145,7 @@ export default class ActivityStore {
             cashu: true,
             swaps: true,
             lsps1: true,
+            lsps7: true,
             sent: false,
             received: true,
             unpaid: false,
@@ -147,7 +160,8 @@ export default class ActivityStore {
             endDate: undefined,
             memo: '',
             swapState: { ...DEFAULT_FILTERS.swapState },
-            lsps1OrderState: { ...DEFAULT_FILTERS.lsps1OrderState }
+            lsps1State: { ...DEFAULT_FILTERS.lsps1State },
+            lsps7State: { ...DEFAULT_FILTERS.lsps7State }
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -224,7 +238,6 @@ export default class ActivityStore {
 
                 if (res.service === 'LSPS7') {
                     const payment = orderData?.payment;
-                    console.log(payment);
                     const fee =
                         payment?.bolt11?.order_total_sat ||
                         payment?.fee_total_sat ||
@@ -382,9 +395,13 @@ export default class ActivityStore {
                         ...DEFAULT_FILTERS.swapState,
                         ...(parsedFilters.swapState || {})
                     },
-                    lsps1OrderState: {
-                        ...DEFAULT_FILTERS.lsps1OrderState,
-                        ...(parsedFilters.lsps1OrderState || {})
+                    lsps1State: {
+                        ...DEFAULT_FILTERS.lsps1State,
+                        ...(parsedFilters.lsps1State || {})
+                    },
+                    lsps7State: {
+                        ...DEFAULT_FILTERS.lsps7State,
+                        ...(parsedFilters.lsps7State || {})
                     }
                 };
             } else {
@@ -407,9 +424,13 @@ export default class ActivityStore {
                 ...DEFAULT_FILTERS.swapState,
                 ...filters.swapState
             },
-            lsps1OrderState: {
-                ...DEFAULT_FILTERS.lsps1OrderState,
-                ...filters.lsps1OrderState
+            lsps1State: {
+                ...DEFAULT_FILTERS.lsps1State,
+                ...filters.lsps1State
+            },
+            lsps7State: {
+                ...DEFAULT_FILTERS.lsps7State,
+                ...filters.lsps7State
             }
         };
         this.filteredActivity = ActivityFilterUtils.filterActivities(

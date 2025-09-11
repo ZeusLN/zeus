@@ -84,25 +84,37 @@ class ActivityFilterUtils {
 
         if (filter.lsps1 == false) {
             filteredActivity = filteredActivity.filter(
-                (activity) =>
-                    activity.model !== 'LSPS1Order' &&
-                    activity.model !== 'LSPS7Order'
+                (activity) => activity.model !== 'LSPS1Order'
             );
         } else {
             filteredActivity = filteredActivity.filter((activity) => {
-                if (
-                    activity.model !== 'LSPS1Order' &&
-                    activity.model !== 'LSPS7Order'
-                )
-                    return true;
+                if (activity.model !== 'LSPS1Order') return true;
 
                 const state = activity.state;
-                if (filter.lsps1OrderState.CREATED && state === 'CREATED')
+                if (filter.lsps1State.CREATED && state === 'CREATED')
                     return true;
-                if (filter.lsps1OrderState.COMPLETED && state === 'COMPLETED')
+                if (filter.lsps1State.COMPLETED && state === 'COMPLETED')
                     return true;
-                if (filter.lsps1OrderState.FAILED && state === 'FAILED')
+                if (filter.lsps1State.FAILED && state === 'FAILED') return true;
+
+                return false;
+            });
+        }
+
+        if (filter.lsps7 === false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS7Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS7Order') return true;
+
+                const state = activity.state;
+                if (filter.lsps7State.CREATED && state === 'CREATED')
                     return true;
+                if (filter.lsps7State.COMPLETED && state === 'COMPLETED')
+                    return true;
+                if (filter.lsps7State.FAILED && state === 'FAILED') return true;
 
                 return false;
             });
