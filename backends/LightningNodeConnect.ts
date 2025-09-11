@@ -654,6 +654,7 @@ export default class LightningNodeConnect {
     supportsMessageSigning = () => this.permSignMessage;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
+    supportsOnchainBalance = () => true;
     supportsOnchainSends = () => this.permSendCoins;
     supportsOnchainReceiving = () => this.permNewAddress;
     supportsLightningSends = () => this.permSendLN;
