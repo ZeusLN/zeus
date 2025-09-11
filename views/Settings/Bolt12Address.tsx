@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -161,99 +161,93 @@ export default class Bolt12AddressSettings extends React.Component<
                     containerStyle={{ borderBottomWidth: 0 }}
                     navigation={navigation}
                 />
-                {error && <ErrorMessage message={error} />}
-                {existingLocalPart ? (
-                    <View style={{ padding: 20 }}>
-                        <Text
-                            style={{
-                                ...styles.handle,
-                                color: themeColor('text'),
-                                paddingBottom: 10
-                            }}
-                        >
-                            {`${existingLocalPart}@${HOST}`}
-                        </Text>
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.Bolt12Address.changeButton'
-                                )}
-                                onPress={() => {
-                                    this.setState({
-                                        existingLocalPart: '',
-                                        newLocalPart: ''
-                                    });
-                                }}
-                            />
-                        </View>
-                    </View>
-                ) : (
-                    <View
-                        style={{
-                            padding: 20
-                        }}
-                    >
-                        <Text
-                            style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Bolt12Address.handle'
-                            )}
-                        </Text>
-                        <View
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'row'
-                            }}
-                        >
-                            <TextInput
-                                value={newLocalPart}
-                                onChangeText={(text: string) => {
-                                    this.setState({
-                                        newLocalPart: text
-                                    });
-                                }}
-                                autoCapitalize="none"
-                                autoCorrect={false}
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row'
-                                }}
-                            />
+                <ScrollView style={{ flex: 1 }}>
+                    {error && <ErrorMessage message={error} />}
+                    {existingLocalPart ? (
+                        <View style={{ padding: 20 }}>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
+                                    ...styles.handle,
                                     color: themeColor('text'),
-                                    fontSize: 20,
-                                    marginLeft: 5,
-                                    marginTop: 27
+                                    paddingBottom: 10
                                 }}
                             >
-                                @{HOST}
+                                {`${existingLocalPart}@${HOST}`}
                             </Text>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.Bolt12Address.changeButton'
+                                    )}
+                                    onPress={() => {
+                                        this.setState({
+                                            existingLocalPart: '',
+                                            newLocalPart: ''
+                                        });
+                                    }}
+                                />
+                            </View>
                         </View>
-                        <Text
+                    ) : (
+                        <View
                             style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('warning')
+                                padding: 20
                             }}
                         >
-                            {error}
-                        </Text>
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.Bolt12Address.requestButton'
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Bolt12Address.handle'
                                 )}
-                                disabled={!this.state.newLocalPart}
-                                onPress={() => this.requestPaymentAddress()}
-                            />
+                            </Text>
+                            <View
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'row'
+                                }}
+                            >
+                                <TextInput
+                                    value={newLocalPart}
+                                    onChangeText={(text: string) => {
+                                        this.setState({
+                                            newLocalPart: text
+                                        });
+                                    }}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row'
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('text'),
+                                        fontSize: 20,
+                                        marginLeft: 5,
+                                        marginTop: 27
+                                    }}
+                                >
+                                    @{HOST}
+                                </Text>
+                            </View>
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.Bolt12Address.requestButton'
+                                    )}
+                                    disabled={!this.state.newLocalPart}
+                                    onPress={() => this.requestPaymentAddress()}
+                                />
+                            </View>
                         </View>
-                    </View>
-                )}
+                    )}
+                </ScrollView>
             </Screen>
         );
     }
