@@ -84,11 +84,17 @@ class ActivityFilterUtils {
 
         if (filter.lsps1 == false) {
             filteredActivity = filteredActivity.filter(
-                (activity) => activity.model !== 'LSPS1Order'
+                (activity) =>
+                    activity.model !== 'LSPS1Order' &&
+                    activity.model !== 'LSPS7Order'
             );
         } else {
             filteredActivity = filteredActivity.filter((activity) => {
-                if (activity.model !== 'LSPS1Order') return true;
+                if (
+                    activity.model !== 'LSPS1Order' &&
+                    activity.model !== 'LSPS7Order'
+                )
+                    return true;
 
                 const state = activity.state;
                 if (filter.lsps1OrderState.CREATED && state === 'CREATED')

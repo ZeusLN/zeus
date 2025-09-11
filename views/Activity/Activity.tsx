@@ -290,6 +290,9 @@ const ActivityListItem = React.memo(
         } else if (item.model === 'LSPS1Order') {
             displayName = localeString('views.LSPS1.type');
             subTitle = `${localeString('general.state')}: ${item.state}`;
+        } else if (item.model === 'LSPS7Order') {
+            displayName = localeString('views.LSPS7.type');
+            subTitle = `${localeString('general.state')}: ${item.state}`;
         }
 
         return (
@@ -574,7 +577,7 @@ export default class Activity extends React.PureComponent<
             return 'text';
         }
 
-        if (item.model === 'LSPS1Order') {
+        if (item.model === 'LSPS1Order' || item.model === 'LSPS7Order') {
             switch (item.state) {
                 case 'CREATED':
                     return 'highlight';
@@ -659,6 +662,16 @@ export default class Activity extends React.PureComponent<
             const orderShouldUpdate =
                 item.state === 'FAILED' || item.state === 'COMPLETED';
             navigation.navigate('LSPS1Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
+
+        if (item.model === 'LSPS7Order') {
+            const orderShouldUpdate =
+                item.state === 'FAILED' || item.state === 'COMPLETED';
+            navigation.navigate('LSPS7Order', {
                 orderId: item.id,
                 orderShouldUpdate
             });
