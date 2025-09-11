@@ -46,6 +46,7 @@ interface ActivityFilterState {
         services: boolean;
         swaps: boolean;
         lsps1: boolean;
+        lsps7: boolean;
     };
 }
 
@@ -63,7 +64,8 @@ export default class ActivityFilter extends React.Component<
         expandedSections: {
             services: false,
             swaps: false,
-            lsps1: false
+            lsps1: false,
+            lsps7: false
         }
     };
 
@@ -75,15 +77,23 @@ export default class ActivityFilter extends React.Component<
         const newFilters = JSON.parse(JSON.stringify(filters));
 
         if (path === 'services') {
-            const isTurningOn = !(filters.swaps || filters.lsps1);
+            const isTurningOn = !(
+                filters.swaps ||
+                filters.lsps1 ||
+                filters.lsps7
+            );
             newFilters.swaps = isTurningOn;
             newFilters.lsps1 = isTurningOn;
+            newFilters.lsps7 = isTurningOn;
 
             Object.keys(newFilters.swapState).forEach((key) => {
                 (newFilters.swapState as any)[key] = isTurningOn;
             });
-            Object.keys(newFilters.lsps1OrderState).forEach((key) => {
-                (newFilters.lsps1OrderState as any)[key] = isTurningOn;
+            Object.keys(newFilters.lsps1State).forEach((key) => {
+                (newFilters.lsps1State as any)[key] = isTurningOn;
+            });
+            Object.keys(newFilters.lsps7State).forEach((key) => {
+                (newFilters.lsps7State as any)[key] = isTurningOn;
             });
 
             if (!isTurningOn) {
@@ -91,7 +101,8 @@ export default class ActivityFilter extends React.Component<
                     expandedSections: {
                         ...prevState.expandedSections,
                         swaps: false,
-                        lsps1: false
+                        lsps1: false,
+                        lsps7: false
                     }
                 }));
             }
@@ -102,14 +113,16 @@ export default class ActivityFilter extends React.Component<
 
             if (isTurningOn) {
                 if (parent === 'swapState') newFilters.swaps = true;
-                if (parent === 'lsps1OrderState') newFilters.lsps1 = true;
+                if (parent === 'lsps1State') newFilters.lsps1 = true;
+                if (parent === 'lsps7State') newFilters.lsps7 = true;
             } else {
                 const allChildrenOff = Object.values(newFilters[parent]).every(
                     (item) => item === false
                 );
                 if (allChildrenOff) {
                     if (parent === 'swapState') newFilters.swaps = false;
-                    if (parent === 'lsps1OrderState') newFilters.lsps1 = false;
+                    if (parent === 'lsps1State') newFilters.lsps1 = false;
+                    if (parent === 'lsps7State') newFilters.lsps7 = false;
                 }
             }
         } else {
@@ -123,8 +136,13 @@ export default class ActivityFilter extends React.Component<
                 });
             }
             if (key === 'lsps1') {
-                Object.keys(newFilters.lsps1OrderState).forEach((key) => {
-                    (newFilters.lsps1OrderState as any)[key] = isTurningOn;
+                Object.keys(newFilters.lsps1State).forEach((key) => {
+                    (newFilters.lsps1State as any)[key] = isTurningOn;
+                });
+            }
+            if (key === 'lsps7') {
+                Object.keys(newFilters.lsps7State).forEach((key) => {
+                    (newFilters.lsps7State as any)[key] = isTurningOn;
                 });
             }
         }
@@ -178,6 +196,7 @@ export default class ActivityFilter extends React.Component<
             cashu,
             swaps,
             lsps1,
+            lsps7,
             sent,
             received,
             unpaid,
@@ -346,7 +365,7 @@ export default class ActivityFilter extends React.Component<
                         ]
                     },
                     {
-                        label: localeString('views.LSPS1.lsps1Orders'),
+                        label: localeString('views.LSPS1.type'),
                         value: lsps1,
                         var: 'lsps1',
                         section: 'lsps1',
@@ -355,21 +374,50 @@ export default class ActivityFilter extends React.Component<
                                 label: localeString(
                                     'views.ActivityFilter.swapState.created'
                                 ),
-                                var: ['lsps1OrderState', 'CREATED'],
+                                var: ['lsps1State', 'CREATED'],
                                 type: 'Toggle'
                             },
                             {
                                 label: localeString(
-                                    'views.ActivityFilter.lsps1OrderState.completed'
+                                    'views.ActivityFilter.lsps1State.completed'
                                 ),
-                                var: ['lsps1OrderState', 'COMPLETED'],
+                                var: ['lsps1State', 'COMPLETED'],
                                 type: 'Toggle'
                             },
                             {
                                 label: localeString(
                                     'views.ActivityFilter.swapState.failed'
                                 ),
-                                var: ['lsps1OrderState', 'FAILED'],
+                                var: ['lsps1State', 'FAILED'],
+                                type: 'Toggle'
+                            }
+                        ]
+                    },
+                    {
+                        label: localeString('views.LSPS7.type'),
+                        value: lsps7,
+                        var: 'lsps7',
+                        section: 'lsps7',
+                        children: [
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.created'
+                                ),
+                                var: ['lsps7State', 'CREATED'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.lsps1State.completed'
+                                ),
+                                var: ['lsps7State', 'COMPLETED'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.failed'
+                                ),
+                                var: ['lsps7State', 'FAILED'],
                                 type: 'Toggle'
                             }
                         ]
@@ -567,7 +615,9 @@ export default class ActivityFilter extends React.Component<
                                                     </ListItem.Title>
                                                 </ListItem.Content>
                                                 <Switch
-                                                    value={swaps || lsps1}
+                                                    value={
+                                                        swaps || lsps1 || lsps7
+                                                    }
                                                     onValueChange={() =>
                                                         this.handleToggle(
                                                             'services'
