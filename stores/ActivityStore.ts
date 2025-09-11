@@ -200,7 +200,7 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
-    private async getLSPS1Orders(): Promise<any[]> {
+    private async getLSPOrders(): Promise<any[]> {
         try {
             const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
             if (!responseArrayString) return [];
@@ -222,11 +222,29 @@ export default class ActivityStore {
                     ? new Date(createdAt).getTime() / 1000
                     : 0;
 
+                if (res.service === 'LSPS7') {
+                    const payment = orderData?.payment;
+                    console.log(payment);
+                    const fee =
+                        payment?.bolt11?.order_total_sat ||
+                        payment?.fee_total_sat ||
+                        0;
+                    return {
+                        model: 'LSPS7Order',
+                        id: orderData?.order_id,
+                        state: orderData?.order_state,
+                        getAmount: Number(fee),
+                        getTimestamp: timestamp,
+                        getDate: new Date(createdAt),
+                        getDisplayTimeShort:
+                            DateTimeUtils.listFormattedDateShort(timestamp)
+                    };
+                }
+
                 return {
                     model: 'LSPS1Order',
                     id: orderData?.order_id,
                     state: orderData?.order_state,
-                    service: res?.service || 'LSPS1',
                     getAmount: Number(orderData?.lsp_balance_sat) || 0,
                     getTimestamp: timestamp,
                     getDate: new Date(createdAt),
@@ -250,12 +268,12 @@ export default class ActivityStore {
         const invoices = this.invoicesStore.invoices;
         const withdrawalRequests = this.invoicesStore.withdrawalRequests;
         const swaps = this.swapStore.swaps;
-        const lsps1Orders = await this.getLSPS1Orders();
+        const lspOrders = await this.getLSPOrders();
 
         let additions = payments.concat(invoices);
         additions = additions.concat(withdrawalRequests);
         additions = additions.concat(swaps);
-        additions = additions.concat(lsps1Orders);
+        additions = additions.concat(lspOrders);
 
         if (BackendUtils.supportsOnchainSends()) {
             additions = additions.concat(transactions);
