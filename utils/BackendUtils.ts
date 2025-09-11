@@ -166,6 +166,7 @@ class BackendUtils {
     supportsLSPS1rest = () => this.call('supportsLSPS1rest');
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
+    supportsOnchainBalance = () => this.call('supportsOnchainBalance');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
     supportsLightningSends = () => this.call('supportsLightningSends');

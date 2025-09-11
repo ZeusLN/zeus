@@ -400,6 +400,7 @@ export default class EmbeddedLND extends LND {
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
+    supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
