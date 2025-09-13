@@ -3,6 +3,7 @@ import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { RectButton } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { LNURLWithdrawParams } from 'js-lnurl';
 
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
@@ -27,6 +28,7 @@ interface PaymentMethodListProps {
     lightningAddress?: string;
     ecash?: string;
     offer?: string;
+    lnurlParams?: LNURLWithdrawParams | undefined;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -120,7 +122,8 @@ const SwipeableRow = ({
     satAmount,
     lightning,
     lightningAddress,
-    offer
+    offer,
+    lnurlParams
 }: {
     item: DataRow;
     index: number;
@@ -130,12 +133,14 @@ const SwipeableRow = ({
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
+    lnurlParams?: LNURLWithdrawParams | undefined;
 }) => {
     if (item.layer === 'Lightning') {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
                 lightning={lightning}
+                lnurlParams={lnurlParams}
                 locked={true}
                 disabled={item.disabled}
             >
@@ -162,6 +167,7 @@ const SwipeableRow = ({
             <EcashSwipeableRow
                 navigation={navigation}
                 lightning={lightning}
+                lnurlParams={lnurlParams}
                 locked={true}
                 disabled={item.disabled}
             >
@@ -209,7 +215,8 @@ export default class PaymentMethodList extends Component<
             satAmount,
             lightning,
             lightningAddress,
-            offer
+            offer,
+            lnurlParams
         } = this.props;
 
         let DATA: DataRow[] = [];
@@ -281,6 +288,7 @@ export default class PaymentMethodList extends Component<
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}
+                            lnurlParams={lnurlParams}
                         />
                     )}
                     keyExtractor={(_item, index) => `message ${index}`}
