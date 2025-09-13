@@ -7,12 +7,13 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import WithdrawalRequest from '../models/WithdrawalRequest';
+import Swap, { SwapState } from '../models/Swap';
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<Invoice | Payment | Transaction | WithdrawalRequest>,
+        activities: Array<any>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction | WithdrawalRequest> {
+    ): Array<any> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -40,6 +41,83 @@ class ActivityFilterUtils {
                         activity instanceof CashuToken
                     )
             );
+        }
+
+        if (filter.swaps == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => !(activity instanceof Swap)
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (!(activity instanceof Swap)) return true;
+
+                const status = activity.status;
+                if (
+                    filter.swapState.created &&
+                    (status === SwapState.Created ||
+                        status === SwapState.InvoiceSet)
+                )
+                    return true;
+                if (
+                    filter.swapState.successful &&
+                    (status === SwapState.InvoiceSettled ||
+                        status === SwapState.TransactionClaimed)
+                )
+                    return true;
+                if (
+                    filter.swapState.failed &&
+                    (status === SwapState.InvoiceFailedToPay ||
+                        status === SwapState.SwapExpired ||
+                        status === SwapState.TransactionFailed ||
+                        status === SwapState.TransactionLockupFailed)
+                )
+                    return true;
+                if (
+                    filter.swapState.refunded &&
+                    status === SwapState.TransactionRefunded
+                )
+                    return true;
+
+                return false;
+            });
+        }
+
+        if (filter.lsps1 == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS1Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS1Order') return true;
+
+                const state = activity.state;
+                if (filter.lsps1State.CREATED && state === 'CREATED')
+                    return true;
+                if (filter.lsps1State.COMPLETED && state === 'COMPLETED')
+                    return true;
+                if (filter.lsps1State.FAILED && state === 'FAILED') return true;
+
+                return false;
+            });
+        }
+
+        if (filter.lsps7 === false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS7Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS7Order') return true;
+
+                const state = activity.state;
+                if (filter.lsps7State.CREATED && state === 'CREATED')
+                    return true;
+                if (filter.lsps7State.COMPLETED && state === 'COMPLETED')
+                    return true;
+                if (filter.lsps7State.FAILED && state === 'FAILED') return true;
+
+                return false;
+            });
         }
 
         if (filter.sent == false) {
@@ -179,15 +257,23 @@ class ActivityFilterUtils {
             const memoFilter = filter.memo.toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
-                let note = activity.getNote
-                    ? activity.getNote.toLowerCase()
-                    : '';
+                let note = '';
                 let memo = '';
                 if (activity instanceof Invoice) {
+                    note = activity.getNote
+                        ? activity.getNote.toLowerCase()
+                        : '';
                     memo = activity.memo ? activity.memo.toLowerCase() : '';
                 } else if (activity instanceof Payment) {
+                    note = activity.getNote
+                        ? activity.getNote.toLowerCase()
+                        : '';
                     memo = activity.getMemo
                         ? activity.getMemo.toLowerCase()
+                        : '';
+                } else if (activity.constructor === Object) {
+                    note = activity.getNote
+                        ? activity.getNote.toLowerCase()
                         : '';
                 }
                 return note.includes(memoFilter) || memo.includes(memoFilter);
