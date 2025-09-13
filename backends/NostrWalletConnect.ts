@@ -86,6 +86,7 @@ export default class NostrWalletConnect {
     supportsPeers = () => false;
     supportsMessageSigning = () => false;
     supportsLnurlAuth = () => false;
+    supportsOnchainBalance = () => false;
     supportsOnchainSends = () => false;
     supportsOnchainReceiving = () => false;
     supportsLightningSends = () => true;
