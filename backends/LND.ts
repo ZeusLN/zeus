@@ -832,6 +832,7 @@ export default class LND {
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
+    supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
