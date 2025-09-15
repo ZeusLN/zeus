@@ -10,7 +10,9 @@ import {
     Platform,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Alert,
+    AlertButton
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -51,6 +53,7 @@ import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
 
 import Storage from '../../storage';
 
@@ -150,6 +153,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private panResponder: PanResponderInstance;
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
+    private startupTimeoutId?: ReturnType<typeof setTimeout>;
 
     constructor(props: WalletProps) {
         super(props);
@@ -250,6 +254,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.props.navigation.removeListener('focus', this.handleFocus);
         this.handleAppStateChangeSubscription?.remove();
         this.backPressSubscription?.remove();
+        if (this.startupTimeoutId) {
+            clearTimeout(this.startupTimeoutId);
+            this.startupTimeoutId = undefined;
+        }
     }
 
     handleAppStateChange = (nextAppState: any) => {
@@ -471,6 +479,80 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     isTorEnabled: embeddedTor,
                     isTestnet: embeddedLndNetwork === 'Testnet'
                 });
+
+                if (!this.startupTimeoutId) {
+                    this.startupTimeoutId = setTimeout(() => {
+                        if (
+                            this.props.SettingsStore.connecting &&
+                            this.props.SettingsStore.implementation ===
+                                'embedded-lnd'
+                        ) {
+                            try {
+                                const message =
+                                    Platform.OS === 'ios'
+                                        ? localeString(
+                                              'views.Wallet.startupSlowMsg.ios'
+                                          )
+                                        : localeString(
+                                              'views.Wallet.startupSlowMsg.android'
+                                          );
+
+                                const buttons: AlertButton[] =
+                                    Platform.OS === 'ios'
+                                        ? [
+                                              {
+                                                  text: localeString(
+                                                      'views.Settings.EmbeddedNode.LNDLogs.title'
+                                                  ),
+                                                  onPress: () =>
+                                                      this.props.navigation.navigate(
+                                                          'LNDLogs'
+                                                      )
+                                              },
+                                              {
+                                                  text: localeString(
+                                                      'general.cancel'
+                                                  ),
+                                                  style: 'cancel' as const
+                                              }
+                                          ]
+                                        : [
+                                              {
+                                                  text: localeString(
+                                                      'views.Settings.EmbeddedNode.LNDLogs.title'
+                                                  ),
+                                                  onPress: () =>
+                                                      this.props.navigation.navigate(
+                                                          'LNDLogs'
+                                                      )
+                                              },
+                                              {
+                                                  text: localeString(
+                                                      'views.Wallet.restart'
+                                                  ),
+                                                  style: 'destructive' as const,
+                                                  onPress: () =>
+                                                      restartNeeded(true)
+                                              },
+                                              {
+                                                  text: localeString(
+                                                      'general.cancel'
+                                                  ),
+                                                  style: 'cancel' as const
+                                              }
+                                          ];
+
+                                Alert.alert(
+                                    localeString(
+                                        'views.Wallet.startupSlowTitle'
+                                    ),
+                                    message,
+                                    buttons
+                                );
+                            } catch (e) {}
+                        }
+                    }, 60000); // 60 seconds
+                }
             }
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
@@ -624,6 +706,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);
+            if (this.startupTimeoutId) {
+                clearTimeout(this.startupTimeoutId);
+                this.startupTimeoutId = undefined;
+            }
         }
 
         if (BackendUtils.supportsFlowLSP()) {
