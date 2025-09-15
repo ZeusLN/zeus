@@ -69,6 +69,28 @@ export default class ActivityFilter extends React.Component<
         }
     };
 
+    getParentState = (children: boolean[]): 'off' | 'partial' | 'full' => {
+        if (children.every((state) => state === true)) {
+            return 'full';
+        }
+        if (children.every((state) => state === false)) {
+            return 'off';
+        }
+        return 'partial';
+    };
+
+    getCombinedState = (
+        childStatuses: ('off' | 'partial' | 'full')[]
+    ): 'off' | 'partial' | 'full' => {
+        if (childStatuses.every((status) => status === 'full')) {
+            return 'full';
+        }
+        if (childStatuses.every((status) => status === 'off')) {
+            return 'off';
+        }
+        return 'partial';
+    };
+
     handleToggle = async (path: string | string[]) => {
         const { ActivityStore, SettingsStore } = this.props;
         const { filters, setFilters } = ActivityStore;
@@ -77,11 +99,14 @@ export default class ActivityFilter extends React.Component<
         const newFilters = JSON.parse(JSON.stringify(filters));
 
         if (path === 'services') {
-            const isTurningOn = !(
-                filters.swaps ||
-                filters.lsps1 ||
+            const childrenStates = [
+                filters.swaps,
+                filters.lsps1,
                 filters.lsps7
-            );
+            ];
+            const currentState = this.getParentState(childrenStates);
+            const isTurningOn = currentState === 'off';
+
             newFilters.swaps = isTurningOn;
             newFilters.lsps1 = isTurningOn;
             newFilters.lsps7 = isTurningOn;
@@ -127,23 +152,30 @@ export default class ActivityFilter extends React.Component<
             }
         } else {
             const key = path as keyof Filter;
-            const isTurningOn = !filters[key];
-            newFilters[key] = isTurningOn;
+            const childStateKeyMap = {
+                swaps: 'swapState',
+                lsps1: 'lsps1State',
+                lsps7: 'lsps7State'
+            };
+            const childStateKey =
+                childStateKeyMap[key as keyof typeof childStateKeyMap];
 
-            if (key === 'swaps') {
-                Object.keys(newFilters.swapState).forEach((key) => {
-                    (newFilters.swapState as any)[key] = isTurningOn;
+            if (childStateKey) {
+                const childrenStates = Object.values(
+                    filters[childStateKey] || {}
+                );
+                const currentState = this.getParentState(
+                    childrenStates as boolean[]
+                );
+                const isTurningOn = currentState === 'off';
+                newFilters[key] = isTurningOn;
+
+                const targetState = newFilters[childStateKey];
+                Object.keys(targetState).forEach((key) => {
+                    (targetState as any)[key] = isTurningOn;
                 });
-            }
-            if (key === 'lsps1') {
-                Object.keys(newFilters.lsps1State).forEach((key) => {
-                    (newFilters.lsps1State as any)[key] = isTurningOn;
-                });
-            }
-            if (key === 'lsps7') {
-                Object.keys(newFilters.lsps7State).forEach((key) => {
-                    (newFilters.lsps7State as any)[key] = isTurningOn;
-                });
+            } else {
+                newFilters[key] = !filters[key];
             }
         }
 
@@ -213,6 +245,21 @@ export default class ActivityFilter extends React.Component<
             memo,
             keysend
         } = filters;
+
+        const swapsState = this.getParentState(
+            Object.values(filters.swapState)
+        );
+        const lsps1State = this.getParentState(
+            Object.values(filters.lsps1State)
+        );
+        const lsps7State = this.getParentState(
+            Object.values(filters.lsps7State)
+        );
+        const servicesState = this.getCombinedState([
+            swapsState,
+            lsps1State,
+            lsps7State
+        ]);
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
             <View
@@ -616,7 +663,17 @@ export default class ActivityFilter extends React.Component<
                                                 </ListItem.Content>
                                                 <Switch
                                                     value={
-                                                        swaps || lsps1 || lsps7
+                                                        servicesState !== 'off'
+                                                    }
+                                                    trackEnabledColor={
+                                                        servicesState ===
+                                                        'partial'
+                                                            ? themeColor(
+                                                                  'secondaryText'
+                                                              )
+                                                            : themeColor(
+                                                                  'highlight'
+                                                              )
                                                     }
                                                     onValueChange={() =>
                                                         this.handleToggle(
@@ -636,6 +693,14 @@ export default class ActivityFilter extends React.Component<
                                                             expandedSections[
                                                                 child.section as keyof typeof expandedSections
                                                             ];
+                                                        const childSwitchState =
+                                                            child.var ===
+                                                            'swaps'
+                                                                ? swapsState
+                                                                : child.var ===
+                                                                  'lsps1'
+                                                                ? lsps1State
+                                                                : lsps7State;
                                                         return (
                                                             <React.Fragment
                                                                 key={child.var}
@@ -705,9 +770,18 @@ export default class ActivityFilter extends React.Component<
 
                                                                         <Switch
                                                                             value={
-                                                                                filters[
-                                                                                    child.var as keyof Filter
-                                                                                ]
+                                                                                childSwitchState !==
+                                                                                'off'
+                                                                            }
+                                                                            trackEnabledColor={
+                                                                                childSwitchState ===
+                                                                                'partial'
+                                                                                    ? themeColor(
+                                                                                          'secondaryText'
+                                                                                      )
+                                                                                    : themeColor(
+                                                                                          'highlight'
+                                                                                      )
                                                                             }
                                                                             onValueChange={() =>
                                                                                 this.handleToggle(
