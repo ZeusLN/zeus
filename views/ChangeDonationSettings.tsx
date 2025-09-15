@@ -1,12 +1,13 @@
 import React from 'react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { inject, observer } from 'mobx-react';
 
 import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
+import Text from '../components/Text';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -80,9 +81,9 @@ export default class ChangeDonationSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
+                                justifyContent: 'space-between',
                                 marginTop: 16,
-                                marginBottom: 16,
-                                alignItems: 'center'
+                                marginBottom: 16
                             }}
                         >
                             <Text
@@ -91,6 +92,9 @@ export default class ChangeDonationSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     flex: 1
                                 }}
+                                infoModalText={localeString(
+                                    'views.PaymentRequest.donationInfo'
+                                )}
                             >
                                 {localeString(
                                     'views.PaymentRequest.enableDonations'
@@ -137,7 +141,7 @@ export default class ChangeDonationSettings extends React.Component<
                                 <Text
                                     style={{ color: themeColor('highlight') }}
                                 >
-                                    {donationPercentage.toString()}%
+                                    {`${donationPercentage.toString()}%`}
                                 </Text>
                             </View>
                             <View>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Slider from '@react-native-community/slider';
@@ -16,6 +16,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import AmountInput from '../../components/AmountInput';
 
@@ -133,10 +134,10 @@ export default class PaymentsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('general.lightning')} -{' '}
-                                {localeString(
+                                {`${localeString('general.lightning')} -${' '}
+                                ${localeString(
                                     'views.Settings.Payments.defaultFeeLimit'
-                                )}
+                                )}`}
                             </Text>
                             <View
                                 style={{
@@ -232,10 +233,10 @@ export default class PaymentsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('general.lightning')} -{' '}
-                                {localeString(
+                                {`${localeString('general.lightning')} -${' '}
+                                ${localeString(
                                     'views.Settings.Payments.defaultFeeLimit'
-                                )}
+                                )}`}
                             </Text>
                             <View
                                 style={{
@@ -330,10 +331,11 @@ export default class PaymentsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('general.lightning')} -{' '}
-                                {localeString(
+                                {`${localeString(
+                                    'general.lightning'
+                                )} -${' '}${localeString(
                                     'views.Settings.Payments.timeoutSeconds'
-                                )}
+                                )}`}
                             </Text>
                             <TextInput
                                 keyboardType="numeric"
@@ -412,6 +414,7 @@ export default class PaymentsSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
+                                justifyContent: 'space-between',
                                 marginTop: 16,
                                 marginBottom: 16
                             }}
@@ -422,6 +425,9 @@ export default class PaymentsSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     flex: 1
                                 }}
+                                infoModalText={localeString(
+                                    'views.PaymentRequest.donationInfo'
+                                )}
                             >
                                 {localeString(
                                     'views.PaymentRequest.enableDonations'
@@ -468,7 +474,7 @@ export default class PaymentsSettings extends React.Component<
                                 <Text
                                     style={{ color: themeColor('highlight') }}
                                 >
-                                    {this.state.donationPercentage.toString()}%
+                                    {`${donationPercentage.toString()}%`}
                                 </Text>
                             </View>
                             <View>
