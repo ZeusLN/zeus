@@ -35,9 +35,7 @@ function Support(props: SupportProps) {
             condition: nodeInfoStore.nodeInfo.isMainNet
         },
         {
-            label: localeString(
-                'views.Settings.Payments.defaultDonationPercentage'
-            ),
+            label: localeString('views.PaymentRequest.addATip'),
             path: 'ChangeDonationSettings',
             condition: nodeInfoStore.nodeInfo.isMainNet
         },

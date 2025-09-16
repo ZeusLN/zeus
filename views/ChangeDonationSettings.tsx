@@ -63,7 +63,7 @@ export default class ChangeDonationSettings extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Change donation settings',
+                        text: localeString('views.PaymentRequest.addATip'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
