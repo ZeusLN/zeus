@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ScrollView, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, Platform } from 'react-native';
 import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -709,8 +709,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </View>
                         )}
 
-                        {/* Background Connection Info Button */}
-                        {!route.params?.isEdit && (
+                        {/* Background Connection Info - Hidden on iOS */}
+                        {!route.params?.isEdit && Platform.OS !== 'ios' && (
                             <View
                                 style={{
                                     flexDirection: 'row',
