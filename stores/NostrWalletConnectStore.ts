@@ -6,9 +6,9 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
 }
 
 import 'websocket-polyfill';
-import { action, observable, runInAction } from 'mobx';
+import { action, computed, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
-import { getPublicKey, generatePrivateKey } from 'nostr-tools';
+import { getPublicKey, generatePrivateKey, nip04 } from 'nostr-tools';
 import { Platform, NativeModules } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,6 +32,7 @@ import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
 import InvoicesStore from './InvoicesStore';
 import MessageSignStore from './MessageSignStore';
+import LightningAddressStore from './LightningAddressStore';
 
 import type {
     Nip47GetInfoResponse,
@@ -53,6 +54,7 @@ import type {
     NWCWalletServiceRequestHandler,
     NWCWalletServiceResponsePromise
 } from '@getalby/sdk/dist/nwc';
+
 import bolt11 from 'bolt11';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
@@ -60,6 +62,8 @@ export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
 export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
+export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
+    'http://localhost:8080/api/v1';
 
 export const DEFAULT_NOSTR_RELAYS = [
     // 'wss://nos.lol',
@@ -75,6 +79,22 @@ interface ClientKeys {
 interface WalletServiceKeys {
     privateKey: string;
     publicKey: string;
+}
+
+interface NostrEvent {
+    kind: number;
+    pubkey: string;
+    content: string;
+    id: string;
+}
+interface RestoreResponse {
+    connections: { relay: string; pubkey: string }[];
+    events: string[];
+}
+interface NWCRequest {
+    id: string;
+    method: Nip47SingleMethod;
+    params: any;
 }
 
 export interface CreateConnectionParams {
@@ -109,6 +129,8 @@ export default class NostrWalletConnectStore {
     @observable private healthCheckInterval: any = null;
     @observable private connectionRetryInterval: any = null;
     @observable private lastConnectionAttempt: number = 0;
+    @observable private lastCallTimes: Map<string, number> = new Map();
+    private readonly RATE_LIMIT_MS = 500; // 0.5 seconds between calls
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -117,6 +139,7 @@ export default class NostrWalletConnectStore {
     cashuStore: CashuStore;
     invoicesStore: InvoicesStore;
     messageSignStore: MessageSignStore;
+    lightningAddressStore: LightningAddressStore;
 
     constructor(
         settingsStore: SettingsStore,
@@ -125,7 +148,8 @@ export default class NostrWalletConnectStore {
         transactionsStore: TransactionsStore,
         cashuStore: CashuStore,
         invoicesStore: InvoicesStore,
-        messageSignStore: MessageSignStore
+        messageSignStore: MessageSignStore,
+        lightningAddressStore: LightningAddressStore
     ) {
         this.settingsStore = settingsStore;
         this.balanceStore = balanceStore;
@@ -134,9 +158,9 @@ export default class NostrWalletConnectStore {
         this.cashuStore = cashuStore;
         this.invoicesStore = invoicesStore;
         this.messageSignStore = messageSignStore;
+        this.lightningAddressStore = lightningAddressStore;
         this.initializeServiceWithRetry();
     }
-
     @action
     public reset = () => {
         if (this.healthCheckInterval) {
@@ -148,10 +172,8 @@ export default class NostrWalletConnectStore {
             this.connectionRetryInterval = null;
         }
         this.connections = [];
-        this.activeSubscriptions.clear();
-        this.nwcWalletServices.clear();
-        this.clearPublishedRelays();
         this.error = false;
+        this.walletServiceKeys = null;
         this.errorMessage = '';
         this.loading = false;
         this.initializing = false;
@@ -161,6 +183,11 @@ export default class NostrWalletConnectStore {
         this.lastConnectionAttempt = 0;
         this.cashuEnabled = false;
         this.persistentNWCServiceEnabled = false;
+        this.activeSubscriptions.clear();
+        this.nwcWalletServices.clear();
+        this.lastCallTimes.clear();
+        this.publishedRelays.clear();
+        this.clearPublishedRelays();
     };
 
     private generateWalletServiceKeys(): WalletServiceKeys {
@@ -172,6 +199,15 @@ export default class NostrWalletConnectStore {
         };
     }
 
+    private async loadClientKeys(): Promise<ClientKeys> {
+        try {
+            const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+            return storedKeys ? JSON.parse(storedKeys) : {};
+        } catch (error) {
+            console.error('Failed to load client keys:', error);
+            return {};
+        }
+    }
     private async loadWalletServiceKeys(): Promise<WalletServiceKeys> {
         try {
             const storedKeys = await Storage.getItem(NWC_SERVICE_KEYS);
@@ -212,7 +248,7 @@ export default class NostrWalletConnectStore {
             console.error('Failed to save wallet service keys:', error);
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.failedToStoreServiceKeys'
+                    'views.Settings.NostrWalletConnect.error.failedToStoreServiceKeys'
                 )
             );
         }
@@ -239,7 +275,6 @@ export default class NostrWalletConnectStore {
             });
         }
     }
-
     private async loadPersistentServiceSetting(): Promise<void> {
         try {
             const stored = await AsyncStorage.getItem(
@@ -258,7 +293,6 @@ export default class NostrWalletConnectStore {
             });
         }
     }
-
     @action
     public async setPersistentNWCServiceEnabled(
         enabled: boolean
@@ -292,7 +326,7 @@ export default class NostrWalletConnectStore {
             );
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.failedToSavePersistentServiceSetting'
+                    'views.Settings.NostrWalletConnect.error.failedToSavePersistentServiceSetting'
                 )
             );
         }
@@ -308,7 +342,7 @@ export default class NostrWalletConnectStore {
             console.error('Failed to save Cashu setting:', error);
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.failedToSaveCashuSetting'
+                    'views.Settings.NostrWalletConnect.error.failedToSaveCashuSetting'
                 )
             );
         }
@@ -322,14 +356,12 @@ export default class NostrWalletConnectStore {
         }
         runInAction(() => {
             this.walletServiceKeys = keys;
-            // Clear published relays when wallet service keys change
             this.clearPublishedRelays();
         });
     }
 
     @action
-    public initializeServiceWithRetry = async () => {
-        const maxAttempts = 5;
+    public initializeServiceWithRetry = async (maxAttempts: number = 5) => {
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             console.log(
                 `Attempting to connect to NWC relay ${
@@ -373,7 +405,7 @@ export default class NostrWalletConnectStore {
                 if (successfulRelays === 0) {
                     throw new Error(
                         localeString(
-                            'views.Settings.NostrWalletConnect.failedToInitializeRelays'
+                            'views.Settings.NostrWalletConnect.error.failedToInitializeRelays'
                         )
                     );
                 }
@@ -381,6 +413,11 @@ export default class NostrWalletConnectStore {
                 runInAction(() => {
                     this.relayConnected = true;
                 });
+                if (Platform.OS === 'ios') {
+                    this.fetchAndProcessPendingEvents().catch((error) => {
+                        console.error('Failed to fetch pending events', error);
+                    });
+                }
                 return;
             } catch (error: any) {
                 console.warn(`Failed to connect to relay:`, error);
@@ -389,7 +426,7 @@ export default class NostrWalletConnectStore {
                     runInAction(() => {
                         this.error = true;
                         this.errorMessage = localeString(
-                            'views.Settings.NostrWalletConnect.errors.failedToConnectToRelay'
+                            'views.Settings.NostrWalletConnect.error.failedToConnectToRelay'
                         ).replace(
                             '{error}',
                             error instanceof Error
@@ -399,7 +436,6 @@ export default class NostrWalletConnectStore {
                         this.relayConnected = false;
                     });
                 } else {
-                    // Longer delay on Android to account for background service startup
                     const delay = Platform.OS === 'android' ? 2000 : 1000;
                     await new Promise((resolve) => setTimeout(resolve, delay));
                 }
@@ -415,7 +451,6 @@ export default class NostrWalletConnectStore {
                 'views.Settings.NostrWalletConnect.initializingService'
             );
         });
-
         try {
             await this.initializeWalletServiceKeys();
             await this.loadPersistentServiceSetting();
@@ -435,7 +470,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToInitializeService'
+                        'views.Settings.NostrWalletConnect.error.failedToInitializeService'
                     );
                 this.initializing = false;
                 this.loadingMsg = undefined;
@@ -453,7 +488,7 @@ export default class NostrWalletConnectStore {
             if (!this.walletServiceKeys?.privateKey) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.walletServiceKeyNotFound'
+                        'views.Settings.NostrWalletConnect.error.walletServiceKeyNotFound'
                     )
                 );
             }
@@ -466,19 +501,19 @@ export default class NostrWalletConnectStore {
             if (successfulPublishes === 0) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToPublishToRelays'
+                        'views.Settings.NostrWalletConnect.error.failedToPublishToRelays'
                     )
                 );
             }
             console.log(
                 `Successfully published to ${successfulPublishes}/${this.nwcWalletServices.size} relays`
             );
-
-            await this.subscribeToAllConnections();
-
-            if (hasActiveConnections && this.persistentNWCServiceEnabled) {
-                this.setupPlatformSpecificMonitoring();
-            }
+            setTimeout(async () => {
+                await this.subscribeToAllConnections();
+                if (hasActiveConnections && this.persistentNWCServiceEnabled) {
+                    this.setupPlatformSpecificMonitoring();
+                }
+            }, 2000);
         } catch (error: any) {
             console.error('Failed to start NWC service:', error);
             runInAction(() => {
@@ -486,7 +521,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToStartService'
+                        'views.Settings.NostrWalletConnect.error.failedToStartService'
                     );
             });
             return false;
@@ -541,15 +576,75 @@ export default class NostrWalletConnectStore {
         }
     }
 
+    private async checkRelayHealth(relayUrl: string): Promise<boolean> {
+        try {
+            const nwcWalletService = this.nwcWalletServices.get(relayUrl);
+            if (!nwcWalletService) {
+                console.warn(
+                    `NWC: No service instance found for relay ${relayUrl}`
+                );
+                return false;
+            }
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+                controller.abort();
+            }, 3000);
+            try {
+                await Promise.race([
+                    nwcWalletService.publishWalletServiceInfoEvent(
+                        this.walletServiceKeys!.privateKey,
+                        ['get_info'], // Empty permissions for test
+                        [] // Empty notifications for test
+                    ),
+                    new Promise((_, reject) =>
+                        setTimeout(
+                            () => reject(new Error('Health check timeout')),
+                            2000
+                        )
+                    )
+                ]);
+                clearTimeout(timeoutId);
+                console.log(`NWC: Health check passed for relay ${relayUrl}`);
+                return true;
+            } catch (healthError: any) {
+                clearTimeout(timeoutId);
+                console.warn(
+                    `NWC: Health check failed for relay ${relayUrl}:`,
+                    healthError?.message
+                );
+                return false;
+            }
+        } catch (error) {
+            console.warn(
+                `NWC: Health check error for relay ${relayUrl}:`,
+                error
+            );
+            return false;
+        }
+    }
+
     private async publishToAllRelays(): Promise<number> {
         let successfulPublishes = 0;
         const publishPromises = Array.from(
             this.nwcWalletServices.entries()
         ).map(async ([relayUrl, nwcWalletService]) => {
-            // Skip if already published to this relay
+            // Checking if already published to this relay
             if (this.publishedRelays.has(relayUrl)) {
-                console.log(`Skipping already published relay: ${relayUrl}`);
-                return;
+                const isHealthy = await this.checkRelayHealth(relayUrl);
+                if (isHealthy) {
+                    console.log(
+                        `Skipping already published and healthy relay: ${relayUrl}`
+                    );
+                    successfulPublishes++;
+                    return;
+                } else {
+                    console.log(
+                        `Relay ${relayUrl} was published but is now unhealthy, republishing...`
+                    );
+                    runInAction(() => {
+                        this.publishedRelays.delete(relayUrl);
+                    });
+                }
             }
             try {
                 const success = await this.publishWithRetry(
@@ -583,12 +678,6 @@ export default class NostrWalletConnectStore {
         this.publishedRelays.clear();
     }
 
-    @action
-    public forceRepublishToAllRelays = async (): Promise<number> => {
-        this.clearPublishedRelays();
-        return await this.publishToAllRelays();
-    };
-
     public getPublishedRelaysStatus(): { published: string[]; total: number } {
         return {
             published: Array.from(this.publishedRelays),
@@ -597,10 +686,8 @@ export default class NostrWalletConnectStore {
     }
 
     private setupPlatformSpecificMonitoring(): void {
-        // Platform-specific health checks
         this.setupHealthChecks();
 
-        // Android-specific connection monitoring
         if (Platform.OS === 'android') {
             this.setupAndroidConnectionMonitoring();
         }
@@ -654,14 +741,14 @@ export default class NostrWalletConnectStore {
         if (!this.walletServiceKeys?.privateKey) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.walletServiceKeysNotInitialized'
+                    'views.Settings.NostrWalletConnect.error.walletServiceKeysNotInitialized'
                 )
             );
         }
         if (this.nwcWalletServices.size === 0) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.noRelaysAvailable'
+                    'views.Settings.NostrWalletConnect.error.noRelaysAvailable'
                 )
             );
         }
@@ -688,35 +775,14 @@ export default class NostrWalletConnectStore {
         }, 10 * 60 * 1000); // 10 minutes - less frequent
     }
 
-    private async subscribeWithPlatformHandling(
+    private async subscribeWithRetry(
         nwcWalletService: nwc.NWCWalletService,
         keypair: nwc.NWCWalletServiceKeyPair,
         handler: NWCWalletServiceRequestHandler,
-        connection: NWCConnection
+        connection: NWCConnection,
+        maxRetries: number = 3
     ): Promise<() => void> {
-        // Platform-specific subscription logic
-        if (Platform.OS === 'android') {
-            return await this.subscribeWithAndroidRetry(
-                nwcWalletService,
-                keypair,
-                handler,
-                connection
-            );
-        } else {
-            // iOS: Direct subscription (more stable)
-            return await nwcWalletService.subscribe(keypair, handler);
-        }
-    }
-
-    private async subscribeWithAndroidRetry(
-        nwcWalletService: nwc.NWCWalletService,
-        keypair: nwc.NWCWalletServiceKeyPair,
-        handler: NWCWalletServiceRequestHandler,
-        connection: NWCConnection
-    ): Promise<() => void> {
-        const maxRetries = 3;
         let lastError: any;
-
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
                 const unsubscribe = await nwcWalletService.subscribe(
@@ -746,12 +812,11 @@ export default class NostrWalletConnectStore {
             lastError ||
             new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.failedToSubscribeAfterRetries'
+                    'views.Settings.NostrWalletConnect.error.failedToSubscribeAfterRetries'
                 )
             )
         );
     }
-
     public isServiceReady(): boolean {
         return (
             this.walletServiceKeys?.privateKey !== undefined &&
@@ -759,38 +824,36 @@ export default class NostrWalletConnectStore {
             !this.error
         );
     }
-    private isCashuProperlyConfigured(): boolean {
+    @computed
+    get isCashuProperlyConfigured(): boolean {
         return this.cashuEnabled && this.cashuStore.isProperlyConfigured();
     }
+    @computed
+    get cashuConfigurationStatus(): {
+        isEnabled: boolean;
+        isConfigured: boolean;
+        selectedMintUrl?: string;
+        errorMessage?: string;
+    } {
+        const isEnabled = this.cashuEnabled;
+        const isConfigured = this.cashuStore.isProperlyConfigured();
+        const selectedMintUrl = this.cashuStore.selectedMintUrl;
 
-    public async forceReconnectConnection(
-        connectionId: string
-    ): Promise<boolean> {
-        const connection = this.getConnection(connectionId);
-        if (!connection) {
-            console.error(`NWC: Connection ${connectionId} not found`);
-            return false;
+        let errorMessage: string | undefined;
+        if (isEnabled && !isConfigured) {
+            if (!selectedMintUrl) {
+                errorMessage = 'No Cashu mint selected';
+            } else {
+                errorMessage = `Cashu mint not properly configured: ${selectedMintUrl}`;
+            }
         }
 
-        try {
-            console.log(
-                `NWC: Force reconnecting connection ${connection.name}`
-            );
-            await this.unsubscribeFromConnection(connectionId);
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            await this.subscribeToConnection(connection);
-
-            console.log(
-                `NWC: Successfully reconnected connection ${connection.name}`
-            );
-            return true;
-        } catch (error) {
-            console.error(
-                `NWC: Failed to reconnect connection ${connection.name}:`,
-                error
-            );
-            return false;
-        }
+        return {
+            isEnabled,
+            isConfigured,
+            selectedMintUrl,
+            errorMessage
+        };
     }
 
     @action
@@ -831,7 +894,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToStopService'
+                        'views.Settings.NostrWalletConnect.error.failedToStopService'
                     );
             });
             return false;
@@ -875,21 +938,20 @@ export default class NostrWalletConnectStore {
         return false;
     }
 
-    private generateConnectionSecretUrl(
-        connectionPrivateKey: string,
-        relayUrl: string
-    ): string {
+    private generateConnectionSecret(relayUrl: string) {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.walletServicePublicKeyNotAvailable'
+                    'views.Settings.NostrWalletConnect.error.walletServicePublicKeyNotAvailable'
                 )
             );
         }
-        const connectionString = `nostr+walletconnect://${
+        const connectionPrivateKey = generatePrivateKey();
+        const connectionPublicKey = getPublicKey(connectionPrivateKey);
+        const connectionUrl = `nostr+walletconnect://${
             this.walletServiceKeys.publicKey
         }?relay=${encodeURIComponent(relayUrl)}&secret=${connectionPrivateKey}`;
-        return connectionString;
+        return { connectionUrl, connectionPrivateKey, connectionPublicKey };
     }
 
     private async storeClientKeys(
@@ -905,7 +967,7 @@ export default class NostrWalletConnectStore {
             console.error('Failed to store private key:', error);
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.failedToStorePrivateKey'
+                    'views.Settings.NostrWalletConnect.error.failedToStorePrivateKey'
                 )
             );
         }
@@ -923,7 +985,6 @@ export default class NostrWalletConnectStore {
             console.error('Failed to delete client keys:', error);
         }
     }
-
     @action
     public loadConnections = async () => {
         try {
@@ -1021,7 +1082,7 @@ export default class NostrWalletConnectStore {
             if (!this.nwcWalletServices.has(params.relayUrl)) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.relayNotAvailable'
+                        'views.Settings.NostrWalletConnect.error.relayNotAvailable'
                     )
                         .replace('{relayUrl}', params.relayUrl)
                         .replace(
@@ -1032,12 +1093,8 @@ export default class NostrWalletConnectStore {
             }
 
             const connectionId = uuidv4();
-            const connectionPrivateKey = generatePrivateKey();
-            const connectionPublicKey = getPublicKey(connectionPrivateKey);
-            const nostrUrl = this.generateConnectionSecretUrl(
-                connectionPrivateKey,
-                params.relayUrl
-            );
+            const { connectionUrl, connectionPrivateKey, connectionPublicKey } =
+                this.generateConnectionSecret(params.relayUrl);
 
             const connectionData = {
                 id: connectionId,
@@ -1060,14 +1117,12 @@ export default class NostrWalletConnectStore {
                 connectionPublicKey,
                 connectionPrivateKey
             );
-
             runInAction(() => {
                 this.connections.unshift(connection);
             });
-
             await this.saveConnections();
             await this.subscribeToConnection(connection);
-            return nostrUrl;
+            return connectionUrl;
         } catch (error: any) {
             throw error;
         } finally {
@@ -1100,9 +1155,7 @@ export default class NostrWalletConnectStore {
 
             const connection = this.connections[connectionIndex];
             await this.deleteClientKeys(connection.pubkey);
-
             await this.unsubscribeFromConnection(connectionId);
-
             runInAction(() => {
                 this.connections.splice(connectionIndex, 1);
             });
@@ -1116,7 +1169,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToDeleteConnection'
+                        'views.Settings.NostrWalletConnect.error.failedToDeleteConnection'
                     );
             });
             return false;
@@ -1182,7 +1235,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToUpdateConnection'
+                        'views.Settings.NostrWalletConnect.error.failedToUpdateConnection'
                     );
             });
             return false;
@@ -1192,7 +1245,6 @@ export default class NostrWalletConnectStore {
             });
         }
     };
-
     @action
     private markConnectionUsed = async (connectionId: string) => {
         const connection = this.connections.find((c) => c.id === connectionId);
@@ -1213,7 +1265,18 @@ export default class NostrWalletConnectStore {
             }
         }
     };
+    private isRateLimited(connectionId: string, method: string): boolean {
+        const key = `${connectionId}-${method}`;
+        const lastCallTime = this.lastCallTimes.get(key);
+        const now = Date.now();
 
+        if (lastCallTime && now - lastCallTime < this.RATE_LIMIT_MS) {
+            return true;
+        }
+
+        this.lastCallTimes.set(key, now);
+        return false;
+    }
     @action
     public startWaitingForConnection = (connectionId: string) => {
         this.waitingForConnection = true;
@@ -1264,7 +1327,7 @@ export default class NostrWalletConnectStore {
                     const remainingBudget = connection.remainingBudget;
                     const error = new Error(
                         localeString(
-                            'views.Settings.NostrWalletConnect.errors.paymentExceedsBudget'
+                            'views.Settings.NostrWalletConnect.error.paymentExceedsBudget'
                         )
                             .replace('{amount}', amountSats.toString())
                             .replace('{remaining}', remainingBudget.toString())
@@ -1302,17 +1365,67 @@ export default class NostrWalletConnectStore {
     };
     private async subscribeToAllConnections(): Promise<void> {
         const activeConnections = this.connections.filter((c) => c.isActive);
-        for (const connection of activeConnections) {
-            await this.subscribeToConnection(connection);
+        if (activeConnections.length === 0) {
+            return;
+        }
+        const subscriptionPromises = activeConnections.map(
+            async (connection) => {
+                try {
+                    await this.subscribeToConnection(connection);
+                    return { success: true, connection: connection.name };
+                } catch (error) {
+                    console.error(
+                        `NWC: Failed to subscribe to ${connection.name}:`,
+                        error
+                    );
+                    return {
+                        success: false,
+                        connection: connection.name,
+                        error
+                    };
+                }
+            }
+        );
+
+        // Wait for all subscriptions to complete
+        const results = await Promise.allSettled(subscriptionPromises);
+        // Log results
+        const successful = results.filter(
+            (r) => r.status === 'fulfilled' && r.value.success
+        ).length;
+        const failed = results.length - successful;
+
+        console.log(
+            `NWC: Subscription results - ${successful} successful, ${failed} failed`
+        );
+
+        if (failed > 0) {
+            console.warn(
+                'NWC: Some subscriptions failed:',
+                results
+                    .filter(
+                        (r) =>
+                            r.status === 'rejected' ||
+                            (r.status === 'fulfilled' && !r.value.success)
+                    )
+                    .map((r) =>
+                        r.status === 'fulfilled'
+                            ? r.value.connection
+                            : 'unknown'
+                    )
+            );
         }
     }
     private async subscribeToConnection(
         connection: NWCConnection
     ): Promise<void> {
         if (!this.isServiceReady()) {
-            console.warn(
-                `NWC: Service not ready, cannot subscribe to connection ${connection.name}`
-            );
+            runInAction(() => {
+                this.error = true;
+                this.errorMessage = localeString(
+                    'views.Settings.NostrWalletConnect.error.serviceNotReady'
+                );
+            });
             return;
         }
         try {
@@ -1326,7 +1439,6 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-
             const keypair = new nwc.NWCWalletServiceKeyPair(
                 serviceSecretKey,
                 connection.pubkey
@@ -1378,25 +1490,20 @@ export default class NostrWalletConnectStore {
             if (!nwcWalletService) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.nwcWalletServiceNotFound'
+                        'views.Settings.NostrWalletConnect.error.nwcWalletServiceNotFound'
                     ).replace('{relayUrl}', connection.relayUrl)
                 );
             }
-            // Platform-specific subscription handling
-            const unsubscribe = await this.subscribeWithPlatformHandling(
+            const unsubscribe = await this.subscribeWithRetry(
                 nwcWalletService,
                 keypair,
                 handler,
                 connection
             );
-
             runInAction(() => {
                 this.activeSubscriptions.set(connection.id, unsubscribe);
             });
-
-            console.log(
-                `NWC: Successfully subscribed to connection ${connection.name}`
-            );
+            await new Promise((resolve) => setTimeout(resolve, 1000)); //wait for 1 second to prevent rate limiting
         } catch (error: any) {
             console.error(
                 `Failed to subscribe to connection ${connection.name}:`,
@@ -1404,11 +1511,13 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-
     private async handleGetInfo(
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetInfoResponse> {
         this.markConnectionUsed(connection.id);
+        if (this.isRateLimited(connection.id, 'get_info')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         try {
             if (!this.nodeInfoStore.nodeInfo?.identity_pubkey) {
                 await this.nodeInfoStore.getNodeInfo();
@@ -1441,17 +1550,25 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error) {
-            return this.handleError(error, 'INTERNAL_ERROR');
+            return this.handleError(
+                localeString(
+                    'views.Settings.NostrWalletConnect.error.failedToGetInfo'
+                ),
+                'INTERNAL_ERROR'
+            );
         }
     }
 
     private async handleGetBalance(
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
+        if (this.isRateLimited(connection.id, 'get_balance')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         this.markConnectionUsed(connection.id);
         console.log('calling handleGetBalance for connection', connection.name);
         try {
-            const balance = this.isCashuProperlyConfigured()
+            const balance = this.isCashuProperlyConfigured
                 ? this.cashuStore.totalBalanceSats
                 : (await this.balanceStore.getLightningBalance(true))
                       ?.lightningBalance;
@@ -1463,7 +1580,7 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error) {
-            return this.handleError(error, 'INTERNAL_ERROR');
+            return this.handleError((error as Error).message, 'INTERNAL_ERROR');
         }
     }
 
@@ -1472,16 +1589,19 @@ export default class NostrWalletConnectStore {
         request: Nip47PayInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
         this.markConnectionUsed(connection.id);
+        if (this.isRateLimited(connection.id, 'pay_invoice')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         console.log('calling handlePayInvoice for connection', connection.name);
         try {
-            if (this.isCashuProperlyConfigured()) {
-                if (!this.cashuStore.selectedMintUrl) {
+            if (this.isCashuProperlyConfigured) {
+                const cashuStatus = this.cashuConfigurationStatus;
+                if (!cashuStatus.isConfigured) {
                     return this.handleError(
-                        new Error(
+                        cashuStatus.errorMessage ||
                             localeString(
-                                'views.Settings.NostrWalletConnect.errors.noCashuMintSelected'
-                            )
-                        ),
+                                'views.Settings.NostrWalletConnect.error.noCashuMintSelected'
+                            ),
                         'INTERNAL_ERROR'
                     );
                 }
@@ -1490,37 +1610,28 @@ export default class NostrWalletConnectStore {
                 const error = this.cashuStore.getPayReqError;
 
                 if (error) {
-                    return this.handleError(
-                        new Error(error),
-                        'INVALID_INVOICE'
-                    );
+                    return this.handleError(error, 'INVALID_INVOICE');
                 }
                 if (!invoice) {
                     return this.handleError(
-                        new Error(
-                            localeString(
-                                'views.Settings.NostrWalletConnect.errors.failedToDecodeInvoice'
-                            )
+                        localeString(
+                            'views.Settings.NostrWalletConnect.error.failedToDecodeInvoice'
                         ),
                         'INVALID_INVOICE'
                     );
                 }
                 if (invoice.isPaid) {
                     return this.handleError(
-                        new Error(
-                            localeString(
-                                'views.Settings.NostrWalletConnect.errors.invoiceAlreadyPaid'
-                            )
+                        localeString(
+                            'views.Settings.NostrWalletConnect.error.invoiceAlreadyPaid'
                         ),
                         'INVALID_INVOICE'
                     );
                 }
                 if (invoice.isExpired) {
                     return this.handleError(
-                        new Error(
-                            localeString(
-                                'views.Settings.NostrWalletConnect.errors.invoiceExpired'
-                            )
+                        localeString(
+                            'views.Settings.NostrWalletConnect.error.invoiceExpired'
                         ),
                         'INVALID_INVOICE'
                     );
@@ -1530,10 +1641,8 @@ export default class NostrWalletConnectStore {
                     invoice.getPaymentRequest.trim() === ''
                 ) {
                     return this.handleError(
-                        new Error(
-                            localeString(
-                                'views.Settings.NostrWalletConnect.errors.invalidPaymentRequest'
-                            )
+                        localeString(
+                            'views.Settings.NostrWalletConnect.error.invalidPaymentRequest'
                         ),
                         'INVALID_INVOICE'
                     );
@@ -1552,7 +1661,7 @@ export default class NostrWalletConnectStore {
                         error: {
                             code: 'INVALID_INVOICE',
                             message: localeString(
-                                'views.Settings.NostrWalletConnect.errors.invalidAmount'
+                                'views.Settings.NostrWalletConnect.error.invalidAmount'
                             )
                         }
                     };
@@ -1564,7 +1673,7 @@ export default class NostrWalletConnectStore {
                         error: {
                             code: 'INSUFFICIENT_BALANCE',
                             message: localeString(
-                                'views.Settings.NostrWalletConnect.errors.insufficientBalance'
+                                'views.Settings.NostrWalletConnect.error.insufficientBalance'
                             )
                                 .replace('{amount}', amount.toString())
                                 .replace('{balance}', currentBalance.toString())
@@ -1607,7 +1716,7 @@ export default class NostrWalletConnectStore {
                         error: {
                             code: 'INVOICE_EXPIRED',
                             message: localeString(
-                                'views.Settings.NostrWalletConnect.errors.invoiceExpired'
+                                'views.Settings.NostrWalletConnect.error.invoiceExpired'
                             )
                         }
                     };
@@ -1623,7 +1732,7 @@ export default class NostrWalletConnectStore {
                     error: {
                         code: 'INSUFFICIENT_BALANCE',
                         message: localeString(
-                            'views.Settings.NostrWalletConnect.errors.insufficientBalance'
+                            'views.Settings.NostrWalletConnect.error.insufficientBalance'
                         )
                             .replace('{amount}', amountSats.toString())
                             .replace(
@@ -1643,7 +1752,7 @@ export default class NostrWalletConnectStore {
             await new Promise((resolve) => setTimeout(resolve, 100));
             if (this.transactionsStore.payment_error) {
                 return this.handleError(
-                    new Error(this.transactionsStore.payment_error),
+                    this.transactionsStore.payment_error,
                     'FAILED_TO_PAY_INVOICE'
                 );
             }
@@ -1667,13 +1776,15 @@ export default class NostrWalletConnectStore {
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
-        console.log('handleMakeInvoice', request);
+        if (this.isRateLimited(connection.id, 'make_invoice')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         console.log(
             'calling handleMakeInvoice for connection',
             connection.name
         );
         try {
-            if (this.isCashuProperlyConfigured()) {
+            if (this.isCashuProperlyConfigured) {
                 try {
                     const cashuInvoice = await this.cashuStore.createInvoice({
                         value: Math.floor(request.amount / 1000).toString(),
@@ -1683,7 +1794,7 @@ export default class NostrWalletConnectStore {
                     if (!cashuInvoice || !cashuInvoice.paymentRequest) {
                         throw new Error(
                             localeString(
-                                'views.Settings.NostrWalletConnect.failedToCreateCashuInvoice'
+                                'views.Settings.NostrWalletConnect.error.failedToCreateCashuInvoice'
                             )
                         );
                     }
@@ -1712,7 +1823,10 @@ export default class NostrWalletConnectStore {
                             }
                         }
                     } catch (decodeError) {
-                        return this.handleError(decodeError, 'INVALID_INVOICE');
+                        return this.handleError(
+                            (decodeError as Error).message,
+                            'INVALID_INVOICE'
+                        );
                     }
 
                     this.showInvoiceCreatedNotification(
@@ -1740,7 +1854,7 @@ export default class NostrWalletConnectStore {
                     };
                 } catch (cashuError) {
                     return this.handleError(
-                        cashuError,
+                        (cashuError as Error).message,
                         'FAILED_TO_CREATE_INVOICE'
                     );
                 }
@@ -1775,7 +1889,7 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error) {
-            return this.handleError(error, 'INTERNAL_ERROR');
+            return this.handleError((error as Error).message, 'INTERNAL_ERROR');
         }
     }
 
@@ -1785,15 +1899,14 @@ export default class NostrWalletConnectStore {
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         console.log('handleLookupInvoice', request);
         this.markConnectionUsed(connection.id);
-        console.log(
-            'calling handleLookupInvoice for connection',
-            connection.name
-        );
+        if (this.isRateLimited(connection.id, 'lookup_invoice')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         try {
             let paymentHash = this.convertPaymentHashToHex(
                 request.payment_hash!
             );
-            if (this.isCashuProperlyConfigured()) {
+            if (this.isCashuProperlyConfigured) {
                 const cashuInvoices = this.cashuStore.invoices || [];
                 const matchingInvoice = cashuInvoices.find((inv) => {
                     try {
@@ -1856,10 +1969,8 @@ export default class NostrWalletConnectStore {
                     };
                 } else {
                     return this.handleError(
-                        new Error(
-                            localeString(
-                                'views.Settings.NostrWalletConnect.errors.invoiceNotFound'
-                            )
+                        localeString(
+                            'views.Settings.NostrWalletConnect.error.invoiceNotFound'
                         ),
                         'NOT_FOUND'
                     );
@@ -1868,8 +1979,6 @@ export default class NostrWalletConnectStore {
                 const rawInvoice = await BackendUtils.lookupInvoice({
                     r_hash: paymentHash
                 });
-                console.log('handleLookupInvoice rawInvoice', rawInvoice);
-
                 const invoice = new Invoice(rawInvoice);
                 const result = {
                     type: 'incoming' as const,
@@ -1902,7 +2011,7 @@ export default class NostrWalletConnectStore {
                 };
             }
         } catch (error) {
-            return this.handleError(error, 'NOT_FOUND');
+            return this.handleError((error as Error).message, 'NOT_FOUND');
         }
     }
 
@@ -1911,6 +2020,9 @@ export default class NostrWalletConnectStore {
         request: Nip47ListTransactionsRequest
     ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
         this.markConnectionUsed(connection.id);
+        if (this.isRateLimited(connection.id, 'list_transactions')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         console.log(
             'calling handleListTransactions for connection',
             connection.name
@@ -1918,7 +2030,7 @@ export default class NostrWalletConnectStore {
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
-            if (this.isCashuProperlyConfigured()) {
+            if (this.isCashuProperlyConfigured) {
                 const cashuPayments = this.cashuStore.payments || [];
                 const cashuInvoices = this.cashuStore.invoices || [];
                 const receivedTokens = this.cashuStore.receivedTokens || [];
@@ -2072,7 +2184,6 @@ export default class NostrWalletConnectStore {
                     }
                 );
             }
-
             if (request.type && request.type.trim() !== '') {
                 nip47Transactions = nip47Transactions.filter(
                     (tx) => tx.type === request.type
@@ -2116,7 +2227,7 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error) {
-            return this.handleError(error, 'INTERNAL_ERROR');
+            return this.handleError((error as Error).message, 'INTERNAL_ERROR');
         }
     }
 
@@ -2125,18 +2236,19 @@ export default class NostrWalletConnectStore {
         request: Nip47PayKeysendRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         this.markConnectionUsed(connection.id);
+        if (this.isRateLimited(connection.id, 'pay_keysend')) {
+            return this.handleError('Rate limited', 'RATE_LIMITED');
+        }
         console.log('calling handlePayKeysend for connection', connection.name);
         try {
             const amountSats = Math.floor(request.amount / 1000);
             await this.manageBudget(connection.id, amountSats, 'validate');
 
             let result;
-            if (this.isCashuProperlyConfigured()) {
+            if (this.isCashuProperlyConfigured) {
                 return this.handleError(
-                    new Error(
-                        localeString(
-                            'views.Settings.NostrWalletConnect.errors.keysendNotSupportedForCashu'
-                        )
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.keysendNotSupportedForCashu'
                     ),
                     'NOT_IMPLEMENTED'
                 );
@@ -2178,16 +2290,14 @@ export default class NostrWalletConnectStore {
     ): NWCWalletServiceResponsePromise<Nip47SignMessageResponse> {
         this.markConnectionUsed(connection.id);
         try {
-            if (this.isCashuProperlyConfigured()) {
+            if (this.isCashuProperlyConfigured) {
                 const selectedMintUrl = this.cashuStore.selectedMintUrl;
                 const wallet = this.cashuStore.cashuWallets[selectedMintUrl];
 
                 if (!wallet || !wallet.wallet) {
                     return this.handleError(
-                        new Error(
-                            localeString(
-                                'views.Settings.NostrWalletConnect.errors.cashuWalletNotInitialized'
-                            )
+                        localeString(
+                            'views.Settings.NostrWalletConnect.error.cashuWalletNotInitialized'
                         ),
                         'INTERNAL_ERROR'
                     );
@@ -2203,7 +2313,7 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error) {
-            return this.handleError(error, 'INTERNAL_ERROR');
+            return this.handleError((error as Error).message, 'INTERNAL_ERROR');
         }
     }
 
@@ -2403,8 +2513,8 @@ export default class NostrWalletConnectStore {
         }
     }
     private handleError(
-        error: any,
-        defaultCode: string = 'INTERNAL_ERROR'
+        message: string,
+        code: string = 'INTERNAL_ERROR'
     ): {
         result: undefined;
         error: {
@@ -2412,17 +2522,273 @@ export default class NostrWalletConnectStore {
             message: string;
         };
     } {
-        const errorCode = defaultCode || error.code;
-        const errorMessage = String(error) || error.message;
-
-        console.warn('NWC Error:', errorCode, errorMessage);
-
         return {
             result: undefined,
             error: {
-                code: errorCode,
-                message: errorMessage
+                code,
+                message
             }
         };
     }
+    // for IOS fetch and process pending events
+    @action
+    public async fetchAndProcessPendingEvents(
+        maxRetries: number = 3
+    ): Promise<void> {
+        if (!this.isServiceReady()) {
+            console.warn('NWC: Service not ready, cannot fetch pending events');
+            return;
+        }
+        runInAction(() => {
+            this.loading = true;
+            this.error = false;
+            this.loadingMsg = localeString(
+                'views.Settings.NostrWalletConnect.fetchingPendingEvents'
+            );
+        });
+        try {
+            const deviceToken = this.lightningAddressStore.currentDeviceToken;
+            if (!deviceToken) {
+                throw new Error(
+                    localeString(
+                        'views.Settings.NostrWalletConnect.deviceTokenNotAvailable'
+                    )
+                );
+            }
+            const data = await this.fetchPendingEvents(deviceToken, maxRetries);
+            console.log('FOUND PENDING EVENTS', data, data.events.length);
+            await this.processPendingEvents(data.events);
+        } catch (error) {
+            this.handleError(
+                (error as Error).message,
+                'Failed to fetch/process pending events'
+            );
+        } finally {
+            runInAction(() => {
+                this.loading = false;
+                this.loadingMsg = undefined;
+            });
+        }
+    }
+    private async fetchPendingEvents(
+        deviceToken: string,
+        maxRetries: number = 3
+    ): Promise<RestoreResponse> {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const response = await fetch(
+                    `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/restore?device_token=${encodeURIComponent(
+                        deviceToken
+                    )}`,
+                    {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        signal: controller.signal
+                    }
+                );
+                clearTimeout(timeoutId);
+                if (!response.ok) {
+                    throw new Error(
+                        `HTTP error ${
+                            response.status
+                        }: ${await response.text()}`
+                    );
+                }
+
+                return await response.json();
+            } catch (error) {
+                if (attempt === maxRetries - 1) {
+                    throw error; // Rethrow on last attempt
+                }
+                console.warn(
+                    `NWC: Retry attempt ${attempt + 1}/${maxRetries} for fetch`,
+                    { error }
+                );
+                throw error;
+            }
+        }
+        throw new Error('Failed to fetch restore data after maximum retries');
+    }
+    private async validateAndParsePendingEvent(
+        eventStr: string,
+        clientKey: ClientKeys
+    ): Promise<{
+        request: NWCRequest;
+        connection: NWCConnection;
+    }> {
+        let event: NostrEvent;
+        try {
+            event = JSON.parse(eventStr);
+            if (event.kind !== 23194 || !event.content || !event.pubkey) {
+                console.warn('NWC: Invalid event format, skipping', {
+                    event
+                });
+                throw new Error('Invalid event format');
+            }
+        } catch (error) {
+            throw new Error('Failed to parse event');
+        }
+        const connection = this.connections.find(
+            (c) => c.pubkey === event.pubkey
+        );
+        if (!connection) {
+            console.warn('NWC: Connection not found for event', {
+                pubkey: event.pubkey
+            });
+            throw new Error('Connection not found for event');
+        }
+        const privateKey = clientKey[connection.pubkey];
+        if (!privateKey) {
+            console.warn('NWC: No private key for connection', {
+                pubkey: connection.pubkey
+            });
+            throw new Error('No private key for connection');
+        }
+        let request: NWCRequest;
+        try {
+            const privateKey = this.walletServiceKeys!.privateKey;
+            console.log(privateKey.length);
+            console.log(
+                'NWC: Using private key (first 8 chars):',
+                privateKey.substring(0, 8) + '...'
+            );
+            const decryptedContent = await nip04.decrypt(
+                privateKey,
+                connection.pubkey,
+                event.content
+            );
+            request = JSON.parse(decryptedContent);
+        } catch (error) {
+            console.error('NWC: Failed to decrypt or parse event content', {
+                error,
+                eventStr
+            });
+            throw error;
+        }
+
+        return { request, connection };
+    }
+    private async processPendingEvents(events: string[]): Promise<void> {
+        if (!events || !Array.isArray(events) || events.length === 0) {
+            console.info('NWC: No pending events to process');
+            return;
+        }
+        const clientKeys = await this.loadClientKeys();
+        for (const eventStr of events) {
+            try {
+                const { request, connection } =
+                    await this.validateAndParsePendingEvent(
+                        eventStr,
+                        clientKeys
+                    );
+                await this.handleEventRequest(connection, request);
+            } catch (error) {
+                console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
+                    error,
+                    eventStr
+                });
+                continue;
+            }
+        }
+        console.info('NWC: Successfully processed all pending events', {
+            eventCount: events.length
+        });
+    }
+
+    private async handleEventRequest(
+        connection: NWCConnection,
+        request: NWCRequest
+    ): Promise<void> {
+        try {
+            switch (request.method) {
+                case 'pay_invoice':
+                    await this.handlePayInvoice(connection, request.params);
+                    break;
+                case 'make_invoice':
+                    await this.handleMakeInvoice(connection, request.params);
+                    break;
+                case 'lookup_invoice':
+                    await this.handleLookupInvoice(connection, request.params);
+                    break;
+                case 'list_transactions':
+                    await this.handleListTransactions(
+                        connection,
+                        request.params
+                    );
+                    break;
+                case 'pay_keysend':
+                    await this.handlePayKeysend(connection, request.params);
+                    break;
+                case 'sign_message':
+                    await this.handleSignMessage(connection, request.params);
+                    break;
+                case 'get_info':
+                    await this.handleGetInfo(connection);
+                    break;
+                case 'get_balance':
+                    await this.handleGetBalance(connection);
+                    break;
+                default:
+                    console.warn('NWC: Unsupported method', {
+                        method: request.method,
+                        connection: connection.name
+                    });
+                    return;
+            }
+        } catch (error) {
+            console.warn('NWC: Failed to handle event request', {
+                error,
+                request,
+                connection
+            });
+        }
+    }
+
+    // For IOS server handoff
+    @action
+    public sendHandoffRequest = async (): Promise<boolean> => {
+        try {
+            const deviceToken = this.lightningAddressStore.currentDeviceToken;
+            if (!deviceToken) {
+                console.warn(
+                    'NWC: Cannot send handoff request - device token not available '
+                );
+                return false;
+            }
+            const handoffData = {
+                device_token: deviceToken,
+                connections: this.activeConnections.map((conn) => ({
+                    relay: conn.relayUrl,
+                    pubkey: conn.pubkey,
+                    name: conn.name
+                }))
+            };
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            const response = await fetch(
+                `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/handoff`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(handoffData),
+                    signal: controller.signal
+                }
+            );
+
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                return true;
+            } else {
+                return false;
+            }
+        } catch (error) {
+            console.error('NWC: Failed to send handoff request:', error);
+            return false;
+        }
+    };
 }
