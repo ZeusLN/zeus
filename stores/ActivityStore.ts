@@ -22,6 +22,12 @@ import { LSPS_ORDERS_KEY } from './LSPStore';
 export const LEGACY_ACTIVITY_FILTERS_KEY = 'zeus-activity-filters';
 export const ACTIVITY_FILTERS_KEY = 'zeus-activity-filters-v2';
 
+export const SERVICES_CONFIG = {
+    swaps: 'swapState',
+    lsps1: 'lsps1State',
+    lsps7: 'lsps7State'
+};
+
 export interface Filter {
     [index: string]: any;
     lightning: boolean;
