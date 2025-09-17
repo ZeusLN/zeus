@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Text, NativeModules } from 'react-native';
+import { View, Text, NativeModules, Alert } from 'react-native';
 import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
@@ -18,30 +18,92 @@ interface ShareIntentProcessingProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<
         'ShareIntentProcessing',
-        { qrData?: string; base64Image?: string }
+        {
+            qrData?: string;
+            base64Image?: string;
+            requiresAuth?: boolean;
+            requiresWalletSelection?: boolean;
+        }
     >;
 }
 
 interface ShareIntentProcessingState {
     processing: boolean;
-    error?: string;
+    currentStep: string;
 }
 
 @observer
-export default class ShareIntentProcessing extends React.Component<
+class ShareIntentProcessing extends React.Component<
     ShareIntentProcessingProps,
     ShareIntentProcessingState
 > {
     state = {
         processing: true,
-        error: undefined
+        currentStep: localeString('utils.shareIntent.processing')
+    };
+
+    showInvalidImageAlert = (message: string) => {
+        const { navigation } = this.props;
+
+        Alert.alert(localeString('general.error'), message, [
+            {
+                text: localeString('general.ok'),
+                onPress: () => {
+                    if (navigation.canGoBack()) {
+                        navigation.goBack();
+                    } else {
+                        navigation.navigate('Wallet');
+                    }
+                }
+            }
+        ]);
     };
 
     async componentDidMount() {
         const { route, navigation } = this.props;
-        const { qrData, base64Image } = route.params;
+        const { qrData, base64Image, requiresAuth, requiresWalletSelection } =
+            route.params;
+
+        if (requiresAuth) {
+            this.setState({
+                currentStep: localeString('utils.shareIntent.authRequired')
+            });
+
+            const shareData = { qrData, base64Image };
+
+            navigation.replace('Lockscreen', {
+                modifySecurityScreen: '',
+                deletePin: false,
+                deleteDuressPin: false,
+                shareIntentData: shareData
+            });
+            return;
+        }
+
+        if (requiresWalletSelection) {
+            this.setState({
+                currentStep: localeString('utils.shareIntent.walletSelection')
+            });
+
+            const shareData = { qrData, base64Image };
+
+            navigation.replace('Wallets', {
+                fromStartup: true,
+                shareIntentData: shareData
+            });
+            return;
+        }
+
+        await this.processQRCode(qrData, base64Image);
+    }
+
+    async processQRCode(qrData?: string, base64Image?: string) {
+        const { navigation } = this.props;
 
         try {
+            this.setState({
+                currentStep: localeString('utils.shareIntent.extractingQRCode')
+            });
             let finalQrData: string | null = null;
 
             if (qrData) {
@@ -54,13 +116,39 @@ export default class ShareIntentProcessing extends React.Component<
                 if (result?.values.length > 0) {
                     finalQrData = result.values[0];
                 } else {
-                    throw new Error('No QR code found in image');
+                    try {
+                        await MobileTools.clearSharedIntent();
+                    } catch (clearError) {
+                        console.warn(
+                            'Failed to clear shared intent:',
+                            clearError
+                        );
+                    }
+
+                    this.showInvalidImageAlert(
+                        localeString('utils.shareIntent.invalidImage')
+                    );
+                    return;
                 }
             } else {
-                throw new Error('No QR data or image provided');
+                try {
+                    await MobileTools.clearSharedIntent();
+                } catch (clearError) {
+                    console.warn('Failed to clear shared intent:', clearError);
+                }
+
+                this.showInvalidImageAlert(
+                    localeString('utils.shareIntent.processingError')
+                );
+                return;
             }
 
             if (finalQrData) {
+                this.setState({
+                    currentStep: localeString(
+                        'utils.shareIntent.processingPayment'
+                    )
+                });
                 const response = await handleAnything(finalQrData);
                 if (response) {
                     const [route, params] = response;
@@ -73,14 +161,26 @@ export default class ShareIntentProcessing extends React.Component<
 
                     navigation.replace(route, params);
                 } else {
-                    this.setState({
-                        processing: false,
-                        error: localeString('utils.shareIntent.processingError')
-                    });
+                    try {
+                        await MobileTools.clearSharedIntent();
+                    } catch (clearError) {
+                        console.warn(
+                            'Failed to clear shared intent:',
+                            clearError
+                        );
+                    }
+
+                    this.showInvalidImageAlert(
+                        localeString('utils.shareIntent.processingError')
+                    );
+                    return;
                 }
             }
         } catch (error) {
-            console.error('Error processing shared QR:', error);
+            console.error(
+                '[ShareIntentProcessing] Error processing shared QR:',
+                error
+            );
 
             try {
                 await MobileTools.clearSharedIntent();
@@ -91,53 +191,14 @@ export default class ShareIntentProcessing extends React.Component<
                 );
             }
 
-            this.setState({
-                processing: false,
-                error: localeString('utils.shareIntent.processingError')
-            });
+            this.showInvalidImageAlert(
+                localeString('utils.shareIntent.processingError')
+            );
         }
     }
 
     render() {
-        const { error } = this.state;
-
-        if (error) {
-            return (
-                <Screen>
-                    <View
-                        style={{
-                            flex: 1,
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            padding: 20
-                        }}
-                    >
-                        <Text
-                            style={{
-                                color: themeColor('error'),
-                                fontSize: 18,
-                                textAlign: 'center',
-                                marginBottom: 20,
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {error}
-                        </Text>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontSize: 14,
-                                textAlign: 'center',
-                                marginBottom: 20,
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {localeString('utils.shareIntent.noQRFound')}
-                        </Text>
-                    </View>
-                </Screen>
-            );
-        }
+        const { currentStep } = this.state;
 
         return (
             <Screen>
@@ -159,7 +220,7 @@ export default class ShareIntentProcessing extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
                     >
-                        {localeString('utils.shareIntent.processing')}
+                        {currentStep + '...'}
                     </Text>
                     <Text
                         style={{
@@ -177,3 +238,5 @@ export default class ShareIntentProcessing extends React.Component<
         );
     }
 }
+
+export default ShareIntentProcessing;

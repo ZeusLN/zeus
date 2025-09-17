@@ -103,11 +103,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     };
 
     navigateAfterWalletSelection = () => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
+        const shareIntentData = route?.params?.shareIntentData;
 
-        // Always navigate to Wallet after wallet selection
-        // The Wallet component will handle pending share intents after loading is complete
-        navigation.popTo('Wallet');
+        // Always navigate to Wallet screen after wallet selection
+        // Pass shareIntentData if present so Wallet screen can handle it
+        if (shareIntentData) {
+            navigation.popTo('Wallet', { shareIntentData });
+        } else {
+            navigation.popTo('Wallet');
+        }
     };
 
     handleFocus = () => {

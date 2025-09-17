@@ -307,7 +307,10 @@ export default class App extends React.PureComponent {
     handleAppStateChange = (nextAppState: string) => {
         if (nextAppState === 'active' && this.navigation) {
             LinkingUtils.resetShareIntentFlag();
-            LinkingUtils.handleInitialUrl(this.navigation);
+
+            setTimeout(() => {
+                LinkingUtils.handleInitialUrl(this.navigation);
+            }, 100);
         }
     };
 
