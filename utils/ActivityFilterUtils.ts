@@ -257,23 +257,15 @@ class ActivityFilterUtils {
             const memoFilter = filter.memo.toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
-                let note = '';
+                let note = activity.getNote
+                    ? activity.getNote.toLowerCase()
+                    : '';
                 let memo = '';
                 if (activity instanceof Invoice) {
-                    note = activity.getNote
-                        ? activity.getNote.toLowerCase()
-                        : '';
                     memo = activity.memo ? activity.memo.toLowerCase() : '';
                 } else if (activity instanceof Payment) {
-                    note = activity.getNote
-                        ? activity.getNote.toLowerCase()
-                        : '';
                     memo = activity.getMemo
                         ? activity.getMemo.toLowerCase()
-                        : '';
-                } else if (activity.constructor === Object) {
-                    note = activity.getNote
-                        ? activity.getNote.toLowerCase()
                         : '';
                 }
                 return note.includes(memoFilter) || memo.includes(memoFilter);
