@@ -215,6 +215,25 @@ class ActivityFilterUtils {
             });
         }
 
+        if (filter.circularRebalance == false) {
+            filteredActivity = filteredActivity.filter((activity: any) => {
+                const isPayment = activity instanceof Payment;
+                const isInvoice = activity instanceof Invoice;
+
+                if (isPayment) {
+                    const memo = activity.getMemo ? activity.getMemo : '';
+                    return !memo.includes('Circular Rebalance from');
+                }
+
+                if (isInvoice) {
+                    const memo = activity.memo ? activity.memo : '';
+                    return !memo.includes('Circular Rebalance from');
+                }
+
+                return true;
+            });
+        }
+
         if (filter.minimumAmount > 0) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>

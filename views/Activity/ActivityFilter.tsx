@@ -326,7 +326,8 @@ export default class ActivityFilter extends React.Component<
             startDate,
             endDate,
             memo,
-            keysend
+            keysend,
+            circularRebalance
         } = filters;
 
         const submarineState = this.getParentState(
@@ -614,6 +615,13 @@ export default class ActivityFilter extends React.Component<
                 var: 'keysend',
                 type: 'Toggle',
                 condition: BackendUtils.supportsKeysend()
+            },
+            {
+                label: localeString('views.Activity.circularRebalance'),
+                value: circularRebalance,
+                var: 'circularRebalance',
+                type: 'Toggle',
+                condition: true
             },
             {
                 label: localeString('general.unconfirmed'),
