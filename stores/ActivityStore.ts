@@ -34,6 +34,7 @@ export interface Filter {
     unconfirmed: boolean;
     zeusPay: boolean;
     keysend: boolean;
+    circularRebalance: boolean;
     minimumAmount: number;
     maximumAmount?: number;
     startDate?: Date;
@@ -55,6 +56,7 @@ export const DEFAULT_FILTERS = {
     ampInvoices: true,
     zeusPay: true,
     keysend: true,
+    circularRebalance: true,
     minimumAmount: 0,
     maximumAmount: undefined,
     startDate: undefined,
@@ -110,6 +112,7 @@ export default class ActivityStore {
             unconfirmed: true,
             zeusPay: true,
             keysend: true,
+            circularRebalance: true,
             minimumAmount: 0,
             maximumAmount: undefined,
             startDate: undefined,
