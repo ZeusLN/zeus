@@ -19,7 +19,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import ActivityStore, {
     DEFAULT_FILTERS,
-    Filter
+    Filter,
+    SERVICES_CONFIG
 } from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -91,6 +92,17 @@ export default class ActivityFilter extends React.Component<
         return 'partial';
     };
 
+    updateAllChildStates = (filterState: any, newValue: boolean) => {
+        const newState = { ...filterState };
+
+        if (newState) {
+            Object.keys(newState).forEach((key) => {
+                newState[key] = newValue;
+            });
+        }
+        return newState;
+    };
+
     handleToggle = async (path: string | string[]) => {
         const { ActivityStore, SettingsStore } = this.props;
         const { filters, setFilters } = ActivityStore;
@@ -99,66 +111,61 @@ export default class ActivityFilter extends React.Component<
         const newFilters = JSON.parse(JSON.stringify(filters));
 
         if (path === 'services') {
-            const childrenStates = [
-                filters.swaps,
-                filters.lsps1,
-                filters.lsps7
-            ];
-            const currentState = this.getParentState(childrenStates);
+            const parentKeys = Object.keys(SERVICES_CONFIG);
+            const parentStates = parentKeys.map(
+                (key) => filters[key as keyof Filter]
+            );
+            const currentState = this.getParentState(parentStates);
             const isTurningOn = currentState === 'off';
 
-            newFilters.swaps = isTurningOn;
-            newFilters.lsps1 = isTurningOn;
-            newFilters.lsps7 = isTurningOn;
-
-            Object.keys(newFilters.swapState).forEach((key) => {
-                (newFilters.swapState as any)[key] = isTurningOn;
-            });
-            Object.keys(newFilters.lsps1State).forEach((key) => {
-                (newFilters.lsps1State as any)[key] = isTurningOn;
-            });
-            Object.keys(newFilters.lsps7State).forEach((key) => {
-                (newFilters.lsps7State as any)[key] = isTurningOn;
+            parentKeys.forEach((parentKey) => {
+                newFilters[parentKey] = isTurningOn;
+                const childStateKey =
+                    SERVICES_CONFIG[parentKey as keyof typeof SERVICES_CONFIG];
+                newFilters[childStateKey] = this.updateAllChildStates(
+                    newFilters[childStateKey],
+                    isTurningOn
+                );
             });
 
             if (!isTurningOn) {
+                const sectionsToCollapse = parentKeys.reduce((acc, key) => {
+                    (acc as any)[key] = false;
+                    return acc;
+                }, {});
+
                 this.setState((prevState) => ({
                     expandedSections: {
                         ...prevState.expandedSections,
-                        swaps: false,
-                        lsps1: false,
-                        lsps7: false
+                        ...sectionsToCollapse
                     }
                 }));
             }
         } else if (Array.isArray(path)) {
-            const [parent, child] = path as [keyof Filter, string];
-            const isTurningOn = !filters[parent]?.[child];
-            newFilters[parent][child] = isTurningOn;
+            const [parentStateKey, childKey] = path;
+            const isTurningOn = !filters[parentStateKey]?.[childKey];
+            newFilters[parentStateKey][childKey] = isTurningOn;
 
-            if (isTurningOn) {
-                if (parent === 'swapState') newFilters.swaps = true;
-                if (parent === 'lsps1State') newFilters.lsps1 = true;
-                if (parent === 'lsps7State') newFilters.lsps7 = true;
-            } else {
-                const allChildrenOff = Object.values(newFilters[parent]).every(
-                    (item) => item === false
-                );
-                if (allChildrenOff) {
-                    if (parent === 'swapState') newFilters.swaps = false;
-                    if (parent === 'lsps1State') newFilters.lsps1 = false;
-                    if (parent === 'lsps7State') newFilters.lsps7 = false;
+            const parentToggleKey = Object.keys(SERVICES_CONFIG).find(
+                (key) =>
+                    SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG] ===
+                    parentStateKey
+            );
+
+            if (parentToggleKey) {
+                if (isTurningOn) {
+                    newFilters[parentToggleKey] = true;
+                } else {
+                    const allChildrenOff = Object.values(
+                        newFilters[parentStateKey]
+                    ).every((child) => child === false);
+                    if (allChildrenOff) newFilters[parentToggleKey] = false;
                 }
             }
         } else {
             const key = path as keyof Filter;
-            const childStateKeyMap = {
-                swaps: 'swapState',
-                lsps1: 'lsps1State',
-                lsps7: 'lsps7State'
-            };
             const childStateKey =
-                childStateKeyMap[key as keyof typeof childStateKeyMap];
+                SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG];
 
             if (childStateKey) {
                 const childrenStates = Object.values(
@@ -170,10 +177,10 @@ export default class ActivityFilter extends React.Component<
                 const isTurningOn = currentState === 'off';
                 newFilters[key] = isTurningOn;
 
-                const targetState = newFilters[childStateKey];
-                Object.keys(targetState).forEach((key) => {
-                    (targetState as any)[key] = isTurningOn;
-                });
+                newFilters[childStateKey] = this.updateAllChildStates(
+                    newFilters[childStateKey],
+                    isTurningOn
+                );
             } else {
                 newFilters[key] = !filters[key];
             }
