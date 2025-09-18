@@ -217,6 +217,7 @@ import SendEcash from './views/Cashu/SendEcash';
 import UnspentTokens from './views/Cashu/UnspentTokens';
 import CashuSeed from './views/Cashu/CashuSeed';
 import CashuLockSettings from './views/Cashu/CashuLockSettings';
+import MultimintPayment from './views/Cashu/MultimintPayment';
 
 // Cashu Lightning address
 import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
@@ -1114,6 +1115,12 @@ export default class App extends React.PureComponent {
                                                         name="CashuSendingLightning" // @ts-ignore:next-line
                                                         component={
                                                             CashuSendingLightning
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="MultimintPayment" // @ts-ignore:next-line
+                                                        component={
+                                                            MultimintPayment
                                                         }
                                                     />
                                                     <Stack.Screen
