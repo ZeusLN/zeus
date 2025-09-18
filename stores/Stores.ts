@@ -21,11 +21,11 @@ import PaymentsStore from './PaymentsStore';
 import PosStore from './PosStore';
 import SettingsStore from './SettingsStore';
 import SwapStore from './SwapStore';
-import SweepStore from './SweepStore';
 import SyncStore from './SyncStore';
 import TransactionsStore from './TransactionsStore';
 import UnitsStore from './UnitsStore';
 import UTXOsStore from './UTXOsStore';
+import SweepStore from './SweepStore';
 
 export const settingsStore = new SettingsStore();
 export const modalStore = new ModalStore();
