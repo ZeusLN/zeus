@@ -53,10 +53,11 @@ export default class SweepStore {
             `${wifUtils.baseUrl(network)}/address/${address}/utxo`
         );
         if (!res.ok) {
-            throw new Error(localeString(`Error fetching UTXOs`));
+            throw new Error(localeString('views.Wif.errorFetchingUtxos'));
         }
 
         const utxos = await res.json();
+        console.log(utxos);
         return utxos;
     }
 
@@ -104,7 +105,7 @@ export default class SweepStore {
             }
         }
 
-        throw new Error(localeString('views.Sweep.addressTypeNotSupported'));
+        throw new Error(localeString('views.Wif.noUtxosFound'));
     }
 
     @action
@@ -141,7 +142,7 @@ export default class SweepStore {
             if (this.addressType === 'p2tr') {
                 this.sweepError = true;
                 this.sweepErrorMsg = localeString(
-                    'views.Sweep.addressTypeNotSupported'
+                    'views.Wif.addressTypeNotSupported'
                 );
                 return;
             }
@@ -153,11 +154,12 @@ export default class SweepStore {
                     const res = await fetch(
                         `${wifUtils.baseUrl(networkStr)}/tx/${txid}/hex`
                     );
+
                     if (!res.ok)
                         throw new Error(
-                            localeString(
-                                `views.Sweep.failedToFetchTxHex:${txid}`
-                            )
+                            localeString('views.Wif.failedToFetchTxHex', {
+                                txid
+                            })
                         );
 
                     const rawTxHex = await res.text();
@@ -177,9 +179,9 @@ export default class SweepStore {
                     );
                     if (!res.ok)
                         throw new Error(
-                            localeString(
-                                `views.Sweep.failedToFetchTxDetails:${txid}`
-                            )
+                            localeString('views.Wif.failedToFetchTxDetails', {
+                                txid
+                            })
                         );
 
                     const tx = await res.json();
@@ -187,9 +189,10 @@ export default class SweepStore {
 
                     if (!output)
                         throw new Error(
-                            localeString(
-                                `views.Sweep.outputIndexNotFound:${vout}:${txid}`
-                            )
+                            localeString('views.Sweep.outputIndexNotFound', {
+                                vout,
+                                txid
+                            })
                         );
 
                     const value = Math.round(output.value);
@@ -218,9 +221,9 @@ export default class SweepStore {
                     );
                     if (!res.ok)
                         throw new Error(
-                            localeString(
-                                `views.Sweep.failedToFetchTxDetails:${txid}`
-                            )
+                            localeString('views.Wif.failedToFetchTxDetails', {
+                                txid
+                            })
                         );
 
                     const tx = await res.json();
@@ -228,9 +231,10 @@ export default class SweepStore {
 
                     if (!output)
                         throw new Error(
-                            localeString(
-                                `views.Sweep.outputNotFound:${vout}:${txid}`
-                            )
+                            localeString('views.Wif.outputNotFound', {
+                                vout,
+                                txid
+                            })
                         );
                     const scriptPubKeyHex = output.scriptpubkey;
                     const script = Buffer.from(scriptPubKeyHex, 'hex');
@@ -240,7 +244,7 @@ export default class SweepStore {
 
                     if (!fullPub) {
                         throw new Error(
-                            localeString('views.Sweep.failedToDerivePubkey')
+                            localeString('views.Wif.failedToDerivePubkey')
                         );
                     }
 
@@ -276,9 +280,7 @@ export default class SweepStore {
 
             const fullPub = ecc.pointFromScalar(privateKey, true);
             if (!fullPub)
-                throw new Error(
-                    localeString('views.Sweep.failedToDerivePubkey')
-                );
+                throw new Error(localeString('views.Wif.failedToDerivePubkey'));
 
             const signer: bitcoin.Signer = {
                 publicKey: Buffer.from(fullPub),
@@ -310,7 +312,7 @@ export default class SweepStore {
 
             if (this.valueToSend <= 0)
                 throw new Error(
-                    localeString('views.Sweep.insufficientFundsAfterFees')
+                    localeString('views.Wif.insufficientFundsAfterFees')
                 );
 
             this.psbt.addOutput({
