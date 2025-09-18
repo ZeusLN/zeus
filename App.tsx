@@ -35,11 +35,11 @@ import {
     posStore,
     settingsStore,
     swapStore,
-    sweepStore,
     syncStore,
     transactionsStore,
     unitsStore,
-    utxosStore
+    utxosStore,
+    sweepStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -259,6 +259,7 @@ import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
 import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
 import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
 import ShareIntentProcessing from './views/ShareIntentProcessing';
+import WIFSweeper from './views/Tools/WIFSweeper';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
@@ -266,7 +267,6 @@ import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
-import WIFSweeper from './views/WIFSweeper';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
