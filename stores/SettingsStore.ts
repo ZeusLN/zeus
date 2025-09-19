@@ -103,6 +103,8 @@ interface PaymentsSettings {
     slideToPayThreshold: number;
     enableDonations?: boolean;
     defaultDonationPercentage?: number;
+    autoPayEnabled?: boolean;
+    autoPayThreshold?: number;
 }
 
 interface InvoicesSettings {
@@ -1392,7 +1394,9 @@ export default class SettingsStore {
             preferredMempoolRate: 'fastestFee',
             slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
             enableDonations: false,
-            defaultDonationPercentage: 5
+            defaultDonationPercentage: 5,
+            autoPayEnabled: false,
+            autoPayThreshold: 0
         },
         invoices: {
             addressType: '0',
