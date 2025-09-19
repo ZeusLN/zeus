@@ -9,8 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { getParams as getlnurlParams } from 'js-lnurl';
-import { RectButton } from 'react-native-gesture-handler';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
 
