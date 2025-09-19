@@ -287,7 +287,7 @@ export const SWAP_HOST_KEYS_MAINNET = [
     },
     {
         key: 'SwapMarket',
-        value: 'https://api.middleway.space/v2',
+        value: 'https://api.middle-way.space/v2',
         pro: false,
         supportsRescue: true
     },
