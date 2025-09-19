@@ -382,8 +382,6 @@ export default class ActivityFilter extends React.Component<
                         children: [
                             {
                                 label: `${localeString(
-                                    'general.swap'
-                                )} ${localeString(
                                     'views.ActivityFilter.swapState.created'
                                 )}`,
                                 var: ['swapState', 'created'],
@@ -391,8 +389,6 @@ export default class ActivityFilter extends React.Component<
                             },
                             {
                                 label: `${localeString(
-                                    'general.swap'
-                                )} ${localeString(
                                     'views.ActivityFilter.swapState.successful'
                                 )}`,
                                 var: ['swapState', 'successful'],
@@ -400,8 +396,6 @@ export default class ActivityFilter extends React.Component<
                             },
                             {
                                 label: `${localeString(
-                                    'general.swap'
-                                )} ${localeString(
                                     'views.ActivityFilter.swapState.failed'
                                 )}`,
                                 var: ['swapState', 'failed'],
@@ -409,8 +403,6 @@ export default class ActivityFilter extends React.Component<
                             },
                             {
                                 label: `${localeString(
-                                    'general.swap'
-                                )} ${localeString(
                                     'views.ActivityFilter.swapState.refunded'
                                 )}`,
                                 var: ['swapState', 'refunded'],
