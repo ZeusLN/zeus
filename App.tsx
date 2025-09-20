@@ -35,6 +35,7 @@ import {
     posStore,
     settingsStore,
     swapStore,
+    sweepStore,
     syncStore,
     transactionsStore,
     unitsStore,
@@ -265,6 +266,7 @@ import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
+import WIFSweeper from './views/WIFSweeper';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -345,6 +347,7 @@ export default class App extends React.PureComponent {
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
+                SweepStore={sweepStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -1267,6 +1270,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             ChangeDonationSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WIFSweeper" // @ts-ignore:next-line
+                                                        component={WIFSweeper}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
