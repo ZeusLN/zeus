@@ -21,6 +21,7 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
+import ActivityToCsv from './ActivityToCsv';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -31,6 +32,7 @@ import {
     numberWithDecimals
 } from '../../utils/UnitsUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
+import dateTimeUtils from '../../utils/DateTimeUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -39,14 +41,15 @@ import SettingsStore from '../../stores/SettingsStore';
 import NotesStore from '../../stores/NotesStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+
 import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
-import CashuToken from '../../models/CashuToken';
-import ActivityToCsv from './ActivityToCsv';
-import Storage from '../../storage';
-import dateTimeUtils from '../../utils/DateTimeUtils';
+import { SwapType } from '../../models/Swap';
 import WithdrawalRequest from '../../models/WithdrawalRequest';
+import CashuToken from '../../models/CashuToken';
+
+import Storage from '../../storage';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -265,6 +268,31 @@ const ActivityListItem = React.memo(
                           'general.unconfirmed'
                       )}`
                     : localeString('general.onchain');
+        } else if (item.model === localeString('views.Swaps.title')) {
+            displayName =
+                item.type === SwapType.Submarine
+                    ? localeString('views.Swaps.submarine')
+                    : localeString('views.Swaps.reverse');
+            subTitle = (
+                <Text>
+                    {item?.imported
+                        ? `${localeString('views.Swaps.SwapsPane.imported')}: `
+                        : ''}
+                    {item.type === SwapType.Submarine
+                        ? `${localeString('general.onchain')} → ${localeString(
+                              'general.lightning'
+                          )}  🔗 → ⚡`
+                        : `${localeString(
+                              'general.lightning'
+                          )} → ${localeString('general.onchain')}  ⚡ → 🔗`}
+                </Text>
+            );
+        } else if (item.model === 'LSPS1Order') {
+            displayName = localeString('views.LSPS1.type');
+            subTitle = `${localeString('general.state')}: ${item.state}`;
+        } else if (item.model === 'LSPS7Order') {
+            displayName = localeString('views.LSPS7.type');
+            subTitle = `${localeString('general.state')}: ${item.state}`;
         }
 
         return (
@@ -545,6 +573,23 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.Cashu.CashuPayment.title'))
             return 'warning';
 
+        if (item.model === localeString('views.Swaps.title')) {
+            return 'text';
+        }
+
+        if (item.model === 'LSPS1Order' || item.model === 'LSPS7Order') {
+            switch (item.state) {
+                case 'CREATED':
+                    return 'highlight';
+                case 'COMPLETED':
+                    return 'success';
+                case 'FAILED':
+                    return 'warning';
+                default:
+                    return 'text';
+            }
+        }
+
         if (item.model === localeString('cashu.token')) {
             return item.sent
                 ? item.spent
@@ -602,6 +647,34 @@ export default class Activity extends React.PureComponent<
             } else {
                 this.setState({ selectedPaymentForOrder: item });
             }
+            return;
+        }
+        if (item.model === localeString('views.Swaps.title')) {
+            navigation.navigate('SwapDetails', {
+                swapData: item,
+                keys: item.keys,
+                endpoint: item.endpoint,
+                invoice: item.invoice
+            });
+        }
+
+        if (item.model === 'LSPS1Order') {
+            const orderShouldUpdate =
+                item.state === 'FAILED' || item.state === 'COMPLETED';
+            navigation.navigate('LSPS1Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
+
+        if (item.model === 'LSPS7Order') {
+            const orderShouldUpdate =
+                item.state === 'FAILED' || item.state === 'COMPLETED';
+            navigation.navigate('LSPS7Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
             return;
         }
 

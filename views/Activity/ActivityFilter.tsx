@@ -4,7 +4,8 @@ import {
     Text,
     View,
     KeyboardAvoidingView,
-    Platform
+    Platform,
+    TouchableOpacity
 } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -16,13 +17,20 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
+import ActivityStore, {
+    DEFAULT_FILTERS,
+    Filter,
+    SERVICES_CONFIG
+} from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
+
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
 interface ActivityFilterProps {
     navigation: StackNavigationProp<any, any>;
@@ -35,6 +43,12 @@ interface ActivityFilterState {
     setEndDate: boolean;
     workingStartDate: any;
     workingEndDate: any;
+    expandedSections: {
+        services: boolean;
+        swaps: boolean;
+        lsps1: boolean;
+        lsps7: boolean;
+    };
 }
 
 @inject('ActivityStore', 'SettingsStore')
@@ -47,7 +61,143 @@ export default class ActivityFilter extends React.Component<
         setStartDate: false,
         setEndDate: false,
         workingStartDate: new Date(),
-        workingEndDate: new Date()
+        workingEndDate: new Date(),
+        expandedSections: {
+            services: false,
+            swaps: false,
+            lsps1: false,
+            lsps7: false
+        }
+    };
+
+    getParentState = (children: boolean[]): 'off' | 'partial' | 'full' => {
+        if (children.every((state) => state === true)) {
+            return 'full';
+        }
+        if (children.every((state) => state === false)) {
+            return 'off';
+        }
+        return 'partial';
+    };
+
+    getCombinedState = (
+        childStatuses: ('off' | 'partial' | 'full')[]
+    ): 'off' | 'partial' | 'full' => {
+        if (childStatuses.every((status) => status === 'full')) {
+            return 'full';
+        }
+        if (childStatuses.every((status) => status === 'off')) {
+            return 'off';
+        }
+        return 'partial';
+    };
+
+    updateAllChildStates = (filterState: any, newValue: boolean) => {
+        const newState = { ...filterState };
+
+        if (newState) {
+            Object.keys(newState).forEach((key) => {
+                newState[key] = newValue;
+            });
+        }
+        return newState;
+    };
+
+    handleToggle = async (path: string | string[]) => {
+        const { ActivityStore, SettingsStore } = this.props;
+        const { filters, setFilters } = ActivityStore;
+        const locale = SettingsStore.settings.locale;
+
+        const newFilters = JSON.parse(JSON.stringify(filters));
+
+        if (path === 'services') {
+            const parentKeys = Object.keys(SERVICES_CONFIG);
+            const parentStates = parentKeys.map(
+                (key) => filters[key as keyof Filter]
+            );
+            const currentState = this.getParentState(parentStates);
+            const isTurningOn = currentState === 'off';
+
+            parentKeys.forEach((parentKey) => {
+                newFilters[parentKey] = isTurningOn;
+                const childStateKey =
+                    SERVICES_CONFIG[parentKey as keyof typeof SERVICES_CONFIG];
+                newFilters[childStateKey] = this.updateAllChildStates(
+                    newFilters[childStateKey],
+                    isTurningOn
+                );
+            });
+
+            if (!isTurningOn) {
+                const sectionsToCollapse = parentKeys.reduce((acc, key) => {
+                    (acc as any)[key] = false;
+                    return acc;
+                }, {});
+
+                this.setState((prevState) => ({
+                    expandedSections: {
+                        ...prevState.expandedSections,
+                        ...sectionsToCollapse
+                    }
+                }));
+            }
+        } else if (Array.isArray(path)) {
+            const [parentStateKey, childKey] = path;
+            const isTurningOn = !filters[parentStateKey]?.[childKey];
+            newFilters[parentStateKey][childKey] = isTurningOn;
+
+            const parentToggleKey = Object.keys(SERVICES_CONFIG).find(
+                (key) =>
+                    SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG] ===
+                    parentStateKey
+            );
+
+            if (parentToggleKey) {
+                if (isTurningOn) {
+                    newFilters[parentToggleKey] = true;
+                } else {
+                    const allChildrenOff = Object.values(
+                        newFilters[parentStateKey]
+                    ).every((child) => child === false);
+                    if (allChildrenOff) newFilters[parentToggleKey] = false;
+                }
+            }
+        } else {
+            const key = path as keyof Filter;
+            const childStateKey =
+                SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG];
+
+            if (childStateKey) {
+                const childrenStates = Object.values(
+                    filters[childStateKey] || {}
+                );
+                const currentState = this.getParentState(
+                    childrenStates as boolean[]
+                );
+                const isTurningOn = currentState === 'off';
+                newFilters[key] = isTurningOn;
+
+                newFilters[childStateKey] = this.updateAllChildStates(
+                    newFilters[childStateKey],
+                    isTurningOn
+                );
+            } else {
+                newFilters[key] = !filters[key];
+            }
+        }
+
+        await setFilters(newFilters, locale);
+    };
+
+    toggleSection = (
+        sectionName: keyof ActivityFilterState['expandedSections']
+    ) => {
+        this.setState((prevState) => ({
+            expandedSections: {
+                ...prevState.expandedSections,
+                [sectionName]: !prevState.expandedSections[sectionName]
+            }
+        }));
     };
 
     renderSeparator = () => (
@@ -61,11 +211,15 @@ export default class ActivityFilter extends React.Component<
 
     render() {
         const { navigation, ActivityStore, SettingsStore } = this.props;
-        const { setStartDate, setEndDate, workingStartDate, workingEndDate } =
-            this.state;
+        const {
+            setStartDate,
+            setEndDate,
+            workingStartDate,
+            workingEndDate,
+            expandedSections
+        } = this.state;
         const locale = SettingsStore.settings.locale;
         const {
-            setFilters,
             filters,
             setAmountFilter,
             setMaximumAmountFilter,
@@ -79,6 +233,9 @@ export default class ActivityFilter extends React.Component<
             lightning,
             onChain,
             cashu,
+            swaps,
+            lsps1,
+            lsps7,
             sent,
             received,
             unpaid,
@@ -95,6 +252,21 @@ export default class ActivityFilter extends React.Component<
             memo,
             keysend
         } = filters;
+
+        const swapsState = this.getParentState(
+            Object.values(filters.swapState)
+        );
+        const lsps1State = this.getParentState(
+            Object.values(filters.lsps1State)
+        );
+        const lsps7State = this.getParentState(
+            Object.values(filters.lsps7State)
+        );
+        const servicesState = this.getCombinedState([
+            swapsState,
+            lsps1State,
+            lsps7State
+        ]);
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
             <View
@@ -195,6 +367,108 @@ export default class ActivityFilter extends React.Component<
                 var: 'cashu',
                 type: 'Toggle',
                 condition: BackendUtils.supportsCashuWallet()
+            },
+            {
+                label: localeString('views.ActivityFilter.services'),
+                type: 'Services',
+                condition: true,
+                section: 'services',
+                children: [
+                    {
+                        label: localeString('views.Swaps.title'),
+                        value: swaps,
+                        var: 'swaps',
+                        section: 'swaps',
+                        children: [
+                            {
+                                label: `${localeString(
+                                    'views.ActivityFilter.swapState.created'
+                                )}`,
+                                var: ['swapState', 'created'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: `${localeString(
+                                    'views.ActivityFilter.swapState.successful'
+                                )}`,
+                                var: ['swapState', 'successful'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: `${localeString(
+                                    'views.ActivityFilter.swapState.failed'
+                                )}`,
+                                var: ['swapState', 'failed'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: `${localeString(
+                                    'views.ActivityFilter.swapState.refunded'
+                                )}`,
+                                var: ['swapState', 'refunded'],
+                                type: 'Toggle'
+                            }
+                        ]
+                    },
+                    {
+                        label: localeString('views.LSPS1.type'),
+                        value: lsps1,
+                        var: 'lsps1',
+                        section: 'lsps1',
+                        children: [
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.created'
+                                ),
+                                var: ['lsps1State', 'CREATED'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.lsps1State.completed'
+                                ),
+                                var: ['lsps1State', 'COMPLETED'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.failed'
+                                ),
+                                var: ['lsps1State', 'FAILED'],
+                                type: 'Toggle'
+                            }
+                        ]
+                    },
+                    {
+                        label: localeString('views.LSPS7.type'),
+                        value: lsps7,
+                        var: 'lsps7',
+                        section: 'lsps7',
+                        children: [
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.created'
+                                ),
+                                var: ['lsps7State', 'CREATED'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.lsps1State.completed'
+                                ),
+                                var: ['lsps7State', 'COMPLETED'],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.failed'
+                                ),
+                                var: ['lsps7State', 'FAILED'],
+                                type: 'Toggle'
+                            }
+                        ]
+                    }
+                ]
             },
             {
                 label: localeString('general.sent'),
@@ -334,6 +608,273 @@ export default class ActivityFilter extends React.Component<
                     <ScrollView>
                         {FILTERS.map((item, index) => {
                             if (!item.condition) return null;
+                            if (item.type === 'Services') {
+                                return (
+                                    <React.Fragment key={item.label}>
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                this.toggleSection('services')
+                                            }
+                                        >
+                                            <ListItem
+                                                containerStyle={{
+                                                    borderBottomWidth: 0,
+                                                    backgroundColor:
+                                                        'transparent'
+                                                }}
+                                            >
+                                                <View
+                                                    style={{
+                                                        marginRight: 0,
+                                                        justifyContent: 'center'
+                                                    }}
+                                                >
+                                                    {expandedSections.services ? (
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width={24}
+                                                            height={24}
+                                                        />
+                                                    ) : (
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width={24}
+                                                            height={24}
+                                                        />
+                                                    )}
+                                                </View>
+                                                <ListItem.Content>
+                                                    <ListItem.Title
+                                                        style={{
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
+                                                        }}
+                                                    >
+                                                        {item.label}
+                                                    </ListItem.Title>
+                                                </ListItem.Content>
+                                                <Switch
+                                                    value={
+                                                        servicesState !== 'off'
+                                                    }
+                                                    trackEnabledColor={
+                                                        servicesState ===
+                                                        'partial'
+                                                            ? themeColor(
+                                                                  'secondaryText'
+                                                              )
+                                                            : themeColor(
+                                                                  'highlight'
+                                                              )
+                                                    }
+                                                    onValueChange={() =>
+                                                        this.handleToggle(
+                                                            'services'
+                                                        )
+                                                    }
+                                                />
+                                            </ListItem>
+                                        </TouchableOpacity>
+
+                                        {expandedSections.services && (
+                                            <View style={{ paddingLeft: 20 }}>
+                                                {this.renderSeparator()}
+                                                {item.children?.map(
+                                                    (child, childIndex) => {
+                                                        const isChildExpanded =
+                                                            expandedSections[
+                                                                child.section as keyof typeof expandedSections
+                                                            ];
+                                                        const childSwitchState =
+                                                            child.var ===
+                                                            'swaps'
+                                                                ? swapsState
+                                                                : child.var ===
+                                                                  'lsps1'
+                                                                ? lsps1State
+                                                                : lsps7State;
+                                                        return (
+                                                            <React.Fragment
+                                                                key={child.var}
+                                                            >
+                                                                <TouchableOpacity
+                                                                    onPress={() =>
+                                                                        this.toggleSection(
+                                                                            child.section as any
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <ListItem
+                                                                        containerStyle={{
+                                                                            borderBottomWidth: 0,
+                                                                            backgroundColor:
+                                                                                'transparent'
+                                                                        }}
+                                                                    >
+                                                                        <View
+                                                                            style={{
+                                                                                marginRight: 0,
+                                                                                justifyContent:
+                                                                                    'center'
+                                                                            }}
+                                                                        >
+                                                                            {isChildExpanded ? (
+                                                                                <CaretDown
+                                                                                    fill={themeColor(
+                                                                                        'text'
+                                                                                    )}
+                                                                                    width={
+                                                                                        24
+                                                                                    }
+                                                                                    height={
+                                                                                        24
+                                                                                    }
+                                                                                />
+                                                                            ) : (
+                                                                                <CaretRight
+                                                                                    fill={themeColor(
+                                                                                        'text'
+                                                                                    )}
+                                                                                    width={
+                                                                                        24
+                                                                                    }
+                                                                                    height={
+                                                                                        24
+                                                                                    }
+                                                                                />
+                                                                            )}
+                                                                        </View>
+                                                                        <ListItem.Content>
+                                                                            <ListItem.Title
+                                                                                style={{
+                                                                                    color: themeColor(
+                                                                                        'text'
+                                                                                    ),
+                                                                                    fontFamily:
+                                                                                        'PPNeueMontreal-Book'
+                                                                                }}
+                                                                            >
+                                                                                {
+                                                                                    child.label
+                                                                                }
+                                                                            </ListItem.Title>
+                                                                        </ListItem.Content>
+
+                                                                        <Switch
+                                                                            value={
+                                                                                childSwitchState !==
+                                                                                'off'
+                                                                            }
+                                                                            trackEnabledColor={
+                                                                                childSwitchState ===
+                                                                                'partial'
+                                                                                    ? themeColor(
+                                                                                          'secondaryText'
+                                                                                      )
+                                                                                    : themeColor(
+                                                                                          'highlight'
+                                                                                      )
+                                                                            }
+                                                                            onValueChange={() =>
+                                                                                this.handleToggle(
+                                                                                    child.var as string
+                                                                                )
+                                                                            }
+                                                                        />
+                                                                    </ListItem>
+                                                                </TouchableOpacity>
+                                                                {isChildExpanded && (
+                                                                    <View
+                                                                        style={{
+                                                                            paddingLeft: 20
+                                                                        }}
+                                                                    >
+                                                                        {this.renderSeparator()}
+                                                                        {child.children.map(
+                                                                            (
+                                                                                grandchild,
+                                                                                grandchildIndex
+                                                                            ) => (
+                                                                                <React.Fragment
+                                                                                    key={grandchild.var.join(
+                                                                                        '-'
+                                                                                    )}
+                                                                                >
+                                                                                    <ListItem
+                                                                                        key={grandchild.var.join(
+                                                                                            '-'
+                                                                                        )}
+                                                                                        containerStyle={{
+                                                                                            backgroundColor:
+                                                                                                'transparent'
+                                                                                        }}
+                                                                                    >
+                                                                                        <ListItem.Content>
+                                                                                            <ListItem.Title
+                                                                                                style={{
+                                                                                                    color: themeColor(
+                                                                                                        'text'
+                                                                                                    )
+                                                                                                }}
+                                                                                            >
+                                                                                                {
+                                                                                                    grandchild.label
+                                                                                                }
+                                                                                            </ListItem.Title>
+                                                                                        </ListItem.Content>
+
+                                                                                        <Switch
+                                                                                            value={
+                                                                                                filters[
+                                                                                                    grandchild
+                                                                                                        .var[0]
+                                                                                                ]?.[
+                                                                                                    grandchild
+                                                                                                        .var[1]
+                                                                                                ] ||
+                                                                                                false
+                                                                                            }
+                                                                                            onValueChange={() =>
+                                                                                                this.handleToggle(
+                                                                                                    grandchild.var
+                                                                                                )
+                                                                                            }
+                                                                                        />
+                                                                                    </ListItem>
+                                                                                    {grandchildIndex <
+                                                                                        child
+                                                                                            .children
+                                                                                            .length -
+                                                                                            1 &&
+                                                                                        this.renderSeparator()}
+                                                                                </React.Fragment>
+                                                                            )
+                                                                        )}
+                                                                    </View>
+                                                                )}
+                                                                {childIndex <
+                                                                    item
+                                                                        .children
+                                                                        .length -
+                                                                        1 &&
+                                                                    this.renderSeparator()}
+                                                            </React.Fragment>
+                                                        );
+                                                    }
+                                                )}
+                                            </View>
+                                        )}
+                                        {this.renderSeparator()}
+                                    </React.Fragment>
+                                );
+                            }
 
                             return (
                                 <React.Fragment key={index}>
@@ -362,17 +903,11 @@ export default class ActivityFilter extends React.Component<
                                             >
                                                 <Switch
                                                     value={item.value}
-                                                    onValueChange={async () => {
-                                                        const newFilters: any =
-                                                            filters;
-                                                        const index = `${item.var}`;
-                                                        newFilters[index] =
-                                                            !filters[index];
-                                                        await setFilters(
-                                                            newFilters,
-                                                            locale
-                                                        );
-                                                    }}
+                                                    onValueChange={() =>
+                                                        this.handleToggle(
+                                                            item.var as string
+                                                        )
+                                                    }
                                                 />
                                             </View>
                                         )}
