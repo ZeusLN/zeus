@@ -16,6 +16,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -48,6 +49,8 @@ export default class TransactionsStore {
     @observable error_msg: string | null;
     @observable transactions: Array<Transaction> = [];
     @observable transaction: Transaction | null;
+    @observable showGraphSyncPrompt = false;
+    @observable pendingPaymentData: SendPaymentReq | null = null;
     @observable payment_route: any; // Route
     @observable payment_preimage: string | null;
     @observable isIncomplete: boolean | null;
@@ -454,7 +457,44 @@ export default class TransactionsStore {
     };
 
     @action
-    public sendPayment = ({
+    public checkGraphSyncBeforePayment = (
+        paymentData: SendPaymentReq
+    ): boolean => {
+        const { settings, implementation } = this.settingsStore;
+        return checkGraphSyncBeforePayment(
+            settings,
+            implementation,
+            paymentData,
+            this
+        );
+    };
+
+    @action
+    public hideGraphSyncPrompt = () => {
+        this.showGraphSyncPrompt = false;
+    };
+
+    @action
+    public proceedWithPayment = async () => {
+        if (this.pendingPaymentData) {
+            this.hideGraphSyncPrompt();
+            this.sendPaymentInternal(this.pendingPaymentData);
+            this.pendingPaymentData = null;
+        }
+    };
+
+    @action
+    public sendPayment = (paymentData: SendPaymentReq) => {
+        // Check graph sync before proceeding with payment
+        if (!this.checkGraphSyncBeforePayment(paymentData)) {
+            return;
+        }
+
+        return this.sendPaymentInternal(paymentData);
+    };
+
+    @action
+    private sendPaymentInternal = ({
         payment_request,
         amount,
         pubkey,
