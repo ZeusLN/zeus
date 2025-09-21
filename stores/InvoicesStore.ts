@@ -249,7 +249,8 @@ export default class InvoicesStore {
         routeHintChannels,
         addressType,
         customPreimage,
-        noLsp
+        noLsp,
+        skipOnchain
     }: {
         memo: string;
         value: string;
@@ -262,6 +263,7 @@ export default class InvoicesStore {
         addressType?: string;
         customPreimage?: string;
         noLsp?: boolean;
+        skipOnchain?: boolean;
     }) => {
         this.creatingInvoice = true;
         return this.createInvoice({
@@ -284,7 +286,7 @@ export default class InvoicesStore {
                 rHash: string;
                 paymentRequest: string;
             }) => {
-                if (BackendUtils.supportsOnchainReceiving()) {
+                if (BackendUtils.supportsOnchainReceiving() && !skipOnchain) {
                     return this.getNewAddress(
                         addressType
                             ? { type: addressType, unified: true }

@@ -73,9 +73,10 @@ import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
 import BalanceStore from '../stores/BalanceStore';
 
-import { localeString } from '../utils/LocaleUtils';
+import { isBelowDustLimit } from '../utils/AmountUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { localeString } from '../utils/LocaleUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
@@ -397,7 +398,9 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (lnOnly) {
+        const belowDustLimit = isBelowDustLimit(amount);
+
+        if (lnOnly || belowDustLimit) {
             this.setState({
                 selectedIndex: 1
             });
@@ -411,7 +414,8 @@ export default class Receive extends React.Component<
                 routeHints,
                 ampInvoice,
                 blindedPaths,
-                addressType
+                addressType,
+                belowDustLimit
             );
         }
 
@@ -500,7 +504,8 @@ export default class Receive extends React.Component<
         routeHints?: boolean,
         ampInvoice?: boolean,
         blindedPaths?: boolean,
-        addressType?: string
+        addressType?: string,
+        skipOnchain?: boolean
     ) => {
         const { InvoicesStore, PosStore } = this.props;
         const { lspIsActive, receiverName, orderId, orderTip, exchangeRate } =
@@ -555,7 +560,8 @@ export default class Receive extends React.Component<
                 addressType: BackendUtils.supportsAddressTypeSelection()
                     ? addressType || '1'
                     : undefined,
-                noLsp: !lspIsActive
+                noLsp: !lspIsActive,
+                skipOnchain
             }).then(
                 ({
                     rHash,
@@ -1441,42 +1447,18 @@ export default class Receive extends React.Component<
             </React.Fragment>
         );
 
-        const buttons: any =
-            BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet
-                ? [
-                      { element: unifiedButton },
-                      { element: lightningButton },
-                      { element: onChainButton },
-                      { element: lightningAddressButton }
-                  ]
-                : [
-                      { element: unifiedButton },
-                      { element: lightningButton },
-                      { element: onChainButton }
-                  ];
-
-        const haveUnifiedInvoice = !!payment_request && !!address;
         const haveInvoice = !!payment_request || !!address;
 
-        let unifiedInvoice,
-            lnInvoice,
-            lnInvoiceCopyValue,
-            btcAddress,
-            btcAddressCopyValue;
+        let lnInvoice, lnInvoiceCopyValue, btcAddress, btcAddressCopyValue;
         // if format is case insensitive, format as all caps to save QR space, otherwise present in original format
-        const onChainFormatted =
-            address && address === address.toLowerCase()
-                ? address.toUpperCase()
-                : address;
-        if (haveUnifiedInvoice) {
-            unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request.toUpperCase()}`}${
-                Number(satAmount) > 0
-                    ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFormat()}`
-                    : ''
-            }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
-        }
+        const onChainFormatted = address?.toLowerCase();
+        const unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request?.toUpperCase()}`}${
+            Number(satAmount) > 0
+                ? `&amount=${new BigNumber(satAmount)
+                      .dividedBy(SATS_PER_BTC)
+                      .toFormat()}`
+                : ''
+        }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
 
         if (payment_request) {
             lnInvoice = `lightning:${payment_request.toUpperCase()}`;
@@ -1507,10 +1489,26 @@ export default class Receive extends React.Component<
             }
         }
 
-        const belowDustLimit: boolean =
-            Number(satAmount) !== 0 && Number(satAmount) < 546;
+        const belowDustLimit: boolean = isBelowDustLimit(satAmount);
 
         const windowSize = Dimensions.get('window');
+
+        const buttons: any = [];
+
+        if (payment_request) {
+            buttons.push(
+                { element: unifiedButton },
+                { element: lightningButton }
+            );
+        }
+
+        if (!belowDustLimit && BackendUtils.supportsOnchainReceiving()) {
+            buttons.push({ element: onChainButton });
+        }
+
+        if (BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet) {
+            buttons.push({ element: lightningAddressButton });
+        }
 
         const tenMButton = () => (
             <Text
@@ -1635,10 +1633,7 @@ export default class Receive extends React.Component<
         const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
 
         const showButtonGroup =
-            !belowDustLimit &&
-            haveUnifiedInvoice &&
-            !lnOnly &&
-            !watchedInvoicePaid;
+            buttons.length > 1 && !lnOnly && !watchedInvoicePaid;
 
         const showNfcButton =
             !(
@@ -1998,67 +1993,57 @@ export default class Receive extends React.Component<
                                     )}
                                 {haveInvoice && !creatingInvoiceError && (
                                     <View>
-                                        {selectedIndex == 0 &&
-                                            !belowDustLimit &&
-                                            haveUnifiedInvoice && (
-                                                <CollapsedQR
-                                                    value={unifiedInvoice || ''}
-                                                    iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
-                                                    showShare={true}
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    logo={
-                                                        themeColor(
-                                                            'invertQrIcons'
-                                                        )
-                                                            ? ZIconWhite
-                                                            : ZIcon
-                                                    }
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
-                                                />
-                                            )}
-                                        {selectedIndex == 1 &&
-                                            !belowDustLimit &&
-                                            haveUnifiedInvoice && (
-                                                <CollapsedQR
-                                                    value={lnInvoice || ''}
-                                                    copyValue={
-                                                        lnInvoiceCopyValue
-                                                    }
-                                                    iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
-                                                    showShare={true}
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    logo={
-                                                        themeColor(
-                                                            'invertQrIcons'
-                                                        )
-                                                            ? LightningIconWhite
-                                                            : LightningIcon
-                                                    }
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
-                                                />
-                                            )}
+                                        {selectedIndex == 0 && (
+                                            <CollapsedQR
+                                                value={unifiedInvoice || ''}
+                                                iconOnly={true}
+                                                iconContainerStyle={{
+                                                    marginRight: 40
+                                                }}
+                                                showShare={true}
+                                                expanded
+                                                textBottom
+                                                truncateLongValue
+                                                logo={
+                                                    themeColor('invertQrIcons')
+                                                        ? ZIconWhite
+                                                        : ZIcon
+                                                }
+                                                nfcSupported={nfcSupported}
+                                                satAmount={satAmount}
+                                                displayAmount={
+                                                    settings?.invoices
+                                                        ?.displayAmountOnInvoice ||
+                                                    false
+                                                }
+                                            />
+                                        )}
+                                        {selectedIndex == 1 && (
+                                            <CollapsedQR
+                                                value={lnInvoice || ''}
+                                                copyValue={lnInvoiceCopyValue}
+                                                iconOnly={true}
+                                                iconContainerStyle={{
+                                                    marginRight: 40
+                                                }}
+                                                showShare={true}
+                                                expanded
+                                                textBottom
+                                                truncateLongValue
+                                                logo={
+                                                    themeColor('invertQrIcons')
+                                                        ? LightningIconWhite
+                                                        : LightningIcon
+                                                }
+                                                nfcSupported={nfcSupported}
+                                                satAmount={satAmount}
+                                                displayAmount={
+                                                    settings?.invoices
+                                                        ?.displayAmountOnInvoice ||
+                                                    false
+                                                }
+                                            />
+                                        )}
                                         {selectedIndex == 2 &&
                                             !belowDustLimit &&
                                             btcAddress && (
@@ -2174,32 +2159,6 @@ export default class Receive extends React.Component<
                                                 </View>
                                             )}
 
-                                        {(selectedIndex === 0 ||
-                                            selectedIndex === 1) &&
-                                            (belowDustLimit ||
-                                                !haveUnifiedInvoice) && (
-                                                <CollapsedQR
-                                                    value={lnInvoice || ''}
-                                                    copyValue={
-                                                        lnInvoiceCopyValue
-                                                    }
-                                                    iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
-                                                    showShare={true}
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
-                                                />
-                                            )}
                                         {(showButtonGroup || showNfcButton) && (
                                             <>
                                                 <View
@@ -3372,11 +3331,7 @@ export default class Receive extends React.Component<
                                                         // If clearButton was used in on-chain tab
                                                         // and a new invoice below dust limit is created
                                                         // reset selectedIndex to 1 (lightning)
-                                                        if (
-                                                            selectedIndex ===
-                                                                2 &&
-                                                            belowDustLimit
-                                                        ) {
+                                                        if (belowDustLimit) {
                                                             this.setState({
                                                                 selectedIndex: 1
                                                             });
@@ -3421,7 +3376,9 @@ export default class Receive extends React.Component<
                                                                 showCustomPreimageField
                                                                     ? customPreimage
                                                                     : undefined,
-                                                            noLsp: !lspIsActive
+                                                            noLsp: !lspIsActive,
+                                                            skipOnchain:
+                                                                belowDustLimit
                                                         }).then(
                                                             ({
                                                                 rHash,
@@ -3447,31 +3404,26 @@ export default class Receive extends React.Component<
                 </View>
                 {showAdvanced && showButtonGroup && (
                     <View style={{ bottom: 0 }}>
-                        {!belowDustLimit &&
-                            haveUnifiedInvoice &&
-                            !lnOnly &&
-                            !watchedInvoicePaid && (
-                                <ButtonGroup
-                                    onPress={this.updateIndex}
-                                    selectedIndex={selectedIndex}
-                                    buttons={buttons}
-                                    selectedButtonStyle={{
-                                        backgroundColor:
-                                            themeColor('highlight'),
-                                        borderRadius: 12
-                                    }}
-                                    containerStyle={{
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 12,
-                                        borderWidth: 0,
-                                        height: 80
-                                    }}
-                                    innerBorderStyle={{
-                                        color: themeColor('secondary')
-                                    }}
-                                />
-                            )}
+                        {!lnOnly && !watchedInvoicePaid && (
+                            <ButtonGroup
+                                onPress={this.updateIndex}
+                                selectedIndex={selectedIndex}
+                                buttons={buttons}
+                                selectedButtonStyle={{
+                                    backgroundColor: themeColor('highlight'),
+                                    borderRadius: 12
+                                }}
+                                containerStyle={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 12,
+                                    borderWidth: 0,
+                                    height: 80
+                                }}
+                                innerBorderStyle={{
+                                    color: themeColor('secondary')
+                                }}
+                            />
+                        )}
                     </View>
                 )}
                 <ModalBox
