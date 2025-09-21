@@ -12,11 +12,9 @@ import {
     handleNeverAskAgain
 } from '../../utils/GraphSyncUtils';
 
-import SettingsStore from '../../stores/SettingsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 
 interface GraphSyncPromptModalProps {
-    SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
 }
 
@@ -24,7 +22,7 @@ interface GraphSyncPromptModalState {
     loading: boolean;
 }
 
-@inject('SettingsStore', 'TransactionsStore')
+@inject('TransactionsStore')
 @observer
 export default class GraphSyncPromptModal extends React.Component<
     GraphSyncPromptModalProps,
@@ -152,9 +150,7 @@ export default class GraphSyncPromptModal extends React.Component<
                         <View style={styles.rowButtons}>
                             <View style={styles.halfButton}>
                                 <Button
-                                    title={localeString(
-                                        'views.GraphSyncPrompt.ignoreOnce'
-                                    )}
+                                    title={localeString('general.ignoreOnce')}
                                     onPress={this.handleIgnoreOnce}
                                     disabled={this.state.loading}
                                     buttonStyle={{
@@ -170,7 +166,7 @@ export default class GraphSyncPromptModal extends React.Component<
                             <View style={styles.halfButton}>
                                 <Button
                                     title={localeString(
-                                        'views.GraphSyncPrompt.neverAskAgain'
+                                        'general.neverAskAgain'
                                     )}
                                     onPress={this.handleNeverAskAgain}
                                     disabled={this.state.loading}
