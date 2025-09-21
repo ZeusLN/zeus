@@ -12,11 +12,9 @@ import {
     handleNeverAskAgain
 } from '../../utils/GraphSyncUtils';
 
-import SettingsStore from '../../stores/SettingsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 
 interface GraphSyncPromptModalProps {
-    SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
 }
 
@@ -24,7 +22,7 @@ interface GraphSyncPromptModalState {
     loading: boolean;
 }
 
-@inject('SettingsStore', 'TransactionsStore')
+@inject('TransactionsStore')
 @observer
 export default class GraphSyncPromptModal extends React.Component<
     GraphSyncPromptModalProps,
@@ -35,12 +33,15 @@ export default class GraphSyncPromptModal extends React.Component<
     };
 
     handleEnableAndRestart = async () => {
-        if (this.state.loading) return;
+        const { loading } = this.state;
+        const { TransactionsStore } = this.props;
 
+        if (loading) return;
         this.setState({ loading: true });
+
         try {
             await handleEnableGraphSync();
-            this.props.TransactionsStore.hideGraphSyncPrompt();
+            TransactionsStore.hideGraphSyncPrompt();
         } catch (error) {
             console.error('Error enabling graph sync:', error);
         } finally {
@@ -49,9 +50,11 @@ export default class GraphSyncPromptModal extends React.Component<
     };
 
     handleIgnoreOnce = async () => {
-        if (this.state.loading) return;
+        const { loading } = this.state;
 
+        if (loading) return;
         this.setState({ loading: true });
+
         try {
             await handleIgnoreOnce();
         } catch (error) {
@@ -62,12 +65,15 @@ export default class GraphSyncPromptModal extends React.Component<
     };
 
     handleNeverAskAgain = async () => {
-        if (this.state.loading) return;
+        const { loading } = this.state;
+        const { TransactionsStore } = this.props;
 
+        if (loading) return;
         this.setState({ loading: true });
+
         try {
             await handleNeverAskAgain();
-            this.props.TransactionsStore.proceedWithPayment();
+            TransactionsStore.proceedWithPayment();
         } catch (error) {
             console.error('Error handling never ask again:', error);
         } finally {
@@ -152,9 +158,7 @@ export default class GraphSyncPromptModal extends React.Component<
                         <View style={styles.rowButtons}>
                             <View style={styles.halfButton}>
                                 <Button
-                                    title={localeString(
-                                        'views.GraphSyncPrompt.ignoreOnce'
-                                    )}
+                                    title={localeString('general.ignoreOnce')}
                                     onPress={this.handleIgnoreOnce}
                                     disabled={this.state.loading}
                                     buttonStyle={{
@@ -163,14 +167,18 @@ export default class GraphSyncPromptModal extends React.Component<
                                         borderColor: themeColor('highlight')
                                     }}
                                     titleStyle={{
-                                        color: themeColor('background')
+                                        color: themeColor('background'),
+                                        textAlign: 'center',
+                                        flexShrink: 1,
+                                        includeFontPadding: false
                                     }}
                                 />
                             </View>
+
                             <View style={styles.halfButton}>
                                 <Button
                                     title={localeString(
-                                        'views.GraphSyncPrompt.neverAskAgain'
+                                        'general.neverAskAgain'
                                     )}
                                     onPress={this.handleNeverAskAgain}
                                     disabled={this.state.loading}
@@ -180,7 +188,10 @@ export default class GraphSyncPromptModal extends React.Component<
                                         borderColor: themeColor('highlight')
                                     }}
                                     titleStyle={{
-                                        color: themeColor('background')
+                                        color: themeColor('background'),
+                                        textAlign: 'center',
+                                        flexShrink: 1,
+                                        includeFontPadding: false
                                     }}
                                 />
                             </View>
@@ -219,6 +230,7 @@ const styles = StyleSheet.create({
     },
     halfButton: {
         flex: 1,
-        marginHorizontal: 5
+        marginHorizontal: 5,
+        minWidth: 140
     }
 });
