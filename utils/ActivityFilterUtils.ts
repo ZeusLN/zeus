@@ -8,6 +8,7 @@ import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import WithdrawalRequest from '../models/WithdrawalRequest';
 import Swap, { SwapState } from '../models/Swap';
+import { LSPOrderState } from '../models/LSP';
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -90,12 +91,22 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (activity.model !== 'LSPS1Order') return true;
 
-                const state = activity.state;
-                if (filter.lsps1State.CREATED && state === 'CREATED')
+                const state = activity.state as LSPOrderState;
+                if (
+                    filter.lsps1State[LSPOrderState.CREATED] &&
+                    state === LSPOrderState.CREATED
+                )
                     return true;
-                if (filter.lsps1State.COMPLETED && state === 'COMPLETED')
+                if (
+                    filter.lsps1State[LSPOrderState.COMPLETED] &&
+                    state === LSPOrderState.COMPLETED
+                )
                     return true;
-                if (filter.lsps1State.FAILED && state === 'FAILED') return true;
+                if (
+                    filter.lsps1State[LSPOrderState.FAILED] &&
+                    state === LSPOrderState.FAILED
+                )
+                    return true;
 
                 return false;
             });
@@ -109,12 +120,22 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (activity.model !== 'LSPS7Order') return true;
 
-                const state = activity.state;
-                if (filter.lsps7State.CREATED && state === 'CREATED')
+                const state = activity.state as LSPOrderState;
+                if (
+                    filter.lsps7State[LSPOrderState.CREATED] &&
+                    state === LSPOrderState.CREATED
+                )
                     return true;
-                if (filter.lsps7State.COMPLETED && state === 'COMPLETED')
+                if (
+                    filter.lsps7State[LSPOrderState.COMPLETED] &&
+                    state === LSPOrderState.COMPLETED
+                )
                     return true;
-                if (filter.lsps7State.FAILED && state === 'FAILED') return true;
+                if (
+                    filter.lsps7State[LSPOrderState.FAILED] &&
+                    state === LSPOrderState.FAILED
+                )
+                    return true;
 
                 return false;
             });

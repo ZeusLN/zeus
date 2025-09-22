@@ -29,6 +29,8 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
+import { LSPOrderState } from '../../models/LSP';
+
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
@@ -420,21 +422,21 @@ export default class ActivityFilter extends React.Component<
                                 label: localeString(
                                     'views.ActivityFilter.swapState.created'
                                 ),
-                                var: ['lsps1State', 'CREATED'],
+                                var: ['lsps1State', LSPOrderState.CREATED],
                                 type: 'Toggle'
                             },
                             {
                                 label: localeString(
                                     'views.ActivityFilter.lsps1State.completed'
                                 ),
-                                var: ['lsps1State', 'COMPLETED'],
+                                var: ['lsps1State', LSPOrderState.COMPLETED],
                                 type: 'Toggle'
                             },
                             {
                                 label: localeString(
                                     'views.ActivityFilter.swapState.failed'
                                 ),
-                                var: ['lsps1State', 'FAILED'],
+                                var: ['lsps1State', LSPOrderState.FAILED],
                                 type: 'Toggle'
                             }
                         ]
@@ -449,21 +451,21 @@ export default class ActivityFilter extends React.Component<
                                 label: localeString(
                                     'views.ActivityFilter.swapState.created'
                                 ),
-                                var: ['lsps7State', 'CREATED'],
+                                var: ['lsps7State', LSPOrderState.CREATED],
                                 type: 'Toggle'
                             },
                             {
                                 label: localeString(
                                     'views.ActivityFilter.lsps1State.completed'
                                 ),
-                                var: ['lsps7State', 'COMPLETED'],
+                                var: ['lsps7State', LSPOrderState.COMPLETED],
                                 type: 'Toggle'
                             },
                             {
                                 label: localeString(
                                     'views.ActivityFilter.swapState.failed'
                                 ),
-                                var: ['lsps7State', 'FAILED'],
+                                var: ['lsps7State', LSPOrderState.FAILED],
                                 type: 'Toggle'
                             }
                         ]
