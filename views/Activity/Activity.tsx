@@ -45,7 +45,12 @@ import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import CashuToken from '../../models/CashuToken';
+
 import { SwapType } from '../../models/Swap';
+
+import { LSPOrderState } from '../../models/LSP';
+
+import Storage from '../../storage';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -540,11 +545,11 @@ export default class Activity extends React.PureComponent<
 
         if (item.model === 'LSPS1Order' || item.model === 'LSPS7Order') {
             switch (item.state) {
-                case 'CREATED':
+                case LSPOrderState.CREATED:
                     return 'highlight';
-                case 'COMPLETED':
+                case LSPOrderState.COMPLETED:
                     return 'success';
-                case 'FAILED':
+                case LSPOrderState.FAILED:
                     return 'warning';
                 default:
                     return 'text';
@@ -603,7 +608,8 @@ export default class Activity extends React.PureComponent<
 
         if (item.model === 'LSPS1Order') {
             const orderShouldUpdate =
-                item.state === 'FAILED' || item.state === 'COMPLETED';
+                item.state === LSPOrderState.FAILED ||
+                item.state === LSPOrderState.COMPLETED;
             navigation.navigate('LSPS1Order', {
                 orderId: item.id,
                 orderShouldUpdate
@@ -613,7 +619,8 @@ export default class Activity extends React.PureComponent<
 
         if (item.model === 'LSPS7Order') {
             const orderShouldUpdate =
-                item.state === 'FAILED' || item.state === 'COMPLETED';
+                item.state === LSPOrderState.FAILED ||
+                item.state === LSPOrderState.COMPLETED;
             navigation.navigate('LSPS7Order', {
                 orderId: item.id,
                 orderShouldUpdate
