@@ -2,7 +2,8 @@ import { action, observable, runInAction } from 'mobx';
 
 // LN
 import Invoice from './../models/Invoice';
-// on-chain
+
+import { LSPOrderState } from './../models/LSP';
 
 import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
@@ -56,16 +57,8 @@ export interface Filter {
         failed: boolean;
         refunded: boolean;
     };
-    lsps1State: {
-        CREATED: boolean;
-        COMPLETED: boolean;
-        FAILED: boolean;
-    };
-    lsps7State: {
-        CREATED: boolean;
-        COMPLETED: boolean;
-        FAILED: boolean;
-    };
+    lsps1State: Record<LSPOrderState, boolean>;
+    lsps7State: Record<LSPOrderState, boolean>;
 }
 
 export const DEFAULT_FILTERS = {
@@ -97,14 +90,14 @@ export const DEFAULT_FILTERS = {
         refunded: true
     },
     lsps1State: {
-        CREATED: true,
-        COMPLETED: true,
-        FAILED: true
+        [LSPOrderState.CREATED]: true,
+        [LSPOrderState.COMPLETED]: true,
+        [LSPOrderState.FAILED]: true
     },
     lsps7State: {
-        CREATED: true,
-        COMPLETED: true,
-        FAILED: true
+        [LSPOrderState.CREATED]: true,
+        [LSPOrderState.COMPLETED]: true,
+        [LSPOrderState.FAILED]: true
     }
 };
 

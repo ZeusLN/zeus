@@ -16,6 +16,8 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import Storage from '../../storage';
 
+import { LSPOrderState } from '../../models/LSP';
+
 import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
@@ -169,13 +171,13 @@ export default class OrdersPane extends React.Component<
     renderItem = ({ item }: { item: any }) => {
         let stateColor;
         switch (item.state) {
-            case 'CREATED':
+            case LSPOrderState.CREATED:
                 stateColor = 'orange';
                 break;
-            case 'FAILED':
+            case LSPOrderState.FAILED:
                 stateColor = 'red';
                 break;
-            case 'COMPLETED':
+            case LSPOrderState.COMPLETED:
                 stateColor = 'green';
                 break;
             default:
@@ -188,7 +190,8 @@ export default class OrdersPane extends React.Component<
                 onPress={() => {
                     const orderId = item.order_id || item.orderId;
                     const orderShouldUpdate =
-                        item?.state === 'FAILED' || item?.state === 'COMPLETED';
+                        item?.state === LSPOrderState.FAILED ||
+                        item?.state === LSPOrderState.COMPLETED;
                     if (item.service === 'LSPS7') {
                         this.props.navigation.navigate('LSPS7Order', {
                             orderId,
