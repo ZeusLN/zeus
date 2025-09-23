@@ -38,6 +38,7 @@ import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NotesStore from '../../stores/NotesStore';
+import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 
@@ -59,6 +60,7 @@ interface ActivityProps {
     PosStore: PosStore;
     SettingsStore: SettingsStore;
     NotesStore: NotesStore;
+    SwapStore: SwapStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -93,6 +95,7 @@ interface ActivityListItemProps {
         | 'warning'
         | 'warningReserve';
     order?: Order;
+    swapStore: SwapStore;
 }
 
 const ActivityListItem = React.memo(
@@ -101,7 +104,8 @@ const ActivityListItem = React.memo(
         selectedPaymentForOrder,
         onItemPress,
         getRightTitleTheme,
-        order
+        order,
+        swapStore
     }: ActivityListItemProps) => {
         const note = item.getNote;
         let displayName = item.model;
@@ -260,14 +264,26 @@ const ActivityListItem = React.memo(
                         : `${localeString(
                               'general.lightning'
                           )} → ${localeString('general.onchain')}  ⚡ → 🔗`}
+                    {item?.status && (
+                        <>
+                            {'\n'}
+                            {`${localeString(
+                                'views.Channel.status'
+                            )}: ${swapStore.formatStatus(item.status)}`}
+                        </>
+                    )}
                 </Text>
             );
         } else if (item.model === 'LSPS1Order') {
             displayName = localeString('views.LSPS1.type');
-            subTitle = `${localeString('general.state')}: ${item.state}`;
+            subTitle = `${localeString('general.state')}: ${item.state
+                .toLowerCase()
+                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
         } else if (item.model === 'LSPS7Order') {
             displayName = localeString('views.LSPS7.type');
-            subTitle = `${localeString('general.state')}: ${item.state}`;
+            subTitle = `${localeString('general.state')}: ${item.state
+                .toLowerCase()
+                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
         }
 
         return (
@@ -436,7 +452,8 @@ const ActivityListItem = React.memo(
     'PosStore',
     'SettingsStore',
     'NotesStore',
-    'InvoicesStore'
+    'InvoicesStore',
+    'SwapStore'
 )
 @observer
 export default class Activity extends React.PureComponent<
@@ -655,6 +672,7 @@ export default class Activity extends React.PureComponent<
             FiatStore,
             PosStore,
             SettingsStore,
+            SwapStore,
             route
         } = this.props;
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
@@ -836,6 +854,7 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 getRightTitleTheme={this.getRightTitleTheme}
                                 order={route.params?.order}
+                                swapStore={SwapStore}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}

@@ -30,6 +30,7 @@ import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
 import { LSPOrderState } from '../../models/LSP';
+import { SwapState } from '../../models/Swap';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -383,31 +384,129 @@ export default class ActivityFilter extends React.Component<
                         section: 'swaps',
                         children: [
                             {
-                                label: `${localeString(
+                                label: localeString(
                                     'views.ActivityFilter.swapState.created'
-                                )}`,
-                                var: ['swapState', 'created'],
+                                ),
+                                var: ['swapState', SwapState.Created],
                                 type: 'Toggle'
                             },
                             {
-                                label: `${localeString(
-                                    'views.ActivityFilter.swapState.successful'
-                                )}`,
-                                var: ['swapState', 'successful'],
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.invoiceExpired'
+                                ),
+                                var: ['swapState', SwapState.InvoiceExpired],
                                 type: 'Toggle'
                             },
                             {
-                                label: `${localeString(
-                                    'views.ActivityFilter.swapState.failed'
-                                )}`,
-                                var: ['swapState', 'failed'],
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.invoiceFailedToPay'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.InvoiceFailedToPay
+                                ],
                                 type: 'Toggle'
                             },
                             {
-                                label: `${localeString(
-                                    'views.ActivityFilter.swapState.refunded'
-                                )}`,
-                                var: ['swapState', 'refunded'],
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.invoicePaid'
+                                ),
+                                var: ['swapState', SwapState.InvoicePaid],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.invoicePending'
+                                ),
+                                var: ['swapState', SwapState.InvoicePending],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.invoiceSettled'
+                                ),
+                                var: ['swapState', SwapState.InvoiceSettled],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.invoiceSet'
+                                ),
+                                var: ['swapState', SwapState.InvoiceSet],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.swapExpired'
+                                ),
+                                var: ['swapState', SwapState.SwapExpired],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionClaimPending'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.TransactionClaimPending
+                                ],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionClaimed'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.TransactionClaimed
+                                ],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionConfirmed'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.TransactionConfirmed
+                                ],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionFailed'
+                                ),
+                                var: ['swapState', SwapState.TransactionFailed],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionLockupFailed'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.TransactionLockupFailed
+                                ],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionMempool'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.TransactionMempool
+                                ],
+                                type: 'Toggle'
+                            },
+                            {
+                                label: localeString(
+                                    'views.ActivityFilter.swapState.transactionRefunded'
+                                ),
+                                var: [
+                                    'swapState',
+                                    SwapState.TransactionRefunded
+                                ],
                                 type: 'Toggle'
                             }
                         ]
@@ -433,9 +532,7 @@ export default class ActivityFilter extends React.Component<
                                 type: 'Toggle'
                             },
                             {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.failed'
-                                ),
+                                label: localeString('general.failed'),
                                 var: ['lsps1State', LSPOrderState.FAILED],
                                 type: 'Toggle'
                             }
@@ -462,9 +559,7 @@ export default class ActivityFilter extends React.Component<
                                 type: 'Toggle'
                             },
                             {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.failed'
-                                ),
+                                label: localeString('general.failed'),
                                 var: ['lsps7State', LSPOrderState.FAILED],
                                 type: 'Toggle'
                             }
