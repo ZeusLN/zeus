@@ -3,6 +3,7 @@ import { action, observable, runInAction } from 'mobx';
 // LN
 import Invoice from './../models/Invoice';
 import { LSPOrderState } from './../models/LSP';
+import { SwapState } from './../models/Swap';
 
 import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
@@ -50,12 +51,7 @@ export interface Filter {
     startDate?: Date;
     endDate?: Date;
     memo: string;
-    swapState: {
-        created: boolean;
-        successful: boolean;
-        failed: boolean;
-        refunded: boolean;
-    };
+    swapState: Record<SwapState, boolean>;
     lsps1State: Record<LSPOrderState, boolean>;
     lsps7State: Record<LSPOrderState, boolean>;
 }
@@ -83,10 +79,21 @@ export const DEFAULT_FILTERS = {
     endDate: undefined,
     memo: '',
     swapState: {
-        created: true,
-        successful: true,
-        failed: true,
-        refunded: true
+        [SwapState.Created]: true,
+        [SwapState.InvoiceSet]: true,
+        [SwapState.TransactionClaimPending]: true,
+        [SwapState.TransactionMempool]: true,
+        [SwapState.TransactionFailed]: true,
+        [SwapState.TransactionClaimed]: true,
+        [SwapState.InvoiceSettled]: true,
+        [SwapState.TransactionRefunded]: true,
+        [SwapState.InvoiceFailedToPay]: true,
+        [SwapState.SwapExpired]: true,
+        [SwapState.InvoiceExpired]: true,
+        [SwapState.TransactionLockupFailed]: true,
+        [SwapState.InvoicePending]: true,
+        [SwapState.InvoicePaid]: true,
+        [SwapState.TransactionConfirmed]: true
     },
     lsps1State: {
         [LSPOrderState.CREATED]: true,

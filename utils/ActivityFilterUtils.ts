@@ -7,7 +7,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import WithdrawalRequest from '../models/WithdrawalRequest';
-import Swap, { SwapState } from '../models/Swap';
+import Swap from '../models/Swap';
 import { LSPOrderState } from '../models/LSP';
 
 class ActivityFilterUtils {
@@ -52,34 +52,7 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (!(activity instanceof Swap)) return true;
 
-                const status = activity.status;
-                if (
-                    filter.swapState.created &&
-                    (status === SwapState.Created ||
-                        status === SwapState.InvoiceSet)
-                )
-                    return true;
-                if (
-                    filter.swapState.successful &&
-                    (status === SwapState.InvoiceSettled ||
-                        status === SwapState.TransactionClaimed)
-                )
-                    return true;
-                if (
-                    filter.swapState.failed &&
-                    (status === SwapState.InvoiceFailedToPay ||
-                        status === SwapState.SwapExpired ||
-                        status === SwapState.TransactionFailed ||
-                        status === SwapState.TransactionLockupFailed)
-                )
-                    return true;
-                if (
-                    filter.swapState.refunded &&
-                    status === SwapState.TransactionRefunded
-                )
-                    return true;
-
-                return false;
+                return filter.swapState[activity.status] === true;
             });
         }
 
