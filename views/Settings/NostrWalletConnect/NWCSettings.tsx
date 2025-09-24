@@ -98,7 +98,7 @@ export default class NWCSettings extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { loading, error, enableCashu, persistentNWCService } =
             this.state;
-        const supportsCashu = BackendUtils.supportsCashuWallet();
+        const { settings } = SettingsStore;
 
         return (
             <Screen>
@@ -189,58 +189,59 @@ export default class NWCSettings extends React.Component<
                             </View>
                         )}
 
-                        {BackendUtils.supportsCashuWallet() && supportsCashu && (
-                            <View style={{ marginTop: 20 }}>
-                                <View style={{ flexDirection: 'row' }}>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            justifyContent: 'center'
-                                        }}
-                                    >
-                                        <Text
+                        {BackendUtils.supportsCashuWallet() &&
+                            settings.ecash.enableCashu && (
+                                <View style={{ marginTop: 20 }}>
+                                    <View style={{ flexDirection: 'row' }}>
+                                        <View
                                             style={{
-                                                color: themeColor('text'),
-                                                fontSize: 17
+                                                flex: 1,
+                                                justifyContent: 'center'
                                             }}
                                         >
-                                            {localeString(
-                                                'views.Settings.NostrWalletConnect.switchToCashuWallet'
-                                            )}
-                                        </Text>
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontSize: 17
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.NostrWalletConnect.switchToCashuWallet'
+                                                )}
+                                            </Text>
+                                        </View>
+                                        <View
+                                            style={{
+                                                alignSelf: 'center',
+                                                marginLeft: 5
+                                            }}
+                                        >
+                                            <Switch
+                                                value={enableCashu}
+                                                onValueChange={
+                                                    this.toggleCashuWallet
+                                                }
+                                                disabled={
+                                                    SettingsStore.settingsUpdateInProgress ||
+                                                    loading
+                                                }
+                                            />
+                                        </View>
                                     </View>
-                                    <View
+                                    <Text
                                         style={{
-                                            alignSelf: 'center',
-                                            marginLeft: 5
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 14,
+                                            marginTop: 8,
+                                            lineHeight: 20
                                         }}
                                     >
-                                        <Switch
-                                            value={enableCashu}
-                                            onValueChange={
-                                                this.toggleCashuWallet
-                                            }
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress ||
-                                                loading
-                                            }
-                                        />
-                                    </View>
+                                        {localeString(
+                                            'views.Settings.NostrWalletConnect.cashuWalletDescription'
+                                        )}
+                                    </Text>
                                 </View>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 14,
-                                        marginTop: 8,
-                                        lineHeight: 20
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.cashuWalletDescription'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
+                            )}
                     </ScrollView>
                 )}
             </Screen>
