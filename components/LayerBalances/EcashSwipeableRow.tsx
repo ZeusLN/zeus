@@ -8,7 +8,7 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
+import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
@@ -28,6 +28,7 @@ import Send from '../../assets/images/SVG/Send.svg';
 interface EcashSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
     lightning?: string;
+    lnurlParams?: LNURLWithdrawParams | undefined;
     value?: string;
     locked?: boolean;
     account?: string;
@@ -179,52 +180,58 @@ export default class EcashSwipeableRow extends Component<
         if (this.swipeableRow) this.swipeableRow.openLeft();
     };
 
-    private fetchLnInvoice = () => {
-        const { lightning } = this.props;
-        if (lightning?.toLowerCase().startsWith('lnurl')) {
-            return getlnurlParams(lightning)
-                .then((params: any) => {
-                    if (
-                        params.status === 'ERROR' &&
-                        params.domain.endsWith('.onion')
-                    ) {
-                        // TODO handle fetching of params with internal Tor
-                        throw new Error(
-                            `${params.domain} says: ${params.reason}`
-                        );
-                    }
+    private handleLnurlRequest = async (
+        lightning?: string,
+        lnurlParams?: any,
+        navigation?: any
+    ): Promise<void> => {
+        const params = lnurlParams || (await getlnurlParams(lightning ?? ''));
+        if (
+            params &&
+            params.status === 'ERROR' &&
+            params.domain?.endsWith('.onion')
+        ) {
+            // TODO handle fetching of params with internal Tor
+            throw new Error(`${params.domain} says: ${params.reason}`);
+        }
 
-                    switch (params.tag) {
-                        case 'payRequest':
-                            params.lnurlText = lightning;
-                            this.props.navigation.navigate('LnurlPay', {
-                                lnurlParams: params,
-                                ecash: true
-                            });
-                            return;
-                        default:
-                            Alert.alert(
-                                localeString('general.error'),
-                                params.status === 'ERROR'
-                                    ? `${params.domain} says: ${params.reason}`
-                                    : `${localeString(
-                                          'utils.handleAnything.unsupportedLnurlType'
-                                      )}: ${params.tag}`,
-                                [
-                                    {
-                                        text: localeString('general.ok'),
-                                        onPress: () => void 0
-                                    }
-                                ],
-                                { cancelable: false }
-                            );
-                    }
-                })
-                .catch(() => {
-                    throw new Error(
-                        localeString('utils.handleAnything.invalidLnurlParams')
-                    );
+        switch (params.tag) {
+            case 'payRequest':
+                params.lnurlText = lightning;
+                navigation.navigate('LnurlPay', {
+                    lnurlParams: params,
+                    ecash: true
                 });
+                break;
+            case 'withdrawRequest':
+                navigation.navigate('ReceiveEcash', {
+                    lnurlParams: params
+                });
+                break;
+            default:
+                Alert.alert(
+                    localeString('general.error'),
+                    params.status === 'ERROR'
+                        ? `${params.domain} says: ${params.reason}`
+                        : `${localeString(
+                              'utils.handleAnything.unsupportedLnurlType'
+                          )}: ${params.tag}`,
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+        }
+    };
+
+    private fetchLnInvoice = () => {
+        const { lightning, lnurlParams, navigation } = this.props;
+        if (lightning?.toLowerCase().startsWith('lnurl') || lnurlParams) {
+            this.handleLnurlRequest(lightning, lnurlParams, navigation);
+            return;
         } else {
             cashuStore.getPayReq(lightning ?? '');
             this.props.navigation.navigate('CashuPaymentRequest', {});
