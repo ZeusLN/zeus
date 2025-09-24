@@ -4,7 +4,6 @@ import {
     FlatList,
     View,
     Text,
-    TouchableHighlight,
     TouchableOpacity,
     SectionList
 } from 'react-native';
@@ -18,10 +17,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
-import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 
-import OrderItem from './OrderItem';
+import SwipeableOrderItem from './SwipeableOrderItem';
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 
 import ActivityStore from '../../stores/ActivityStore';
@@ -113,6 +111,16 @@ export default class StandalonePosPane extends React.PureComponent<
         ).start();
     }
 
+    private rows: Array<Swipeable | null> = [];
+    private prevOpenedRow: Swipeable | null = null;
+
+    private closeRow = (index: number) => {
+        if (this.prevOpenedRow && this.prevOpenedRow !== this.rows[index]) {
+            this.prevOpenedRow.close();
+        }
+        this.prevOpenedRow = this.rows[index];
+    };
+
     async componentDidMount(): Promise<void> {
         this.fetchProducts();
         this.loadCurrentOrder();
@@ -185,116 +193,6 @@ export default class StandalonePosPane extends React.PureComponent<
         } catch (e) {
             console.log('error fetching products', e);
         }
-    };
-
-    renderItem = (
-        { item, index }: { item: { [key: string]: any }; index: number },
-        onClickPaid: any,
-        onClickHide: any
-    ) => {
-        const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore!;
-        const isPaid: boolean = item && item.payment;
-
-        let row: Array<any> = [];
-        let prevOpenedRow: any;
-
-        const closeRow = (index: any) => {
-            if (prevOpenedRow && prevOpenedRow !== row[index]) {
-                prevOpenedRow.close();
-            }
-            prevOpenedRow = row[index];
-        };
-
-        const renderRightActions = (
-            _progress: any,
-            _dragX: any,
-            onClickPaid: any,
-            onClickHide: any
-        ) => {
-            return (
-                <View
-                    style={{
-                        margin: 0,
-                        alignContent: 'center',
-                        justifyContent: 'center',
-                        width: 280
-                    }}
-                >
-                    <Row>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickPaid}
-                                icon={{
-                                    name: 'payments',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'green' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickHide}
-                                icon={{
-                                    name: 'delete',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'red' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                    </Row>
-                </View>
-            );
-        };
-
-        let tip = '';
-        if (isPaid) {
-            const { orderTip, rate } = item.payment;
-            tip = new BigNumber(orderTip)
-                .multipliedBy(rate)
-                .dividedBy(SATS_PER_BTC)
-                .toFixed(2);
-        }
-
-        return (
-            <Swipeable
-                renderRightActions={(progress, dragX) =>
-                    renderRightActions(
-                        progress,
-                        dragX,
-                        onClickPaid,
-                        onClickHide
-                    )
-                }
-                onSwipeableOpen={() => closeRow(index)}
-                ref={(ref) => {
-                    row[index] = ref;
-                }}
-            >
-                <TouchableHighlight
-                    onPress={() => {
-                        if (getRate() === '$N/A') return;
-                        navigation.navigate('Order', {
-                            order: item
-                        });
-                    }}
-                >
-                    <OrderItem
-                        title={item.getItemsList}
-                        money={
-                            isPaid
-                                ? `${item.getTotalMoneyDisplay} + ${
-                                      getSymbol().symbol
-                                  }${tip}`
-                                : item.getTotalMoneyDisplay
-                        }
-                        date={item.getDisplayTime}
-                    />
-                </TouchableHighlight>
-            </Swipeable>
-        );
     };
 
     addProductToOrder = (product: Product) => {
@@ -960,23 +858,27 @@ export default class StandalonePosPane extends React.PureComponent<
                                         ? -1
                                         : 1
                                 )}
-                            renderItem={(v: any) =>
-                                this.renderItem(
-                                    v,
-                                    () => {
+                            renderItem={({ item, index }) => (
+                                <SwipeableOrderItem
+                                    ref={(ref) => (this.rows[index] = ref)}
+                                    onSwipeableOpen={() => this.closeRow(index)}
+                                    item={item}
+                                    navigation={navigation}
+                                    fiatStore={FiatStore}
+                                    onClickPaid={() => {
                                         setFiltersPos().then(() => {
                                             navigation.navigate('Activity', {
-                                                order: v
+                                                order: item
                                             });
                                         });
-                                    },
-                                    () => {
-                                        hideOrder(v.item.id).then(() =>
+                                    }}
+                                    onClickHide={() => {
+                                        hideOrder(item.id).then(() =>
                                             getOrders()
                                         );
-                                    }
-                                )
-                            }
+                                    }}
+                                />
+                            )}
                             ListFooterComponent={<Spacer height={100} />}
                             onRefresh={() => getOrders()}
                             refreshing={loading}

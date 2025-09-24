@@ -1,13 +1,5 @@
 import * as React from 'react';
-import {
-    Animated,
-    FlatList,
-    View,
-    Text,
-    TouchableHighlight,
-    TouchableOpacity
-} from 'react-native';
-import BigNumber from 'bignumber.js';
+import { Animated, FlatList, View, Text, TouchableOpacity } from 'react-native';
 import { ButtonGroup, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -16,10 +8,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
-import { Row } from '../../components/layout/Row';
 
 import { Spacer } from '../../components/layout/Spacer';
-import OrderItem from './OrderItem';
+import SwipeableOrderItem from './SwipeableOrderItem';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -31,7 +22,6 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 
 import { version } from './../../package.json';
 
@@ -89,114 +79,14 @@ export default class SquarePosPane extends React.PureComponent<
         ).start();
     }
 
-    renderItem = (
-        { item, index }: { item: { [key: string]: any }; index: number },
-        onClickPaid: any,
-        onClickHide: any
-    ) => {
-        const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore!;
-        const isPaid: boolean = item && item.payment;
+    private rows: Array<Swipeable | null> = [];
+    private prevOpenedRow: Swipeable | null = null;
 
-        let row: Array<any> = [];
-        let prevOpenedRow: any;
-
-        const closeRow = (index: any) => {
-            if (prevOpenedRow && prevOpenedRow !== row[index]) {
-                prevOpenedRow.close();
-            }
-            prevOpenedRow = row[index];
-        };
-
-        const renderRightActions = (
-            _progress: any,
-            _dragX: any,
-            onClickPaid: any,
-            onClickHide: any
-        ) => {
-            return (
-                <View
-                    style={{
-                        margin: 0,
-                        alignContent: 'center',
-                        justifyContent: 'center',
-                        width: 280
-                    }}
-                >
-                    <Row>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickPaid}
-                                icon={{
-                                    name: 'payments',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'green' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickHide}
-                                icon={{
-                                    name: 'delete',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'red' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                    </Row>
-                </View>
-            );
-        };
-
-        let tip = '';
-        if (isPaid) {
-            const { orderTip, rate } = item.payment;
-            tip = new BigNumber(orderTip)
-                .multipliedBy(rate)
-                .dividedBy(SATS_PER_BTC)
-                .toFixed(2);
+    private closeRow = (index: number) => {
+        if (this.prevOpenedRow && this.prevOpenedRow !== this.rows[index]) {
+            this.prevOpenedRow.close();
         }
-
-        return (
-            <Swipeable
-                renderRightActions={(progress, dragX) =>
-                    renderRightActions(
-                        progress,
-                        dragX,
-                        onClickPaid,
-                        onClickHide
-                    )
-                }
-                onSwipeableOpen={() => closeRow(index)}
-                ref={(ref) => {
-                    row[index] = ref;
-                }}
-            >
-                <TouchableHighlight
-                    onPress={() => {
-                        if (getRate() === '$N/A') return;
-                        navigation.navigate('Order', {
-                            order: item
-                        });
-                    }}
-                >
-                    <OrderItem
-                        title={item.getItemsList}
-                        money={
-                            isPaid
-                                ? `${item.getTotalMoneyDisplay} + ${
-                                      getSymbol().symbol
-                                  }${tip}`
-                                : item.getTotalMoneyDisplay
-                        }
-                        date={item.getDisplayTime}
-                    />
-                </TouchableHighlight>
-            </Swipeable>
-        );
+        this.prevOpenedRow = this.rows[index];
     };
 
     render() {
@@ -422,23 +312,25 @@ export default class SquarePosPane extends React.PureComponent<
                 {!loading && orders && orders.length > 0 && (
                     <FlatList
                         data={orders}
-                        renderItem={(v: any) =>
-                            this.renderItem(
-                                v,
-                                () => {
+                        renderItem={({ item, index }) => (
+                            <SwipeableOrderItem
+                                ref={(ref) => (this.rows[index] = ref)}
+                                onSwipeableOpen={() => this.closeRow(index)}
+                                item={item}
+                                navigation={navigation}
+                                fiatStore={FiatStore}
+                                onClickPaid={() => {
                                     setFiltersPos().then(() => {
                                         navigation.navigate('Activity', {
-                                            order: v
+                                            order: item
                                         });
                                     });
-                                },
-                                () => {
-                                    hideOrder(v.item.id).then(() =>
-                                        getOrders()
-                                    );
-                                }
-                            )
-                        }
+                                }}
+                                onClickHide={() => {
+                                    hideOrder(item.id).then(() => getOrders());
+                                }}
+                            />
+                        )}
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getOrders()}
                         refreshing={loading}
