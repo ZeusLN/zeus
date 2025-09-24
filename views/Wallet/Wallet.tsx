@@ -279,7 +279,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore, NostrWalletConnectStore } = this.props;
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
-        console.log(nextAppState);
         if (
             nextAppState === 'background' &&
             SettingsStore.loginMethodConfigured() &&

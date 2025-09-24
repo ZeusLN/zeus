@@ -8,7 +8,8 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
 import 'websocket-polyfill';
 import { action, computed, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
-import { getPublicKey, generatePrivateKey, nip04 } from 'nostr-tools';
+import { getPublicKey, generatePrivateKey } from 'nostr-tools';
+import * as nip04 from '@nostr/tools/nip04';
 import { Platform, NativeModules } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -384,10 +385,6 @@ export default class NostrWalletConnectStore {
                     }
 
                     try {
-                        console.log(
-                            'Initializing NWC Wallet Service for relay:',
-                            relayUrl
-                        );
                         this.nwcWalletServices.set(
                             relayUrl,
                             new nwc.NWCWalletService({
@@ -1566,7 +1563,6 @@ export default class NostrWalletConnectStore {
             return this.handleError('Rate limited', 'RATE_LIMITED');
         }
         this.markConnectionUsed(connection.id);
-        console.log('calling handleGetBalance for connection', connection.name);
         try {
             const balance = this.isCashuProperlyConfigured
                 ? this.cashuStore.totalBalanceSats
@@ -1592,7 +1588,6 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'pay_invoice')) {
             return this.handleError('Rate limited', 'RATE_LIMITED');
         }
-        console.log('calling handlePayInvoice for connection', connection.name);
         try {
             if (this.isCashuProperlyConfigured) {
                 const cashuStatus = this.cashuConfigurationStatus;
@@ -1779,10 +1774,6 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'make_invoice')) {
             return this.handleError('Rate limited', 'RATE_LIMITED');
         }
-        console.log(
-            'calling handleMakeInvoice for connection',
-            connection.name
-        );
         try {
             if (this.isCashuProperlyConfigured) {
                 try {
@@ -1897,7 +1888,6 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        console.log('handleLookupInvoice', request);
         this.markConnectionUsed(connection.id);
         if (this.isRateLimited(connection.id, 'lookup_invoice')) {
             return this.handleError('Rate limited', 'RATE_LIMITED');
@@ -2023,10 +2013,6 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'list_transactions')) {
             return this.handleError('Rate limited', 'RATE_LIMITED');
         }
-        console.log(
-            'calling handleListTransactions for connection',
-            connection.name
-        );
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
@@ -2239,7 +2225,6 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'pay_keysend')) {
             return this.handleError('Rate limited', 'RATE_LIMITED');
         }
-        console.log('calling handlePayKeysend for connection', connection.name);
         try {
             const amountSats = Math.floor(request.amount / 1000);
             await this.manageBudget(connection.id, amountSats, 'validate');
@@ -2556,7 +2541,7 @@ export default class NostrWalletConnectStore {
                 );
             }
             const data = await this.fetchPendingEvents(deviceToken, maxRetries);
-            console.log('FOUND PENDING EVENTS', data, data.events.length);
+            console.info('FOUND PENDING EVENTS', data, data.events.length);
             await this.processPendingEvents(data.events);
         } catch (error) {
             this.handleError(
@@ -2649,12 +2634,7 @@ export default class NostrWalletConnectStore {
         let request: NWCRequest;
         try {
             const privateKey = this.walletServiceKeys!.privateKey;
-            console.log(privateKey.length);
-            console.log(
-                'NWC: Using private key (first 8 chars):',
-                privateKey.substring(0, 8) + '...'
-            );
-            const decryptedContent = await nip04.decrypt(
+            const decryptedContent = nip04.decrypt(
                 privateKey,
                 connection.pubkey,
                 event.content
@@ -2766,7 +2746,7 @@ export default class NostrWalletConnectStore {
                 }))
             };
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
             const response = await fetch(
                 `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/handoff`,
                 {
