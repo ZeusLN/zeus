@@ -2686,29 +2686,8 @@ export default class NostrWalletConnectStore {
                 case 'pay_invoice':
                     await this.handlePayInvoice(connection, request.params);
                     break;
-                case 'make_invoice':
-                    await this.handleMakeInvoice(connection, request.params);
-                    break;
-                case 'lookup_invoice':
-                    await this.handleLookupInvoice(connection, request.params);
-                    break;
-                case 'list_transactions':
-                    await this.handleListTransactions(
-                        connection,
-                        request.params
-                    );
-                    break;
                 case 'pay_keysend':
                     await this.handlePayKeysend(connection, request.params);
-                    break;
-                case 'sign_message':
-                    await this.handleSignMessage(connection, request.params);
-                    break;
-                case 'get_info':
-                    await this.handleGetInfo(connection);
-                    break;
-                case 'get_balance':
-                    await this.handleGetBalance(connection);
                     break;
                 default:
                     console.warn('NWC: Unsupported method', {
