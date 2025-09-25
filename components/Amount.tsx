@@ -15,10 +15,9 @@ import { localeString, formatInlineNoun } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { formatBitcoinWithSpaces } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
+import { processSatsAmount } from '../utils/AmountUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
-
-import { settingsStore } from '../stores/Stores';
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
@@ -272,24 +271,11 @@ function AmountDisplay({
 
     switch (unit) {
         case 'sats':
-            const hideMsats =
-                !settingsStore?.settings?.display?.showMillisatoshiAmounts;
-
-            if (!roundAmount) {
-                // For exact amounts, never round
-                return renderSatsAmount(amount.toString(), false);
-            } else {
-                const [, decimalPart] = amount.toString().split('.');
-                const hasDecimals = decimalPart && Number(decimalPart) > 0;
-
-                const shouldRound = hasDecimals && (hideMsats || roundAmount);
-                const displayAmount = shouldRound
-                    ? Math.round(Number(amount)).toString()
-                    : amount.toString();
-                const shouldShowRounding = Boolean(shouldRound && roundAmount);
-
-                return renderSatsAmount(displayAmount, shouldShowRounding);
-            }
+            const { displayAmount, shouldShowRounding } = processSatsAmount(
+                amount,
+                roundAmount
+            );
+            return renderSatsAmount(displayAmount, shouldShowRounding);
         case 'BTC':
         case 'fiat':
             return renderCurrencyAmount();
