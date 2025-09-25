@@ -127,6 +127,7 @@ export default class SelectCurrency extends React.Component<
                             importantForAccessibility: 'no-hide-descendants',
                             accessibilityElementsHidden: true
                         }}
+                        autoCorrect={false}
                     />
                     <FlatList
                         data={currencies}
