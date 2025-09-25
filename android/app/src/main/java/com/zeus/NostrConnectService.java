@@ -124,7 +124,7 @@ public class NostrConnectService extends Service {
         }
         notificationBuilder
             .setContentText(getLocalizedString("androidNotification.nwcRunningBackground"))
-            .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
+            .setSmallIcon(R.drawable.notification_icon)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .addAction(0, getLocalizedString("androidNotification.nwcShutdown"), stopPendingIntent);
@@ -171,11 +171,9 @@ public class NostrConnectService extends Service {
             ReactDatabaseSupplier dbSupplier = ReactDatabaseSupplier.getInstance(context);
             SQLiteDatabase db = dbSupplier.get();
             String persistentNWCServicesEnabled = AsyncLocalStorageUtil.getItemImpl(db, "persistentNWCServicesEnabled");
-            Log.d(TAG, "getPersistentNWCServicesEnabled: AsyncStorage key 'persistentNWCServicesEnabled' = '" + persistentNWCServicesEnabled + "'");
             
             if (persistentNWCServicesEnabled != null) {
                 boolean result = persistentNWCServicesEnabled.equals("true");
-                Log.d(TAG, "getPersistentNWCServicesEnabled: Parsed result = " + result);
                 return result;
             } else {
                 Log.d(TAG, "getPersistentNWCServicesEnabled: Key not found in AsyncStorage, returning false");
