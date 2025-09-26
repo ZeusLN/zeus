@@ -23,6 +23,7 @@ import ActivityStore, {
     SERVICES_CONFIG
 } from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
+import SwapStore from '../../stores/SwapStore';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -39,6 +40,7 @@ interface ActivityFilterProps {
     navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     SettingsStore: SettingsStore;
+    SwapStore: SwapStore;
 }
 
 interface ActivityFilterState {
@@ -51,10 +53,12 @@ interface ActivityFilterState {
         swaps: boolean;
         lsps1: boolean;
         lsps7: boolean;
+        submarine: boolean;
+        reverse: boolean;
     };
 }
 
-@inject('ActivityStore', 'SettingsStore')
+@inject('ActivityStore', 'SettingsStore', 'SwapStore')
 @observer
 export default class ActivityFilter extends React.Component<
     ActivityFilterProps,
@@ -69,7 +73,9 @@ export default class ActivityFilter extends React.Component<
             services: false,
             swaps: false,
             lsps1: false,
-            lsps7: false
+            lsps7: false,
+            submarine: false,
+            reverse: false
         }
     };
 
@@ -106,7 +112,7 @@ export default class ActivityFilter extends React.Component<
         return newState;
     };
 
-    handleToggle = async (path: string | string[]) => {
+    handleToggle = async (path: string | (string | SwapState)[]) => {
         const { ActivityStore, SettingsStore } = this.props;
         const { filters, setFilters } = ActivityStore;
         const locale = SettingsStore.settings.locale;
@@ -122,73 +128,134 @@ export default class ActivityFilter extends React.Component<
             const isTurningOn = currentState === 'off';
 
             parentKeys.forEach((parentKey) => {
-                newFilters[parentKey] = isTurningOn;
                 const childStateKey =
                     SERVICES_CONFIG[parentKey as keyof typeof SERVICES_CONFIG];
-                newFilters[childStateKey] = this.updateAllChildStates(
-                    newFilters[childStateKey],
-                    isTurningOn
-                );
+                if (childStateKey === 'swapFilter') {
+                    newFilters.swaps = isTurningOn;
+                    newFilters.submarine = isTurningOn;
+                    newFilters.reverse = isTurningOn;
+                    Object.keys(newFilters.swapFilter.submarine).forEach(
+                        (s) =>
+                            (newFilters.swapFilter.submarine[s as SwapState] =
+                                isTurningOn)
+                    );
+                    Object.keys(newFilters.swapFilter.reverse).forEach(
+                        (s) =>
+                            (newFilters.swapFilter.reverse[s as SwapState] =
+                                isTurningOn)
+                    );
+                } else if (childStateKey) {
+                    newFilters[parentKey] = isTurningOn;
+                    newFilters[childStateKey] = this.updateAllChildStates(
+                        newFilters[childStateKey],
+                        isTurningOn
+                    );
+                }
             });
+        } else if (path === 'submarine' || path === 'reverse') {
+            const sectionName = path;
+            const isTurningOn = !filters[sectionName];
+            newFilters[sectionName] = isTurningOn;
 
-            if (!isTurningOn) {
-                const sectionsToCollapse = parentKeys.reduce((acc, key) => {
-                    (acc as any)[key] = false;
-                    return acc;
-                }, {});
-
-                this.setState((prevState) => ({
-                    expandedSections: {
-                        ...prevState.expandedSections,
-                        ...sectionsToCollapse
-                    }
-                }));
-            }
-        } else if (Array.isArray(path)) {
-            const [parentStateKey, childKey] = path;
-            const isTurningOn = !filters[parentStateKey]?.[childKey];
-            newFilters[parentStateKey][childKey] = isTurningOn;
-
-            const parentToggleKey = Object.keys(SERVICES_CONFIG).find(
-                (key) =>
-                    SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG] ===
-                    parentStateKey
+            Object.keys(newFilters.swapFilter[sectionName]).forEach(
+                (stateKey) => {
+                    newFilters.swapFilter[sectionName][stateKey as SwapState] =
+                        isTurningOn;
+                }
             );
 
-            if (parentToggleKey) {
+            if (isTurningOn) {
+                newFilters.swaps = true;
+            } else {
+                const otherSectionName =
+                    sectionName === 'submarine' ? 'reverse' : 'submarine';
+                if (filters[otherSectionName] === false) {
+                    newFilters.swaps = false;
+                }
+            }
+        } else if (Array.isArray(path)) {
+            const [group, state] = path as [
+                'submarine' | 'reverse' | 'lsps1State' | 'lsps7State',
+                any
+            ];
+
+            if (group === 'submarine' || group === 'reverse') {
+                const swapState = state as SwapState;
+                const isTurningOn = !filters.swapFilter[group][swapState];
+                newFilters.swapFilter[group][swapState] = isTurningOn;
+
                 if (isTurningOn) {
-                    newFilters[parentToggleKey] = true;
+                    newFilters[group] = true;
+                    newFilters.swaps = true;
                 } else {
                     const allChildrenOff = Object.values(
-                        newFilters[parentStateKey]
-                    ).every((child) => child === false);
-                    if (allChildrenOff) newFilters[parentToggleKey] = false;
+                        newFilters.swapFilter[group]
+                    ).every((c) => c === false);
+                    if (allChildrenOff) {
+                        newFilters[group] = false;
+                    }
+                }
+            } else {
+                const parentStateKey = group as 'lsps1State' | 'lsps7State';
+                const childKey = state as LSPOrderState;
+                const isTurningOn = !filters[parentStateKey]?.[childKey];
+                newFilters[parentStateKey][childKey] = isTurningOn;
+
+                const parentToggleKey = Object.keys(SERVICES_CONFIG).find(
+                    (key) =>
+                        SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG] ===
+                        parentStateKey
+                );
+
+                if (parentToggleKey) {
+                    if (isTurningOn) newFilters[parentToggleKey] = true;
+                    else {
+                        const allChildrenOff = Object.values(
+                            newFilters[parentStateKey]
+                        ).every((c) => c === false);
+                        if (allChildrenOff) newFilters[parentToggleKey] = false;
+                    }
                 }
             }
         } else {
             const key = path as keyof Filter;
-            const childStateKey =
-                SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG];
 
-            if (childStateKey) {
-                const childrenStates = Object.values(
-                    filters[childStateKey] || {}
+            if (key === 'swaps') {
+                const isTurningOn = !filters.swaps;
+                newFilters.swaps = isTurningOn;
+                newFilters.submarine = isTurningOn;
+                newFilters.reverse = isTurningOn;
+                Object.keys(newFilters.swapFilter.submarine).forEach(
+                    (s) =>
+                        (newFilters.swapFilter.submarine[s as SwapState] =
+                            isTurningOn)
                 );
-                const currentState = this.getParentState(
-                    childrenStates as boolean[]
-                );
-                const isTurningOn = currentState === 'off';
-                newFilters[key] = isTurningOn;
-
-                newFilters[childStateKey] = this.updateAllChildStates(
-                    newFilters[childStateKey],
-                    isTurningOn
+                Object.keys(newFilters.swapFilter.reverse).forEach(
+                    (s) =>
+                        (newFilters.swapFilter.reverse[s as SwapState] =
+                            isTurningOn)
                 );
             } else {
-                newFilters[key] = !filters[key];
+                const childStateKey =
+                    SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG];
+                if (childStateKey) {
+                    const childrenStates = Object.values(
+                        filters[childStateKey] || {}
+                    );
+                    const currentState = this.getParentState(
+                        childrenStates as boolean[]
+                    );
+                    const isTurningOn = currentState === 'off';
+                    newFilters[key] = isTurningOn;
+                    newFilters[childStateKey] = this.updateAllChildStates(
+                        newFilters[childStateKey],
+                        isTurningOn
+                    );
+                } else {
+                    newFilters[key] = !filters[key];
+                }
             }
         }
-
         await setFilters(newFilters, locale);
     };
 
@@ -205,15 +272,13 @@ export default class ActivityFilter extends React.Component<
 
     renderSeparator = () => (
         <View
-            style={{
-                height: 0.4,
-                backgroundColor: themeColor('separator')
-            }}
+            style={{ height: 0.4, backgroundColor: themeColor('separator') }}
         />
     );
 
     render() {
-        const { navigation, ActivityStore, SettingsStore } = this.props;
+        const { navigation, ActivityStore, SettingsStore, SwapStore } =
+            this.props;
         const {
             setStartDate,
             setEndDate,
@@ -256,9 +321,16 @@ export default class ActivityFilter extends React.Component<
             keysend
         } = filters;
 
-        const swapsState = this.getParentState(
-            Object.values(filters.swapState)
+        const submarineState = this.getParentState(
+            Object.values(filters.swapFilter.submarine)
         );
+        const reverseState = this.getParentState(
+            Object.values(filters.swapFilter.reverse)
+        );
+        const swapsState = this.getCombinedState([
+            submarineState,
+            reverseState
+        ]);
         const lsps1State = this.getParentState(
             Object.values(filters.lsps1State)
         );
@@ -384,130 +456,35 @@ export default class ActivityFilter extends React.Component<
                         section: 'swaps',
                         children: [
                             {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.created'
-                                ),
-                                var: ['swapState', SwapState.Created],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.invoiceExpired'
-                                ),
-                                var: ['swapState', SwapState.InvoiceExpired],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.invoiceFailedToPay'
-                                ),
-                                var: [
-                                    'swapState',
-                                    SwapState.InvoiceFailedToPay
-                                ],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.invoicePaid'
-                                ),
-                                var: ['swapState', SwapState.InvoicePaid],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.invoicePending'
-                                ),
-                                var: ['swapState', SwapState.InvoicePending],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.invoiceSettled'
-                                ),
-                                var: ['swapState', SwapState.InvoiceSettled],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.invoiceSet'
-                                ),
-                                var: ['swapState', SwapState.InvoiceSet],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.swapExpired'
-                                ),
-                                var: ['swapState', SwapState.SwapExpired],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionClaimPending'
-                                ),
-                                var: [
-                                    'swapState',
-                                    SwapState.TransactionClaimPending
-                                ],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionClaimed'
-                                ),
-                                var: [
-                                    'swapState',
-                                    SwapState.TransactionClaimed
-                                ],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionConfirmed'
-                                ),
-                                var: [
-                                    'swapState',
-                                    SwapState.TransactionConfirmed
-                                ],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionFailed'
-                                ),
-                                var: ['swapState', SwapState.TransactionFailed],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionLockupFailed'
-                                ),
-                                var: [
-                                    'swapState',
+                                label: localeString('views.Swaps.submarine'),
+                                section: 'submarine',
+                                states: [
+                                    SwapState.InvoiceSet,
+                                    SwapState.TransactionClaimPending,
+                                    SwapState.TransactionMempool,
+                                    SwapState.TransactionConfirmed,
+                                    SwapState.TransactionClaimed,
+                                    SwapState.InvoicePending,
+                                    SwapState.InvoicePaid,
+                                    SwapState.TransactionRefunded,
+                                    SwapState.InvoiceFailedToPay,
+                                    SwapState.SwapExpired,
                                     SwapState.TransactionLockupFailed
-                                ],
-                                type: 'Toggle'
+                                ]
                             },
                             {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionMempool'
-                                ),
-                                var: [
-                                    'swapState',
-                                    SwapState.TransactionMempool
-                                ],
-                                type: 'Toggle'
-                            },
-                            {
-                                label: localeString(
-                                    'views.ActivityFilter.swapState.transactionRefunded'
-                                ),
-                                var: [
-                                    'swapState',
-                                    SwapState.TransactionRefunded
-                                ],
-                                type: 'Toggle'
+                                label: localeString('views.Swaps.reverse'),
+                                section: 'reverse',
+                                states: [
+                                    SwapState.Created,
+                                    SwapState.TransactionMempool,
+                                    SwapState.TransactionFailed,
+                                    SwapState.TransactionConfirmed,
+                                    SwapState.InvoiceSettled,
+                                    SwapState.TransactionRefunded,
+                                    SwapState.SwapExpired,
+                                    SwapState.InvoiceExpired
+                                ]
                             }
                         ]
                     },
@@ -797,6 +774,313 @@ export default class ActivityFilter extends React.Component<
                                                                   'lsps1'
                                                                 ? lsps1State
                                                                 : lsps7State;
+                                                        if (
+                                                            child.var ===
+                                                            'swaps'
+                                                        ) {
+                                                            return (
+                                                                <React.Fragment
+                                                                    key={
+                                                                        child.var
+                                                                    }
+                                                                >
+                                                                    <TouchableOpacity
+                                                                        onPress={() =>
+                                                                            this.toggleSection(
+                                                                                'swaps'
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <ListItem
+                                                                            containerStyle={{
+                                                                                borderBottomWidth: 0,
+                                                                                backgroundColor:
+                                                                                    'transparent'
+                                                                            }}
+                                                                        >
+                                                                            <View
+                                                                                style={{
+                                                                                    marginRight: 0,
+                                                                                    justifyContent:
+                                                                                        'center'
+                                                                                }}
+                                                                            >
+                                                                                {isChildExpanded ? (
+                                                                                    <CaretDown
+                                                                                        fill={themeColor(
+                                                                                            'text'
+                                                                                        )}
+                                                                                        width={
+                                                                                            24
+                                                                                        }
+                                                                                        height={
+                                                                                            24
+                                                                                        }
+                                                                                    />
+                                                                                ) : (
+                                                                                    <CaretRight
+                                                                                        fill={themeColor(
+                                                                                            'text'
+                                                                                        )}
+                                                                                        width={
+                                                                                            24
+                                                                                        }
+                                                                                        height={
+                                                                                            24
+                                                                                        }
+                                                                                    />
+                                                                                )}
+                                                                            </View>
+                                                                            <ListItem.Content>
+                                                                                <ListItem.Title
+                                                                                    style={{
+                                                                                        color: themeColor(
+                                                                                            'text'
+                                                                                        ),
+                                                                                        fontFamily:
+                                                                                            'PPNeueMontreal-Book'
+                                                                                    }}
+                                                                                >
+                                                                                    {
+                                                                                        child.label
+                                                                                    }
+                                                                                </ListItem.Title>
+                                                                            </ListItem.Content>
+                                                                            <Switch
+                                                                                value={
+                                                                                    childSwitchState !==
+                                                                                    'off'
+                                                                                }
+                                                                                trackEnabledColor={
+                                                                                    childSwitchState ===
+                                                                                    'partial'
+                                                                                        ? themeColor(
+                                                                                              'secondaryText'
+                                                                                          )
+                                                                                        : themeColor(
+                                                                                              'highlight'
+                                                                                          )
+                                                                                }
+                                                                                onValueChange={() =>
+                                                                                    this.handleToggle(
+                                                                                        'swaps'
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </ListItem>
+                                                                    </TouchableOpacity>
+                                                                    {isChildExpanded && (
+                                                                        <View
+                                                                            style={{
+                                                                                paddingLeft: 20
+                                                                            }}
+                                                                        >
+                                                                            {this.renderSeparator()}
+                                                                            {child.children.map(
+                                                                                (
+                                                                                    subItem: any,
+                                                                                    subIndex: number
+                                                                                ) => {
+                                                                                    const isSubItemExpanded =
+                                                                                        expandedSections[
+                                                                                            subItem.section as keyof typeof expandedSections
+                                                                                        ];
+                                                                                    const subItemSwitchState =
+                                                                                        this.getParentState(
+                                                                                            subItem.states.map(
+                                                                                                (
+                                                                                                    state: SwapState
+                                                                                                ) =>
+                                                                                                    filters
+                                                                                                        .swapFilter[
+                                                                                                        subItem.section as
+                                                                                                            | 'submarine'
+                                                                                                            | 'reverse'
+                                                                                                    ][
+                                                                                                        state
+                                                                                                    ]
+                                                                                            )
+                                                                                        );
+                                                                                    return (
+                                                                                        <React.Fragment
+                                                                                            key={
+                                                                                                subItem.section
+                                                                                            }
+                                                                                        >
+                                                                                            <TouchableOpacity
+                                                                                                onPress={() =>
+                                                                                                    this.toggleSection(
+                                                                                                        subItem.section
+                                                                                                    )
+                                                                                                }
+                                                                                            >
+                                                                                                <ListItem
+                                                                                                    containerStyle={{
+                                                                                                        borderBottomWidth: 0,
+                                                                                                        backgroundColor:
+                                                                                                            'transparent'
+                                                                                                    }}
+                                                                                                >
+                                                                                                    <View
+                                                                                                        style={{
+                                                                                                            marginRight: 5,
+                                                                                                            justifyContent:
+                                                                                                                'center'
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        {isSubItemExpanded ? (
+                                                                                                            <CaretDown
+                                                                                                                fill={themeColor(
+                                                                                                                    'text'
+                                                                                                                )}
+                                                                                                                width={
+                                                                                                                    24
+                                                                                                                }
+                                                                                                                height={
+                                                                                                                    24
+                                                                                                                }
+                                                                                                            />
+                                                                                                        ) : (
+                                                                                                            <CaretRight
+                                                                                                                fill={themeColor(
+                                                                                                                    'text'
+                                                                                                                )}
+                                                                                                                width={
+                                                                                                                    24
+                                                                                                                }
+                                                                                                                height={
+                                                                                                                    24
+                                                                                                                }
+                                                                                                            />
+                                                                                                        )}
+                                                                                                    </View>
+                                                                                                    <ListItem.Content>
+                                                                                                        <ListItem.Title
+                                                                                                            style={{
+                                                                                                                color: themeColor(
+                                                                                                                    'text'
+                                                                                                                )
+                                                                                                            }}
+                                                                                                        >
+                                                                                                            {
+                                                                                                                subItem.label
+                                                                                                            }
+                                                                                                        </ListItem.Title>
+                                                                                                    </ListItem.Content>
+                                                                                                    <Switch
+                                                                                                        value={
+                                                                                                            subItemSwitchState !==
+                                                                                                            'off'
+                                                                                                        }
+                                                                                                        trackEnabledColor={
+                                                                                                            subItemSwitchState ===
+                                                                                                            'partial'
+                                                                                                                ? themeColor(
+                                                                                                                      'secondaryText'
+                                                                                                                  )
+                                                                                                                : themeColor(
+                                                                                                                      'highlight'
+                                                                                                                  )
+                                                                                                        }
+                                                                                                        onValueChange={() =>
+                                                                                                            this.handleToggle(
+                                                                                                                subItem.section
+                                                                                                            )
+                                                                                                        }
+                                                                                                    />
+                                                                                                </ListItem>
+                                                                                            </TouchableOpacity>
+                                                                                            {isSubItemExpanded && (
+                                                                                                <View
+                                                                                                    style={{
+                                                                                                        paddingLeft: 20
+                                                                                                    }}
+                                                                                                >
+                                                                                                    {this.renderSeparator()}
+                                                                                                    {subItem.states.map(
+                                                                                                        (
+                                                                                                            stateEnum: SwapState,
+                                                                                                            stateIndex: number
+                                                                                                        ) => (
+                                                                                                            <React.Fragment
+                                                                                                                key={
+                                                                                                                    stateEnum
+                                                                                                                }
+                                                                                                            >
+                                                                                                                <ListItem
+                                                                                                                    containerStyle={{
+                                                                                                                        backgroundColor:
+                                                                                                                            'transparent'
+                                                                                                                    }}
+                                                                                                                >
+                                                                                                                    <ListItem.Content>
+                                                                                                                        <ListItem.Title
+                                                                                                                            style={{
+                                                                                                                                color: themeColor(
+                                                                                                                                    'text'
+                                                                                                                                )
+                                                                                                                            }}
+                                                                                                                        >
+                                                                                                                            {SwapStore.formatStatus(
+                                                                                                                                stateEnum
+                                                                                                                            )}
+                                                                                                                        </ListItem.Title>
+                                                                                                                    </ListItem.Content>
+                                                                                                                    <Switch
+                                                                                                                        value={
+                                                                                                                            filters
+                                                                                                                                .swapFilter[
+                                                                                                                                subItem.section as
+                                                                                                                                    | 'submarine'
+                                                                                                                                    | 'reverse'
+                                                                                                                            ][
+                                                                                                                                stateEnum
+                                                                                                                            ] ||
+                                                                                                                            false
+                                                                                                                        }
+                                                                                                                        onValueChange={() =>
+                                                                                                                            this.handleToggle(
+                                                                                                                                [
+                                                                                                                                    subItem.section,
+                                                                                                                                    stateEnum
+                                                                                                                                ]
+                                                                                                                            )
+                                                                                                                        }
+                                                                                                                    />
+                                                                                                                </ListItem>
+                                                                                                                {stateIndex <
+                                                                                                                    subItem
+                                                                                                                        .states
+                                                                                                                        .length -
+                                                                                                                        1 &&
+                                                                                                                    this.renderSeparator()}
+                                                                                                            </React.Fragment>
+                                                                                                        )
+                                                                                                    )}
+                                                                                                </View>
+                                                                                            )}
+                                                                                            {subIndex <
+                                                                                                child
+                                                                                                    .children
+                                                                                                    .length -
+                                                                                                    1 &&
+                                                                                                this.renderSeparator()}
+                                                                                        </React.Fragment>
+                                                                                    );
+                                                                                }
+                                                                            )}
+                                                                        </View>
+                                                                    )}
+                                                                    {childIndex <
+                                                                        item
+                                                                            .children
+                                                                            .length -
+                                                                            1 &&
+                                                                        this.renderSeparator()}
+                                                                </React.Fragment>
+                                                            );
+                                                        }
+
                                                         return (
                                                             <React.Fragment
                                                                 key={child.var}
@@ -900,12 +1184,16 @@ export default class ActivityFilter extends React.Component<
                                                                                 grandchildIndex
                                                                             ) => (
                                                                                 <React.Fragment
-                                                                                    key={grandchild.var.join(
+                                                                                    key={(
+                                                                                        grandchild as any
+                                                                                    ).var.join(
                                                                                         '-'
                                                                                     )}
                                                                                 >
                                                                                     <ListItem
-                                                                                        key={grandchild.var.join(
+                                                                                        key={(
+                                                                                            grandchild as any
+                                                                                        ).var.join(
                                                                                             '-'
                                                                                         )}
                                                                                         containerStyle={{
@@ -930,17 +1218,24 @@ export default class ActivityFilter extends React.Component<
                                                                                         <Switch
                                                                                             value={
                                                                                                 filters[
-                                                                                                    grandchild
+                                                                                                    (
+                                                                                                        grandchild as any
+                                                                                                    )
                                                                                                         .var[0]
                                                                                                 ]?.[
-                                                                                                    grandchild
+                                                                                                    (
+                                                                                                        grandchild as any
+                                                                                                    )
                                                                                                         .var[1]
                                                                                                 ] ||
                                                                                                 false
                                                                                             }
                                                                                             onValueChange={() =>
                                                                                                 this.handleToggle(
-                                                                                                    grandchild.var
+                                                                                                    (
+                                                                                                        grandchild as any
+                                                                                                    )
+                                                                                                        .var
                                                                                                 )
                                                                                             }
                                                                                         />
