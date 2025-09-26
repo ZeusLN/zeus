@@ -25,9 +25,18 @@ export const LEGACY_ACTIVITY_FILTERS_KEY = 'zeus-activity-filters';
 export const ACTIVITY_FILTERS_KEY = 'zeus-activity-filters-v2';
 
 export const SERVICES_CONFIG = {
-    swaps: 'swapState',
+    swaps: 'swapFilter',
     lsps1: 'lsps1State',
     lsps7: 'lsps7State'
+};
+
+const createSwapStateRecord = (
+    initialValue: boolean
+): Record<SwapState, boolean> => {
+    return Object.values(SwapState).reduce((acc, state) => {
+        acc[state] = initialValue;
+        return acc;
+    }, {} as Record<SwapState, boolean>);
 };
 
 export interface Filter {
@@ -37,6 +46,8 @@ export interface Filter {
     cashu: boolean;
     sent: boolean;
     swaps: boolean;
+    submarine: boolean;
+    reverse: boolean;
     lsps1: boolean;
     lsps7: boolean;
     received: boolean;
@@ -51,7 +62,10 @@ export interface Filter {
     startDate?: Date;
     endDate?: Date;
     memo: string;
-    swapState: Record<SwapState, boolean>;
+    swapFilter: {
+        submarine: Record<SwapState, boolean>;
+        reverse: Record<SwapState, boolean>;
+    };
     lsps1State: Record<LSPOrderState, boolean>;
     lsps7State: Record<LSPOrderState, boolean>;
 }
@@ -62,6 +76,8 @@ export const DEFAULT_FILTERS = {
     cashu: true,
     sent: true,
     swaps: true,
+    submarine: true,
+    reverse: true,
     lsps1: true,
     lsps7: true,
     received: true,
@@ -78,22 +94,9 @@ export const DEFAULT_FILTERS = {
     startDate: undefined,
     endDate: undefined,
     memo: '',
-    swapState: {
-        [SwapState.Created]: true,
-        [SwapState.InvoiceSet]: true,
-        [SwapState.TransactionClaimPending]: true,
-        [SwapState.TransactionMempool]: true,
-        [SwapState.TransactionFailed]: true,
-        [SwapState.TransactionClaimed]: true,
-        [SwapState.InvoiceSettled]: true,
-        [SwapState.TransactionRefunded]: true,
-        [SwapState.InvoiceFailedToPay]: true,
-        [SwapState.SwapExpired]: true,
-        [SwapState.InvoiceExpired]: true,
-        [SwapState.TransactionLockupFailed]: true,
-        [SwapState.InvoicePending]: true,
-        [SwapState.InvoicePaid]: true,
-        [SwapState.TransactionConfirmed]: true
+    swapFilter: {
+        submarine: createSwapStateRecord(true),
+        reverse: createSwapStateRecord(true)
     },
     lsps1State: {
         [LSPOrderState.CREATED]: true,
@@ -150,6 +153,8 @@ export default class ActivityStore {
             onChain: true,
             cashu: true,
             swaps: true,
+            submarine: true,
+            reverse: true,
             lsps1: true,
             lsps7: true,
             sent: false,
@@ -165,7 +170,7 @@ export default class ActivityStore {
             startDate: undefined,
             endDate: undefined,
             memo: '',
-            swapState: { ...DEFAULT_FILTERS.swapState },
+            swapFilter: { ...DEFAULT_FILTERS.swapFilter },
             lsps1State: { ...DEFAULT_FILTERS.lsps1State },
             lsps7State: { ...DEFAULT_FILTERS.lsps7State }
         };
@@ -397,9 +402,15 @@ export default class ActivityStore {
                 this.filters = {
                     ...DEFAULT_FILTERS,
                     ...parsedFilters,
-                    swapState: {
-                        ...DEFAULT_FILTERS.swapState,
-                        ...(parsedFilters.swapState || {})
+                    swapFilter: {
+                        submarine: {
+                            ...DEFAULT_FILTERS.swapFilter.submarine,
+                            ...(parsedFilters.swapFilter?.submarine || {})
+                        },
+                        reverse: {
+                            ...DEFAULT_FILTERS.swapFilter.reverse,
+                            ...(parsedFilters.swapFilter?.reverse || {})
+                        }
                     },
                     lsps1State: {
                         ...DEFAULT_FILTERS.lsps1State,
@@ -426,9 +437,15 @@ export default class ActivityStore {
         this.filters = {
             ...DEFAULT_FILTERS,
             ...filters,
-            swapState: {
-                ...DEFAULT_FILTERS.swapState,
-                ...filters.swapState
+            swapFilter: {
+                submarine: {
+                    ...DEFAULT_FILTERS.swapFilter.submarine,
+                    ...filters.swapFilter?.submarine
+                },
+                reverse: {
+                    ...DEFAULT_FILTERS.swapFilter.reverse,
+                    ...filters.swapFilter?.reverse
+                }
             },
             lsps1State: {
                 ...DEFAULT_FILTERS.lsps1State,

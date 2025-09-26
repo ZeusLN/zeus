@@ -50,9 +50,23 @@ class ActivityFilterUtils {
             );
         } else {
             filteredActivity = filteredActivity.filter((activity) => {
-                if (!(activity instanceof Swap)) return true;
+                if (!(activity instanceof Swap)) {
+                    return true;
+                }
 
-                return filter.swapState[activity.status] === true;
+                const isSubmarine = activity.isSubmarineSwap;
+                const isReverse = activity.isReverseSwap;
+
+                if (isSubmarine && filter.submarine) {
+                    return (
+                        filter.swapFilter.submarine[activity.status] === true
+                    );
+                }
+                if (isReverse && filter.reverse) {
+                    return filter.swapFilter.reverse[activity.status] === true;
+                }
+
+                return false;
             });
         }
 
