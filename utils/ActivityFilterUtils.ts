@@ -7,12 +7,14 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import WithdrawalRequest from '../models/WithdrawalRequest';
+import Swap from '../models/Swap';
+import { LSPOrderState } from '../models/LSP';
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<Invoice | Payment | Transaction | WithdrawalRequest>,
+        activities: Array<any>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction | WithdrawalRequest> {
+    ): Array<any> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -40,6 +42,90 @@ class ActivityFilterUtils {
                         activity instanceof CashuToken
                     )
             );
+        }
+
+        if (filter.swaps == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => !(activity instanceof Swap)
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (!(activity instanceof Swap)) {
+                    return true;
+                }
+
+                const isSubmarine = activity.isSubmarineSwap;
+                const isReverse = activity.isReverseSwap;
+
+                if (isSubmarine && filter.submarine) {
+                    return (
+                        filter.swapFilter.submarine[activity.status] === true
+                    );
+                }
+                if (isReverse && filter.reverse) {
+                    return filter.swapFilter.reverse[activity.status] === true;
+                }
+
+                return false;
+            });
+        }
+
+        if (filter.lsps1 == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS1Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS1Order') return true;
+
+                const state = activity.state as LSPOrderState;
+                if (
+                    filter.lsps1State[LSPOrderState.CREATED] &&
+                    state === LSPOrderState.CREATED
+                )
+                    return true;
+                if (
+                    filter.lsps1State[LSPOrderState.COMPLETED] &&
+                    state === LSPOrderState.COMPLETED
+                )
+                    return true;
+                if (
+                    filter.lsps1State[LSPOrderState.FAILED] &&
+                    state === LSPOrderState.FAILED
+                )
+                    return true;
+
+                return false;
+            });
+        }
+
+        if (filter.lsps7 === false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS7Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS7Order') return true;
+
+                const state = activity.state as LSPOrderState;
+                if (
+                    filter.lsps7State[LSPOrderState.CREATED] &&
+                    state === LSPOrderState.CREATED
+                )
+                    return true;
+                if (
+                    filter.lsps7State[LSPOrderState.COMPLETED] &&
+                    state === LSPOrderState.COMPLETED
+                )
+                    return true;
+                if (
+                    filter.lsps7State[LSPOrderState.FAILED] &&
+                    state === LSPOrderState.FAILED
+                )
+                    return true;
+
+                return false;
+            });
         }
 
         if (filter.sent == false) {
