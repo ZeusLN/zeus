@@ -285,6 +285,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
+            NostrWalletConnectStore.reset();
         } else if (nextAppState === 'inactive') {
             if (Platform.OS === 'ios') {
                 NostrWalletConnectStore.sendHandoffRequest().catch((error) => {
@@ -770,7 +771,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting) {
             try {
-                NostrWalletConnectStore.initializeServiceWithRetry();
+                NostrWalletConnectStore.initializeService();
             } catch (error) {
                 console.warn(
                     'Failed to initialize Nostr Wallet Connect service:',
