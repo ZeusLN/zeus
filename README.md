@@ -156,7 +156,9 @@ All releases and all maintainer commits as of October 20, 2021 are signed by key
 
 ## Donations
 
-If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via our [BTCPayServer portal](https://pay.zeusln.app/), via Lightning Address (tips@pay.zeusln.app), or via PayNym ([+holymorning7d1](http://my.paynym.is/+holymorning7d1)). You can also become a [community sponsor](https://zeusln.com/about#communitySponsors) and have your Twitter or Nostr avatar displayed on our website and in-app.
+If you'd like to help cover the development costs of running the ZEUS project you can send a payment to us via our [BTCPayServer portal](https://pay.zeusln.app/), via Lightning Address (tips@pay.zeusln.app), or via PayNym ([+holymorning7d1](http://my.paynym.is/+holymorning7d1)). You can also become a [community sponsor](https://zeusln.com/about#communitySponsors) and have your Twitter or Nostr avatar displayed on our website and in-app.
+
+As of v0.11.5, you can also donate an additional percentage of each Lightning payment made in the wallet. You can set your donation percentage under `Menu` > `Support ZEUS` > `Add a Tip with Each Payment` or under `Payment settings`.
 
 Thank you.
 
