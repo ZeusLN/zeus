@@ -119,61 +119,23 @@ export default class ActivityFilter extends React.Component<
 
         const newFilters = JSON.parse(JSON.stringify(filters));
 
-        if (path === 'services') {
-            const parentKeys = Object.keys(SERVICES_CONFIG);
-            const parentStates = parentKeys.map(
-                (key) => filters[key as keyof Filter]
+        const toggleAllSwapFilters = (shouldTurnOn: boolean) => {
+            newFilters.swaps = shouldTurnOn;
+            newFilters.submarine = shouldTurnOn;
+            newFilters.reverse = shouldTurnOn;
+            Object.keys(newFilters.swapFilter.submarine).forEach(
+                (s) =>
+                    (newFilters.swapFilter.submarine[s as SwapState] =
+                        shouldTurnOn)
             );
-            const currentState = this.getParentState(parentStates);
-            const isTurningOn = currentState === 'off';
-
-            parentKeys.forEach((parentKey) => {
-                const childStateKey =
-                    SERVICES_CONFIG[parentKey as keyof typeof SERVICES_CONFIG];
-                if (childStateKey === 'swapFilter') {
-                    newFilters.swaps = isTurningOn;
-                    newFilters.submarine = isTurningOn;
-                    newFilters.reverse = isTurningOn;
-                    Object.keys(newFilters.swapFilter.submarine).forEach(
-                        (s) =>
-                            (newFilters.swapFilter.submarine[s as SwapState] =
-                                isTurningOn)
-                    );
-                    Object.keys(newFilters.swapFilter.reverse).forEach(
-                        (s) =>
-                            (newFilters.swapFilter.reverse[s as SwapState] =
-                                isTurningOn)
-                    );
-                } else if (childStateKey) {
-                    newFilters[parentKey] = isTurningOn;
-                    newFilters[childStateKey] = this.updateAllChildStates(
-                        newFilters[childStateKey],
-                        isTurningOn
-                    );
-                }
-            });
-        } else if (path === 'submarine' || path === 'reverse') {
-            const sectionName = path;
-            const isTurningOn = !filters[sectionName];
-            newFilters[sectionName] = isTurningOn;
-
-            Object.keys(newFilters.swapFilter[sectionName]).forEach(
-                (stateKey) => {
-                    newFilters.swapFilter[sectionName][stateKey as SwapState] =
-                        isTurningOn;
-                }
+            Object.keys(newFilters.swapFilter.reverse).forEach(
+                (s) =>
+                    (newFilters.swapFilter.reverse[s as SwapState] =
+                        shouldTurnOn)
             );
+        };
 
-            if (isTurningOn) {
-                newFilters.swaps = true;
-            } else {
-                const otherSectionName =
-                    sectionName === 'submarine' ? 'reverse' : 'submarine';
-                if (filters[otherSectionName] === false) {
-                    newFilters.swaps = false;
-                }
-            }
-        } else if (Array.isArray(path)) {
+        if (Array.isArray(path)) {
             const [group, state] = path as [
                 'submarine' | 'reverse' | 'lsps1State' | 'lsps7State',
                 any
@@ -196,7 +158,7 @@ export default class ActivityFilter extends React.Component<
                     }
                 }
             } else {
-                const parentStateKey = group as 'lsps1State' | 'lsps7State';
+                const parentStateKey = group;
                 const childKey = state as LSPOrderState;
                 const isTurningOn = !filters[parentStateKey]?.[childKey];
                 newFilters[parentStateKey][childKey] = isTurningOn;
@@ -208,8 +170,9 @@ export default class ActivityFilter extends React.Component<
                 );
 
                 if (parentToggleKey) {
-                    if (isTurningOn) newFilters[parentToggleKey] = true;
-                    else {
+                    if (isTurningOn) {
+                        newFilters[parentToggleKey] = true;
+                    } else {
                         const allChildrenOff = Object.values(
                             newFilters[parentStateKey]
                         ).every((c) => c === false);
@@ -218,41 +181,86 @@ export default class ActivityFilter extends React.Component<
                 }
             }
         } else {
-            const key = path as keyof Filter;
+            const key = path;
+            switch (key) {
+                case 'services': {
+                    const parentKeys = Object.keys(SERVICES_CONFIG);
+                    const parentStates = parentKeys.map(
+                        (k) => filters[k as keyof Filter]
+                    );
+                    const isTurningOn =
+                        this.getParentState(parentStates) === 'off';
 
-            if (key === 'swaps') {
-                const isTurningOn = !filters.swaps;
-                newFilters.swaps = isTurningOn;
-                newFilters.submarine = isTurningOn;
-                newFilters.reverse = isTurningOn;
-                Object.keys(newFilters.swapFilter.submarine).forEach(
-                    (s) =>
-                        (newFilters.swapFilter.submarine[s as SwapState] =
-                            isTurningOn)
-                );
-                Object.keys(newFilters.swapFilter.reverse).forEach(
-                    (s) =>
-                        (newFilters.swapFilter.reverse[s as SwapState] =
-                            isTurningOn)
-                );
-            } else {
-                const childStateKey =
-                    SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG];
-                if (childStateKey) {
+                    toggleAllSwapFilters(isTurningOn);
+
+                    ['lsps1', 'lsps7'].forEach((serviceKey) => {
+                        newFilters[serviceKey] = isTurningOn;
+                        const stateKey =
+                            SERVICES_CONFIG[
+                                serviceKey as keyof typeof SERVICES_CONFIG
+                            ];
+                        newFilters[stateKey] = this.updateAllChildStates(
+                            newFilters[stateKey],
+                            isTurningOn
+                        );
+                    });
+                    break;
+                }
+
+                case 'swaps': {
+                    const isTurningOn = !filters.swaps;
+                    toggleAllSwapFilters(isTurningOn);
+                    break;
+                }
+
+                case 'submarine':
+                case 'reverse': {
+                    const sectionName = key;
+                    const isTurningOn = !filters[sectionName];
+                    newFilters[sectionName] = isTurningOn;
+
+                    Object.keys(newFilters.swapFilter[sectionName]).forEach(
+                        (stateKey) =>
+                            (newFilters.swapFilter[sectionName][
+                                stateKey as SwapState
+                            ] = isTurningOn)
+                    );
+
+                    if (isTurningOn) {
+                        newFilters.swaps = true;
+                    } else {
+                        const otherSection =
+                            key === 'submarine' ? 'reverse' : 'submarine';
+                        if (filters[otherSection] === false) {
+                            newFilters.swaps = false;
+                        }
+                    }
+                    break;
+                }
+
+                case 'lsps1':
+                case 'lsps7': {
+                    const childStateKey =
+                        SERVICES_CONFIG[key as keyof typeof SERVICES_CONFIG];
                     const childrenStates = Object.values(
                         filters[childStateKey] || {}
                     );
-                    const currentState = this.getParentState(
-                        childrenStates as boolean[]
-                    );
-                    const isTurningOn = currentState === 'off';
+                    const isTurningOn =
+                        this.getParentState(childrenStates as boolean[]) ===
+                        'off';
                     newFilters[key] = isTurningOn;
                     newFilters[childStateKey] = this.updateAllChildStates(
                         newFilters[childStateKey],
                         isTurningOn
                     );
-                } else {
-                    newFilters[key] = !filters[key];
+                    break;
+                }
+
+                default: {
+                    if (key in newFilters) {
+                        newFilters[key] = !filters[key];
+                    }
+                    break;
                 }
             }
         }
