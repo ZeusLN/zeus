@@ -124,7 +124,7 @@ public class NostrConnectService extends Service {
         }
         notificationBuilder
             .setContentText(getLocalizedString("androidNotification.nwcRunningBackground"))
-            .setSmallIcon(R.drawable.notification_icon)
+            .setSmallIcon(R.drawable.ic_stat_ic_notification_nwc)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .addAction(0, getLocalizedString("androidNotification.nwcShutdown"), stopPendingIntent);
