@@ -1464,7 +1464,6 @@ export default class NostrWalletConnectStore {
                 ? this.cashuStore.totalBalanceSats
                 : (await this.balanceStore.getLightningBalance(true))
                       ?.lightningBalance;
-
             return {
                 result: {
                     balance: Number(balance) * MILLISATS_PER_SAT
@@ -2613,61 +2612,58 @@ export default class NostrWalletConnectStore {
                 eventId
             });
         }
-        await this.publishPendingEventToClient(
+        await this.publishEventToClient(
             connection,
-            request,
-            eventId,
-            response
+            request.method,
+            response,
+            eventId
         );
     }
-    private async publishPendingEventToClient(
+    // Publishing Events to Nostr client
+    private async publishEventToClient(
         connection: NWCConnection,
-        request: NWCRequest,
-        eventId: string,
-        response: any
-    ) {
-        try {
-            const servicePrivateKey = this.walletServiceKeys!.privateKey;
-            const servicePublicKey = this.walletServiceKeys!.publicKey;
-            const content = nip04.encrypt(
-                servicePrivateKey,
-                connection.pubkey,
-                JSON.stringify({
-                    result_type: request.method,
-                    ...(response?.error
-                        ? { error: response.error }
-                        : { result: response?.result })
-                })
-            );
+        method: string,
+        response: any,
+        eventId?: string
+    ): Promise<void> {
+        const servicePrivateKey = this.walletServiceKeys!.privateKey;
+        const servicePublicKey = this.walletServiceKeys!.publicKey;
+        const content = nip04.encrypt(
+            servicePrivateKey,
+            connection.pubkey,
+            JSON.stringify({
+                result_type: method,
+                ...(response?.error
+                    ? { error: response.error }
+                    : { result: response?.result })
+            })
+        );
+        let tags = [];
+        if (eventId) {
+            tags.push(['e', eventId, 'encryption', 'nip04 nip44_v2']);
+        }
+        const unsignedEvent: UnsignedEvent = {
+            kind: 23195,
+            tags,
+            content,
+            created_at: Math.floor(Date.now() / 1000),
+            pubkey: servicePublicKey
+        };
+        const signedEvent = {
+            ...unsignedEvent,
+            id: getEventHash(unsignedEvent),
+            sig: getSignature(unsignedEvent, servicePrivateKey)
+        };
 
-            const unsignedEvent: UnsignedEvent = {
-                kind: 23195,
-                tags: [['e', eventId]],
-                content,
-                created_at: Math.floor(Date.now() / 1000),
-                pubkey: servicePublicKey
-            };
-            const signedEvent = {
-                ...unsignedEvent,
-                id: getEventHash(unsignedEvent),
-                sig: getSignature(unsignedEvent, servicePrivateKey)
-            };
+        await this.retryWithBackoff(async () => {
             const relay = relayInit(connection.relayUrl);
             await relay.connect();
             try {
                 await relay.publish(signedEvent);
-                console.info(
-                    `NWC: Published response for pending event ${eventId} on relay ${connection.relayUrl}`
-                );
             } finally {
                 relay.close();
             }
-        } catch (publishError) {
-            console.error('NWC: Failed to publish response for pending event', {
-                publishError,
-                connection
-            });
-        }
+        }, MAX_RELAY_ATTEMPTS);
     }
     // For IOS server handoff
     @action
