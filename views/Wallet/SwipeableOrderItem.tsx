@@ -1,12 +1,12 @@
 import * as React from 'react';
-import { View, TouchableHighlight } from 'react-native';
+import { TouchableHighlight, Animated, StyleSheet } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
-import { Row } from '../../components/layout/Row';
 import OrderItem from './OrderItem';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface SwipeableOrderItemProps {
     item: any;
@@ -41,48 +41,53 @@ const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
                 .toFixed(2);
         }
 
-        const renderRightActions = () => (
-            <View
-                style={{
-                    margin: 0,
-                    alignContent: 'center',
-                    justifyContent: 'center',
-                    width: 280,
-                    marginVertical: 5
-                }}
-            >
-                <Row>
-                    <View style={{ flex: 1 }}>
-                        <Button
-                            onPress={onClickPaid}
-                            icon={{ name: 'payments', size: 25 }}
-                            containerStyle={{
-                                backgroundColor: 'green',
-                                height: '100%'
-                            }}
-                            iconOnly
-                        />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                        <Button
-                            onPress={onClickHide}
-                            icon={{ name: 'delete', size: 25 }}
-                            containerStyle={{
-                                backgroundColor: 'red',
-                                height: '100%'
-                            }}
-                            iconOnly
-                        />
-                    </View>
-                </Row>
-            </View>
-        );
+        const renderRightActions = (
+            _progress: Animated.AnimatedInterpolation<number>,
+            dragX: Animated.AnimatedInterpolation<number>
+        ) => {
+            const trans = dragX.interpolate({
+                inputRange: [-180, 0],
+                outputRange: [0, 180],
+                extrapolate: 'clamp'
+            });
+
+            return (
+                <Animated.View
+                    style={[
+                        styles.rightActionsContainer,
+                        { transform: [{ translateX: trans }] }
+                    ]}
+                >
+                    <Button
+                        onPress={onClickPaid}
+                        icon={{
+                            name: 'payments',
+                            size: 25,
+                            color: themeColor('text')
+                        }}
+                        containerStyle={styles.paidButton}
+                        iconOnly
+                    />
+                    <Button
+                        onPress={onClickHide}
+                        icon={{
+                            name: 'delete',
+                            size: 25,
+                            color: themeColor('text')
+                        }}
+                        containerStyle={styles.deleteButton}
+                        iconOnly
+                    />
+                </Animated.View>
+            );
+        };
 
         return (
             <Swipeable
                 ref={ref}
                 onSwipeableOpen={onSwipeableOpen}
                 renderRightActions={renderRightActions}
+                containerStyle={styles.swipeableContainer}
             >
                 <TouchableHighlight
                     onPress={() => {
@@ -106,5 +111,30 @@ const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
         );
     }
 );
+
+const styles = StyleSheet.create({
+    swipeableContainer: {
+        marginVertical: 5
+    },
+    rightActionsContainer: {
+        width: 180,
+        flexDirection: 'row'
+    },
+    paidButton: {
+        flex: 1,
+        backgroundColor: '#4CAF50',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 1
+    },
+    deleteButton: {
+        flex: 1,
+        backgroundColor: '#F44336',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center'
+    }
+});
 
 export default SwipeableOrderItem;
