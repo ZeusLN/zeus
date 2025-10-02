@@ -243,8 +243,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         ).plus(reverseInfo?.fees?.minerFees?.lockup || 0);
         const networkFee = networkFeeBigNum.toNumber();
 
-        const min = reverseInfo.limits.minimal || 0;
-        const max = reverseInfo.limits.maximal || 0;
+        const min = reverseInfo?.limits?.minimal || 0;
+        const max = reverseInfo?.limits?.maximal || 0;
         const minBN = new BigNumber(min);
         const maxBN = new BigNumber(max);
 
