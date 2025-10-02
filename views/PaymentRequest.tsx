@@ -143,7 +143,7 @@ export default class PaymentRequest extends React.Component<
         selectedIndex: null
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         this.isComponentMounted = true;
         const { SettingsStore, InvoicesStore } = this.props;
         const { getSettings, implementation } = SettingsStore;
