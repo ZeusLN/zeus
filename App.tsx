@@ -369,10 +369,6 @@ export default class App extends React.PureComponent {
                                                             // @ts-ignore:next-line
                                                             nav
                                                         );
-
-                                                        LinkingUtils.handleInitialUrl(
-                                                            nav as any
-                                                        );
                                                     }
                                                 }}
                                                 // @ts-ignore:next-line
