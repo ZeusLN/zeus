@@ -206,8 +206,12 @@ export default class PaymentRequest extends React.Component<
             return false;
         }
 
-        const min = this.calculateLimit(subInfo.limits.minimal || 0).toNumber();
-        const max = this.calculateLimit(subInfo.limits.maximal || 0).toNumber();
+        const min = this.calculateLimit(
+            subInfo?.limits?.minimal || 0
+        ).toNumber();
+        const max = this.calculateLimit(
+            subInfo?.limits?.maximal || 0
+        ).toNumber();
         const minBN = new BigNumber(min);
         const maxBN = new BigNumber(max);
 
