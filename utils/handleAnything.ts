@@ -613,6 +613,15 @@ const handleAnything = async (
                 switch (params.tag) {
                     case 'withdrawRequest':
                         if (isClipboardValue) return true;
+                        if (ecash) {
+                            return [
+                                'ChoosePaymentMethod',
+                                {
+                                    lnurlParams: params,
+                                    lightning: raw
+                                }
+                            ];
+                        }
                         return [
                             'Receive',
                             {
