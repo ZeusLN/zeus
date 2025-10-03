@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { LNURLWithdrawParams } from 'js-lnurl';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -20,6 +21,7 @@ interface ChoosePaymentMethodProps {
             lightning: string;
             lightningAddress: string;
             offer: string;
+            lnurlParams: LNURLWithdrawParams | undefined;
         }
     >;
 }
@@ -30,6 +32,7 @@ interface ChoosePaymentMethodState {
     lightning: string;
     lightningAddress: string;
     offer: string;
+    lnurlParams: LNURLWithdrawParams | undefined;
 }
 
 export default class ChoosePaymentMethod extends React.Component<
@@ -41,13 +44,20 @@ export default class ChoosePaymentMethod extends React.Component<
         satAmount: '',
         lightning: '',
         lightningAddress: '',
-        offer: ''
+        offer: '',
+        lnurlParams: undefined
     };
 
     componentDidMount() {
         const { route } = this.props;
-        const { value, satAmount, lightning, lightningAddress, offer } =
-            route.params ?? {};
+        const {
+            value,
+            satAmount,
+            lightning,
+            lightningAddress,
+            offer,
+            lnurlParams
+        } = route.params ?? {};
 
         if (value) {
             this.setState({ value });
@@ -68,12 +78,22 @@ export default class ChoosePaymentMethod extends React.Component<
         if (offer) {
             this.setState({ offer });
         }
+
+        if (lnurlParams) {
+            this.setState({ lnurlParams });
+        }
     }
 
     render() {
         const { navigation } = this.props;
-        const { value, satAmount, lightning, lightningAddress, offer } =
-            this.state;
+        const {
+            value,
+            satAmount,
+            lightning,
+            lightningAddress,
+            offer,
+            lnurlParams
+        } = this.state;
 
         return (
             <Screen>
@@ -93,6 +113,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     lightning={lightning}
                     lightningAddress={lightningAddress}
                     offer={offer}
+                    lnurlParams={lnurlParams}
                 />
                 {!!value && !!lightning && (
                     <Button
