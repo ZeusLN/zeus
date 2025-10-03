@@ -105,4 +105,16 @@ static void ClearKeychainIfNecessary() {
   [RNNotifications didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+  NSLog(@"App entered background");
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+  NSLog(@"App will enter foreground");
+}
+
+- (void)applicationWillTerminate:(UIApplication *)application {
+  NSLog(@"App will terminate");
+}
+
 @end
