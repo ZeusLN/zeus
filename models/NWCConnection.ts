@@ -1,4 +1,4 @@
-import { computed } from 'mobx';
+import { action, computed, observable } from 'mobx';
 import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -11,7 +11,6 @@ export type BudgetRenewalType =
     | 'weekly'
     | 'monthly'
     | 'yearly';
-
 export interface NWCConnectionData {
     id: string;
     name: string;
@@ -41,28 +40,28 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export default class NWCConnection extends BaseModel {
     id: string;
-    name: string;
-    icon?: any;
-    description?: string;
+    @observable name: string;
+    @observable icon?: any;
+    @observable description?: string;
     pubkey: string;
     relayUrl: string;
-    permissions: Nip47SingleMethod[];
+    @observable permissions: Nip47SingleMethod[];
     createdAt: Date;
-    lastUsed?: Date;
-    totalSpendSats: number;
-    maxAmountSats?: number;
-    budgetRenewal?: BudgetRenewalType;
-    expiresAt?: Date;
-    lastBudgetReset?: Date;
-    metadata?: any;
+    @observable lastUsed?: Date;
+    @observable totalSpendSats: number;
+    @observable maxAmountSats?: number;
+    @observable budgetRenewal?: BudgetRenewalType;
+    @observable expiresAt?: Date;
+    @observable lastBudgetReset?: Date;
+    @observable metadata?: any;
 
     constructor(data?: NWCConnectionData) {
         super(data);
 
-        this.totalSpendSats = Number(this.totalSpendSats || 0);
+        this.totalSpendSats = Math.floor(Number(this.totalSpendSats || 0));
         this.maxAmountSats =
             this.maxAmountSats !== undefined
-                ? Number(this.maxAmountSats)
+                ? Math.floor(Number(this.maxAmountSats))
                 : undefined;
 
         this.normalizeDates();
@@ -83,17 +82,14 @@ export default class NWCConnection extends BaseModel {
             }
         });
     }
-
     @computed public get isExpired(): boolean {
         return this.expiresAt ? new Date() > this.expiresAt : false;
     }
-
     @computed public get statusText(): string {
         return this.isExpired
             ? localeString('channel.expirationStatus.expired')
             : localeString('general.active');
     }
-
     @computed public get hasRecentActivity(): boolean {
         if (!this.lastUsed) return false;
 
@@ -129,7 +125,6 @@ export default class NWCConnection extends BaseModel {
         ) {
             return false;
         }
-
         // If no last reset, needs reset
         if (!this.lastBudgetReset) {
             return true;
@@ -157,27 +152,74 @@ export default class NWCConnection extends BaseModel {
         return this.totalSpendSats + amountSats <= this.maxAmountSats!;
     }
 
+    @action
     public resetBudget(): void {
         this.totalSpendSats = 0;
         this.lastBudgetReset = new Date();
     }
 
-    public addSpending(amountSats: number): void {
+    @action
+    public checkAndResetBudgetIfNeeded(): boolean {
+        if (this.needsBudgetReset) {
+            this.resetBudget();
+            return true;
+        }
+        return false;
+    }
+
+    private validateAmount(amountSats: number): void {
+        if (!Number.isInteger(amountSats) || amountSats < 0) {
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.error.invalidAmount'
+                )
+            );
+        }
+    }
+    @action
+    public validateBudgetBeforePayment(amountSats: number): void {
+        this.validateAmount(amountSats);
+
+        if (this.isExpired) {
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.error.connectionExpired'
+                )
+            );
+        }
+
+        this.checkAndResetBudgetIfNeeded();
+
+        if (this.hasBudgetLimit && !this.canSpend(amountSats)) {
+            const error = new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
+                    {
+                        amount: amountSats.toString(),
+                        remaining: this.remainingBudget.toString()
+                    }
+                )
+            );
+            (error as any).code = 'QUOTA_EXCEEDED';
+            throw error;
+        }
+    }
+
+    @action
+    public trackSpending(amountSats: number): void {
+        this.validateAmount(amountSats);
         this.totalSpendSats += amountSats;
     }
 
     public hasPermission(permission: Nip47SingleMethod): boolean {
         return this.permissions?.includes(permission) || false;
     }
-
     public getDaysUntilExpiry(): number | null {
         if (!this.expiresAt) return null;
-
         const now = new Date();
         const timeDiff = this.expiresAt.getTime() - now.getTime();
         return Math.ceil(timeDiff / ONE_DAY_MS);
     }
-
     public getDaysSinceLastUsed(): number | null {
         if (!this.lastUsed) return null;
 

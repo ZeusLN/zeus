@@ -21,8 +21,10 @@ export interface PermissionType {
     title: string;
     description: string;
 }
-
 export default class NostrConnectUtils {
+    static async delay(ms: number): Promise<void> {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
     }
