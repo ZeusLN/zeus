@@ -6,7 +6,8 @@ import {
     StyleSheet,
     Text,
     View,
-    TouchableOpacity
+    TouchableOpacity,
+    ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -21,10 +22,11 @@ import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
-import { Row } from '../components/layout/Row';
 import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
+import { Row } from '../components/layout/Row';
 import ModalBox from '../components/ModalBox';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 import BalanceStore from '../stores/BalanceStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -32,11 +34,13 @@ import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import ChannelsStore from '../stores/ChannelsStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import Channel from '../models/Channel';
 
 import Storage from '../storage';
 
@@ -45,8 +49,23 @@ import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import Gift from '../assets/images/SVG/gift.svg';
 import CopyBox from '../components/CopyBox';
-import LoadingIndicator from '../components/LoadingIndicator';
 import BigNumber from 'bignumber.js';
+
+const PROCESSING_TIMEOUT_MS = 3000;
+
+interface RebalanceResult {
+    success: boolean;
+    error?: string;
+    sourceChannel: Channel;
+    destinationChannel: Channel;
+    rebalanceAmount: number;
+    fee?: number;
+    paymentPreimage?: string;
+    paymentHash?: string;
+    paymentRoute?: any;
+    route?: any;
+    isProcessing?: boolean;
+}
 
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
@@ -59,10 +78,14 @@ interface SendingLightningProps {
         {
             donationAmount?: string;
             enableDonations: boolean;
+            rebalanceData?: RebalanceResult;
+            isRebalance?: boolean;
+            currentRebalanceState?: any;
         }
     >;
     TransactionsStore: TransactionsStore;
     NodeInfoStore: NodeInfoStore;
+    ChannelsStore: ChannelsStore;
 }
 
 interface SendingLightningState {
@@ -79,6 +102,7 @@ interface SendingLightningState {
     donationPathExists: boolean;
     donationFee: string;
     donationFeePercentage: string;
+    isInitialProcessing: boolean;
 }
 
 @inject(
@@ -87,7 +111,8 @@ interface SendingLightningState {
     'PaymentsStore',
     'SettingsStore',
     'TransactionsStore',
-    'NodeInfoStore'
+    'NodeInfoStore',
+    'ChannelsStore'
 )
 @observer
 export default class SendingLightning extends React.Component<
@@ -95,11 +120,15 @@ export default class SendingLightning extends React.Component<
     SendingLightningState
 > {
     private backPressSubscription: NativeEventSubscription;
-
+    private navigationUnsubscribe: () => void;
     focusListener: any;
 
     constructor(props: SendingLightningProps) {
         super(props);
+
+        const rebalanceData = this.getRebalanceData();
+        const isProcessing = rebalanceData?.isProcessing || false;
+
         this.state = {
             storedNotes: '',
             currentPayment: null,
@@ -113,16 +142,35 @@ export default class SendingLightning extends React.Component<
             donationEnhancedPath: null,
             donationPathExists: false,
             donationFee: '',
-            donationFeePercentage: ''
+            donationFeePercentage: '',
+            isInitialProcessing: isProcessing
         };
     }
 
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
+        if (this.state.isInitialProcessing) {
+            setTimeout(() => {
+                this.setState({ isInitialProcessing: false });
+            }, PROCESSING_TIMEOUT_MS);
+        }
+
         this.focusListener = navigation.addListener('focus', () => {
             this.setState({ showDonationInfo: false });
-            const noteKey: string = TransactionsStore.noteKey;
+            const isRebalance = this.isRebalanceMode();
+            const rebalanceData = this.getRebalanceData();
+
+            const noteKey: string | null =
+                TransactionsStore.noteKey ||
+                (isRebalance &&
+                    rebalanceData &&
+                    `note-${
+                        rebalanceData.paymentHash ||
+                        rebalanceData.paymentPreimage
+                    }`) ||
+                null;
+
             if (!noteKey) return;
             Storage.getItem(noteKey)
                 .then((storedNotes) => {
@@ -135,10 +183,40 @@ export default class SendingLightning extends React.Component<
                 });
         });
 
+        this.navigationUnsubscribe = this.focusListener;
+
+        const isRebalance = this.isRebalanceMode();
+        const rebalanceData = this.getRebalanceData();
+        const initialNoteKey: string | null =
+            TransactionsStore.noteKey ||
+            (isRebalance &&
+                rebalanceData &&
+                `note-${
+                    rebalanceData.paymentHash || rebalanceData.paymentPreimage
+                }`) ||
+            null;
+
+        if (initialNoteKey) {
+            Storage.getItem(initialNoteKey)
+                .then((storedNotes) => {
+                    if (storedNotes) {
+                        this.setState({ storedNotes });
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        }
+
         this.backPressSubscription = BackHandler.addEventListener(
             'hardwareBackPress',
             this.handleBackPress.bind(this)
         );
+
+        if (this.successfullySent(TransactionsStore)) {
+            this.fetchPayments();
+            this.setState({ wasSuccessful: true });
+        }
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
@@ -170,6 +248,91 @@ export default class SendingLightning extends React.Component<
         ) {
             this.handleDonationPayment(donationAmount);
         }
+    }
+
+    private isRebalanceMode(): boolean {
+        return !!this.props.route?.params?.isRebalance;
+    }
+
+    private getRebalanceData(): RebalanceResult | null {
+        return this.props.route?.params?.rebalanceData || null;
+    }
+
+    private handleTryAgain = () => {
+        const { navigation } = this.props;
+        const isRebalance = this.isRebalanceMode();
+        const currentRebalanceState =
+            this.props.route?.params?.currentRebalanceState;
+
+        if (isRebalance && currentRebalanceState) {
+            navigation.replace('Rebalance', {
+                restoreRebalanceState: currentRebalanceState
+            });
+        } else {
+            navigation.goBack();
+        }
+    };
+
+    private navigateToRebalanceSummary() {
+        const { navigation } = this.props;
+        const rebalanceData = this.getRebalanceData();
+        const { currentPayment } = this.state;
+
+        if (!rebalanceData) return;
+
+        const sourceChannel = { ...rebalanceData.sourceChannel };
+        const destinationChannel = { ...rebalanceData.destinationChannel };
+
+        const originalSourceLocal = Number(sourceChannel.local_balance) || 0;
+        const originalSourceRemote = Number(sourceChannel.remote_balance) || 0;
+
+        const newSourceLocal = Math.max(
+            0,
+            originalSourceLocal - rebalanceData.rebalanceAmount
+        );
+        const newSourceRemote =
+            originalSourceRemote + rebalanceData.rebalanceAmount;
+
+        sourceChannel.local_balance = newSourceLocal.toString();
+        sourceChannel.remote_balance = newSourceRemote.toString();
+
+        const originalDestLocal = Number(destinationChannel.local_balance) || 0;
+        const originalDestRemote =
+            Number(destinationChannel.remote_balance) || 0;
+
+        const newDestLocal = originalDestLocal + rebalanceData.rebalanceAmount;
+        const newDestRemote = Math.max(
+            0,
+            originalDestRemote - rebalanceData.rebalanceAmount
+        );
+
+        destinationChannel.local_balance = newDestLocal.toString();
+        destinationChannel.remote_balance = newDestRemote.toString();
+
+        let actualFee = rebalanceData.fee || 0;
+
+        if (currentPayment?.getFee) {
+            actualFee = Number(currentPayment.getFee);
+        } else if (currentPayment?.fee_msat) {
+            actualFee = Number(currentPayment.fee_msat) / 1000;
+        }
+
+        const routingEvent = {
+            fee: actualFee,
+            rebalanceFees: actualFee,
+            rebalanceAmount: rebalanceData.rebalanceAmount,
+            inAmt: rebalanceData.rebalanceAmount,
+            outAmt: rebalanceData.rebalanceAmount,
+            inChannelId: sourceChannel.chan_id || sourceChannel.channel_id,
+            outChannelId:
+                destinationChannel.chan_id || destinationChannel.channel_id,
+            getTime: new Date().toLocaleString(),
+            isRebalance: true,
+            sourceChannel,
+            destinationChannel
+        };
+
+        navigation.navigate('RoutingEvent', { routingEvent });
     }
 
     handleDonationPayment = async (donationAmount: string) => {
@@ -507,22 +670,36 @@ export default class SendingLightning extends React.Component<
 
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
+
         try {
             const payments = await PaymentsStore.getPayments({
                 maxPayments: 5,
                 reversed: true
             });
-            const matchingPayment = payments.find(
+
+            let matchingPayment = payments.find(
                 (payment: any) =>
                     payment.payment_preimage ===
-                    TransactionsStore.payment_preimage
+                        TransactionsStore.payment_preimage ||
+                    payment.getPreimage === TransactionsStore.payment_preimage
             );
+
+            if (!matchingPayment && TransactionsStore.payment_hash) {
+                matchingPayment = payments.find(
+                    (payment: any) =>
+                        payment.payment_hash ===
+                            TransactionsStore.payment_hash ||
+                        payment.paymentHash === TransactionsStore.payment_hash
+                );
+            }
+
             this.setState({ currentPayment: matchingPayment });
         } catch (error) {
             this.setState({ currentPayment: null });
             console.error('Failed to fetch payments', error);
         }
     };
+
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
         if (
@@ -541,9 +718,23 @@ export default class SendingLightning extends React.Component<
             this.focusListener();
         }
         this.backPressSubscription?.remove();
+
+        if (this.navigationUnsubscribe) {
+            this.navigationUnsubscribe();
+        }
     }
 
     private successfullySent(transactionStore: TransactionsStore): boolean {
+        const { SettingsStore } = this.props;
+
+        if (SettingsStore.implementation === 'cln-rest') {
+            return (
+                transactionStore.status === 'complete' ||
+                transactionStore.status === 'SUCCEEDED' ||
+                transactionStore.status === 2
+            );
+        }
+
         return (
             transactionStore.payment_route ||
             transactionStore.status === 'complete' ||
@@ -579,15 +770,20 @@ export default class SendingLightning extends React.Component<
             currentPayment,
             donationHandled,
             paymentType,
-            payingDonation
+            payingDonation,
+            isInitialProcessing
         } = this.state;
 
-        const enhancedPath = currentPayment?.enhancedPath;
+        const isRebalance = this.isRebalanceMode();
+        const rebalanceData = this.getRebalanceData();
 
+        const success = isRebalance
+            ? rebalanceData?.success
+            : this.successfullySent(TransactionsStore);
+
+        const enhancedPath = currentPayment?.enhancedPath;
         const paymentPathExists =
             enhancedPath?.length > 0 && enhancedPath[0][0];
-
-        const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
 
@@ -597,7 +793,7 @@ export default class SendingLightning extends React.Component<
         return (
             <Screen>
                 {this.renderInfoModal()}
-                {loading && (
+                {(isRebalance ? isInitialProcessing || loading : loading) && (
                     <View
                         style={{
                             alignItems: 'center',
@@ -610,13 +806,18 @@ export default class SendingLightning extends React.Component<
                             style={{
                                 color: themeColor('text'),
                                 fontFamily: 'PPNeueMontreal-Book',
-                                // paddingBottom for centering
                                 paddingBottom: windowSize.height / 10,
                                 fontSize:
                                     windowSize.width * windowSize.scale * 0.014
                             }}
                         >
-                            {localeString('views.SendingLightning.sending')}
+                            {isRebalance
+                                ? localeString(
+                                      'views.SendingLightning.sendingRebalance'
+                                  )
+                                : localeString(
+                                      'views.SendingLightning.sending'
+                                  )}
                         </Text>
                     </View>
                 )}
@@ -651,8 +852,15 @@ export default class SendingLightning extends React.Component<
                     </View>
                 )}
 
-                {!loading && (
-                    <>
+                {!(isRebalance ? isInitialProcessing || loading : loading) && (
+                    <ScrollView
+                        style={{ flex: 1 }}
+                        contentContainerStyle={{
+                            flexGrow: 1,
+                            paddingBottom: 20
+                        }}
+                        showsVerticalScrollIndicator={false}
+                    >
                         <View
                             style={{
                                 ...styles.content,
@@ -666,6 +874,7 @@ export default class SendingLightning extends React.Component<
                                     fill={themeColor('highlight')}
                                 />
                             )}
+
                             {!!success && !error && (
                                 <>
                                     <PaidIndicator />
@@ -684,9 +893,13 @@ export default class SendingLightning extends React.Component<
                                                     0.017
                                             }}
                                         >
-                                            {localeString(
-                                                'views.SendingLightning.success'
-                                            )}
+                                            {isRebalance
+                                                ? localeString(
+                                                      'views.SendingLightning.rebalanceSuccess'
+                                                  )
+                                                : localeString(
+                                                      'views.SendingLightning.success'
+                                                  )}
                                         </Text>
                                         {paymentDuration !== null && (
                                             <Text
@@ -750,7 +963,6 @@ export default class SendingLightning extends React.Component<
                                     <View
                                         style={{
                                             padding: 20,
-                                            marginTop: 10,
                                             marginBottom: 10,
                                             alignItems: 'center'
                                         }}
@@ -780,7 +992,9 @@ export default class SendingLightning extends React.Component<
                                         </Text>
                                     </View>
                                 )}
-                            {(!!error || !!payment_error) &&
+                            {(!!error ||
+                                !!payment_error ||
+                                (isRebalance && !!rebalanceData?.error)) &&
                                 !LnurlPayStore.isZaplocker && (
                                     <View style={{ alignItems: 'center' }}>
                                         <ErrorIcon
@@ -799,7 +1013,10 @@ export default class SendingLightning extends React.Component<
                                         >
                                             {localeString('general.error')}
                                         </Text>
-                                        {(payment_error || error_msg) && (
+                                        {(payment_error ||
+                                            error_msg ||
+                                            (isRebalance &&
+                                                rebalanceData?.error)) && (
                                             <Text
                                                 style={{
                                                     color: themeColor('text'),
@@ -816,7 +1033,10 @@ export default class SendingLightning extends React.Component<
                                                     padding: 5
                                                 }}
                                             >
-                                                {payment_error || error_msg}
+                                                {payment_error ||
+                                                    error_msg ||
+                                                    (isRebalance &&
+                                                        rebalanceData?.error)}
                                             </Text>
                                         )}
                                     </View>
@@ -842,8 +1062,14 @@ export default class SendingLightning extends React.Component<
                             {!!payment_preimage &&
                                 !isIncomplete &&
                                 !error &&
-                                !payment_error && (
-                                    <View style={{ width: '90%' }}>
+                                !payment_error &&
+                                !(isRebalance && !rebalanceData?.success) && (
+                                    <View
+                                        style={{
+                                            ...styles.preImageContainer,
+                                            marginBottom: isRebalance ? 40 : 0
+                                        }}
+                                    >
                                         <CopyBox
                                             heading={localeString(
                                                 'views.Payment.paymentPreimage'
@@ -860,70 +1086,140 @@ export default class SendingLightning extends React.Component<
                                 )}
                         </View>
 
-                        <Row
-                            align="flex-end"
-                            style={{
-                                marginBottom: 5,
-                                bottom: 25,
-                                alignSelf: 'center'
-                            }}
-                        >
-                            {paymentPathExists && (
-                                <Button
-                                    title={`${localeString(
-                                        'views.Payment.title'
-                                    )} ${
-                                        enhancedPath?.length > 1
-                                            ? `${localeString(
-                                                  'views.Payment.paths'
-                                              )} (${enhancedPath.length})`
-                                            : localeString('views.Payment.path')
-                                    } `}
-                                    onPress={() =>
-                                        navigation.navigate('PaymentPaths', {
-                                            enhancedPath
-                                        })
-                                    }
-                                    secondary
-                                    buttonStyle={{ height: 40, width: '100%' }}
-                                    containerStyle={{
-                                        maxWidth: '45%',
-                                        paddingRight: 5
+                        {isRebalance &&
+                            rebalanceData &&
+                            rebalanceData.success &&
+                            !!payment_preimage && (
+                                <View
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: 5,
+                                        bottom: 30
                                     }}
-                                />
+                                >
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingLightning.rebalanceSummary'
+                                        )}
+                                        onPress={() =>
+                                            this.navigateToRebalanceSummary()
+                                        }
+                                        secondary
+                                        buttonStyle={{ height: 40 }}
+                                        containerStyle={{ width: '100%' }}
+                                    />
+                                </View>
                             )}
-                            {noteKey && !error && !payment_error && (
-                                <Button
-                                    title={
-                                        storedNotes
-                                            ? localeString(
-                                                  'views.SendingLightning.UpdateNote'
-                                              )
-                                            : localeString(
-                                                  'views.SendingLightning.AddANote'
-                                              )
-                                    }
-                                    onPress={() =>
-                                        navigation.navigate('AddNotes', {
-                                            noteKey
-                                        })
-                                    }
-                                    secondary
-                                    buttonStyle={{ height: 40, width: '100%' }}
-                                    containerStyle={{
-                                        maxWidth: paymentPathExists
-                                            ? '45%'
-                                            : '100%',
-                                        paddingLeft: paymentPathExists ? 5 : 0
-                                    }}
-                                />
-                            )}
-                        </Row>
 
+                        {/* Action Buttons - Payment Path and Add Note */}
+                        {(paymentPathExists ||
+                            (noteKey &&
+                                !error &&
+                                !payment_error &&
+                                !isRebalance)) && (
+                            <Row
+                                align="flex-end"
+                                style={{
+                                    marginBottom: 5,
+                                    bottom: 25,
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                {paymentPathExists && !rebalanceData?.error && (
+                                    <Button
+                                        title={`${localeString(
+                                            'views.Payment.title'
+                                        )} ${
+                                            enhancedPath?.length > 1
+                                                ? `${localeString(
+                                                      'views.Payment.paths'
+                                                  )} (${enhancedPath.length})`
+                                                : localeString(
+                                                      'views.Payment.path'
+                                                  )
+                                        } `}
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'PaymentPaths',
+                                                {
+                                                    enhancedPath
+                                                }
+                                            )
+                                        }
+                                        secondary
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                        containerStyle={{
+                                            maxWidth:
+                                                (noteKey &&
+                                                    !error &&
+                                                    !payment_error) ||
+                                                (isRebalance && !!rebalanceData)
+                                                    ? '45%'
+                                                    : '100%',
+                                            paddingRight:
+                                                (noteKey &&
+                                                    !error &&
+                                                    !payment_error) ||
+                                                (isRebalance && !!rebalanceData)
+                                                    ? 5
+                                                    : 0
+                                        }}
+                                    />
+                                )}
+                                {((noteKey && !error && !payment_error) ||
+                                    (isRebalance &&
+                                        !!rebalanceData &&
+                                        !rebalanceData?.error)) && (
+                                    <Button
+                                        title={
+                                            storedNotes
+                                                ? localeString(
+                                                      'views.SendingLightning.UpdateNote'
+                                                  )
+                                                : localeString(
+                                                      'views.SendingLightning.AddANote'
+                                                  )
+                                        }
+                                        onPress={() =>
+                                            navigation.navigate('AddNotes', {
+                                                noteKey:
+                                                    noteKey ||
+                                                    (isRebalance &&
+                                                        `note-${
+                                                            rebalanceData?.paymentHash ||
+                                                            rebalanceData?.paymentPreimage
+                                                        }`)
+                                            })
+                                        }
+                                        secondary
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                        containerStyle={{
+                                            maxWidth: paymentPathExists
+                                                ? '45%'
+                                                : '100%',
+                                            paddingLeft: paymentPathExists
+                                                ? 5
+                                                : 0
+                                        }}
+                                    />
+                                )}
+                            </Row>
+                        )}
+
+                        {/* Error and Action Buttons */}
                         <View
                             style={[
                                 styles.buttons,
-                                !noteKey && { marginTop: 14 }
+                                !(
+                                    (noteKey && !error && !payment_error) ||
+                                    (isRebalance && !!rebalanceData)
+                                ) && { marginTop: 14 }
                             ]}
                         >
                             {(payment_error == 'FAILURE_REASON_NO_ROUTE' ||
@@ -931,21 +1227,15 @@ export default class SendingLightning extends React.Component<
                                     localeString(
                                         'error.failureReasonNoRoute'
                                     )) && (
-                                <Text
-                                    style={{
-                                        textAlign: 'center',
-                                        color: 'white',
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        padding: 20,
-                                        fontSize: 14
-                                    }}
-                                >
+                                <Text style={styles.errorHintText}>
                                     {localeString(
                                         'views.SendingLightning.lowFeeLimitMessage'
                                     )}
                                 </Text>
                             )}
-                            {(!!payment_error || !!error) && (
+                            {(!!payment_error ||
+                                !!error ||
+                                (isRebalance && !!rebalanceData?.error)) && (
                                 <>
                                     <Button
                                         title={localeString(
@@ -956,7 +1246,7 @@ export default class SendingLightning extends React.Component<
                                             type: 'ionicon',
                                             size: 25
                                         }}
-                                        onPress={() => navigation.goBack()}
+                                        onPress={this.handleTryAgain}
                                         buttonStyle={{
                                             backgroundColor: 'white',
                                             height: 40
@@ -993,6 +1283,7 @@ export default class SendingLightning extends React.Component<
 
                             {(!!error ||
                                 !!payment_error ||
+                                (isRebalance && !!rebalanceData?.error) ||
                                 !!success ||
                                 !!inTransit) && (
                                 <Row
@@ -1018,6 +1309,10 @@ export default class SendingLightning extends React.Component<
                                         }
                                         onPress={() => {
                                             navigation.popTo('Wallet');
+
+                                            if (isRebalance && success) {
+                                                this.props.ChannelsStore?.getChannels();
+                                            }
                                         }}
                                         buttonStyle={{
                                             height: 40,
@@ -1060,7 +1355,7 @@ export default class SendingLightning extends React.Component<
                                 </Row>
                             )}
                         </View>
-                    </>
+                    </ScrollView>
                 )}
             </Screen>
         );
@@ -1082,5 +1377,15 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 15,
         bottom: 15
+    },
+    preImageContainer: {
+        width: '90%'
+    },
+    errorHintText: {
+        textAlign: 'center',
+        color: 'white',
+        fontFamily: 'PPNeueMontreal-Book',
+        padding: 20,
+        fontSize: 14
     }
 });
