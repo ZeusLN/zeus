@@ -4,7 +4,6 @@ import {
     FlatList,
     View,
     Text,
-    TouchableHighlight,
     TouchableOpacity,
     SectionList
 } from 'react-native';
@@ -18,10 +17,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
-import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 
-import OrderItem from './OrderItem';
+import SwipeableOrderItem from './SwipeableOrderItem';
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 
 import ActivityStore from '../../stores/ActivityStore';
@@ -36,6 +34,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { calculateTaxSats } from '../../utils/PosUtils';
 
 import { version } from './../../package.json';
 
@@ -110,6 +110,16 @@ export default class StandalonePosPane extends React.PureComponent<
         ).start();
     }
 
+    private rows: Array<Swipeable | null> = [];
+    private prevOpenedRow: Swipeable | null = null;
+
+    private closeRow = (index: number) => {
+        if (this.prevOpenedRow && this.prevOpenedRow !== this.rows[index]) {
+            this.prevOpenedRow.close();
+        }
+        this.prevOpenedRow = this.rows[index];
+    };
+
     async UNSAFE_componentWillMount(): Promise<void> {
         this.fetchProducts();
         this.loadCurrentOrder();
@@ -182,114 +192,6 @@ export default class StandalonePosPane extends React.PureComponent<
         } catch (e) {
             console.log('error fetching products', e);
         }
-    };
-
-    renderItem = (
-        { item, index }: { item: { [key: string]: any }; index: number },
-        onClickPaid: any,
-        onClickHide: any
-    ) => {
-        const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore!;
-        const isPaid: boolean = item && item.payment;
-
-        let row: Array<any> = [];
-        let prevOpenedRow: any;
-
-        const closeRow = (index: any) => {
-            if (prevOpenedRow && prevOpenedRow !== row[index]) {
-                prevOpenedRow.close();
-            }
-            prevOpenedRow = row[index];
-        };
-
-        const renderRightActions = (
-            _progress: any,
-            _dragX: any,
-            onClickPaid: any,
-            onClickHide: any
-        ) => {
-            return (
-                <View
-                    style={{
-                        margin: 0,
-                        alignContent: 'center',
-                        justifyContent: 'center',
-                        width: 280
-                    }}
-                >
-                    <Row>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickPaid}
-                                icon={{
-                                    name: 'payments',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'green' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickHide}
-                                icon={{
-                                    name: 'delete',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'red' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                    </Row>
-                </View>
-            );
-        };
-
-        let tip = '';
-        if (isPaid) {
-            const { orderTip, rate } = item.payment;
-            tip = new BigNumber(orderTip)
-                .multipliedBy(rate)
-                .dividedBy(SATS_PER_BTC)
-                .toFixed(2);
-        }
-
-        return (
-            <Swipeable
-                renderRightActions={(progress, dragX) =>
-                    renderRightActions(
-                        progress,
-                        dragX,
-                        onClickPaid,
-                        onClickHide
-                    )
-                }
-                onSwipeableOpen={() => closeRow(index)}
-                ref={(ref) => (row[index] = ref)}
-            >
-                <TouchableHighlight
-                    onPress={() => {
-                        if (getRate() === '$N/A') return;
-                        navigation.navigate('Order', {
-                            order: item
-                        });
-                    }}
-                >
-                    <OrderItem
-                        title={item.getItemsList}
-                        money={
-                            isPaid
-                                ? `${item.getTotalMoneyDisplay} + ${
-                                      getSymbol().symbol
-                                  }${tip}`
-                                : item.getTotalMoneyDisplay
-                        }
-                        date={item.getDisplayTime}
-                    />
-                </TouchableHighlight>
-            </Swipeable>
-        );
     };
 
     addProductToOrder = (product: Product) => {
@@ -746,57 +648,193 @@ export default class StandalonePosPane extends React.PureComponent<
                         />
                         <View
                             style={{
-                                flexDirection: 'row',
-                                paddingLeft: 10,
-                                paddingRight: 10,
                                 paddingTop: 5,
                                 marginBottom: 10
                             }}
                         >
-                            <Button
-                                title={`${localeString('general.charge')} (${
-                                    currentOrder
-                                        ? (itemQty > 0 ? `${itemQty} - ` : '') +
-                                          (fiatEnabled
-                                              ? this.state.totalMoneyDisplay
-                                              : ` ${this.props.UnitsStore?.getAmountFromSats(
-                                                    currentOrder?.total_money
-                                                        ?.sats
-                                                )}`)
-                                        : '0'
-                                })`}
-                                containerStyle={{
-                                    borderRadius: 12,
-                                    flex: 3,
-                                    marginRight: 5
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    marginBottom: 10,
+                                    paddingHorizontal: 22
                                 }}
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: themeColor('highlight')
-                                }}
-                                disabled={disableButtons}
-                                onPress={async () => {
-                                    // there is no order so we can't charge
-                                    if (!currentOrder) return;
-
-                                    // save the current order. This will move it to the open orders screen
-                                    await PosStore.saveStandaloneOrder(
+                            >
+                                <Button
+                                    title={`${localeString(
+                                        'general.charge'
+                                    )} (${
                                         currentOrder
-                                    );
+                                            ? (itemQty > 0
+                                                  ? `${itemQty} - `
+                                                  : '') +
+                                              (fiatEnabled
+                                                  ? this.state.totalMoneyDisplay
+                                                  : ` ${this.props.UnitsStore?.getAmountFromSats(
+                                                        currentOrder
+                                                            ?.total_money?.sats
+                                                    )}`)
+                                            : '0'
+                                    })`}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 2,
+                                        marginRight: 5
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('highlight')
+                                    }}
+                                    disabled={disableButtons}
+                                    onPress={async () => {
+                                        // there is no order so we can't charge
+                                        if (!currentOrder) return;
 
-                                    // now let's create the charge
-                                    navigation.navigate('Order', {
-                                        order: currentOrder
-                                    });
-                                }}
-                            />
+                                        // save the current order. This will move it to the open orders screen
+                                        await PosStore.saveStandaloneOrder(
+                                            currentOrder
+                                        );
+
+                                        // now let's create the charge
+                                        navigation.navigate('Order', {
+                                            order: currentOrder
+                                        });
+                                    }}
+                                />
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.POS.quickPay'
+                                    )}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 1
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('highlight')
+                                    }}
+                                    disabled={disableButtons}
+                                    onPress={async () => {
+                                        if (!currentOrder) return;
+
+                                        await PosStore.saveStandaloneOrder(
+                                            currentOrder
+                                        );
+
+                                        const {
+                                            SettingsStore,
+                                            FiatStore,
+                                            UnitsStore
+                                        } = this.props;
+                                        if (
+                                            !SettingsStore ||
+                                            !FiatStore ||
+                                            !UnitsStore
+                                        )
+                                            return;
+                                        const { settings } = SettingsStore;
+                                        const { getRate, fiatRates } =
+                                            FiatStore;
+                                        const { pos, fiat } = settings;
+                                        const merchantName = pos?.merchantName;
+                                        const taxPercentage =
+                                            pos?.taxPercentage;
+                                        const lineItems =
+                                            currentOrder.line_items;
+
+                                        const memo = merchantName
+                                            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
+                                            : `ZEUS POS - Order ${currentOrder?.id}`;
+
+                                        const fiatEntry =
+                                            fiat && fiatRates
+                                                ? fiatRates.filter(
+                                                      (entry: any) =>
+                                                          entry.code === fiat
+                                                  )[0]
+                                                : null;
+                                        const rate =
+                                            fiat && fiatRates && fiatEntry
+                                                ? fiatEntry.rate.toFixed()
+                                                : 0;
+
+                                        const subTotalSats =
+                                            (currentOrder?.total_money?.sats ??
+                                                0) > 0
+                                                ? currentOrder.total_money.sats
+                                                : new BigNumber(
+                                                      currentOrder?.total_money?.amount
+                                                  )
+                                                      .div(100)
+                                                      .div(rate)
+                                                      .multipliedBy(
+                                                          SATS_PER_BTC
+                                                      )
+                                                      .toFixed(0);
+
+                                        const taxSats = Number(
+                                            calculateTaxSats(
+                                                lineItems,
+                                                subTotalSats,
+                                                rate,
+                                                taxPercentage
+                                            )
+                                        );
+
+                                        const totalSats = new BigNumber(
+                                            subTotalSats || 0
+                                        )
+                                            .plus(taxSats)
+                                            .toFixed(0);
+
+                                        const { units } = UnitsStore;
+
+                                        const totalFiat = new BigNumber(
+                                            totalSats ?? 0
+                                        )
+                                            .multipliedBy(rate)
+                                            .dividedBy(SATS_PER_BTC)
+                                            .toFixed(2);
+                                        navigation.navigate(
+                                            settings?.ecash?.enableCashu &&
+                                                BackendUtils.supportsCashuWallet()
+                                                ? 'ReceiveEcash'
+                                                : 'Receive',
+                                            {
+                                                amount:
+                                                    units === 'sats'
+                                                        ? totalSats
+                                                        : units === 'BTC'
+                                                        ? new BigNumber(
+                                                              totalSats || 0
+                                                          )
+                                                              .div(SATS_PER_BTC)
+                                                              .toFixed(8)
+                                                        : totalFiat,
+                                                autoGenerate: true,
+                                                memo,
+                                                order: currentOrder,
+                                                // For displaying paid orders
+                                                orderId: currentOrder.id,
+                                                // sats
+                                                orderTip: 0,
+                                                orderTotal: totalSats,
+                                                // formatted string rate
+                                                exchangeRate: getRate(),
+                                                // numerical rate
+                                                rate
+                                            }
+                                        );
+                                    }}
+                                />
+                            </View>
                             <Button
                                 title={localeString('general.clear')}
                                 containerStyle={{
-                                    borderRadius: 12,
-                                    flex: 1
+                                    borderRadius: 12
                                 }}
                                 onPress={() => {
                                     PosStore?.clearCurrentOrder();
@@ -824,23 +862,27 @@ export default class StandalonePosPane extends React.PureComponent<
                                         ? -1
                                         : 1
                                 )}
-                            renderItem={(v: any) =>
-                                this.renderItem(
-                                    v,
-                                    () => {
+                            renderItem={({ item, index }) => (
+                                <SwipeableOrderItem
+                                    ref={(ref) => (this.rows[index] = ref)}
+                                    onSwipeableOpen={() => this.closeRow(index)}
+                                    item={item}
+                                    navigation={navigation}
+                                    fiatStore={FiatStore}
+                                    onClickPaid={() => {
                                         setFiltersPos().then(() => {
                                             navigation.navigate('Activity', {
-                                                order: v
+                                                order: item
                                             });
                                         });
-                                    },
-                                    () => {
-                                        hideOrder(v.item.id).then(() =>
+                                    }}
+                                    onClickHide={() => {
+                                        hideOrder(item.id).then(() =>
                                             getOrders()
                                         );
-                                    }
-                                )
-                            }
+                                    }}
+                                />
+                            )}
                             ListFooterComponent={<Spacer height={100} />}
                             onRefresh={() => getOrders()}
                             refreshing={loading}
