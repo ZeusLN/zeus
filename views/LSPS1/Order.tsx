@@ -21,6 +21,8 @@ import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import LSPS1OrderResponse from './OrderResponse';
 
+import { LSPOrderState } from '../../models/LSP';
+
 import { Order } from './OrdersPane';
 
 interface OrderProps {
@@ -117,8 +119,10 @@ export default class LSPS1Order extends React.Component<
                                 const result =
                                     getOrderData?.result || getOrderData;
                                 if (
-                                    (result?.order_state === 'COMPLETED' ||
-                                        result?.order_state === 'FAILED') &&
+                                    (result?.order_state ===
+                                        LSPOrderState.COMPLETED ||
+                                        result?.order_state ===
+                                            LSPOrderState.FAILED) &&
                                     !orderShouldUpdate
                                 ) {
                                     this.updateOrderInStorage(getOrderData);

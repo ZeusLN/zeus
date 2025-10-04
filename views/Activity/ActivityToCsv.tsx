@@ -7,6 +7,7 @@ import Transaction from '../../models/Transaction';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import WithdrawalRequest from '../../models/WithdrawalRequest';
+import Swap from '../../models/Swap';
 
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
@@ -23,7 +24,7 @@ import {
 
 interface ActivityProps {
     filteredActivity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest
+        Invoice | Payment | Transaction | WithdrawalRequest | Swap
     >;
     isVisible: boolean;
     closeModal: () => void;
