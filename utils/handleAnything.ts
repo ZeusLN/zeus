@@ -19,6 +19,7 @@ import CashuToken from '../models/CashuToken';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
+import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -822,8 +823,22 @@ const handleAnything = async (
             }
         ];
     } else {
-        if (isClipboardValue) return false;
-        throw new Error(localeString('utils.handleAnything.notValid'));
+        try {
+            const { isValid, error } = wifUtils.validateWIF(value);
+            if (isValid) {
+                return [
+                    'WIFSweeper',
+                    {
+                        wif: value
+                    }
+                ];
+            } else {
+                throw new Error(error || localeString('views.Wif.invalidWif'));
+            }
+        } catch (err) {
+            if (isClipboardValue) return false;
+            throw new Error(localeString('utils.handleAnything.notValid'));
+        }
     }
 };
 
