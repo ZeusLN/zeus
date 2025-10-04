@@ -417,6 +417,8 @@ export default class NostrWalletConnectStore {
                 await this.loadConnections();
                 await this.checkAndResetAllBudgets();
                 await this.startService();
+                if (Platform.OS === 'ios')
+                    await this.fetchAndProcessPendingEvents();
 
                 runInAction(() => {
                     this.loadingMsg = undefined;
@@ -1139,7 +1141,13 @@ export default class NostrWalletConnectStore {
             }
         }
     };
-
+    @action
+    private findAndUpdateConnection(connection: NWCConnection): void {
+        const index = this.connections.findIndex((c) => c.id === connection.id);
+        if (index !== -1) {
+            this.connections[index] = connection;
+        }
+    }
     private isRateLimited(connectionId: string, method: Nip47Method): boolean {
         const key = `${connectionId}-${method.toLowerCase()}`;
         const lastCallTime = this.lastCallTimes.get(key);
@@ -1445,7 +1453,14 @@ export default class NostrWalletConnectStore {
             }
             return this.handleLightningPayInvoice(connection, request);
         } catch (error: any) {
-            return this.handleError(error, ErrorCodes.INTERNAL_ERROR);
+            console.log(error);
+            return this.handleError(
+                (error instanceof Error ? error.message : String(error)) ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.failedToPayInvoice'
+                    ),
+                ErrorCodes.INTERNAL_ERROR
+            );
         }
     }
     private async handleLightningPayInvoice(
@@ -1526,6 +1541,7 @@ export default class NostrWalletConnectStore {
 
         runInAction(() => {
             connection.trackSpending(amountSats);
+            this.findAndUpdateConnection(connection);
         });
 
         await this.saveConnections();
@@ -1661,6 +1677,7 @@ export default class NostrWalletConnectStore {
 
         runInAction(() => {
             connection.trackSpending(amount);
+            this.findAndUpdateConnection(connection);
         });
 
         await this.saveConnections();
@@ -2235,6 +2252,7 @@ export default class NostrWalletConnectStore {
 
             runInAction(() => {
                 connection.trackSpending(amountSats);
+                this.findAndUpdateConnection(connection);
             });
 
             await this.saveConnections();
@@ -2264,7 +2282,13 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error: any) {
-            return this.handleError(error, ErrorCodes.SEND_KEYSEND_FAILED);
+            return this.handleError(
+                (error instanceof Error ? error.message : String(error)) ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.keysendFailed'
+                    ),
+                ErrorCodes.SEND_KEYSEND_FAILED
+            );
         }
     }
 
@@ -2535,9 +2559,11 @@ export default class NostrWalletConnectStore {
         maxRetries: number = 3
     ): Promise<void> {
         if (!this.isServiceReady()) {
-            console.warn('NWC: Service not ready, cannot fetch pending events');
+            console.warn('Service not ready, cannot fetch pending events');
             return;
         }
+        if (this.connections.length === 0) return;
+
         await this.startIOSBackgroundTask();
         runInAction(() => {
             this.loading = true;
@@ -2559,17 +2585,14 @@ export default class NostrWalletConnectStore {
                 async () => await this.fetchPendingEvents(deviceToken),
                 maxRetries
             );
+            console.log('FOUND PENDING EVENTS', data?.events.length);
             if (data?.events) {
                 await this.processPendingEvents(data.events);
             }
         } catch (error) {
-            console.error(
-                'iOS NWC: Error in fetchAndProcessPendingEvents:',
-                error
-            );
-            this.handleError(
-                (error as Error).message,
-                ErrorCodes.INTERNAL_ERROR
+            console.warn(
+                'iOS NWC: Failed to fetch pending events:',
+                (error as Error).message
             );
         } finally {
             runInAction(() => {
