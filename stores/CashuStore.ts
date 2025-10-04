@@ -1349,13 +1349,12 @@ export default class CashuStore {
     ) => {
         const proofsToSend: Proof[] = [];
         let amountAvailable = 0;
-        if (order === 'desc') {
-            proofsAvailable.sort((a, b) => b.amount - a.amount);
-        } else {
-            proofsAvailable.sort((a, b) => a.amount - b.amount);
-        }
+        const sortedProofs =
+            order === 'desc'
+                ? proofsAvailable.slice().sort((a, b) => b.amount - a.amount)
+                : proofsAvailable.slice().sort((a, b) => a.amount - b.amount);
 
-        proofsAvailable.forEach((proof) => {
+        sortedProofs.forEach((proof) => {
             if (amountAvailable >= amount) {
                 return;
             }

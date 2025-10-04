@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     Animated,
     AppState,
+    AppStateStatus,
     BackHandler,
     Linking,
     NativeEventSubscription,
@@ -255,21 +256,37 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         this.backPressSubscription?.remove();
     }
 
-    handleAppStateChange = (nextAppState: any) => {
-        const { SettingsStore } = this.props;
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        const { SettingsStore, NostrWalletConnectStore } = this.props;
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
-
         if (
             nextAppState === 'background' &&
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
+            NostrWalletConnectStore.reset();
+        } else if (nextAppState === 'inactive') {
+            if (Platform.OS === 'ios') {
+                NostrWalletConnectStore.sendHandoffRequest().catch((error) => {
+                    console.error('failed to send handoff request', error);
+                });
+            }
         } else if (nextAppState === 'active') {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
+                if (Platform.OS === 'ios') {
+                    NostrWalletConnectStore.fetchAndProcessPendingEvents().catch(
+                        (error) => {
+                            console.error(
+                                'NWC: Failed to fetch pending events on app active:',
+                                error
+                            );
+                        }
+                    );
+                }
                 this.getSettingsAndNavigate();
             }
         }
@@ -646,7 +663,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting) {
             try {
-                NostrWalletConnectStore.initializeServiceWithRetry();
+                NostrWalletConnectStore.initializeService();
             } catch (error) {
                 console.warn(
                     'Failed to initialize Nostr Wallet Connect service:',
