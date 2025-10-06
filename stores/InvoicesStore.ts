@@ -494,6 +494,83 @@ export default class InvoicesStore {
     };
 
     @action
+    public fetchIncomingChannel = async (hash: string) => {
+        try {
+            const response = await BackendUtils.lookupInvoice({ r_hash: hash });
+            const enhancedPath: any[] = [];
+
+            if (response?.htlcs?.length) {
+                response.htlcs.forEach((htlc: any) => {
+                    if (htlc.state === 'SETTLED') {
+                        const amount = htlc.amt_msat
+                            ? Math.round(Number(htlc.amt_msat) / 1000)
+                            : 0;
+
+                        const route: any[] = [];
+
+                        if (response.route_hints?.length) {
+                            response.route_hints.forEach((hintGroup: any) => {
+                                (hintGroup.hop_hints || []).forEach(
+                                    (hint: any) => {
+                                        const hop: any = {
+                                            pubKey: hint.node_id,
+                                            node: hint.node_id,
+                                            forwarded: amount,
+                                            fee: hint.fee_base_msat
+                                                ? Math.round(
+                                                      Number(
+                                                          hint.fee_base_msat
+                                                      ) / 1000
+                                                  )
+                                                : 0
+                                        };
+
+                                        if (
+                                            this.channelsStore?.nodes?.[
+                                                hop.pubKey
+                                            ]?.alias
+                                        ) {
+                                            hop.alias =
+                                                this.channelsStore.nodes[
+                                                    hop.pubKey
+                                                ].alias;
+                                            hop.node = hop.alias;
+                                        }
+
+                                        route.push(hop);
+                                    }
+                                );
+                            });
+                        } else if (htlc.chan_id) {
+                            route.push({
+                                pubKey: htlc.chan_id,
+                                node: htlc.chan_id,
+                                forwarded: amount,
+                                fee: 0
+                            });
+                        }
+
+                        enhancedPath.push(route);
+                    }
+                });
+            }
+            enhancedPath.push('incoming');
+            return enhancedPath;
+        } catch (error) {
+            console.error(error);
+            runInAction(() => {
+                this.error = true;
+                this.error_msg =
+                    error?.toString() ||
+                    localeString(
+                        'stores.InvoicesStore.errorFetchingEnhancedPath'
+                    );
+            });
+            return [];
+        }
+    };
+
+    @action
     public setWatchedInvoicePaid = (amount?: string | number) => {
         this.watchedInvoicePaid = true;
         if (amount) this.watchedInvoicePaidAmt = amount;

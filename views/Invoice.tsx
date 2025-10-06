@@ -1,10 +1,12 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
-import { inject } from 'mobx-react';
+import { inject, observer } from 'mobx-react';
+import { Icon, ListItem } from 'react-native-elements';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore from '../stores/SettingsStore';
+import InvoicesStore from '../stores/InvoicesStore';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -13,6 +15,7 @@ import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { Row } from '../components/layout/Row';
 import AttestationButton from '../components/AttestationButton';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 import Invoice from '../models/Invoice';
 
@@ -21,38 +24,52 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
+import BackendUtils from '../utils/BackendUtils';
 
 interface InvoiceProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
+    InvoicesStore?: InvoicesStore;
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
 interface InvoiceState {
     storedNote: string;
+    enhancedPath: any[];
+    loading: boolean;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'InvoicesStore')
+@observer
 export default class InvoiceView extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
-    state = {
-        storedNote: ''
+    state: InvoiceState = {
+        storedNote: '',
+        enhancedPath: [],
+        loading: false
     };
 
     async componentDidMount() {
-        const { navigation, route } = this.props;
+        const { navigation, route, InvoicesStore } = this.props;
         const invoice = route.params?.invoice;
         navigation.addListener('focus', () => {
             const note = invoice.getNote;
             this.setState({ storedNote: note });
         });
+        if (BackendUtils.isLNDBased()) {
+            this.setState({ loading: true });
+            const enhancedPath = await InvoicesStore?.fetchIncomingChannel(
+                invoice.getRHash
+            );
+            this.setState({ enhancedPath: enhancedPath!, loading: false });
+        }
     }
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { storedNote } = this.state;
+        const { storedNote, enhancedPath, loading } = this.state;
         const invoice = route.params?.invoice;
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
@@ -97,9 +114,7 @@ export default class InvoiceView extends React.Component<
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddNotes', {
-                        noteKey: getNoteKey
-                    })
+                    navigation.navigate('AddNotes', { noteKey: getNoteKey })
                 }
                 style={{ marginRight: 15 }}
             >
@@ -125,6 +140,7 @@ export default class InvoiceView extends React.Component<
                     }}
                     rightComponent={
                         <Row>
+                            {loading && <LoadingIndicator />}
                             {invoice.isZeusPay && (
                                 <AttestationButton
                                     hash={invoice.payment_hash || getRHash}
@@ -335,6 +351,53 @@ export default class InvoiceView extends React.Component<
                                     })
                                 }
                             />
+                        )}
+
+                        {enhancedPath.length > 0 && enhancedPath[0][0] && (
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent',
+                                    marginLeft: -16,
+                                    marginRight: -16
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('PaymentPaths', {
+                                        enhancedPath
+                                    })
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {(() => {
+                                            const isIncoming =
+                                                enhancedPath[
+                                                    enhancedPath.length - 1
+                                                ] === 'incoming';
+                                            const numberOfPaths = isIncoming
+                                                ? enhancedPath.length - 1
+                                                : enhancedPath.length;
+
+                                            return numberOfPaths > 1
+                                                ? `${localeString(
+                                                      'views.Payment.paths'
+                                                  )} (${numberOfPaths})`
+                                                : localeString(
+                                                      'views.Payment.path'
+                                                  );
+                                        })()}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
                         )}
                     </View>
                 </ScrollView>
