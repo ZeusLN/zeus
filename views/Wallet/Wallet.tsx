@@ -266,27 +266,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
-            NostrWalletConnectStore.reset();
         } else if (nextAppState === 'inactive') {
-            if (Platform.OS === 'ios') {
-                NostrWalletConnectStore.sendHandoffRequest().catch((error) => {
-                    console.error('failed to send handoff request', error);
-                });
-            }
+            NostrWalletConnectStore.reset();
         } else if (nextAppState === 'active') {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
-                if (Platform.OS === 'ios') {
-                    NostrWalletConnectStore.fetchAndProcessPendingEvents().catch(
-                        (error) => {
-                            console.error(
-                                'NWC: Failed to fetch pending events on app active:',
-                                error
-                            );
-                        }
-                    );
-                }
+                NostrWalletConnectStore.initializeService();
                 this.getSettingsAndNavigate();
             }
         }
