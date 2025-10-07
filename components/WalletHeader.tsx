@@ -30,6 +30,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
+import AutoPayUtils from '../utils/AutoPayUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -143,94 +144,6 @@ const MenuBadge = ({
     </TouchableOpacity>
 );
 
-const checkAutoPayAndProcess = async (
-    invoice: string,
-    navigation: StackNavigationProp<any, any>,
-    settingsStore: SettingsStore,
-    transactionsStore: TransactionsStore
-) => {
-    try {
-        const decodedInvoice = await BackendUtils.decodePaymentRequest([
-            invoice
-        ]);
-
-        if (!decodedInvoice) {
-            const response = await handleAnything(invoice);
-            const [route, props] = response;
-            navigation.navigate(route, props);
-            return;
-        }
-
-        const getAmountFromDecodedInvoice = (decodedInvoice: any): number => {
-            // LND format (with underscores)
-
-            if (decodedInvoice.num_satoshis) {
-                return Number(decodedInvoice.num_satoshis);
-            }
-            if (decodedInvoice.num_msat) {
-                return Number(decodedInvoice.num_msat) / 1000;
-            }
-
-            if (decodedInvoice.numSatoshis) {
-                return Number(decodedInvoice.numSatoshis);
-            }
-            if (decodedInvoice.numMsat) {
-                return Number(decodedInvoice.numMsat) / 1000;
-            }
-
-            // Core Lightning format
-            if (decodedInvoice.amount_msat) {
-                return Number(decodedInvoice.amount_msat) / 1000;
-            }
-
-            // Other possible formats
-            if (decodedInvoice.amount) {
-                return Number(decodedInvoice.amount);
-            }
-            if (decodedInvoice.value) {
-                return Number(decodedInvoice.value);
-            }
-            if (decodedInvoice.valueSat) {
-                return Number(decodedInvoice.valueSat);
-            }
-            if (decodedInvoice.valueMsat) {
-                return Number(decodedInvoice.valueMsat) / 1000;
-            }
-
-            return 0;
-        };
-
-        const amount = getAmountFromDecodedInvoice(decodedInvoice);
-
-        const autoPayThreshold =
-            settingsStore.settings?.payments?.autoPayThreshold || 0;
-
-        if (
-            settingsStore.settings?.payments?.autoPayEnabled &&
-            amount > 0 &&
-            amount <= autoPayThreshold
-        ) {
-            transactionsStore.sendPayment({
-                payment_request: invoice
-            });
-
-            navigation.navigate('SendingLightning', {
-                enableDonations: false
-            });
-        } else {
-            const response = await handleAnything(invoice);
-            const [route, props] = response;
-            navigation.navigate(route, props);
-        }
-    } catch (error) {
-        console.error('Error checking auto-pay:', error);
-        // Normal processing
-        const response = await handleAnything(invoice);
-        const [route, props] = response;
-        navigation.navigate(route, props);
-    }
-};
-
 const ClipboardBadge = ({
     navigation,
     clipboard,
@@ -246,17 +159,20 @@ const ClipboardBadge = ({
         onPress={async () => {
             const trimmedContent = clipboard.trim();
 
-            if (
-                trimmedContent.toLowerCase().startsWith('lnbc') ||
-                trimmedContent.toLowerCase().startsWith('lnbcrt') ||
-                trimmedContent.toLowerCase().startsWith('lntb')
-            ) {
-                await checkAutoPayAndProcess(
-                    trimmedContent,
-                    navigation,
-                    settingsStore,
-                    transactionsStore
-                );
+            if (AutoPayUtils.shouldTryAutoPay(trimmedContent)) {
+                const autoPayProcessed =
+                    await AutoPayUtils.checkAutoPayAndProcess(
+                        trimmedContent,
+                        navigation,
+                        settingsStore,
+                        transactionsStore
+                    );
+
+                if (!autoPayProcessed) {
+                    const response = await handleAnything(clipboard);
+                    const [route, props] = response;
+                    navigation.navigate(route, props);
+                }
             } else {
                 const response = await handleAnything(clipboard);
                 const [route, props] = response;
