@@ -14,10 +14,13 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import Switch from '../../../components/Switch';
 import DropdownSetting from '../../../components/DropdownSetting';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
+
 import SettingsStore from '../../../stores/SettingsStore';
+
 import NostrWalletConnectStore, {
     DEFAULT_NOSTR_RELAYS
 } from '../../../stores/NostrWalletConnectStore';
