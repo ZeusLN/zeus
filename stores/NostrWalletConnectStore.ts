@@ -146,14 +146,13 @@ export default class NostrWalletConnectStore {
     @observable public loading = false;
     @observable public error = false;
     @observable public errorMessage = '';
+    @observable public loadingMsg?: string;
     @observable public connections: NWCConnection[] = [];
     @observable private nwcWalletServices: Map<string, nwc.NWCWalletService> =
         new Map();
     @observable private activeSubscriptions: Map<string, () => void> =
         new Map();
     @observable private publishedRelays: Set<string> = new Set();
-    @observable public initializing = false;
-    @observable public loadingMsg?: string;
     @observable public waitingForConnection = false;
     @observable public currentConnectionId?: string;
     @observable public connectionJustSucceeded = false;
@@ -230,7 +229,6 @@ export default class NostrWalletConnectStore {
             this.walletServiceKeys = null;
             this.errorMessage = '';
             this.loading = false;
-            this.initializing = false;
             this.loadingMsg = undefined;
             this.waitingForConnection = false;
             this.currentConnectionId = undefined;
@@ -410,7 +408,8 @@ export default class NostrWalletConnectStore {
     public initializeService = async () => {
         this.retryWithBackoff(async () => {
             runInAction(() => {
-                this.initializing = true;
+                this.error = false;
+                this.loading = true;
                 this.loadingMsg = localeString(
                     'views.Settings.NostrWalletConnect.initializingService'
                 );
@@ -428,7 +427,7 @@ export default class NostrWalletConnectStore {
 
                 runInAction(() => {
                     this.loadingMsg = undefined;
-                    this.initializing = false;
+                    this.loading = false;
                 });
             } catch (error: any) {
                 console.error('Failed to initialize NWC service:', error);
@@ -441,7 +440,7 @@ export default class NostrWalletConnectStore {
                                 'views.Settings.NostrWalletConnect.error.failedToInitializeService'
                             )
                     );
-                    this.initializing = false;
+                    this.loading = false;
                     this.loadingMsg = undefined;
                 });
             }
@@ -494,10 +493,6 @@ export default class NostrWalletConnectStore {
 
     @action
     public startService = async () => {
-        runInAction(() => {
-            this.loading = true;
-        });
-
         try {
             if (!this.walletServiceKeys?.privateKey) {
                 throw new Error(
@@ -536,10 +531,6 @@ export default class NostrWalletConnectStore {
                 );
             });
             return false;
-        } finally {
-            runInAction(() => {
-                this.loading = false;
-            });
         }
     };
 
@@ -874,15 +865,10 @@ export default class NostrWalletConnectStore {
     public refreshConnections = async () => {
         try {
             runInAction(() => {
-                this.loading = true;
                 this.error = false;
             });
 
             await this.loadConnections();
-
-            runInAction(() => {
-                this.loading = false;
-            });
         } catch (error: any) {
             runInAction(() => {
                 this.setError(
@@ -890,7 +876,6 @@ export default class NostrWalletConnectStore {
                         'views.Settings.NostrWalletConnect.failedToLoadConnections'
                     )
                 );
-                this.loading = false;
             });
         }
     };
@@ -925,11 +910,6 @@ export default class NostrWalletConnectStore {
         params: CreateConnectionParams
     ): Promise<string> => {
         try {
-            runInAction(() => {
-                this.loading = true;
-                this.error = false;
-            });
-
             if (!params.name.trim()) {
                 throw new Error(
                     localeString(
@@ -992,10 +972,6 @@ export default class NostrWalletConnectStore {
             return connectionUrl;
         } catch (error: any) {
             throw error;
-        } finally {
-            runInAction(() => {
-                this.loading = false;
-            });
         }
     };
 
@@ -1010,11 +986,6 @@ export default class NostrWalletConnectStore {
         connectionId: string
     ): Promise<boolean> => {
         try {
-            runInAction(() => {
-                this.loading = true;
-                this.error = false;
-            });
-
             const connectionIndex = this.connections.findIndex(
                 (c) => c.id === connectionId
             );
@@ -1046,10 +1017,6 @@ export default class NostrWalletConnectStore {
                     );
             });
             return false;
-        } finally {
-            runInAction(() => {
-                this.loading = false;
-            });
         }
     };
 
@@ -1067,10 +1034,8 @@ export default class NostrWalletConnectStore {
     ): Promise<boolean> => {
         try {
             runInAction(() => {
-                this.loading = true;
                 this.error = false;
             });
-
             const connection = this.connections.find(
                 (c) => c.id === connectionId
             );
@@ -1119,10 +1084,6 @@ export default class NostrWalletConnectStore {
                     );
             });
             return false;
-        } finally {
-            runInAction(() => {
-                this.loading = false;
-            });
         }
     };
     @action
@@ -2575,7 +2536,6 @@ export default class NostrWalletConnectStore {
             await this.startIOSBackgroundTask();
         }
         runInAction(() => {
-            this.loading = true;
             this.error = false;
             this.loadingMsg = localeString(
                 'views.Settings.NostrWalletConnect.fetchingPendingEvents'
@@ -2605,7 +2565,6 @@ export default class NostrWalletConnectStore {
             );
         } finally {
             runInAction(() => {
-                this.loading = false;
                 this.loadingMsg = undefined;
             });
             if (this.isInNWCConnectionQRView) {
