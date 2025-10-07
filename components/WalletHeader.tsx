@@ -23,6 +23,7 @@ import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
+import NostrWalletConnectStore from '../stores/NostrWalletConnectStore';
 
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -221,6 +222,7 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
+    NostrWalletConnectStore?: NostrWalletConnectStore;
     navigation: StackNavigationProp<any, any>;
     connecting?: boolean;
     loading?: boolean;
@@ -242,7 +244,8 @@ interface WalletHeaderState {
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
-    'SyncStore'
+    'SyncStore',
+    'NostrWalletConnectStore'
 )
 @observer
 export default class WalletHeader extends React.Component<
@@ -301,12 +304,14 @@ export default class WalletHeader extends React.Component<
             LightningAddressStore,
             ModalStore,
             PosStore,
-            SyncStore
+            SyncStore,
+            NostrWalletConnectStore
         } = this.props;
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
+        const { loading: nwcloading } = NostrWalletConnectStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
@@ -625,11 +630,12 @@ export default class WalletHeader extends React.Component<
                                     alignItems: 'center'
                                 }}
                             >
-                                {!connecting && loading && (
+                                {!connecting && (loading || nwcloading) && (
                                     <View style={{ paddingRight: 15 }}>
                                         <LoadingIndicator size={35} />
                                     </View>
                                 )}
+
                                 {!connecting && !!clipboard && (
                                     <View style={{ marginRight: 15 }}>
                                         <ClipboardBadge
