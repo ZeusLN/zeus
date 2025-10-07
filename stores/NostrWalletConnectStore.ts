@@ -157,6 +157,7 @@ export default class NostrWalletConnectStore {
     @observable public waitingForConnection = false;
     @observable public currentConnectionId?: string;
     @observable public connectionJustSucceeded = false;
+    @observable public isInNWCConnectionQRView = false;
     @observable public relayConnectionAttempts: number = 0;
     @observable public relayConnected: boolean = false;
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
@@ -199,12 +200,17 @@ export default class NostrWalletConnectStore {
         this.messageSignStore = messageSignStore;
         this.lightningAddressStore = lightningAddressStore;
     }
+    // iOS: Always reset (except when in NWC connection QR view)
+    // Android: Only reset if persistentNWCServicesEnabled is false
     @action
     public reset = () => {
-        // iOS: Always reset
-        // Android: Only reset if persistentNWCServicesEnabled is false
+        if (Platform.OS === 'ios')
+            this.sendHandoffRequest().catch((error) => {
+                console.error('failed to send handoff request', error);
+            });
+
         if (
-            Platform.OS === 'ios' ||
+            (Platform.OS === 'ios' && !this.isInNWCConnectionQRView) ||
             (Platform.OS === 'android' && !this.persistentNWCServiceEnabled)
         ) {
             if (this.healthCheckInterval) {
@@ -417,6 +423,8 @@ export default class NostrWalletConnectStore {
                 await this.loadConnections();
                 await this.checkAndResetAllBudgets();
                 await this.startService();
+                if (Platform.OS === 'ios')
+                    await this.fetchAndProcessPendingEvents();
 
                 runInAction(() => {
                     this.loadingMsg = undefined;
@@ -1139,7 +1147,13 @@ export default class NostrWalletConnectStore {
             }
         }
     };
-
+    @action
+    private findAndUpdateConnection(connection: NWCConnection): void {
+        const index = this.connections.findIndex((c) => c.id === connection.id);
+        if (index !== -1) {
+            this.connections[index] = connection;
+        }
+    }
     private isRateLimited(connectionId: string, method: Nip47Method): boolean {
         const key = `${connectionId}-${method.toLowerCase()}`;
         const lastCallTime = this.lastCallTimes.get(key);
@@ -1162,6 +1176,7 @@ export default class NostrWalletConnectStore {
     public startWaitingForConnection = (connectionId: string) => {
         this.waitingForConnection = true;
         this.currentConnectionId = connectionId;
+        this.isInNWCConnectionQRView = true;
     };
 
     @action
@@ -1169,6 +1184,7 @@ export default class NostrWalletConnectStore {
         this.connectionJustSucceeded = true;
         this.waitingForConnection = false;
         this.currentConnectionId = undefined;
+        this.isInNWCConnectionQRView = false;
 
         setTimeout(() => {
             runInAction(() => {
@@ -1445,7 +1461,14 @@ export default class NostrWalletConnectStore {
             }
             return this.handleLightningPayInvoice(connection, request);
         } catch (error: any) {
-            return this.handleError(error, ErrorCodes.INTERNAL_ERROR);
+            console.log(error);
+            return this.handleError(
+                (error instanceof Error ? error.message : String(error)) ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.failedToPayInvoice'
+                    ),
+                ErrorCodes.INTERNAL_ERROR
+            );
         }
     }
     private async handleLightningPayInvoice(
@@ -1526,6 +1549,7 @@ export default class NostrWalletConnectStore {
 
         runInAction(() => {
             connection.trackSpending(amountSats);
+            this.findAndUpdateConnection(connection);
         });
 
         await this.saveConnections();
@@ -1560,7 +1584,6 @@ export default class NostrWalletConnectStore {
         await this.cashuStore.getPayReq(request.invoice);
         const invoice = this.cashuStore.payReq;
         const error = this.cashuStore.getPayReqError;
-
         if (error) {
             return this.handleError(error, ErrorCodes.INVALID_INVOICE);
         }
@@ -1661,6 +1684,7 @@ export default class NostrWalletConnectStore {
 
         runInAction(() => {
             connection.trackSpending(amount);
+            this.findAndUpdateConnection(connection);
         });
 
         await this.saveConnections();
@@ -2235,6 +2259,7 @@ export default class NostrWalletConnectStore {
 
             runInAction(() => {
                 connection.trackSpending(amountSats);
+                this.findAndUpdateConnection(connection);
             });
 
             await this.saveConnections();
@@ -2264,7 +2289,13 @@ export default class NostrWalletConnectStore {
                 error: undefined
             };
         } catch (error: any) {
-            return this.handleError(error, ErrorCodes.SEND_KEYSEND_FAILED);
+            return this.handleError(
+                (error instanceof Error ? error.message : String(error)) ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.keysendFailed'
+                    ),
+                ErrorCodes.SEND_KEYSEND_FAILED
+            );
         }
     }
 
@@ -2535,10 +2566,14 @@ export default class NostrWalletConnectStore {
         maxRetries: number = 3
     ): Promise<void> {
         if (!this.isServiceReady()) {
-            console.warn('NWC: Service not ready, cannot fetch pending events');
+            console.warn('Service not ready, cannot fetch pending events');
             return;
         }
-        await this.startIOSBackgroundTask();
+        if (this.connections.length === 0) return;
+
+        if (this.isInNWCConnectionQRView) {
+            await this.startIOSBackgroundTask();
+        }
         runInAction(() => {
             this.loading = true;
             this.error = false;
@@ -2559,24 +2594,23 @@ export default class NostrWalletConnectStore {
                 async () => await this.fetchPendingEvents(deviceToken),
                 maxRetries
             );
+            console.log('FOUND PENDING EVENTS', data?.events.length);
             if (data?.events) {
                 await this.processPendingEvents(data.events);
             }
         } catch (error) {
-            console.error(
-                'iOS NWC: Error in fetchAndProcessPendingEvents:',
-                error
-            );
-            this.handleError(
-                (error as Error).message,
-                ErrorCodes.INTERNAL_ERROR
+            console.warn(
+                'iOS NWC: Failed to fetch pending events:',
+                (error as Error).message
             );
         } finally {
             runInAction(() => {
                 this.loading = false;
                 this.loadingMsg = undefined;
             });
-            await this.endIOSBackgroundTask();
+            if (this.isInNWCConnectionQRView) {
+                await this.endIOSBackgroundTask();
+            }
         }
     }
     private async fetchPendingEvents(
@@ -2824,8 +2858,10 @@ export default class NostrWalletConnectStore {
     public sendHandoffRequest = async (): Promise<boolean | void> => {
         if (Platform.OS !== 'ios') return;
         if (this.activeConnections.length === 0) return;
-        await this.startIOSBackgroundTask();
-        this.startIOSBackgroundTimer();
+        if (this.isInNWCConnectionQRView) {
+            await this.startIOSBackgroundTask();
+            this.startIOSBackgroundTimer();
+        }
         try {
             const deviceToken = this.lightningAddressStore.currentDeviceToken;
             if (!deviceToken) {
@@ -2861,11 +2897,13 @@ export default class NostrWalletConnectStore {
             clearTimeout(timeoutId);
             if (response.ok) {
                 console.info('iOS NWC: Handoff request sent successfully');
-                console.info(
-                    'iOS NWC: Keeping background task alive for 30 seconds to process events'
-                );
-                await new Promise((resolve) => setTimeout(resolve, 30000));
-                console.log('iOS NWC: Background task timeout completed');
+                if (this.isInNWCConnectionQRView) {
+                    console.info(
+                        'iOS NWC: Keeping background task alive for 30 seconds to make connection with nostr client'
+                    );
+                    await new Promise((resolve) => setTimeout(resolve, 30000));
+                    console.log('iOS NWC: Background task timeout completed');
+                }
                 return true;
             } else {
                 console.warn(
