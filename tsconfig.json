@@ -6,7 +6,7 @@
     "experimentalDecorators": true,
     "isolatedModules": false,
     "jsx": "react-native",
-    "lib": ["es6"],
+    "lib": ["es2022"],
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "noEmit": true,

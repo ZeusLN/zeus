@@ -35,7 +35,8 @@
       android:theme="@style/AppTheme"
       android:networkSecurityConfig="@xml/network_security_config"
       android:largeHeap="true"
-      android:extractNativeLibs="true">
+      android:extractNativeLibs="true"
+      android:supportsRtl="true">
         <!-- Set custom default icon. This is used when no icon is set for incoming notification messages.
             See README(https://goo.gl/l4GJaQ) for more. -->
         <meta-data
