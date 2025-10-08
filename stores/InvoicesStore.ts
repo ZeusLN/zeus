@@ -25,7 +25,6 @@ export default class InvoicesStore {
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
-    @observable withdrawalRequests: Array<WithdrawalRequest> = [];
     @observable invoice: Invoice | null;
     @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
@@ -84,7 +83,6 @@ export default class InvoicesStore {
         this.error_msg = null;
         this.getPayReqError = null;
         this.invoices = [];
-        this.withdrawalRequests = [];
         this.invoice = null;
         this.pay_req = null;
         this.payment_request = null;
@@ -121,77 +119,6 @@ export default class InvoicesStore {
                 });
             })
             .catch(() => this.resetInvoices());
-    };
-
-    @action
-    public getWithdrawalRequests = async () => {
-        this.loading = true;
-        try {
-            const { invoicerequests } =
-                await BackendUtils.listWithdrawalRequests();
-
-            const enhancedRequests: WithdrawalRequest[] = [];
-
-            for (const withdrawalRequest of invoicerequests) {
-                try {
-                    await this.getWithdrawalReq(withdrawalRequest.bolt12);
-                    enhancedRequests.push(
-                        new WithdrawalRequest({
-                            ...withdrawalRequest,
-                            invreq_amount_msat:
-                                this.withdrawal_req?.invreq_amount_msat,
-                            offer_description:
-                                this.withdrawal_req?.offer_description
-                        })
-                    );
-                } catch {
-                    enhancedRequests.push(
-                        new WithdrawalRequest(withdrawalRequest)
-                    );
-                }
-            }
-
-            runInAction(() => {
-                this.withdrawalRequests = enhancedRequests.reverse();
-                this.loading = false;
-            });
-        } catch {
-            runInAction(() => {
-                this.withdrawalRequests = [];
-                this.loading = false;
-            });
-        }
-    };
-
-    @action
-    public getRedeemedWithdrawalRequests = async () => {
-        this.loading = true;
-        try {
-            const { invoices } = await BackendUtils.listInvoices();
-            const invoicerequests = invoices.filter(
-                (invoice: any) => !!invoice.bolt12
-            );
-            runInAction(() => {
-                const enhancedRequests = invoicerequests
-                    .map(
-                        (withdrawalRequest: any) =>
-                            new WithdrawalRequest({
-                                ...withdrawalRequest,
-                                redeem: true
-                            })
-                    )
-                    .slice()
-                    .reverse();
-
-                for (const req of enhancedRequests) {
-                    this.withdrawalRequests.push(req);
-                }
-                this.loading = false;
-            });
-        } catch (error: any) {
-            this.withdrawalRequests = [];
-            this.loading = false;
-        }
     };
 
     @action

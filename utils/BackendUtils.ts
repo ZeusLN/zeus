@@ -134,8 +134,6 @@ class BackendUtils {
         this.call('fetchInvoiceFromOffer', args);
     createWithdrawalRequest = (...args: any[]) =>
         this.call('createWithdrawalRequest', args);
-    listWithdrawalRequests = (...args: any[]) =>
-        this.call('listWithdrawalRequests', args);
     redeemWithdrawalRequest = (...args: any[]) =>
         this.call('redeemWithdrawalRequest', args);
     listInvoices = (...args: any[]) => this.call('listInvoices', args);
