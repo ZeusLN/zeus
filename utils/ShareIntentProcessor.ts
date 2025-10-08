@@ -1,5 +1,5 @@
 import { NativeModules } from 'react-native';
-import RNQRGenerator from 'rn-qr-generator';
+import { detectQRFromBase64 } from './QRDecoder';
 import handleAnything from './handleAnything';
 import { localeString } from './LocaleUtils';
 
@@ -27,12 +27,12 @@ export const processSharedQRImage =
             const base64Image = await MobileTools.getSharedImageBase64();
             if (!base64Image) return null;
 
-            // Extract QR code data using existing RNQRGenerator
-            const result = await RNQRGenerator.detect({
+            // Extract QR code data using new QR decoder
+            const result = await detectQRFromBase64({
                 base64: base64Image
             });
 
-            if (result?.values.length > 0) {
+            if (result?.values && result.values.length > 0) {
                 const qrData = result.values[0];
 
                 // Use existing handleAnything function to process the QR data
