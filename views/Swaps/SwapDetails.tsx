@@ -500,6 +500,7 @@ export default class SwapDetails extends React.Component<
                     break;
 
                 case SwapState.TransactionMempool:
+                case SwapState.TransactionConfirmed:
                     if (submitted) {
                         console.log(
                             'Claim transaction already created and submitted successfully. Skipping.'
