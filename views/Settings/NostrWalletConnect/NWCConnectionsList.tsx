@@ -22,7 +22,6 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
-import BackendUtils from '../../../utils/BackendUtils';
 
 import NWCConnection from '../../../models/NWCConnection';
 
@@ -301,10 +300,8 @@ export default class NWCConnectionsList extends React.Component<
     );
 
     render() {
-        const { NostrWalletConnectStore, navigation, SettingsStore } =
-            this.props;
+        const { NostrWalletConnectStore, navigation } = this.props;
         const { connections, loading } = NostrWalletConnectStore;
-        const { settings } = SettingsStore;
         const { connectionsLoading } = this.state;
 
         return (
@@ -351,26 +348,22 @@ export default class NWCConnectionsList extends React.Component<
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-                                {BackendUtils.supportsCashuWallet() &&
-                                    settings.ecash.enableCashu && (
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                navigation.navigate(
-                                                    'NWCSettings'
-                                                )
-                                            }
-                                            accessibilityLabel={localeString(
-                                                'views.Settings.NostrWalletConnect.settings'
-                                            )}
-                                        >
-                                            <Gear
-                                                fill={themeColor('text')}
-                                                width={30}
-                                                height={30}
-                                                style={{ alignSelf: 'center' }}
-                                            />
-                                        </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('NWCSettings')
+                                    }
+                                    accessibilityLabel={localeString(
+                                        'views.Settings.NostrWalletConnect.settings'
                                     )}
+                                >
+                                    <Gear
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                        style={{ alignSelf: 'center' }}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         )
                     }

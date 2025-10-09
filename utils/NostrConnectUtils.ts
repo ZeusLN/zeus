@@ -21,7 +21,6 @@ export interface PermissionType {
     title: string;
     description: string;
 }
-
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
