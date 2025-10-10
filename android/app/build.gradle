@@ -165,7 +165,7 @@ android {
         pickFirst "lib/x86_64/libgojni.so"
 
         jniLibs {
-            useLegacyPackaging true
+            useLegacyPackaging false
         }
     }
 
