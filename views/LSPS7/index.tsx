@@ -27,9 +27,9 @@ import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
+import handleAnything from '../../utils/handleAnything';
 
 import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
-import InvoicesStore from '../../stores/InvoicesStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -40,7 +40,6 @@ import Storage from '../../storage';
 
 interface LSPS7Props {
     LSPStore: LSPStore;
-    InvoicesStore: InvoicesStore;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
@@ -67,13 +66,7 @@ interface LSPS7State {
     expirationBlock: number;
 }
 
-@inject(
-    'LSPStore',
-    'ChannelsStore',
-    'InvoicesStore',
-    'SettingsStore',
-    'NodeInfoStore'
-)
+@inject('LSPStore', 'ChannelsStore', 'SettingsStore', 'NodeInfoStore')
 @observer
 export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     listener: any;
@@ -148,8 +141,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     };
 
     render() {
-        const { navigation, LSPStore, NodeInfoStore, InvoicesStore } =
-            this.props;
+        const { navigation, LSPStore, NodeInfoStore } = this.props;
         const {
             showInfo,
             advancedSettings,
@@ -793,24 +785,17 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                     );
                                                 }
 
-                                                // Navigate to the PaymentRequest screen
-                                                InvoicesStore.getPayReq(
+                                                // Navigate to the payment
+                                                handleAnything(
                                                     payment.bolt11?.invoice ||
                                                         payment.lightning_invoice ||
                                                         payment.bolt11_invoice
-                                                )
-                                                    .then(() => {
-                                                        navigation.navigate(
-                                                            'PaymentRequest',
-                                                            {}
-                                                        );
-                                                    })
-                                                    .catch((error: any) =>
-                                                        console.error(
-                                                            'Error fetching payment request:',
-                                                            error
-                                                        )
+                                                ).then(([route, props]) => {
+                                                    navigation.navigate(
+                                                        route,
+                                                        props
                                                     );
+                                                });
                                             })
                                             .catch((error) =>
                                                 console.error(

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { inject, observer } from 'mobx-react';
 import { ScrollView, View } from 'react-native';
 import moment from 'moment';
 
@@ -10,29 +9,22 @@ import Button from '../../components/Button';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-
-import InvoicesStore from '../../stores/InvoicesStore';
+import handleAnything from '../../utils/handleAnything';
 
 interface LSPS7OrderResponseProps {
     navigation: any;
     orderResponse: any;
-    InvoicesStore?: InvoicesStore;
     orderView: boolean;
 }
 
-@inject('InvoicesStore')
-@observer
 export default class LSPS7OrderResponse extends React.Component<
     LSPS7OrderResponseProps,
     {}
 > {
     render() {
-        const { orderResponse, InvoicesStore, orderView, navigation } =
-            this.props;
+        const { orderResponse, orderView, navigation } = this.props;
         const payment = orderResponse?.payment;
         const channel = orderResponse?.channel;
-
-        console.log('orderResponse', orderResponse);
 
         return (
             <Screen>
@@ -330,25 +322,16 @@ export default class LSPS7OrderResponse extends React.Component<
                                                 paddingVertical: 20
                                             }}
                                             onPress={() => {
-                                                InvoicesStore!
-                                                    .getPayReq(
-                                                        payment.bolt11
-                                                            ?.invoice ||
-                                                            payment.lightning_invoice ||
-                                                            payment.bolt11_invoice
-                                                    )
-                                                    .then(() => {
-                                                        navigation.navigate(
-                                                            'PaymentRequest',
-                                                            {}
-                                                        );
-                                                    })
-                                                    .catch((error: any) =>
-                                                        console.error(
-                                                            'Error fetching payment request:',
-                                                            error
-                                                        )
+                                                handleAnything(
+                                                    payment.bolt11?.invoice ||
+                                                        payment.lightning_invoice ||
+                                                        payment.bolt11_invoice
+                                                ).then(([route, props]) => {
+                                                    navigation.navigate(
+                                                        route,
+                                                        props
                                                     );
+                                                });
                                             }}
                                         />
                                     </>
