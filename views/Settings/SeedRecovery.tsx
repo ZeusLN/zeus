@@ -13,7 +13,7 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import RNFS from 'react-native-fs';
-import DocumentPicker from 'react-native-document-picker';
+import { pick, types } from '@react-native-documents/picker';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -753,16 +753,9 @@ export default class SeedRecovery extends React.PureComponent<
                                                 selectedWordIndex: null
                                             });
                                             try {
-                                                const res =
-                                                    await DocumentPicker.pickSingle(
-                                                        {
-                                                            type: [
-                                                                DocumentPicker
-                                                                    .types
-                                                                    .allFiles
-                                                            ]
-                                                        }
-                                                    );
+                                                const [res] = await pick({
+                                                    type: [types.allFiles]
+                                                });
 
                                                 const content =
                                                     await RNFS.readFile(
@@ -798,9 +791,13 @@ export default class SeedRecovery extends React.PureComponent<
                                                         )
                                                     );
                                                 }
-                                            } catch (err) {
+                                            } catch (err: any) {
                                                 if (
-                                                    DocumentPicker.isCancel(err)
+                                                    err?.message?.includes(
+                                                        'cancel'
+                                                    ) ||
+                                                    err?.code ===
+                                                        'DOCUMENT_PICKER_CANCELED'
                                                 ) {
                                                     this.setState({
                                                         loading: false
