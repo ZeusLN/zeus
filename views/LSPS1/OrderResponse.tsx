@@ -13,33 +13,27 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import handleAnything from '../../utils/handleAnything';
 
-import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 
 interface LSPS1OrderResponseProps {
     navigation: any;
     orderResponse: any;
-    InvoicesStore?: InvoicesStore;
     NodeInfoStore?: NodeInfoStore;
     orderView: boolean;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore')
+@inject('NodeInfoStore')
 @observer
 export default class LSPS1OrderResponse extends React.Component<
     LSPS1OrderResponseProps,
     {}
 > {
     render() {
-        const {
-            orderResponse,
-            InvoicesStore,
-            NodeInfoStore,
-            orderView,
-            navigation
-        } = this.props;
+        const { orderResponse, NodeInfoStore, orderView, navigation } =
+            this.props;
         const { testnet } = NodeInfoStore!;
         const payment = orderResponse?.payment;
         const channel = orderResponse?.channel;
@@ -458,25 +452,16 @@ export default class LSPS1OrderResponse extends React.Component<
                                                 paddingVertical: 20
                                             }}
                                             onPress={() => {
-                                                InvoicesStore!
-                                                    .getPayReq(
-                                                        payment.bolt11
-                                                            ?.invoice ||
-                                                            payment.lightning_invoice ||
-                                                            payment.bolt11_invoice
-                                                    )
-                                                    .then(() => {
-                                                        navigation.navigate(
-                                                            'PaymentRequest',
-                                                            {}
-                                                        );
-                                                    })
-                                                    .catch((error: any) =>
-                                                        console.error(
-                                                            'Error fetching payment request:',
-                                                            error
-                                                        )
+                                                handleAnything(
+                                                    payment.bolt11?.invoice ||
+                                                        payment.lightning_invoice ||
+                                                        payment.bolt11_invoice
+                                                ).then(([route, props]) => {
+                                                    navigation.navigate(
+                                                        route,
+                                                        props
                                                     );
+                                                });
                                             }}
                                         />
                                     </>
