@@ -567,6 +567,70 @@ export default class InvoicesStore {
     };
 
     @action
+    public fetchEnhancedPath = async (hash: string) => {
+        try {
+            const response = await BackendUtils.lookupInvoice({ r_hash: hash });
+            const enhancedPath: any[] = [];
+
+            if (response?.htlcs?.length) {
+                response.htlcs.forEach((htlc: any) => {
+                    if (
+                        htlc.state === 'SETTLED' ||
+                        htlc.status === 'SUCCEEDED'
+                    ) {
+                        const route: any[] = [];
+                        htlc.route?.hops?.forEach((hop: any) => {
+                            route.push({
+                                pubKey: hop.pub_key,
+                                node: hop.pub_key,
+                                forwarded: hop.amt_to_forward,
+                                fee: hop.fee_msat
+                                    ? Number(hop.fee_msat) / 1000
+                                    : 0
+                            });
+                        });
+                        if (route.length) {
+                            enhancedPath.push(route);
+                        }
+                    }
+                });
+            }
+
+            if (!enhancedPath.length && response?.route_hints?.length) {
+                response.route_hints.forEach((hintGroup: any) => {
+                    const route: any[] = [];
+                    hintGroup.hop_hints?.forEach((hint: any) => {
+                        route.push({
+                            pubKey: hint.node_id,
+                            node: hint.node_id,
+                            forwarded: 0,
+                            fee: hint.fee_base_msat
+                                ? Number(hint.fee_base_msat) / 1000
+                                : 0
+                        });
+                    });
+                    if (route.length) {
+                        enhancedPath.push(route);
+                    }
+                });
+            }
+
+            return enhancedPath;
+        } catch (error) {
+            console.error(error);
+            runInAction(() => {
+                this.error = true;
+                this.error_msg =
+                    error?.toString() ||
+                    localeString(
+                        'stores.InvoicesStore.errorFetchingEnhancedPath'
+                    );
+            });
+            return [];
+        }
+    };
+
+    @action
     public setWatchedInvoicePaid = (amount?: string | number) => {
         this.watchedInvoicePaid = true;
         if (amount) this.watchedInvoicePaidAmt = amount;
