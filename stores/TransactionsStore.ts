@@ -129,7 +129,7 @@ export default class TransactionsStore {
     };
 
     @action
-    public broadcast = (raw_final_tx: string) => {
+    public broadcast = async (raw_final_tx: string) => {
         this.loading = true;
 
         const tx_hex = raw_final_tx.includes('=')
@@ -143,6 +143,48 @@ export default class TransactionsStore {
             // Get the transaction ID (txid)
             txid = tx.getId();
         } catch (e) {}
+
+        // CLN REST does not support publishTransaction; broadcast via mempool.space
+        if (this.settingsStore.implementation === 'cln-rest') {
+            const headers = {
+                'Access-Control-Allow-Origin': '*',
+                'Content-Type': 'text/plain'
+            } as any;
+
+            const url = `https://mempool.space/${
+                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
+            }api/tx`;
+
+            return ReactNativeBlobUtil.fetch('POST', url, headers, tx_hex)
+                .then((response: any) => {
+                    const status = response.info().status;
+                    const data = response.data;
+                    if (status == 200) {
+                        runInAction(() => {
+                            this.txid = data || txid;
+                            this.publishSuccess = true;
+                            this.loading = false;
+                            this.channelsStore.resetOpenChannel();
+                        });
+                        return data;
+                    } else {
+                        runInAction(() => {
+                            this.error_msg = errorToUserFriendly(data);
+                            this.error = true;
+                            this.loading = false;
+                        });
+                    }
+                })
+                .catch((err: any) => {
+                    runInAction(() => {
+                        this.error_msg = errorToUserFriendly(
+                            err?.error || err?.message || err?.toString()
+                        );
+                        this.error = true;
+                        this.loading = false;
+                    });
+                });
+        }
 
         return BackendUtils.publishTransaction({
             tx_hex
