@@ -177,8 +177,13 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { LnurlPayStore } = this.props;
+        const { LnurlPayStore, navigation, SettingsStore } = this.props;
         const { satAmount } = this.state;
+
+        if (SettingsStore.settings.ecash.enableMultiMint) {
+            navigation.navigate('MultimintPayment');
+            return;
+        }
 
         // Zaplocker
         const { isZaplocker } = LnurlPayStore;
@@ -323,9 +328,7 @@ export default class CashuPaymentRequest extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        clearPayReq();
-                    }}
+                    onBack={() => clearPayReq()}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -377,6 +380,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
+
                                     {!BackendUtils.supportsLightningSends() && (
                                         <View
                                             style={{
@@ -391,6 +395,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
+
                                     {noBalance &&
                                         BackendUtils.supportsLightningSends() && (
                                             <View
@@ -406,6 +411,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
+
                                     {isNoAmountInvoice ? (
                                         <AmountInput
                                             amount={customAmount}
