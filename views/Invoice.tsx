@@ -76,7 +76,9 @@ export default class InvoiceView extends React.Component<
             is_amp,
             value,
             getNoteKey,
-            getAmount
+            getAmount,
+            bolt12,
+            payment_preimage
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -300,6 +302,24 @@ export default class InvoiceView extends React.Component<
                                     'views.Invoice.paymentHash'
                                 )}
                                 value={payment_hash}
+                                sensitive
+                            />
+                        )}
+
+                        {!!payment_preimage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.paymentPreimage'
+                                )}
+                                value={payment_hash}
+                                sensitive
+                            />
+                        )}
+
+                        {!!bolt12 && (
+                            <KeyValue
+                                keyValue={localeString('views.PayCode.bolt12')}
+                                value={bolt12}
                                 sensitive
                             />
                         )}
