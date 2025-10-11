@@ -1,5 +1,8 @@
 import { computed } from 'mobx';
 import BaseModel from './BaseModel';
+import { notesStore } from '../stores/Stores';
+import { localeString } from '../utils/LocaleUtils';
+import DateTimeUtils from '../utils/DateTimeUtils';
 
 export enum SwapState {
     Created = 'swap.created',
@@ -59,10 +62,28 @@ export default class Swap extends BaseModel {
     lockupTransaction?: any;
     txid?: string;
 
+    @computed public get model(): string {
+        return localeString('views.Swaps.title');
+    }
+
     @computed get createdAtFormatted(): number | string {
         return typeof this.createdAt === 'number'
             ? this.createdAt * 1000
             : this.createdAt;
+    }
+
+    @computed get getTimestamp(): number {
+        return typeof this.createdAt === 'number'
+            ? this.createdAt
+            : new Date(this.createdAt).getTime() / 1000;
+    }
+
+    @computed get getDate(): Date {
+        return new Date(this.createdAtFormatted);
+    }
+
+    @computed get getDisplayTimeShort(): string {
+        return DateTimeUtils.listFormattedDateShort(this.getTimestamp);
     }
 
     @computed get isSubmarineSwap(): boolean {
@@ -78,6 +99,9 @@ export default class Swap extends BaseModel {
     }
 
     @computed get getAmount(): number | undefined {
+        if (this.isSubmarineSwap) {
+            return this.expectedAmount;
+        }
         return this.onchainAmount || this.amount;
     }
 
@@ -101,5 +125,13 @@ export default class Swap extends BaseModel {
             return this.invoice;
         }
         return undefined;
+    }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.id}`;
+    }
+
+    @computed public get getNote(): string {
+        return notesStore.notes[this.getNoteKey] || '';
     }
 }
