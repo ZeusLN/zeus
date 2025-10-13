@@ -933,8 +933,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     accessibilityLabel={localeString(
                                         'general.activity'
                                     )}
+                                    style={{ alignItems: 'center' }}
                                 >
                                     <CaretUp fill={themeColor('text')} />
+                                    <Text
+                                        style={{
+                                            marginTop: 7,
+                                            textAlign: 'center',
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('general.activity')}
+                                    </Text>
                                 </TouchableOpacity>
                             </Animated.View>
                         </>
