@@ -14,6 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Conversion from '../../components/Conversion';
+import LayerBalances from '../../components/LayerBalances';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -85,7 +86,8 @@ export default class BalancePane extends React.PureComponent<
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
             lightningBalance,
-            pendingOpenBalance
+            pendingOpenBalance,
+            balancesCollapsed
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const { implementation, settings } = SettingsStore;
@@ -141,7 +143,9 @@ export default class BalancePane extends React.PureComponent<
             </View>
         );
         const BalanceViewCombined = () => (
-            <View style={styles.balance}>
+            <View
+                style={[styles.balance, { justifyContent: 'center', flex: 1 }]}
+            >
                 <Amount
                     sats={combinedBalanceValue}
                     sensitive
@@ -180,7 +184,13 @@ export default class BalancePane extends React.PureComponent<
 
         if (!error) {
             balancePane = (
-                <View style={{ minHeight: 200 }}>
+                <View
+                    style={{
+                        flex: 1,
+                        alignSelf: 'center',
+                        minHeight: 200
+                    }}
+                >
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
@@ -445,16 +455,35 @@ export default class BalancePane extends React.PureComponent<
                                     </View>
                                 </TouchableOpacity>
                             )}
-                        {implementation === 'lndhub' ||
-                        implementation === 'nostr-wallet-connect' ? (
-                            <View style={{ marginTop: 40 }}>
-                                <LightningBalance />
-                            </View>
-                        ) : (
-                            <View style={{ marginTop: 40 }}>
-                                <BalanceViewCombined />
-                            </View>
-                        )}
+                        <View
+                            style={{
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                width: '100%'
+                            }}
+                        >
+                            {implementation === 'lndhub' ||
+                            implementation === 'nostr-wallet-connect' ? (
+                                <View style={{ height: 150 }}>
+                                    <LightningBalance />
+                                </View>
+                            ) : (
+                                <View
+                                    style={{
+                                        height: 150
+                                    }}
+                                >
+                                    <BalanceViewCombined />
+                                </View>
+                            )}
+                            <LayerBalances
+                                navigation={navigation}
+                                onRefresh={() => {}}
+                                consolidated
+                                collapsed={balancesCollapsed}
+                            />
+                        </View>
                     </View>
                 </View>
             );
