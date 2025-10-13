@@ -1,8 +1,11 @@
 import { action, reaction, observable, runInAction } from 'mobx';
+import Storage from '../storage';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
+
+export const BALANCES_COLLAPSED_KEY = 'zeus-balances-collapsed';
 
 export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
@@ -16,10 +19,12 @@ export default class BalanceStore {
     @observable public pendingOpenBalance: number | string | any;
     @observable public lightningBalance: number | string;
     @observable public otherAccounts: any = {};
+    @observable public balancesCollapsed: boolean = true;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
+        this.getCollapsedSetting();
 
         reaction(
             () => this.settingsStore.settings,
@@ -59,6 +64,17 @@ export default class BalanceStore {
         this.error = true;
         this.loadingBlockchainBalance = false;
         this.loadingLightningBalance = false;
+    };
+
+    private getCollapsedSetting = async () => {
+        const balancesCollapsed = await Storage.getItem(BALANCES_COLLAPSED_KEY);
+        if (balancesCollapsed !== undefined)
+            this.balancesCollapsed = JSON.parse(balancesCollapsed);
+    };
+
+    public toggleCollapse = async () => {
+        this.balancesCollapsed = !this.balancesCollapsed;
+        await Storage.setItem(BALANCES_COLLAPSED_KEY, this.balancesCollapsed);
     };
 
     @action

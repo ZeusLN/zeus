@@ -34,7 +34,6 @@ import StandalonePosPane from './StandalonePosPane';
 import StandalonePosKeypadPane from './StandalonePosKeypadPane';
 
 import Button from '../../components/Button';
-import LayerBalances from '../../components/LayerBalances';
 import LoadingColumns from '../../components/LoadingColumns';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
@@ -842,103 +841,109 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const BalanceScreen = () => {
             return (
                 <Screen>
-                    <BalancePane
-                        navigation={navigation}
-                        NodeInfoStore={NodeInfoStore}
-                        BalanceStore={BalanceStore}
-                        CashuStore={CashuStore}
-                        SettingsStore={SettingsStore}
-                        SyncStore={SyncStore}
-                        loading={loading}
-                    />
+                    <View
+                        style={{
+                            flex: 1,
+                            alignContent: 'center'
+                        }}
+                    >
+                        <BalancePane
+                            navigation={navigation}
+                            NodeInfoStore={NodeInfoStore}
+                            BalanceStore={BalanceStore}
+                            CashuStore={CashuStore}
+                            SettingsStore={SettingsStore}
+                            SyncStore={SyncStore}
+                            loading={loading}
+                        />
 
-                    {error && (
-                        <View style={{ backgroundColor: themeColor('error') }}>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: '#fff',
-                                    fontSize: 12,
-                                    marginBottom: 15,
-                                    textAlign: 'center'
-                                }}
+                        {error && (
+                            <View
+                                style={{ backgroundColor: themeColor('error') }}
                             >
-                                {`v${version} | ${implementationDisplayValue[implementation]}`}
-                            </Text>
-                            <Button
-                                icon={{
-                                    name: 'settings',
-                                    size: 25,
-                                    color: '#fff'
-                                }}
-                                title={localeString(
-                                    'views.Wallet.MainPane.goToSettings'
-                                )}
-                                buttonStyle={{
-                                    backgroundColor: 'gray',
-                                    marginBottom: 20
-                                }}
-                                onPress={() =>
-                                    protectedNavigation(navigation, 'Menu')
-                                }
-                            />
-                            <Button
-                                title={localeString('views.Wallet.restart')}
-                                icon={{
-                                    name: 'sync',
-                                    size: 25
-                                }}
-                                onPress={() => {
-                                    if (Platform.OS === 'android') {
-                                        RNRestart.Restart();
-                                    } else {
-                                        setConnectingStatus(true);
-                                        this.getSettingsAndNavigate();
-                                    }
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    {dataAvailable && !error && (
-                        <>
-                            <LayerBalances
-                                navigation={navigation}
-                                onRefresh={() => this.getSettingsAndNavigate()}
-                                consolidated
-                            />
-
-                            <Animated.View
-                                style={{
-                                    flex: 1,
-                                    maxHeight: 80,
-                                    justifyContent: 'flex-end',
-                                    alignSelf: 'center',
-                                    bottom: 10,
-                                    paddingTop: 40,
-                                    paddingBottom: 35,
-                                    width: '100%',
-                                    transform: [{ translateY: this.pan.y }],
-                                    alignItems: 'center'
-                                }}
-                                {...this.panResponder.panHandlers}
-                            >
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        this.props.navigation.navigate(
-                                            'Activity',
-                                            { animation: 'slide_from_bottom' }
-                                        )
-                                    }
-                                    accessibilityLabel={localeString(
-                                        'general.activity'
-                                    )}
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: '#fff',
+                                        fontSize: 12,
+                                        marginBottom: 15,
+                                        textAlign: 'center'
+                                    }}
                                 >
-                                    <CaretUp fill={themeColor('text')} />
-                                </TouchableOpacity>
-                            </Animated.View>
-                        </>
-                    )}
+                                    {`v${version} | ${implementationDisplayValue[implementation]}`}
+                                </Text>
+                                <Button
+                                    icon={{
+                                        name: 'settings',
+                                        size: 25,
+                                        color: '#fff'
+                                    }}
+                                    title={localeString(
+                                        'views.Wallet.MainPane.goToSettings'
+                                    )}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        marginBottom: 20
+                                    }}
+                                    onPress={() =>
+                                        protectedNavigation(navigation, 'Menu')
+                                    }
+                                />
+                                <Button
+                                    title={localeString('views.Wallet.restart')}
+                                    icon={{
+                                        name: 'sync',
+                                        size: 25
+                                    }}
+                                    onPress={() => {
+                                        if (Platform.OS === 'android') {
+                                            RNRestart.Restart();
+                                        } else {
+                                            setConnectingStatus(true);
+                                            this.getSettingsAndNavigate();
+                                        }
+                                    }}
+                                />
+                            </View>
+                        )}
+
+                        {dataAvailable && !error && (
+                            <>
+                                <Animated.View
+                                    style={{
+                                        flex: 1,
+                                        maxHeight: 80,
+                                        justifyContent: 'flex-end',
+                                        alignSelf: 'center',
+                                        bottom: 10,
+                                        paddingTop: 40,
+                                        paddingBottom: 35,
+                                        width: '100%',
+                                        transform: [{ translateY: this.pan.y }],
+                                        alignItems: 'center'
+                                    }}
+                                    {...this.panResponder.panHandlers}
+                                >
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            this.props.navigation.navigate(
+                                                'Activity',
+                                                {
+                                                    animation:
+                                                        'slide_from_bottom'
+                                                }
+                                            )
+                                        }
+                                        accessibilityLabel={localeString(
+                                            'general.activity'
+                                        )}
+                                    >
+                                        <CaretUp fill={themeColor('text')} />
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            </>
+                        )}
+                    </View>
                 </Screen>
             );
         };
