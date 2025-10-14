@@ -2020,11 +2020,7 @@ export default class Receive extends React.Component<
                                                     }
                                                     nfcSupported={nfcSupported}
                                                     satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
+                                                    displayAmount
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -2052,11 +2048,7 @@ export default class Receive extends React.Component<
                                                     }
                                                     nfcSupported={nfcSupported}
                                                     satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
+                                                    displayAmount
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -2088,11 +2080,7 @@ export default class Receive extends React.Component<
                                                             ? undefined
                                                             : satAmount
                                                     }
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
+                                                    displayAmount
                                                 />
                                             )}
 
@@ -2193,11 +2181,7 @@ export default class Receive extends React.Component<
                                                     truncateLongValue
                                                     nfcSupported={nfcSupported}
                                                     satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
+                                                    displayAmount
                                                 />
                                             )}
                                         {(showButtonGroup || showNfcButton) && (

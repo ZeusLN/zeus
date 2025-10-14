@@ -109,7 +109,7 @@ interface InvoicesSettings {
     ampInvoice?: boolean;
     blindedPaths: boolean;
     showCustomPreimageField?: boolean;
-    displayAmountOnInvoice?: boolean;
+    displayAmountOnInvoice?: boolean; // deprecated
 }
 
 interface ChannelsSettings {
@@ -1355,7 +1355,7 @@ export default class SettingsStore {
             ampInvoice: false,
             blindedPaths: false,
             showCustomPreimageField: false,
-            displayAmountOnInvoice: false
+            displayAmountOnInvoice: false // deprecated
         },
         channels: {
             min_confs: 1,
