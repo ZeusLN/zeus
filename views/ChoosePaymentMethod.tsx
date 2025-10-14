@@ -2,11 +2,15 @@ import * as React from 'react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
+import { inject, observer } from 'mobx-react';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
+
+import BalanceStore from '../stores/BalanceStore';
+import CashuStore from '../stores/CashuStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -24,6 +28,8 @@ interface ChoosePaymentMethodProps {
             lnurlParams: LNURLWithdrawParams | undefined;
         }
     >;
+    BalanceStore?: BalanceStore;
+    CashuStore?: CashuStore;
 }
 
 interface ChoosePaymentMethodState {
@@ -35,6 +41,8 @@ interface ChoosePaymentMethodState {
     lnurlParams: LNURLWithdrawParams | undefined;
 }
 
+@inject('BalanceStore', 'CashuStore')
+@observer
 export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
     ChoosePaymentMethodState
@@ -85,7 +93,7 @@ export default class ChoosePaymentMethod extends React.Component<
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, BalanceStore, CashuStore } = this.props;
         const {
             value,
             satAmount,
@@ -95,6 +103,8 @@ export default class ChoosePaymentMethod extends React.Component<
             lnurlParams
         } = this.state;
 
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBalanceSats } = CashuStore!;
         return (
             <Screen>
                 <Header
@@ -114,6 +124,10 @@ export default class ChoosePaymentMethod extends React.Component<
                     lightningAddress={lightningAddress}
                     offer={offer}
                     lnurlParams={lnurlParams}
+                    // balance data
+                    lightningBalance={lightningBalance}
+                    onchainBalance={totalBlockchainBalance}
+                    ecashBalance={totalBalanceSats}
                 />
                 {!!value && !!lightning && (
                     <Button
