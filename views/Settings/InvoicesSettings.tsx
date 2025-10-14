@@ -39,7 +39,6 @@ interface InvoicesSettingsState {
     ampInvoice: boolean;
     blindedPaths: boolean;
     showCustomPreimageField: boolean;
-    displayAmountOnInvoice: boolean;
 }
 
 @inject('SettingsStore')
@@ -58,8 +57,7 @@ export default class InvoicesSettings extends React.Component<
         routeHints: false,
         ampInvoice: false,
         blindedPaths: false,
-        showCustomPreimageField: false,
-        displayAmountOnInvoice: false
+        showCustomPreimageField: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -78,9 +76,7 @@ export default class InvoicesSettings extends React.Component<
             ampInvoice: settings?.invoices?.ampInvoice || false,
             blindedPaths: settings?.invoices?.blindedPaths || false,
             showCustomPreimageField:
-                settings?.invoices?.showCustomPreimageField || false,
-            displayAmountOnInvoice:
-                settings?.invoices?.displayAmountOnInvoice || false
+                settings?.invoices?.showCustomPreimageField || false
         });
     }
 
@@ -106,8 +102,7 @@ export default class InvoicesSettings extends React.Component<
             routeHints,
             ampInvoice,
             blindedPaths,
-            showCustomPreimageField,
-            displayAmountOnInvoice
+            showCustomPreimageField
         } = this.state;
         const { implementation, settings, updateSettings }: any = SettingsStore;
 
@@ -550,48 +545,6 @@ export default class InvoicesSettings extends React.Component<
                             </View>
                         </View>
                     )}
-
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            marginTop: 20
-                        }}
-                    >
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Invoices.displayAmountOnInvoice'
-                                )}
-                                {}
-                            </Text>
-                        </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
-                            <Switch
-                                value={displayAmountOnInvoice}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                                onValueChange={async () => {
-                                    this.setState({
-                                        displayAmountOnInvoice:
-                                            !displayAmountOnInvoice
-                                    });
-                                    await updateSettings({
-                                        invoices: {
-                                            ...settings.invoices,
-                                            displayAmountOnInvoice:
-                                                !displayAmountOnInvoice
-                                        }
-                                    });
-                                }}
-                            />
-                        </View>
-                    </View>
                 </ScrollView>
                 <ModalBox
                     style={{
