@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Pourcentage de don par défaut",
     "views.Settings.Invoices.title": "Paramètres de facture",
     "views.Settings.Invoices.showCustomPreimageField": "Afficher un champ de préimage personnalisé",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Afficher le montant demandé sur la facture",
     "views.Settings.Invoices.memoExplainer": "Un mémo par défaut à utiliser pour vos factures.",
     "views.Settings.Invoices.receiverNameExplainer": "Un nom de destinataire qui est ajouté à toutes vos factures, pour aider les payeurs à identifier à qui ils paient.",
     "views.Settings.Channels.title": "Paramètres des canaux",
