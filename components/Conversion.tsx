@@ -19,6 +19,7 @@ interface ConversionProps {
     amount?: string | number;
     sats?: string | number;
     satsPending?: string | number;
+    colorOverride?: string;
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
@@ -53,6 +54,7 @@ export default class Conversion extends React.Component<
             FiatStore,
             UnitsStore,
             SettingsStore,
+            colorOverride,
             sensitive
         } = this.props;
         const { showRate } = this.state;
@@ -86,10 +88,16 @@ export default class Conversion extends React.Component<
                     fixedUnits={units}
                     sensitive={sensitive}
                     color="secondaryText"
+                    colorOverride={colorOverride}
                 />
                 {showRate && (
                     <>
-                        <Text style={{ color: themeColor('secondaryText') }}>
+                        <Text
+                            style={{
+                                color:
+                                    colorOverride || themeColor('secondaryText')
+                            }}
+                        >
                             {` | ${getRate(
                                 this.props.UnitsStore?.units === 'sats'
                             )}`}
@@ -112,6 +120,7 @@ export default class Conversion extends React.Component<
                     fixedUnits={units}
                     sensitive={sensitive}
                     color="secondaryText"
+                    colorOverride={colorOverride}
                 />
                 <Text style={{ color: themeColor('secondaryText') }}>
                     {' | '}
@@ -126,10 +135,16 @@ export default class Conversion extends React.Component<
                     fixedUnits={units}
                     sensitive={sensitive}
                     color="secondaryText"
+                    colorOverride={colorOverride}
                 />
                 {showRate && (
                     <>
-                        <Text style={{ color: themeColor('secondaryText') }}>
+                        <Text
+                            style={{
+                                color:
+                                    colorOverride || themeColor('secondaryText')
+                            }}
+                        >
                             {` | ${getRate(
                                 this.props.UnitsStore?.units === 'sats'
                             )}`}

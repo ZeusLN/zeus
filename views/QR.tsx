@@ -113,10 +113,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         hideText={hideText}
                         logo={logo}
                         satAmount={satAmount}
-                        displayAmount={
-                            this.props.SettingsStore?.settings?.invoices
-                                ?.displayAmountOnInvoice || false
-                        }
+                        displayAmount
                         showShare={true}
                         iconOnly={true}
                     />

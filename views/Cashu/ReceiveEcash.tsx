@@ -787,11 +787,7 @@ export default class ReceiveEcash extends React.Component<
                                                             nfcSupported
                                                         }
                                                         satAmount={satAmount}
-                                                        displayAmount={
-                                                            settings?.invoices
-                                                                ?.displayAmountOnInvoice ||
-                                                            false
-                                                        }
+                                                        displayAmount
                                                     />
                                                 </>
                                             )}
