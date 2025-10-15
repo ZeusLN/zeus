@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "默认捐助百分比",
     "views.Settings.Invoices.title": "发票设置",
     "views.Settings.Invoices.showCustomPreimageField": "显示自定义预映像字段",
-    "views.Settings.Invoices.displayAmountOnInvoice": "在发票上显示请求的金额",
     "views.Settings.Invoices.memoExplainer": "用于发票的默认备注。",
     "views.Settings.Invoices.receiverNameExplainer": "在所有发票中添加的收款人名称，用于帮助付款方识别他们正在支付给谁。",
     "views.Settings.Channels.title": "通道设置",
