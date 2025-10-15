@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "Thiết lập hoá đơn",
     "views.Settings.Invoices.showCustomPreimageField": "Show custom preimage field",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Hiển thị số lượng yêu cầu trên hóa đơn",
     "views.Settings.Invoices.memoExplainer": "Một ghi chú mặc định để sử dụng cho hóa đơn của bạn.",
     "views.Settings.Invoices.receiverNameExplainer": "Một tên người nhận được thêm vào tất cả các hóa đơn của bạn, để giúp người trả tiền xác định người họ đang thanh toán đến.",
     "views.Settings.Channels.title": "Thiết lập kênh",
