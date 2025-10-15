@@ -1,48 +1,78 @@
-require_relative '../node_modules/react-native/scripts/react_native_pods'
-require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'
+# Zeus
+def node_require(script)
+  # Resolve script with node to allow for hoisting
+  require Pod::Executable.execute_command('node', ['-p',
+    "require.resolve(
+      '#{script}',
+      {paths: [process.argv[1]]},
+    )", __dir__]).strip
+end
+
+node_require('react-native/scripts/react_native_pods.rb')
+
+platform :ios, 16.6
+prepare_react_native_project!
+
+project 'zeus',
+        'Debug' => :debug,
+        'Release' => :release
+
+linkage = ENV['USE_FRAMEWORKS']
+if linkage != nil
+  Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
+  use_frameworks! :linkage => linkage.to_sym
+end
 
 target 'zeus' do
   config = use_native_modules!
 
-
   use_react_native!(
     :path => config[:reactNativePath],
     # An absolute path to your application root.
-    :app_path => "#{Pod::Config.instance.installation_root}/.."
+    :app_path => "#{Pod::Config.instance.installation_root}/..",
+    :hermes_enabled => true,
+    :fabric_enabled => true
   )
 
   # proto
-  pod 'SwiftProtobuf', '~> 1.0'
-
-  # use_unimodules!(modules_paths: ['../node_modules'])
-
-  pod 'RNGestureHandler', :path => '../node_modules/react-native-gesture-handler'
-
-  pod 'react-native-blob-util', :path => '../node_modules/react-native-blob-util'
+  pod 'SwiftProtobuf', '~> 1.22.0'
 
   target 'zeusTests' do
     inherit! :complete
     # Pods for testing
   end
 
-  # Enables Flipper.
-  #
-  # Note that if you have use_frameworks! enabled, Flipper will not work and
-  # you should disable the next line.
-  # use_flipper!()
-
   post_install do |installer|
     react_native_post_install(
       installer,
-      config[:reactNativePath],
+      # Set `mac_catalyst_enabled` to `true` in order to apply patches
+      # necessary for Mac Catalyst builds
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # https://github.com/dream-sports-labs/react-native-fast-image/issues/273
+    # https://github.com/facebook/folly/issues/2297#issuecomment-2441706674
+    system("chmod -R u+w Pods/RCT-Folly")
+    Dir.glob("Pods/RCT-Folly/folly/Portability.h").each do |file|
+      text = File.read(file)
+      new_contents = text.gsub('#define FOLLY_HAS_COROUTINES 1', '#define FOLLY_HAS_COROUTINES 0')
+      File.open(file, "w") { |file| file.puts new_contents }
+    end
 
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
         # Disable arm64 builds for the simulator
         config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+        
+        # Fix DoubleConversion compilation issues
+        if target.name == 'DoubleConversion'
+          config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'c++17'
+          config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+          config.build_settings['GCC_C_LANGUAGE_STANDARD'] = 'c11'
+          config.build_settings['CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF'] = 'NO'
+          config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+        end
       end
     end
   end

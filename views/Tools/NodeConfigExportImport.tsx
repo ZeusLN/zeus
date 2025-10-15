@@ -14,7 +14,7 @@ import { inject, observer } from 'mobx-react';
 import { CheckBox } from 'react-native-elements';
 import { StackNavigationProp } from '@react-navigation/stack';
 import RNFS from 'react-native-fs';
-import DocumentPicker from 'react-native-document-picker';
+import { pick, types, keepLocalCopy } from '@react-native-documents/picker';
 
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -510,19 +510,35 @@ export default class NodeConfigExportImport extends React.Component<
     private handleImport = async () => {
         try {
             this.setState({ isLoading: true });
-            const result = await DocumentPicker.pick({
-                type: [DocumentPicker.types.allFiles],
-                copyTo: 'cachesDirectory'
+            const [file] = await pick({
+                type: [types.allFiles]
             });
 
-            const filePath = result[0].fileCopyUri;
+            const [localCopy] = await keepLocalCopy({
+                files: [
+                    {
+                        uri: file.uri,
+                        fileName: file.name ?? 'fallbackName'
+                    }
+                ],
+                destination: 'cachesDirectory'
+            });
+
+            if (localCopy.status === 'error') {
+                throw new Error(localCopy.copyError || 'Failed to copy file');
+            }
+
+            const filePath = localCopy.localUri;
             if (!filePath) {
                 throw new Error('No file selected');
             }
 
             await this.handleImportFile(filePath);
-        } catch (error) {
-            if (DocumentPicker.isCancel(error)) {
+        } catch (error: any) {
+            if (
+                error?.message?.includes('cancel') ||
+                error?.code === 'DOCUMENT_PICKER_CANCELED'
+            ) {
                 // not really an error, user just canceled picking a file
                 this.setState({ isLoading: false });
             } else {

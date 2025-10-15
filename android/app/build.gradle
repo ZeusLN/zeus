@@ -58,6 +58,9 @@ react {
     //
     //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
     // hermesFlags = ["-O", "-output-source-map"]
+
+    /* Autolinking */
+    autolinkLibrariesWithApp()
 }
 
 /**
@@ -202,7 +205,6 @@ dependencies {
     implementation "com.google.guava:guava:31.0.1-android"
     implementation "io.grpc:grpc-protobuf-lite:1.45.1"
 
-    implementation "com.jakewharton:process-phoenix:2.0.0"
     implementation 'org.brotli:dec:0.1.2'
 
     // LN address notifications
@@ -231,8 +233,6 @@ tasks.register('copyDownloadableDepsToLibs', Copy) {
     from configurations.implementation
     into 'libs'
 }
-
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 
 protobuf {
     protoc {
