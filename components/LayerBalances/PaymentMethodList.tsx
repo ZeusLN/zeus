@@ -33,6 +33,13 @@ interface PaymentMethodListProps {
     lightningBalance?: number | string;
     onchainBalance?: number | string;
     ecashBalance?: number | string;
+    accounts?: Array<{
+        name: string;
+        balance: number;
+        XFP?: string;
+        watch_only?: boolean;
+        hidden?: boolean;
+    }>;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -43,6 +50,8 @@ type DataRow = {
     subtitle?: string;
     disabled?: boolean;
     balance?: number | string;
+    account?: string;
+    hidden?: boolean;
 };
 
 const Row = ({ item }: { item: DataRow }) => {
@@ -204,14 +213,16 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'On-chain') {
+    if (item.layer === 'On-chain' || item.account) {
         return (
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
                 satAmount={satAmount}
                 locked={true}
+                hidden={item.hidden}
                 disabled={item.disabled}
+                account={item.account}
             >
                 <Row item={item} />
             </OnchainSwipeableRow>
@@ -234,7 +245,8 @@ export default class PaymentMethodList extends Component<
             lnurlParams,
             lightningBalance,
             onchainBalance,
-            ecashBalance
+            ecashBalance,
+            accounts
         } = this.props;
 
         let DATA: DataRow[] = [];
@@ -288,10 +300,27 @@ export default class PaymentMethodList extends Component<
                     ? `${value.slice(0, 12)}...${value.slice(-12)}`
                     : undefined,
                 disabled: !BackendUtils.supportsOnchainSends(),
-                balance: onchainBalance
+                balance: onchainBalance,
+                account: 'default'
             });
-        }
 
+            if (accounts && accounts.length > 0) {
+                accounts.forEach((account) => {
+                    if (!account.hidden && !account.watch_only) {
+                        DATA.push({
+                            layer: account.name,
+                            subtitle: value
+                                ? `${value.slice(0, 12)}...${value.slice(-12)}`
+                                : account.XFP,
+                            disabled: false,
+                            balance: account.balance,
+                            account: account.name,
+                            hidden: account.hidden
+                        });
+                    }
+                });
+            }
+        }
         return (
             <View style={{ flex: 1 }}>
                 <FlatList

@@ -11,6 +11,7 @@ import Screen from '../components/Screen';
 
 import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -30,6 +31,7 @@ interface ChoosePaymentMethodProps {
     >;
     BalanceStore?: BalanceStore;
     CashuStore?: CashuStore;
+    UTXOsStore?: UTXOsStore;
 }
 
 interface ChoosePaymentMethodState {
@@ -41,7 +43,7 @@ interface ChoosePaymentMethodState {
     lnurlParams: LNURLWithdrawParams | undefined;
 }
 
-@inject('BalanceStore', 'CashuStore')
+@inject('BalanceStore', 'CashuStore', 'UTXOsStore')
 @observer
 export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
@@ -93,7 +95,7 @@ export default class ChoosePaymentMethod extends React.Component<
     }
 
     render() {
-        const { navigation, BalanceStore, CashuStore } = this.props;
+        const { navigation, BalanceStore, CashuStore, UTXOsStore } = this.props;
         const {
             value,
             satAmount,
@@ -103,6 +105,7 @@ export default class ChoosePaymentMethod extends React.Component<
             lnurlParams
         } = this.state;
 
+        const { accounts } = UTXOsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
         return (
@@ -128,6 +131,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     lightningBalance={lightningBalance}
                     onchainBalance={totalBlockchainBalance}
                     ecashBalance={totalBalanceSats}
+                    accounts={accounts}
                 />
                 {!!value && !!lightning && (
                     <Button
