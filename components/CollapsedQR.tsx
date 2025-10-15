@@ -246,19 +246,6 @@ export default class CollapsedQR extends React.Component<
                     </View>
                 )}
 
-                {satAmount != null && this.props.displayAmount && (
-                    <View
-                        style={{
-                            flexDirection: 'column',
-                            alignItems: 'center'
-                        }}
-                    >
-                        <Amount sats={satAmount} toggleable></Amount>
-                        <View>
-                            <Conversion sats={satAmount} sensitive />
-                        </View>
-                    </View>
-                )}
                 {!hideText && !textBottom && (
                     <ValueText
                         value={value}
@@ -267,83 +254,123 @@ export default class CollapsedQR extends React.Component<
                     />
                 )}
                 {!collapsed && value && (
-                    <TouchableOpacity
-                        style={{
-                            ...styles.qrPadding,
-                            backgroundColor: themeColor('qr') || 'white'
-                        }}
-                        onPress={() => this.handleQRCodeTap()}
-                    >
-                        {enlargeQR && (
-                            <Modal
-                                transparent={true}
-                                animationType="fade"
-                                visible={enlargeQR}
-                            >
-                                <TouchableWithoutFeedback
-                                    onPress={() => this.handleQRCodeTap()}
+                    <View>
+                        <TouchableOpacity
+                            style={{
+                                ...styles.qrPadding,
+                                backgroundColor: themeColor('qr') || 'white'
+                            }}
+                            onPress={() => this.handleQRCodeTap()}
+                        >
+                            {enlargeQR && (
+                                <Modal
+                                    transparent={true}
+                                    animationType="fade"
+                                    visible={enlargeQR}
                                 >
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            justifyContent: 'center'
-                                        }}
+                                    <TouchableWithoutFeedback
+                                        onPress={() => this.handleQRCodeTap()}
                                     >
                                         <View
                                             style={{
-                                                ...StyleSheet.absoluteFillObject,
-                                                backgroundColor: 'black',
-                                                opacity: 0.6
+                                                flex: 1,
+                                                justifyContent: 'center'
                                             }}
-                                        />
-                                        <View>
-                                            <QRCode
-                                                value={value}
-                                                size={width}
-                                                logo={
-                                                    logo
-                                                        ? logo
-                                                        : themeColor(
-                                                              'invertQrIcons'
-                                                          )
-                                                        ? defaultLogoWhite
-                                                        : defaultLogo
-                                                }
-                                                backgroundColor={'white'}
-                                                logoBackgroundColor={
-                                                    themeColor('invertQrIcons')
-                                                        ? 'black'
-                                                        : 'white'
-                                                }
-                                                logoMargin={10}
-                                                quietZone={width / 20}
+                                        >
+                                            <View
+                                                style={{
+                                                    ...StyleSheet.absoluteFillObject,
+                                                    backgroundColor: 'black',
+                                                    opacity: 0.6
+                                                }}
                                             />
+                                            <View>
+                                                <QRCode
+                                                    value={value}
+                                                    size={width}
+                                                    logo={
+                                                        logo
+                                                            ? logo
+                                                            : themeColor(
+                                                                  'invertQrIcons'
+                                                              )
+                                                            ? defaultLogoWhite
+                                                            : defaultLogo
+                                                    }
+                                                    backgroundColor={'white'}
+                                                    logoBackgroundColor={
+                                                        themeColor(
+                                                            'invertQrIcons'
+                                                        )
+                                                            ? 'black'
+                                                            : 'white'
+                                                    }
+                                                    logoMargin={10}
+                                                    quietZone={width / 20}
+                                                />
+                                            </View>
                                         </View>
-                                    </View>
-                                </TouchableWithoutFeedback>
-                            </Modal>
+                                    </TouchableWithoutFeedback>
+                                </Modal>
+                            )}
+                            <QRCode
+                                value={value}
+                                size={
+                                    height > width ? width * 0.75 : height * 0.6
+                                }
+                                logo={
+                                    logo
+                                        ? logo
+                                        : themeColor('invertQrIcons')
+                                        ? defaultLogoWhite
+                                        : defaultLogo
+                                }
+                                color={themeColor('qr') || 'black'}
+                                backgroundColor={
+                                    themeColor('qrBackground') || 'white'
+                                }
+                                logoBackgroundColor={
+                                    themeColor('qrLogoBackground') || 'white'
+                                }
+                                logoMargin={10}
+                                quietZone={width / 40}
+                            />
+                        </TouchableOpacity>
+                        {satAmount != null && this.props.displayAmount && (
+                            <View
+                                style={{
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    alignSelf: 'center',
+                                    backgroundColor:
+                                        themeColor('buttonBackground') ||
+                                        themeColor('secondary'),
+                                    width:
+                                        height > width
+                                            ? width * 0.75
+                                            : height * 0.6,
+                                    borderBottomLeftRadius: 12,
+                                    borderBottomRightRadius: 12,
+                                    marginTop: -10,
+                                    margin: 15,
+                                    padding: 15
+                                }}
+                            >
+                                <Amount
+                                    sats={satAmount}
+                                    toggleable
+                                    jumboText
+                                    colorOverride={themeColor('buttonText')}
+                                ></Amount>
+                                <View>
+                                    <Conversion
+                                        sats={satAmount}
+                                        colorOverride={themeColor('buttonText')}
+                                    />
+                                </View>
+                            </View>
                         )}
-                        <QRCode
-                            value={value}
-                            size={height > width ? width * 0.75 : height * 0.6}
-                            logo={
-                                logo
-                                    ? logo
-                                    : themeColor('invertQrIcons')
-                                    ? defaultLogoWhite
-                                    : defaultLogo
-                            }
-                            color={themeColor('qr') || 'black'}
-                            backgroundColor={
-                                themeColor('qrBackground') || 'white'
-                            }
-                            logoBackgroundColor={
-                                themeColor('qrLogoBackground') || 'white'
-                            }
-                            logoMargin={10}
-                            quietZone={width / 40}
-                        />
-                    </TouchableOpacity>
+                    </View>
                 )}
                 {!hideText && textBottom && (
                     <ValueText
