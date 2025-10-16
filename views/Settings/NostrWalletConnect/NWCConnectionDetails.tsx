@@ -389,7 +389,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                                 }
                                                             ]}
                                                         >
-                                                            {NostrConnectUtils.getPermissionDescription(
+                                                            {NostrConnectUtils.getPermissionShortDescription(
                                                                 permission
                                                             )}
                                                         </Text>

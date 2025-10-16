@@ -82,7 +82,7 @@ export default class NWCConnectionsList extends React.Component<
         } catch (error: any) {
             this.setState({
                 error: localeString(
-                    'views.Settings.NostrWalletConnect.failedToLoadConnections'
+                    'stores.NostrWalletConnectStore.failedToLoadConnections'
                 ),
                 connectionsLoading: false
             });
@@ -354,7 +354,7 @@ export default class NWCConnectionsList extends React.Component<
                                         navigation.navigate('NWCSettings')
                                     }
                                     accessibilityLabel={localeString(
-                                        'views.Settings.NostrWalletConnect.settings'
+                                        'views.Settings.title'
                                     )}
                                 >
                                     <Gear
