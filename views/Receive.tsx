@@ -117,6 +117,7 @@ interface ReceiveProps {
             autoGenerate: boolean;
             autoGenerateOnChain: boolean;
             autoGenerateChange?: boolean;
+            forceLn?: boolean; // when coming from the LN balance slider action
             account: string;
             addressType?: string;
             selectedIndex: number;
@@ -308,12 +309,13 @@ export default class Receive extends React.Component<
         });
 
         const lnOnly =
-            settings &&
-            posStatus &&
-            posStatus === 'active' &&
-            settings.pos &&
-            settings.pos.confirmationPreference &&
-            settings.pos.confirmationPreference === 'lnOnly';
+            (settings &&
+                posStatus &&
+                posStatus === 'active' &&
+                settings.pos &&
+                settings.pos.confirmationPreference &&
+                settings.pos.confirmationPreference === 'lnOnly') ||
+            route.params?.forceLn;
 
         reset();
 
@@ -1298,12 +1300,13 @@ export default class Receive extends React.Component<
             settings?.invoices?.showCustomPreimageField;
 
         const lnOnly =
-            settings &&
-            posStatus &&
-            posStatus === 'active' &&
-            settings.pos &&
-            settings.pos.confirmationPreference &&
-            settings.pos.confirmationPreference === 'lnOnly';
+            (settings &&
+                posStatus &&
+                posStatus === 'active' &&
+                settings.pos &&
+                settings.pos.confirmationPreference &&
+                settings.pos.confirmationPreference === 'lnOnly') ||
+            route.params?.forceLn;
 
         const lnurl = route.params?.lnurlParams;
 
@@ -1685,6 +1688,7 @@ export default class Receive extends React.Component<
                         ) : !creatingInvoice &&
                           BackendUtils.supportsAddressTypeSelection() &&
                           account === 'default' &&
+                          !route.params?.forceLn &&
                           (selectedIndex === 2 || selectedIndex === 1) ? (
                             <SettingsButton />
                         ) : undefined
