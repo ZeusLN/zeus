@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Porcentaje de donación predeterminado",
     "views.Settings.Invoices.title": "Configuración de facturas",
     "views.Settings.Invoices.showCustomPreimageField": "Mostrar campo preimagen personalizado",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Mostrar el importe solicitado en la factura",
     "views.Settings.Invoices.memoExplainer": "Una nota predeterminada para usar en sus facturas.",
     "views.Settings.Invoices.receiverNameExplainer": "Un nombre de receptor que se agrega a todas sus facturas para ayudar a los pagadores a identificar a quién están pagando.",
     "views.Settings.Channels.title": "Configuración de canales",

@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Výchozí procento daru",
     "views.Settings.Invoices.title": "Nastavení faktur",
     "views.Settings.Invoices.showCustomPreimageField": "Zobrazit vlastní pole s předobrazem",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Zobrazit na faktuře požadovanou částku",
     "views.Settings.Invoices.memoExplainer": "Výchozí poznámka, která bude použita ve vašich fakturách.",
     "views.Settings.Invoices.receiverNameExplainer": "Jméno příjemce, které je přidáno ke všem vašim fakturám. Plátcům pomáhá identifikovat, komu platí.",
     "views.Settings.Channels.title": "Nastavení kanálů",
