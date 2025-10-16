@@ -55,6 +55,7 @@ export default class LightningSwipeableRow extends Component<
         x: number,
         progress: Animated.AnimatedInterpolation<number>
     ) => {
+        const { navigation } = this.props;
         const transTranslateX = progress.interpolate({
             inputRange: [0.25, 1],
             outputRange: [x, 0]
@@ -67,13 +68,13 @@ export default class LightningSwipeableRow extends Component<
             this.close();
 
             if (text === localeString('general.receive')) {
-                this.props.navigation.navigate('Receive');
+                navigation.navigate('Receive', { forceLn: true });
             } else if (text === localeString('general.paycodes')) {
-                this.props.navigation.navigate('PayCodes');
+                navigation.navigate('PayCodes');
             } else if (text === localeString('general.routing')) {
-                this.props.navigation.navigate('Routing');
+                navigation.navigate('Routing');
             } else if (text === localeString('general.send')) {
-                this.props.navigation.navigate('Send');
+                navigation.navigate('Send');
             }
         };
 
