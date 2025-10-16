@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "預設捐贈比例",
     "views.Settings.Invoices.title": "帳單設定",
     "views.Settings.Invoices.showCustomPreimageField": "顯示自訂驗證碼的輸入欄位",
-    "views.Settings.Invoices.displayAmountOnInvoice": "在帳單上顯示請款金額",
     "views.Settings.Invoices.memoExplainer": "你開出去的帳單上的備註的預設值。",
     "views.Settings.Invoices.receiverNameExplainer": "你開出去的帳單上都會有的收款人名稱，可以給付款人識別付給了誰。",
     "views.Settings.Channels.title": "管道設定",

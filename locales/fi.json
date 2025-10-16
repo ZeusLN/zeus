@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "Laskujen asetukset",
     "views.Settings.Invoices.showCustomPreimageField": "Näytä mukautettu alkukuvakenttä",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Näytä pyydetty summa laskussa",
     "views.Settings.Invoices.memoExplainer": "Laskuissa käytettävä oletusmuistio.",
     "views.Settings.Invoices.receiverNameExplainer": "Vastaanottajan nimi, joka lisätään kaikkiin laskuihisi, jotta maksajat voivat tunnistaa, kenelle he maksavat.",
     "views.Settings.Channels.title": "Kanava-asetukset",

@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "इनवॉइस सेटिंग्स",
     "views.Settings.Invoices.showCustomPreimageField": "कस्टम प्रीइमेज फील्ड दिखाएं",
-    "views.Settings.Invoices.displayAmountOnInvoice": "इनवॉइस पर अनुरोधित राशि प्रदर्शित करें",
     "views.Settings.Invoices.memoExplainer": "आपके इनवॉइस के लिए उपयोग करने हेतु एक डिफॉल्ट मेमो।",
     "views.Settings.Invoices.receiverNameExplainer": "एक प्राप्तकर्ता नाम जो आपके सभी इनवॉइस में जोड़ा जाता है, जिससे भुगतानकर्ताओं को यह पहचानने में मदद मिलती है कि वे किसे भुगतान कर रहे हैं।",
     "views.Settings.Channels.title": "चैनल्स सेटिंग्स",

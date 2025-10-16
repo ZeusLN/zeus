@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Procentul implicit de donație",
     "views.Settings.Invoices.title": "Setări factură",
     "views.Settings.Invoices.showCustomPreimageField": "Afișați câmpul preimage personalizat",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Afișați suma solicitată pe factură",
     "views.Settings.Invoices.memoExplainer": "O notă implicită de utilizat pentru facturi.",
     "views.Settings.Invoices.receiverNameExplainer": "Un nume de destinatar care este adăugat la toate facturile dvs., pentru a ajuta plătitorii să identifice pe cine plătesc.",
     "views.Settings.Channels.title": "Setări canale",

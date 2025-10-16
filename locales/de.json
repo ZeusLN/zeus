@@ -924,7 +924,6 @@
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "Rechnungseinstellungen",
     "views.Settings.Invoices.showCustomPreimageField": "Feld für benutzerdefiniertes Pre-Image anzeigen",
-    "views.Settings.Invoices.displayAmountOnInvoice": "Angeforderten Betrag auf Rechnung anzeigen",
     "views.Settings.Invoices.memoExplainer": "Ein Standard-Memo, das für deine Rechnungen verwendet wird.",
     "views.Settings.Invoices.receiverNameExplainer": "Ein Empfängername, der auf all deinen Rechnungen erscheint, um Zahlenden die Identifikation des Zahlungsempfängers zu erleichtern.",
     "views.Settings.Channels.title": "Kanal-Einstellungen",
