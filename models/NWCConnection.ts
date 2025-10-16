@@ -11,6 +11,8 @@ export type BudgetRenewalType =
     | 'weekly'
     | 'monthly'
     | 'yearly';
+
+export type TimeUnit = 'Hours' | 'Days' | 'Weeks' | 'Months' | 'Years';
 export interface NWCConnectionData {
     id: string;
     name: string;
@@ -26,6 +28,8 @@ export interface NWCConnectionData {
     budgetRenewal?: BudgetRenewalType;
     expiresAt?: Date;
     lastBudgetReset?: Date;
+    customExpiryValue?: number;
+    customExpiryUnit?: TimeUnit;
     metadata?: any;
 }
 
@@ -53,6 +57,8 @@ export default class NWCConnection extends BaseModel {
     @observable budgetRenewal?: BudgetRenewalType;
     @observable expiresAt?: Date;
     @observable lastBudgetReset?: Date;
+    @observable customExpiryValue?: number;
+    @observable customExpiryUnit?: TimeUnit;
     @observable metadata?: any;
 
     constructor(data?: NWCConnectionData) {
