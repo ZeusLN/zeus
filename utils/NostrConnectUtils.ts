@@ -1,12 +1,24 @@
-import { BudgetRenewalType, PermissionsType } from '../models/NWCConnection';
-import { localeString } from './LocaleUtils';
 import type {
     Nip47NotificationType,
     Nip47SingleMethod
 } from '@getalby/sdk/dist/nwc/types';
 
+import {
+    BudgetRenewalType,
+    PermissionsType,
+    TimeUnit
+} from '../models/NWCConnection';
+
+import { localeString } from './LocaleUtils';
+
 export interface PermissionOption {
-    key: string;
+    key: PermissionsType;
+    title: string;
+    description: string;
+}
+
+export interface IndividualPermissionOption {
+    key: Nip47SingleMethod;
     title: string;
     description: string;
 }
@@ -16,16 +28,27 @@ export interface BudgetRenewalOption {
     title: string;
 }
 
-export interface PermissionType {
-    key: PermissionsType;
-    title: string;
-    description: string;
-}
+const BUDGET_PRESETS = {
+    TEN_K: 10000,
+    HUNDRED_K: 100000,
+    ONE_MILLION: 1000000,
+    UNLIMITED: -1
+} as const;
+
+const PRESET_INDEX = {
+    FIRST: 0,
+    SECOND: 1,
+    THIRD: 2,
+    NEVER: 3,
+    CUSTOM: 4
+} as const;
+
 export default class NostrConnectUtils {
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
     }
-    static getAvailablePermissions(): PermissionOption[] {
+
+    static getAvailablePermissions(): IndividualPermissionOption[] {
         return [
             {
                 key: 'get_info',
@@ -126,7 +149,7 @@ export default class NostrConnectUtils {
         ];
     }
 
-    static getPermissionTypes(): PermissionType[] {
+    static getPermissionTypes(): PermissionOption[] {
         return [
             {
                 key: 'full_access',
@@ -166,6 +189,18 @@ export default class NostrConnectUtils {
         ];
     }
 
+    static getBudgetPresetIndex(maxAmountSats?: number): number {
+        if (!maxAmountSats) return PRESET_INDEX.FIRST;
+        if (maxAmountSats === BUDGET_PRESETS.TEN_K) return PRESET_INDEX.FIRST;
+        if (maxAmountSats === BUDGET_PRESETS.HUNDRED_K)
+            return PRESET_INDEX.SECOND;
+        if (maxAmountSats === BUDGET_PRESETS.ONE_MILLION)
+            return PRESET_INDEX.THIRD;
+        if (maxAmountSats === BUDGET_PRESETS.UNLIMITED)
+            return PRESET_INDEX.NEVER;
+        return PRESET_INDEX.CUSTOM;
+    }
+
     static getExpiryPresetButtons(): string[] {
         return [
             localeString('time.1W'),
@@ -176,29 +211,76 @@ export default class NostrConnectUtils {
         ];
     }
 
-    static getExpiryPresetIndex(expiryDays?: number): number {
-        if (!expiryDays) return 3;
-        if (expiryDays === 7) return 0;
-        if (expiryDays === 30) return 1;
-        if (expiryDays === 365) return 2;
-        return 4;
+    static getExpiryPresetIndex(expiryAt?: Date): number {
+        const expiryDays =
+            NostrConnectUtils.calculateExpiryDays(expiryAt)?.toString();
+        if (!expiryDays) return PRESET_INDEX.NEVER;
+        if (expiryDays === '7') return PRESET_INDEX.FIRST;
+        if (expiryDays === '30') return PRESET_INDEX.SECOND;
+        if (expiryDays === '365') return PRESET_INDEX.THIRD;
+        return PRESET_INDEX.CUSTOM;
     }
 
-    static getExpiryDaysFromPreset(presetIndex: number): number | undefined {
+    static getExpiryDateFromPreset(
+        presetIndex: number,
+        customExpiryValue?: number,
+        customExpiryUnit?: TimeUnit
+    ): Date {
+        const now = new Date();
         switch (presetIndex) {
-            case 0:
-                return 7;
-            case 1:
-                return 30;
-            case 2:
-                return 365;
-            case 3:
-                return undefined;
-            case 4:
-                return undefined;
+            case PRESET_INDEX.FIRST:
+                return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            case PRESET_INDEX.SECOND:
+                return new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+            case PRESET_INDEX.THIRD:
+                return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+            case PRESET_INDEX.NEVER:
+                return new Date(now.getTime() + 1000 * 60 * 60 * 24 * 365);
+            case PRESET_INDEX.CUSTOM:
+                if (customExpiryValue && customExpiryUnit) {
+                    return NostrConnectUtils.calculateCustomExpiryDate(
+                        customExpiryValue,
+                        customExpiryUnit
+                    );
+                }
+                return new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
             default:
-                return undefined;
+                return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         }
+    }
+
+    static calculateCustomExpiryDate(value: number, unit: TimeUnit): Date {
+        const now = new Date();
+        const unitLower = unit.toLowerCase();
+
+        if (unitLower.includes('hours')) {
+            return new Date(now.getTime() + value * 60 * 60 * 1000);
+        } else if (unitLower.includes('days')) {
+            return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
+        } else if (unitLower.includes('weeks')) {
+            return new Date(now.getTime() + value * 7 * 24 * 60 * 60 * 1000);
+        } else if (unitLower.includes('months')) {
+            const newDate = new Date(now);
+            newDate.setMonth(newDate.getMonth() + value);
+            return newDate;
+        } else if (unitLower.includes('years')) {
+            const newDate = new Date(now);
+            newDate.setFullYear(newDate.getFullYear() + value);
+            return newDate;
+        }
+
+        return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
+    }
+
+    static calculateExpiryDays(expiresAt?: Date): string {
+        if (!expiresAt) return '';
+
+        const now = new Date();
+        const expiry = new Date(expiresAt);
+        const diffTime = expiry.getTime() - now.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return diffDays > 0 ? diffDays.toString() : '';
     }
 
     static getFullAccessPermissions(): Nip47SingleMethod[] {
@@ -224,7 +306,9 @@ export default class NostrConnectUtils {
         ];
     }
 
-    static getPermissionDescription(permission: Nip47SingleMethod): string {
+    static getPermissionShortDescription(
+        permission: Nip47SingleMethod
+    ): string {
         const descriptions: { [key: string]: string } = {
             get_info: localeString(
                 'views.Settings.NostrWalletConnect.permissions.getInfoShort'
@@ -278,12 +362,13 @@ export default class NostrConnectUtils {
     static determinePermissionType(
         permissions: Nip47SingleMethod[]
     ): PermissionsType {
-        const connectionPermissions = permissions.sort();
-        const fullAccessSorted =
-            NostrConnectUtils.getFullAccessPermissions().sort();
-        const readOnlySorted =
-            NostrConnectUtils.getReadOnlyPermissions().sort();
-
+        const connectionPermissions = permissions.slice().sort();
+        const fullAccessSorted = NostrConnectUtils.getFullAccessPermissions()
+            .slice()
+            .sort();
+        const readOnlySorted = NostrConnectUtils.getReadOnlyPermissions()
+            .slice()
+            .sort();
         if (
             JSON.stringify(connectionPermissions) ===
             JSON.stringify(fullAccessSorted)
@@ -298,30 +383,11 @@ export default class NostrConnectUtils {
         return 'custom';
     }
 
-    static calculateExpiryDays(expiresAt?: Date): string {
-        if (!expiresAt) return '';
-
-        const now = new Date();
-        const expiry = new Date(expiresAt);
-        const diffTime = expiry.getTime() - now.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays > 0 ? diffDays.toString() : '';
-    }
-
     static getBudgetRenewalIndex(budgetRenewal?: string): number {
         const options = NostrConnectUtils.getBudgetRenewalOptions();
         const index = options.findIndex(
             (option) => option.key === budgetRenewal
         );
         return index >= 0 ? index : 0;
-    }
-
-    static getBudgetPresetIndex(maxAmountSats?: number): number {
-        if (!maxAmountSats) return 0;
-        if (maxAmountSats === 10000) return 0;
-        if (maxAmountSats === 100000) return 1;
-        if (maxAmountSats === 1000000) return 2;
-        if (maxAmountSats === -1) return 3;
-        return 4;
     }
 }
