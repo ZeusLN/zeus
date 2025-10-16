@@ -1688,6 +1688,7 @@ export default class Receive extends React.Component<
                         ) : !creatingInvoice &&
                           BackendUtils.supportsAddressTypeSelection() &&
                           account === 'default' &&
+                          !route.params?.forceLn &&
                           (selectedIndex === 2 || selectedIndex === 1) ? (
                             <SettingsButton />
                         ) : undefined
