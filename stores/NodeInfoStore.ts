@@ -24,14 +24,17 @@ export default class NodeInfoStore {
         this.channelsStore = channelsStore;
         this.settingsStore = settingsStore;
 
-        reaction(
-            () => this.channelsStore.channels,
-            () => {
-                if (this.channelsStore.channels.length !== 0) {
-                    this.getNodeInfo();
+        // Delay the reaction setup to avoid initialization issues
+        setTimeout(() => {
+            reaction(
+                () => this.channelsStore?.channels,
+                () => {
+                    if (this.channelsStore?.channels && this.channelsStore.channels.length !== 0) {
+                        this.getNodeInfo();
+                    }
                 }
-            }
-        );
+            );
+        }, 0);
     }
 
     @action

@@ -5,7 +5,7 @@ import Long from 'long';
 import sha from 'sha.js';
 
 import Base64Utils from '../utils/Base64Utils';
-import { localeString } from '../utils/LocaleUtils';
+// import { localeString } from '../utils/LocaleUtils'; // Removed to avoid circular dependency
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
@@ -421,9 +421,7 @@ export const sendPaymentV2Sync = async (
 
     const result: any = await Promise.race([
         forcedTimeout((timeout_seconds + 1) * 1000, {
-            payment_error: localeString(
-                'views.SendingLightning.paymentTimedOut'
-            )
+            payment_error: 'Payment timed out'
         }),
         call()
     ]);

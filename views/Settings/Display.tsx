@@ -2,7 +2,6 @@ import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import SettingsStore, {
     DEFAULT_VIEW_KEYS,
@@ -132,13 +131,6 @@ export default class Display extends React.Component<
                                     theme: value
                                 }
                             });
-                            SystemNavigationBar.setNavigationColor(
-                                themeColor('background'),
-                                isLightTheme() ? 'dark' : 'light'
-                            );
-                            SystemNavigationBar.setNavigationBarDividerColor(
-                                themeColor('secondary')
-                            );
                         }}
                         values={THEME_KEYS}
                     />

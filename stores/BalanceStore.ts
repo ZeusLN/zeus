@@ -24,7 +24,7 @@ export default class BalanceStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
-                if (this.settingsStore.hasCredentials()) {
+                if (this.settingsStore.settings && this.settingsStore.hasCredentials()) {
                     this.getBlockchainBalance(false, false);
                     this.getLightningBalance(false);
                 }

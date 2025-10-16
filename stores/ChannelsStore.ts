@@ -118,52 +118,52 @@ export default class ChannelsStore {
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
 
-        reaction(
-            () => this.channelRequest,
-            () => {
-                if (this.channelRequest) {
-                    const chanReq = new OpenChannelRequest(this.channelRequest);
-                    this.openChannel(chanReq);
-                }
-            }
-        );
+        // reaction(
+        //     () => this.channelRequest,
+        //     () => {
+        //         if (this.channelRequest) {
+        //             const chanReq = new OpenChannelRequest(this.channelRequest);
+        //             this.openChannel(chanReq);
+        //         }
+        //     }
+        // );
 
-        reaction(
-            () => this.channels,
-            async () => {
-                if (this.channels) {
-                    this.enrichedChannels = await this.enrichChannels(
-                        this.channels,
-                        true
-                    );
-                    this.filterChannels();
-                }
-            }
-        );
+        // reaction(
+        //     () => this.channels,
+        //     async () => {
+        //         if (this.channels) {
+        //             this.enrichedChannels = await this.enrichChannels(
+        //                 this.channels,
+        //                 true
+        //             );
+        //             this.filterChannels();
+        //         }
+        //     }
+        // );
 
-        reaction(
-            () => this.pendingChannels,
-            async () => {
-                if (this.pendingChannels) {
-                    this.enrichedPendingChannels = await this.enrichChannels(
-                        this.pendingChannels
-                    );
-                    this.filterPendingChannels();
-                }
-            }
-        );
+        // reaction(
+        //     () => this.pendingChannels,
+        //     async () => {
+        //         if (this.pendingChannels) {
+        //             this.enrichedPendingChannels = await this.enrichChannels(
+        //                 this.pendingChannels
+        //             );
+        //             this.filterPendingChannels();
+        //         }
+        //     }
+        // );
 
-        reaction(
-            () => this.closedChannels,
-            async () => {
-                if (this.closedChannels) {
-                    this.enrichedClosedChannels = await this.enrichChannels(
-                        this.closedChannels
-                    );
-                    this.filterClosedChannels();
-                }
-            }
-        );
+        // reaction(
+        //     () => this.closedChannels,
+        //     async () => {
+        //         if (this.closedChannels) {
+        //             this.enrichedClosedChannels = await this.enrichChannels(
+        //                 this.closedChannels
+        //             );
+        //             this.filterClosedChannels();
+        //         }
+        //     }
+        // );
     }
 
     @action
