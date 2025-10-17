@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Animated, View, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
@@ -22,6 +23,8 @@ import {
     getDecimalPlaceholder,
     numberWithCommas
 } from '../../utils/UnitsUtils';
+import { calculateTaxSats } from '../../utils/PosUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 import { PricedIn } from '../../models/Product';
 
@@ -220,6 +223,108 @@ export default class PosKeypadPane extends React.PureComponent<
         navigation.navigate('Order', { order });
     };
 
+    addItemAndQuickPay = async () => {
+        const { PosStore, UnitsStore, SettingsStore, FiatStore, navigation } =
+            this.props;
+        const { settings } = SettingsStore!;
+        const { units } = UnitsStore!;
+        const { fiat } = settings;
+
+        const { amount } = this.state;
+
+        if (!PosStore?.currentOrder)
+            PosStore?.createCurrentOrder(fiat || 'USD');
+        const currentOrder = PosStore?.currentOrder;
+
+        if (!currentOrder) return;
+
+        const amountCalc = amount.replace(/,/g, '.');
+
+        currentOrder.line_items.push({
+            name: localeString('pos.customItem'),
+            quantity: 1,
+            base_price_money: {
+                amount: units === PricedIn.Fiat ? Number(amountCalc) : 0,
+                sats:
+                    units === PricedIn.Sats
+                        ? Number(amountCalc)
+                        : units === PricedIn.Bitcoin
+                        ? Number(amountCalc) * SATS_PER_BTC
+                        : 0
+            }
+        });
+
+        PosStore.recalculateCurrentOrder();
+        await PosStore.saveStandaloneOrder(currentOrder);
+
+        if (!SettingsStore || !FiatStore || !UnitsStore) return;
+        const { getRate, fiatRates } = FiatStore;
+        const { pos } = settings;
+        const merchantName = pos?.merchantName;
+        const taxPercentage = pos?.taxPercentage;
+        const lineItems = currentOrder.line_items;
+
+        const memo = merchantName
+            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
+            : `ZEUS POS - Order ${currentOrder?.id}`;
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+        const rate =
+            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed() : 0;
+
+        const subTotalSats =
+            (currentOrder?.total_money?.sats ?? 0) > 0
+                ? currentOrder.total_money.sats
+                : new BigNumber(currentOrder?.total_money?.amount)
+                      .div(100)
+                      .div(rate)
+                      .multipliedBy(SATS_PER_BTC)
+                      .toFixed(0);
+
+        const taxSats = Number(
+            calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)
+        );
+
+        const totalSats = new BigNumber(subTotalSats || 0)
+            .plus(taxSats)
+            .toFixed(0);
+
+        const totalFiat = new BigNumber(totalSats ?? 0)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+        navigation.navigate(
+            settings?.ecash?.enableCashu && BackendUtils.supportsCashuWallet()
+                ? 'ReceiveEcash'
+                : 'Receive',
+            {
+                amount:
+                    units === 'sats'
+                        ? totalSats
+                        : units === 'BTC'
+                        ? new BigNumber(totalSats || 0)
+                              .div(SATS_PER_BTC)
+                              .toFixed(8)
+                        : totalFiat,
+                autoGenerate: true,
+                memo,
+                order: currentOrder,
+                // For displaying paid orders
+                orderId: currentOrder.id,
+                // sats
+                orderTip: 0,
+                orderTotal: totalSats,
+                // formatted string rate
+                exchangeRate: getRate(),
+                // numerical rate
+                rate
+            }
+        );
+    };
+
     render() {
         const { UnitsStore, navigation } = this.props;
         const { amount } = this.state;
@@ -286,23 +391,43 @@ export default class PosKeypadPane extends React.PureComponent<
                             flex: 1,
                             flexDirection: 'row',
                             position: 'absolute',
-                            bottom: 10
+                            bottom: 10,
+                            paddingHorizontal: 22
                         }}
                     >
-                        <View style={{ width: '100%' }}>
-                            <Button
-                                title={localeString(
-                                    'general.request'
-                                ).toUpperCase()}
-                                quaternary
-                                noUppercase
-                                onPress={() => {
-                                    this.addItemAndCheckout();
-                                }}
-                                buttonStyle={{ height: 40 }}
-                                disabled={!amount || amount == '0'}
-                            />
-                        </View>
+                        <Button
+                            title={localeString(
+                                'general.request'
+                            ).toUpperCase()}
+                            containerStyle={{
+                                borderRadius: 12,
+                                flex: 2,
+                                marginRight: 5
+                            }}
+                            titleStyle={{
+                                color: themeColor('background')
+                            }}
+                            buttonStyle={{
+                                backgroundColor: themeColor('highlight')
+                            }}
+                            disabled={!amount || amount == '0'}
+                            onPress={() => this.addItemAndCheckout()}
+                        />
+                        <Button
+                            title={localeString('views.Settings.POS.quickPay')}
+                            containerStyle={{
+                                borderRadius: 12,
+                                flex: 1
+                            }}
+                            titleStyle={{
+                                color: themeColor('background')
+                            }}
+                            buttonStyle={{
+                                backgroundColor: themeColor('highlight')
+                            }}
+                            disabled={!amount || amount == '0'}
+                            onPress={() => this.addItemAndQuickPay()}
+                        />
                     </View>
                 </View>
             </View>
