@@ -70,12 +70,15 @@ export const cashuStore = new CashuStore(
     channelsStore,
     modalStore
 );
+export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
 export const activityStore = new ActivityStore(
     settingsStore,
     paymentsStore,
     invoicesStore,
     transactionsStore,
-    cashuStore
+    cashuStore,
+    swapStore,
+    nodeInfoStore
 );
 export const lightningAddressStore = new LightningAddressStore(
     cashuStore,
@@ -84,4 +87,3 @@ export const lightningAddressStore = new LightningAddressStore(
 );
 export const posStore = new PosStore(settingsStore, fiatStore);
 export const inventoryStore = new InventoryStore();
-export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
