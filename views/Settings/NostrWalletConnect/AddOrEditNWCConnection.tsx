@@ -71,7 +71,7 @@ interface AddOrEditNWCConnectionState {
     showCustomBudgetInput: boolean;
     selectedExpiryPresetIndex: number;
     showCustomExpiryInput: boolean;
-    customExpiryValue: number;
+    customExpiryValue: number | null;
     customExpiryUnit: TimeUnit;
 }
 
@@ -100,7 +100,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             showCustomBudgetInput: false,
             selectedExpiryPresetIndex: 0,
             showCustomExpiryInput: false,
-            customExpiryValue: 0,
+            customExpiryValue: null,
             customExpiryUnit: localeString('time.days')
         };
     }
@@ -295,7 +295,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     selectExpiryPreset = (presetIndex: number) => {
         const expiryDate = NostrConnectUtils.getExpiryDateFromPreset(
             presetIndex,
-            this.state.customExpiryValue,
+            this.state.customExpiryValue!,
             this.state.customExpiryUnit
         );
         const showCustomExpiryInput = presetIndex === 4;
@@ -1127,7 +1127,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                             this.state
                                                                 .selectedExpiryPresetIndex,
                                                             this.state
-                                                                .customExpiryValue,
+                                                                .customExpiryValue!,
                                                             value as TimeUnit
                                                         );
 
