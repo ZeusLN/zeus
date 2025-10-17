@@ -27,7 +27,10 @@ import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
 
-import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
+import NWCConnection, {
+    BudgetRenewalType,
+    TimeUnit
+} from '../models/NWCConnection';
 import Transaction from '../models/Transaction';
 import Invoice from '../models/Invoice';
 
@@ -88,9 +91,8 @@ const PAYMENT_FEE_LIMIT_SATS = 1000;
 const PAYMENT_PROCESSING_DELAY_MS = 100;
 
 export const DEFAULT_NOSTR_RELAYS = [
-    // 'wss://nos.lol',
-    'wss://relay.snort.social',
     'wss://relay.getalby.com/v1',
+    'wss://relay.snort.social',
     'wss://relay.damus.io'
 ];
 
@@ -140,6 +142,8 @@ export interface CreateConnectionParams {
     budgetAmount?: number;
     budgetRenewal?: BudgetRenewalType;
     expiresAt?: Date;
+    customExpiryValue?: number;
+    customExpiryUnit?: TimeUnit;
 }
 
 export default class NostrWalletConnectStore {
@@ -207,7 +211,7 @@ export default class NostrWalletConnectStore {
                 this.error = false;
                 this.loading = true;
                 this.loadingMsg = localeString(
-                    'views.Settings.NostrWalletConnect.initializingService'
+                    'stores.NostrWalletConnectStore.initializingService'
                 );
             });
             try {
@@ -239,7 +243,7 @@ export default class NostrWalletConnectStore {
                             ? error.message
                             : String(error)) ||
                             localeString(
-                                'views.Settings.NostrWalletConnect.error.failedToInitializeService'
+                                'stores.NostrWalletConnectStore.error.failedToInitializeService'
                             )
                     );
                     this.loading = false;
@@ -287,7 +291,7 @@ export default class NostrWalletConnectStore {
         if (successfulRelays === 0) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToInitializeRelays'
+                    'stores.NostrWalletConnectStore.error.failedToInitializeRelays'
                 )
             );
         }
@@ -321,7 +325,7 @@ export default class NostrWalletConnectStore {
             if (!this.walletServiceKeys?.privateKey) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.walletServiceKeyNotFound'
+                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
                     )
                 );
             }
@@ -334,7 +338,7 @@ export default class NostrWalletConnectStore {
             if (successfulPublishes === 0) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.failedToPublishToRelays'
+                        'stores.NostrWalletConnectStore.error.failedToPublishToRelays'
                     )
                 );
             }
@@ -350,7 +354,7 @@ export default class NostrWalletConnectStore {
                 this.setError(
                     (error instanceof Error ? error.message : String(error)) ||
                         localeString(
-                            'views.Settings.NostrWalletConnect.error.failedToStartService'
+                            'stores.NostrWalletConnectStore.error.failedToStartService'
                         )
                 );
             });
@@ -395,7 +399,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.failedToStopService'
+                        'stores.NostrWalletConnectStore.error.failedToStopService'
                     );
             });
             return false;
@@ -465,14 +469,14 @@ export default class NostrWalletConnectStore {
         if (!this.walletServiceKeys?.privateKey) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.walletServiceKeysNotInitialized'
+                    'stores.NostrWalletConnectStore.error.walletServiceKeysNotInitialized'
                 )
             );
         }
         if (this.nwcWalletServices.size === 0) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.noRelaysAvailable'
+                    'stores.NostrWalletConnectStore.error.noRelaysAvailable'
                 )
             );
         }
@@ -497,7 +501,7 @@ export default class NostrWalletConnectStore {
             if (!params.name.trim()) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.connectionNameRequired'
+                        'stores.NostrWalletConnectStore.connectionNameRequired'
                     )
                 );
             }
@@ -508,14 +512,14 @@ export default class NostrWalletConnectStore {
             if (existingConnection) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.connectionNameExists'
+                        'stores.NostrWalletConnectStore.connectionNameExists'
                     )
                 );
             }
             if (!this.nwcWalletServices.has(params.relayUrl)) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.relayNotAvailable',
+                        'stores.NostrWalletConnectStore.error.relayNotAvailable',
                         {
                             relayUrl: params.relayUrl,
                             availableRelays: this.availableRelays.join(', ')
@@ -540,7 +544,9 @@ export default class NostrWalletConnectStore {
                 maxAmountSats: params.budgetAmount,
                 budgetRenewal: params.budgetRenewal || 'never',
                 expiresAt: params.expiresAt,
-                lastBudgetReset: params.budgetAmount ? new Date() : undefined
+                lastBudgetReset: params.budgetAmount ? new Date() : undefined,
+                customExpiryValue: params.customExpiryValue,
+                customExpiryUnit: params.customExpiryUnit
             };
 
             const connection = new NWCConnection(connectionData);
@@ -576,7 +582,7 @@ export default class NostrWalletConnectStore {
             if (connectionIndex === -1) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.connectionNotFound'
+                        'stores.NostrWalletConnectStore.connectionNotFound'
                     )
                 );
             }
@@ -597,7 +603,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.failedToDeleteConnection'
+                        'stores.NostrWalletConnectStore.error.failedToDeleteConnection'
                     );
             });
             return false;
@@ -626,7 +632,7 @@ export default class NostrWalletConnectStore {
             if (!connection) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.connectionNotFound'
+                        'stores.NostrWalletConnectStore.connectionNotFound'
                     )
                 );
             }
@@ -664,7 +670,7 @@ export default class NostrWalletConnectStore {
                 this.errorMessage =
                     (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.failedToUpdateConnection'
+                        'stores.NostrWalletConnectStore.error.failedToUpdateConnection'
                     );
             });
             return false;
@@ -691,7 +697,7 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.setError(
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToLoadConnections'
+                        'stores.NostrWalletConnectStore.failedToLoadConnections'
                     )
                 );
             });
@@ -709,7 +715,7 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.setError(
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToSaveConnections'
+                        'stores.NostrWalletConnectStore.failedToSaveConnections'
                     )
                 );
             });
@@ -728,7 +734,7 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.setError(
                     localeString(
-                        'views.Settings.NostrWalletConnect.failedToLoadConnections'
+                        'stores.NostrWalletConnectStore.failedToLoadConnections'
                     )
                 );
             });
@@ -772,7 +778,7 @@ export default class NostrWalletConnectStore {
         if (!this.walletServiceKeys?.publicKey) {
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.walletServicePublicKeyNotAvailable'
+                    'stores.NostrWalletConnectStore.error.walletServicePublicKeyNotAvailable'
                 )
             );
         }
@@ -813,7 +819,7 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.error = true;
                 this.errorMessage = localeString(
-                    'views.Settings.NostrWalletConnect.error.serviceNotReady'
+                    'stores.NostrWalletConnectStore.error.serviceNotReady'
                 );
             });
             return;
@@ -825,7 +831,7 @@ export default class NostrWalletConnectStore {
             if (!serviceSecretKey) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.walletServiceKeyNotFound'
+                        'stores.NostrWalletConnectStore.walletServiceKeyNotFound'
                     )
                 );
             }
@@ -880,7 +886,7 @@ export default class NostrWalletConnectStore {
             if (!nwcWalletService) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.nwcWalletServiceNotFound',
+                        'stores.NostrWalletConnectStore.error.nwcWalletServiceNotFound',
                         {
                             relayUrl: connection.relayUrl
                         }
@@ -1025,7 +1031,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'get_info')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1050,7 +1056,7 @@ export default class NostrWalletConnectStore {
                         nodeInfo?.alias ||
                         connection.displayName ||
                         localeString(
-                            'views.Settings.NostrWalletConnect.zeusWallet'
+                            'stores.NostrWalletConnectStore.zeusWallet'
                         ),
                     color: nodeInfo?.color || '#3399FF',
                     pubkey: nodeInfo?.identity_pubkey,
@@ -1065,7 +1071,7 @@ export default class NostrWalletConnectStore {
         } catch (error) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToGetInfo'
+                    'stores.NostrWalletConnectStore.error.failedToGetInfo'
                 ),
                 ErrorCodes.INTERNAL_ERROR
             );
@@ -1078,7 +1084,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'get_balance')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1109,7 +1115,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'pay_invoice')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1125,7 +1131,7 @@ export default class NostrWalletConnectStore {
             return this.handleError(
                 (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.failedToPayInvoice'
+                        'stores.NostrWalletConnectStore.error.failedToPayInvoice'
                     ),
                 ErrorCodes.INTERNAL_ERROR
             );
@@ -1140,7 +1146,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'make_invoice')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1158,7 +1164,7 @@ export default class NostrWalletConnectStore {
                     if (!cashuInvoice || !cashuInvoice.paymentRequest) {
                         throw new Error(
                             localeString(
-                                'views.Settings.NostrWalletConnect.error.failedToCreateCashuInvoice'
+                                'stores.NostrWalletConnectStore.error.failedToCreateCashuInvoice'
                             )
                         );
                     }
@@ -1271,7 +1277,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'lookup_invoice')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1346,7 +1352,7 @@ export default class NostrWalletConnectStore {
                 } else {
                     return this.handleError(
                         localeString(
-                            'views.Settings.NostrWalletConnect.error.invoiceNotFound'
+                            'stores.NostrWalletConnectStore.error.invoiceNotFound'
                         ),
                         ErrorCodes.NOT_FOUND
                     );
@@ -1403,7 +1409,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'list_transactions')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1488,7 +1494,11 @@ export default class NostrWalletConnectStore {
                             type: 'incoming' as const,
                             state: 'settled' as const,
                             invoice: '',
-                            description: token.memo || 'Received Cashu token',
+                            description:
+                                token.memo ||
+                                localeString(
+                                    'stores.NostrWalletConnectStore.receivedCashuToken'
+                                ),
                             description_hash: '',
                             preimage: '',
                             payment_hash: token.encodedToken || '',
@@ -1515,7 +1525,11 @@ export default class NostrWalletConnectStore {
                                 ? ('settled' as const)
                                 : ('pending' as const),
                             invoice: '',
-                            description: token.memo || 'Sent Cashu token',
+                            description:
+                                token.memo ||
+                                localeString(
+                                    'stores.NostrWalletConnectStore.sentCashuToken'
+                                ),
                             description_hash: '',
                             preimage: '',
                             payment_hash: token.encodedToken || '',
@@ -1640,7 +1654,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'pay_keysend')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1653,7 +1667,7 @@ export default class NostrWalletConnectStore {
             if (this.isCashuProperlyConfigured) {
                 return this.handleError(
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.keysendNotSupportedForCashu'
+                        'stores.NostrWalletConnectStore.error.keysendNotSupportedForCashu'
                     ),
                     ErrorCodes.NOT_IMPLEMENTED
                 );
@@ -1684,7 +1698,7 @@ export default class NostrWalletConnectStore {
             if (!preimage || !payment_hash) {
                 return this.handleError(
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.keysendFailed'
+                        'stores.NostrWalletConnectStore.error.keysendFailed'
                     ),
                     ErrorCodes.SEND_KEYSEND_FAILED
                 );
@@ -1704,7 +1718,7 @@ export default class NostrWalletConnectStore {
                     state: 'settled' as const,
                     invoice: '',
                     description: localeString(
-                        'views.Settings.NostrWalletConnect.keysendPayment'
+                        'stores.NostrWalletConnectStore.keysendPayment'
                     ),
                     description_hash: '',
                     preimage,
@@ -1725,7 +1739,7 @@ export default class NostrWalletConnectStore {
             return this.handleError(
                 (error instanceof Error ? error.message : String(error)) ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.keysendFailed'
+                        'stores.NostrWalletConnectStore.error.keysendFailed'
                     ),
                 ErrorCodes.SEND_KEYSEND_FAILED
             );
@@ -1739,7 +1753,7 @@ export default class NostrWalletConnectStore {
         if (this.isRateLimited(connection.id, 'sign_message')) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.rateLimited'
+                    'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
             );
@@ -1754,7 +1768,7 @@ export default class NostrWalletConnectStore {
                 if (!wallet || !wallet.wallet) {
                     return this.handleError(
                         localeString(
-                            'views.Settings.NostrWalletConnect.error.cashuWalletNotInitialized'
+                            'stores.NostrWalletConnectStore.error.cashuWalletNotInitialized'
                         ),
                         ErrorCodes.INTERNAL_ERROR
                     );
@@ -1800,7 +1814,7 @@ export default class NostrWalletConnectStore {
                     error: {
                         code: ErrorCodes.INVOICE_EXPIRED,
                         message: localeString(
-                            'views.Settings.NostrWalletConnect.error.invoiceExpired'
+                            'stores.NostrWalletConnectStore.error.invoiceExpired'
                         )
                     }
                 };
@@ -1814,7 +1828,7 @@ export default class NostrWalletConnectStore {
         if (currentLightningBalance < amountSats) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.insufficientBalance',
+                    'stores.NostrWalletConnectStore.error.insufficientBalance',
                     {
                         amount: amountSats.toString(),
                         balance: currentLightningBalance.toString()
@@ -1847,7 +1861,7 @@ export default class NostrWalletConnectStore {
         if (!preimage) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.noPreimageReceived'
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
                 ),
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
@@ -1883,7 +1897,7 @@ export default class NostrWalletConnectStore {
             return this.handleError(
                 cashuStatus.errorMessage ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.noCashuMintSelected'
+                        'stores.NostrWalletConnectStore.error.noCashuMintSelected'
                     ),
                 ErrorCodes.INTERNAL_ERROR
             );
@@ -1898,7 +1912,7 @@ export default class NostrWalletConnectStore {
         if (!invoice) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToDecodeInvoice'
+                    'stores.NostrWalletConnectStore.error.failedToDecodeInvoice'
                 ),
                 ErrorCodes.INVALID_INVOICE
             );
@@ -1906,7 +1920,7 @@ export default class NostrWalletConnectStore {
         if (invoice.isPaid) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.invoiceAlreadyPaid'
+                    'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
                 ),
                 ErrorCodes.INVALID_INVOICE
             );
@@ -1914,7 +1928,7 @@ export default class NostrWalletConnectStore {
         if (invoice.isExpired) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.invoiceExpired'
+                    'stores.NostrWalletConnectStore.error.invoiceExpired'
                 ),
                 ErrorCodes.INVALID_INVOICE
             );
@@ -1925,7 +1939,7 @@ export default class NostrWalletConnectStore {
         ) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.invalidPaymentRequest'
+                    'stores.NostrWalletConnectStore.error.invalidPaymentRequest'
                 ),
                 ErrorCodes.INVALID_INVOICE
             );
@@ -1944,7 +1958,7 @@ export default class NostrWalletConnectStore {
         if (!amount || amount <= 0) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.invalidAmount'
+                    'stores.NostrWalletConnectStore.error.invalidAmount'
                 ),
                 ErrorCodes.INVALID_INVOICE
             );
@@ -1954,7 +1968,7 @@ export default class NostrWalletConnectStore {
         if (currentBalance < amount) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.insufficientBalance',
+                    'stores.NostrWalletConnectStore.error.insufficientBalance',
                     {
                         amount: amount.toString(),
                         balance: currentBalance.toString()
@@ -1974,7 +1988,7 @@ export default class NostrWalletConnectStore {
             return this.handleError(
                 this.cashuStore.paymentErrorMsg ||
                     localeString(
-                        'views.Settings.NostrWalletConnect.error.failedToPayInvoice'
+                        'stores.NostrWalletConnectStore.error.failedToPayInvoice'
                     ),
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
@@ -1984,7 +1998,7 @@ export default class NostrWalletConnectStore {
         if (!preimage) {
             return this.handleError(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.noPreimageReceived'
+                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
                 ),
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
@@ -2097,7 +2111,7 @@ export default class NostrWalletConnectStore {
             console.error('Failed to save wallet service keys:', error);
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToStoreServiceKeys'
+                    'stores.NostrWalletConnectStore.error.failedToStoreServiceKeys'
                 )
             );
         }
@@ -2125,7 +2139,7 @@ export default class NostrWalletConnectStore {
             console.error('Failed to store private key:', error);
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToStorePrivateKey'
+                    'stores.NostrWalletConnectStore.error.failedToStorePrivateKey'
                 )
             );
         }
@@ -2176,7 +2190,7 @@ export default class NostrWalletConnectStore {
             console.error('Failed to save Cashu setting:', error);
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToSaveCashuSetting'
+                    'stores.NostrWalletConnectStore.error.failedToSaveCashuSetting'
                 )
             );
         }
@@ -2233,7 +2247,7 @@ export default class NostrWalletConnectStore {
             );
             throw new Error(
                 localeString(
-                    'views.Settings.NostrWalletConnect.error.failedToSavePersistentServiceSetting'
+                    'stores.NostrWalletConnectStore.error.failedToSavePersistentServiceSetting'
                 )
             );
         }
@@ -2259,9 +2273,14 @@ export default class NostrWalletConnectStore {
         let errorMessage: string | undefined;
         if (isEnabled && !isConfigured) {
             if (!selectedMintUrl) {
-                errorMessage = 'No Cashu mint selected';
+                errorMessage = localeString(
+                    'stores.NostrWalletConnectStore.error.noCashuMintSelected'
+                );
             } else {
-                errorMessage = `Cashu mint not properly configured: ${selectedMintUrl}`;
+                errorMessage = localeString(
+                    'stores.NostrWalletConnectStore.error.cashuMintNotConfigured',
+                    { mintUrl: selectedMintUrl }
+                );
             }
         }
 
@@ -2436,7 +2455,7 @@ export default class NostrWalletConnectStore {
         runInAction(() => {
             this.error = false;
             this.loadingMsg = localeString(
-                'views.Settings.NostrWalletConnect.fetchingPendingEvents'
+                'stores.NostrWalletConnectStore.fetchingPendingEvents'
             );
         });
         try {
@@ -2444,7 +2463,7 @@ export default class NostrWalletConnectStore {
             if (!deviceToken) {
                 throw new Error(
                     localeString(
-                        'views.Settings.NostrWalletConnect.deviceTokenNotAvailable'
+                        'stores.NostrWalletConnectStore.deviceTokenNotAvailable'
                     )
                 );
             }
@@ -2452,7 +2471,6 @@ export default class NostrWalletConnectStore {
                 async () => await this.fetchPendingEvents(deviceToken),
                 maxRetries
             );
-            console.log('FOUND PENDING EVENTS', data?.events.length);
             if (data?.events) {
                 await this.processPendingEvents(data.events);
             }
@@ -2806,10 +2824,17 @@ export default class NostrWalletConnectStore {
             .toString()
             .replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ',');
         this.showNotification(
-            'Payment Sent via Nostr Wallet Connect',
-            `Sent ${value} ${
-                value === '1' ? 'sat' : 'sats'
-            } via ${connectionName}`
+            localeString(
+                'stores.NostrWalletConnectStore.paymentSentNotificationTitle'
+            ),
+            localeString(
+                'stores.NostrWalletConnectStore.paymentSentNotificationBody',
+                {
+                    amount: value,
+                    unit: localeString('general.sats'),
+                    connectionName
+                }
+            )
         );
     }
 
@@ -2822,13 +2847,29 @@ export default class NostrWalletConnectStore {
             .toString()
             .replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ',');
         const body = description
-            ? `Invoice for ${value} ${
-                  value === '1' ? 'sat' : 'sats'
-              } created by ${connectionName}: ${description}`
-            : `Invoice for ${value} ${
-                  value === '1' ? 'sat' : 'sats'
-              } created by ${connectionName}`;
-        this.showNotification('Invoice Created via Nostr Wallet Connect', body);
+            ? localeString(
+                  'stores.NostrWalletConnectStore.invoiceCreatedNotificationBodyWithDescription',
+                  {
+                      amount: value,
+                      unit: localeString('general.sats'),
+                      connectionName,
+                      description
+                  }
+              )
+            : localeString(
+                  'stores.NostrWalletConnectStore.invoiceCreatedNotificationBody',
+                  {
+                      amount: value,
+                      unit: localeString('general.sats'),
+                      connectionName
+                  }
+              );
+        this.showNotification(
+            localeString(
+                'stores.NostrWalletConnectStore.invoiceCreatedNotificationTitle'
+            ),
+            body
+        );
     }
 
     @action private setError(message: string) {
@@ -2934,7 +2975,7 @@ export default class NostrWalletConnectStore {
         }
         throw new Error(
             localeString(
-                'views.Settings.NostrWalletConnect.error.maxRetriesReached'
+                'stores.NostrWalletConnectStore.error.maxRetriesReached'
             )
         );
     }
