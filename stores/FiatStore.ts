@@ -37,7 +37,8 @@ export default class FiatStore {
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-        this.getFiatRates();
+        // Don't call getFiatRates immediately to avoid race conditions
+        // It will be called when needed
     }
 
     // Resource below may be helpful for formatting
@@ -665,6 +666,11 @@ export default class FiatStore {
         try {
             const settings = await this.settingsStore.getSettings();
 
+            if (!settings) {
+                console.warn('Settings not available for fiat rates');
+                return;
+            }
+
             if (
                 this.fiatRates != null &&
                 this.sourceOfCurrentFiatRates != settings.fiatRatesSource
@@ -673,7 +679,7 @@ export default class FiatStore {
                 this.fiatRates = undefined;
             }
 
-            if (settings.fiatRatesSource.toLowerCase() === 'zeus') {
+            if (settings.fiatRatesSource && settings.fiatRatesSource.toLowerCase() === 'zeus') {
                 this.fiatRates = await this.getFiatRatesFromZeus();
             } else if (settings.fiat != null) {
                 const rate = await this.getSelectedFiatRateFromYadio(
@@ -694,7 +700,7 @@ export default class FiatStore {
                 });
             }
 
-            this.sourceOfCurrentFiatRates = settings.fiatRatesSource;
+            this.sourceOfCurrentFiatRates = settings.fiatRatesSource || 'Zeus';
         } finally {
             this.loading = false;
         }

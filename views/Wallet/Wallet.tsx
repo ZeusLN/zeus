@@ -24,7 +24,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 import { StackNavigationProp } from '@react-navigation/stack';
-import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -196,7 +195,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const currentTabName =
             tabNavigatorState.routeNames[tabNavigatorState.index];
         const defaultView =
-            this.props.SettingsStore.settings.display.defaultView;
+            this.props.SettingsStore.settings?.display?.defaultView;
 
         if (defaultView === currentTabName || currentTabName === 'POS') {
             return false;
@@ -308,13 +307,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 bridgeJavaStrings(locale);
             }
 
-            SystemNavigationBar.setNavigationColor(
-                themeColor('background'),
-                isLightTheme() ? 'dark' : 'light'
-            );
-            SystemNavigationBar.setNavigationBarDividerColor(
-                themeColor('secondary')
-            );
             const loginRequired = SettingsStore.loginRequired();
             const posEnabled =
                 settings?.pos?.posEnabled &&
@@ -593,13 +585,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await updateSettings({
                         recovery: false
                     });
-                    if (SettingsStore.settings.automaticDisasterRecoveryBackup)
+                    if (SettingsStore.settings?.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
                 } catch (e) {
                     console.error('recover error', e);
                 }
             } else {
-                if (SettingsStore.settings.automaticDisasterRecoveryBackup)
+                if (SettingsStore.settings?.automaticDisasterRecoveryBackup)
                     ChannelBackupStore.initSubscribeChannelEvents();
             }
         } else if (implementation === 'lndhub') {
@@ -687,7 +679,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                     if (
                         // TODO add enum
-                        SettingsStore.settings.lightningAddress
+                        SettingsStore.settings?.lightningAddress
                             ?.notifications === 1
                     ) {
                         LightningAddressStore.updatePushCredentials();
@@ -736,7 +728,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (BackendUtils.supportsFlowLSP()) {
             if (
-                SettingsStore.settings.enableLSP &&
+                SettingsStore.settings?.enableLSP &&
                 (implementation !== 'lnd' ||
                     !this.props.NodeInfoStore.flowLspNotConfigured)
             ) {
@@ -760,7 +752,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (
             this.state.initialLoad &&
             !(
-                SettingsStore.settings.selectNodeOnStartup &&
+                SettingsStore.settings?.selectNodeOnStartup &&
                 SettingsStore.initialStart
             )
         ) {

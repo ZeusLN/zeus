@@ -69,17 +69,21 @@ export default class LSPStore {
         this.channelsStore = channelsStore;
         this.nodeInfoStore = nodeInfoStore;
 
-        reaction(
-            () => this.channelsStore.channels,
-            () => {
-                if (
-                    this.channelsStore.channels.length !== 0 &&
-                    BackendUtils.supportsLSPScustomMessage()
-                ) {
-                    this.getExtendableChannels();
+        // Delay the reaction setup to avoid initialization issues
+        setTimeout(() => {
+            reaction(
+                () => this.channelsStore?.channels,
+                () => {
+                    if (
+                        this.channelsStore?.channels &&
+                        this.channelsStore.channels.length !== 0 &&
+                        BackendUtils.supportsLSPScustomMessage()
+                    ) {
+                        this.getExtendableChannels();
+                    }
                 }
-            }
-        );
+            );
+        }, 0);
     }
 
     @action

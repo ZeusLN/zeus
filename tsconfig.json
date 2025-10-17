@@ -6,7 +6,7 @@
     "experimentalDecorators": true,
     "isolatedModules": false,
     "jsx": "react-native",
-    "lib": ["es6"],
+    "lib": ["es2022"],
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "noEmit": true,
@@ -22,5 +22,5 @@
     }
   },
   "exclude": ["node_modules", "zeus_modules"],
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx", "typings/**/*.d.ts"]
 }
