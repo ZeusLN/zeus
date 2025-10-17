@@ -75,7 +75,7 @@ export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
-    'http://localhost:8080/api/v1';
+    'https://nwc-ios-handoff.zeusln.com/api/v1';
 
 const RATE_LIMIT_MS = 500;
 const HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
