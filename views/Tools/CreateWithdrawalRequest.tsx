@@ -23,8 +23,6 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Icon } from 'react-native-elements';
 
-import Storage from '../../storage';
-
 interface CreateWithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
@@ -104,10 +102,6 @@ export default class CreateWithdrawalRequest extends Component<
                 });
 
                 if (response && response.bolt12) {
-                    await Storage.setItem(
-                        `withdrawalRequest_${response.bolt12}`,
-                        Date.now()
-                    );
                     this.setState({
                         bolt12: response.bolt12,
                         showQR: true,
