@@ -26,7 +26,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import BackendUtils from '../utils/BackendUtils';
-import { calculateTotalSats } from '../utils/TipUtils';
+import { calculateTaxSats, calculateTotalSats } from '../utils/PosUtils';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -628,63 +628,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        const calculateTaxSats = () => {
-            const hasIndividualTaxRates = lineItems?.some(
-                (item: any) => item.taxPercentage
-            );
-
-            if (hasIndividualTaxRates) {
-                let totalTaxSats = new BigNumber(0);
-                lineItems?.forEach((item: any) => {
-                    const itemTaxRate =
-                        item.taxPercentage || taxPercentage || '0';
-
-                    const validTaxRate = itemTaxRate || '0';
-
-                    const fiatPriced = item.base_price_money.amount > 0;
-                    let itemSubtotalSats: string;
-
-                    if (fiatPriced) {
-                        let fiatAmount = new BigNumber(
-                            item.base_price_money.amount
-                        ).multipliedBy(item.quantity);
-                        // Only divide by 100 if using Square (amount is in cents)
-                        if (settings.pos.posEnabled === PosEnabled.Square) {
-                            fiatAmount = fiatAmount.div(100);
-                        }
-                        itemSubtotalSats = fiatAmount
-                            .div(rate)
-                            .multipliedBy(SATS_PER_BTC)
-                            .integerValue(BigNumber.ROUND_HALF_UP)
-                            .toFixed(0);
-                    } else {
-                        itemSubtotalSats = new BigNumber(
-                            item.base_price_money.sats || 0
-                        )
-                            .multipliedBy(item.quantity)
-                            .toFixed(0);
-                    }
-
-                    const itemTaxSats = new BigNumber(itemSubtotalSats)
-                        .multipliedBy(new BigNumber(validTaxRate))
-                        .dividedBy(100)
-                        .integerValue(BigNumber.ROUND_HALF_UP)
-                        .toFixed(0);
-
-                    totalTaxSats = totalTaxSats.plus(itemTaxSats);
-                });
-
-                return totalTaxSats.toFixed(0);
-            } else {
-                return new BigNumber(subTotalSats)
-                    .multipliedBy(new BigNumber(taxPercentage || '0'))
-                    .dividedBy(100)
-                    .integerValue(BigNumber.ROUND_HALF_UP)
-                    .toFixed(0);
-            }
-        };
-
-        const taxSats = calculateTaxSats();
+        const taxSats = calculateTaxSats(
+            lineItems,
+            subTotalSats,
+            rate,
+            taxPercentage
+        );
 
         const twentyPercentButton = () => (
             <Text
