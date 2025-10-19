@@ -36,6 +36,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { calculateTaxSats } from '../../utils/PosUtils';
 
 import { version } from './../../package.json';
 
@@ -746,57 +748,193 @@ export default class StandalonePosPane extends React.PureComponent<
                         />
                         <View
                             style={{
-                                flexDirection: 'row',
-                                paddingLeft: 10,
-                                paddingRight: 10,
                                 paddingTop: 5,
                                 marginBottom: 10
                             }}
                         >
-                            <Button
-                                title={`${localeString('general.charge')} (${
-                                    currentOrder
-                                        ? (itemQty > 0 ? `${itemQty} - ` : '') +
-                                          (fiatEnabled
-                                              ? this.state.totalMoneyDisplay
-                                              : ` ${this.props.UnitsStore?.getAmountFromSats(
-                                                    currentOrder?.total_money
-                                                        ?.sats
-                                                )}`)
-                                        : '0'
-                                })`}
-                                containerStyle={{
-                                    borderRadius: 12,
-                                    flex: 3,
-                                    marginRight: 5
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    marginBottom: 10,
+                                    paddingHorizontal: 22
                                 }}
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: themeColor('highlight')
-                                }}
-                                disabled={disableButtons}
-                                onPress={async () => {
-                                    // there is no order so we can't charge
-                                    if (!currentOrder) return;
-
-                                    // save the current order. This will move it to the open orders screen
-                                    await PosStore.saveStandaloneOrder(
+                            >
+                                <Button
+                                    title={`${localeString(
+                                        'general.charge'
+                                    )} (${
                                         currentOrder
-                                    );
+                                            ? (itemQty > 0
+                                                  ? `${itemQty} - `
+                                                  : '') +
+                                              (fiatEnabled
+                                                  ? this.state.totalMoneyDisplay
+                                                  : ` ${this.props.UnitsStore?.getAmountFromSats(
+                                                        currentOrder
+                                                            ?.total_money?.sats
+                                                    )}`)
+                                            : '0'
+                                    })`}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 2,
+                                        marginRight: 5
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('highlight')
+                                    }}
+                                    disabled={disableButtons}
+                                    onPress={async () => {
+                                        // there is no order so we can't charge
+                                        if (!currentOrder) return;
 
-                                    // now let's create the charge
-                                    navigation.navigate('Order', {
-                                        order: currentOrder
-                                    });
-                                }}
-                            />
+                                        // save the current order. This will move it to the open orders screen
+                                        await PosStore.saveStandaloneOrder(
+                                            currentOrder
+                                        );
+
+                                        // now let's create the charge
+                                        navigation.navigate('Order', {
+                                            order: currentOrder
+                                        });
+                                    }}
+                                />
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.POS.quickPay'
+                                    )}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 1
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('highlight')
+                                    }}
+                                    disabled={disableButtons}
+                                    onPress={async () => {
+                                        if (!currentOrder) return;
+
+                                        await PosStore.saveStandaloneOrder(
+                                            currentOrder
+                                        );
+
+                                        const {
+                                            SettingsStore,
+                                            FiatStore,
+                                            UnitsStore
+                                        } = this.props;
+                                        if (
+                                            !SettingsStore ||
+                                            !FiatStore ||
+                                            !UnitsStore
+                                        )
+                                            return;
+                                        const { settings } = SettingsStore;
+                                        const { getRate, fiatRates } =
+                                            FiatStore;
+                                        const { pos, fiat } = settings;
+                                        const merchantName = pos?.merchantName;
+                                        const taxPercentage =
+                                            pos?.taxPercentage;
+                                        const lineItems =
+                                            currentOrder.line_items;
+
+                                        const memo = merchantName
+                                            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
+                                            : `ZEUS POS - Order ${currentOrder?.id}`;
+
+                                        const fiatEntry =
+                                            fiat && fiatRates
+                                                ? fiatRates.filter(
+                                                      (entry: any) =>
+                                                          entry.code === fiat
+                                                  )[0]
+                                                : null;
+                                        const rate =
+                                            fiat && fiatRates && fiatEntry
+                                                ? fiatEntry.rate.toFixed()
+                                                : 0;
+
+                                        const subTotalSats =
+                                            (currentOrder?.total_money?.sats ??
+                                                0) > 0
+                                                ? currentOrder.total_money.sats
+                                                : new BigNumber(
+                                                      currentOrder?.total_money?.amount
+                                                  )
+                                                      .div(100)
+                                                      .div(rate)
+                                                      .multipliedBy(
+                                                          SATS_PER_BTC
+                                                      )
+                                                      .toFixed(0);
+
+                                        const taxSats = Number(
+                                            calculateTaxSats(
+                                                lineItems,
+                                                subTotalSats,
+                                                rate,
+                                                taxPercentage
+                                            )
+                                        );
+
+                                        const totalSats = new BigNumber(
+                                            subTotalSats || 0
+                                        )
+                                            .plus(taxSats)
+                                            .toFixed(0);
+
+                                        const { units } = UnitsStore;
+
+                                        const totalFiat = new BigNumber(
+                                            totalSats ?? 0
+                                        )
+                                            .multipliedBy(rate)
+                                            .dividedBy(SATS_PER_BTC)
+                                            .toFixed(2);
+                                        navigation.navigate(
+                                            settings?.ecash?.enableCashu &&
+                                                BackendUtils.supportsCashuWallet()
+                                                ? 'ReceiveEcash'
+                                                : 'Receive',
+                                            {
+                                                amount:
+                                                    units === 'sats'
+                                                        ? totalSats
+                                                        : units === 'BTC'
+                                                        ? new BigNumber(
+                                                              totalSats || 0
+                                                          )
+                                                              .div(SATS_PER_BTC)
+                                                              .toFixed(8)
+                                                        : totalFiat,
+                                                autoGenerate: true,
+                                                memo,
+                                                order: currentOrder,
+                                                // For displaying paid orders
+                                                orderId: currentOrder.id,
+                                                // sats
+                                                orderTip: 0,
+                                                orderTotal: totalSats,
+                                                // formatted string rate
+                                                exchangeRate: getRate(),
+                                                // numerical rate
+                                                rate
+                                            }
+                                        );
+                                    }}
+                                />
+                            </View>
                             <Button
                                 title={localeString('general.clear')}
                                 containerStyle={{
-                                    borderRadius: 12,
-                                    flex: 1
+                                    borderRadius: 12
                                 }}
                                 onPress={() => {
                                     PosStore?.clearCurrentOrder();
