@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Poista tuote",
     "views.Settings.POS.confirmDelete": "Vahvista poisto",
     "views.Settings.POS.standalone": "Itsenäinen",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "Ei vahvistuksia",
     "views.Settings.POS.1conf": "yksi vahvistus",
     "views.Settings.POS.lnOnly": "Ainoastaan salamaverkko",
