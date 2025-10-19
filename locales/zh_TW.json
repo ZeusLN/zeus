@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "刪除產品",
     "views.Settings.POS.confirmDelete": "確定刪除",
     "views.Settings.POS.standalone": "獨立運作",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "零次確認",
     "views.Settings.POS.1conf": "一次確認",
     "views.Settings.POS.lnOnly": "只用閃電網",
