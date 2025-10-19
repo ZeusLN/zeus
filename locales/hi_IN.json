@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "उत्पाद हटाएं",
     "views.Settings.POS.confirmDelete": "हटाने की पुष्टि करें",
     "views.Settings.POS.standalone": "स्टैंडअलोन",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 पुष्टिकरण",
     "views.Settings.POS.1conf": "1 पुष्टिकरण",
     "views.Settings.POS.lnOnly": "केवल लाइटनिंग",
