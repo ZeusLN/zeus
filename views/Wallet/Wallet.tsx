@@ -479,12 +479,28 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     });
                 } else {
                     if (expressGraphSyncEnabled) {
+                        const expressGraphSyncStart = new Date().getTime();
+                        console.log(
+                            '[Performance] Express Graph Sync starting...'
+                        );
+
                         await expressGraphSync();
+
+                        const expressGraphSyncDuration =
+                            new Date().getTime() - expressGraphSyncStart;
+                        console.log(
+                            `[Performance] Express Graph Sync completed in ${expressGraphSyncDuration}ms`
+                        );
+
                         if (settings.resetExpressGraphSyncOnStartup) {
                             await updateSettings({
                                 resetExpressGraphSyncOnStartup: false
                             });
                         }
+                    } else {
+                        console.log(
+                            '[Performance] Express Graph Sync skipped (disabled) - faster startup'
+                        );
                     }
                 }
 
