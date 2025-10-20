@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Delete product",
     "views.Settings.POS.confirmDelete": "Bekräfta radera",
     "views.Settings.POS.standalone": "Fristående",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 bekräftelser",
     "views.Settings.POS.1conf": "1 bekräftelse",
     "views.Settings.POS.lnOnly": "Endast Lightning",

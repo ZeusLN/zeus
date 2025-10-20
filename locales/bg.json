@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Изтрий продукт",
     "views.Settings.POS.confirmDelete": "Потвърди изтриването",
     "views.Settings.POS.standalone": "Самостоятелна",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 потвърждения",
     "views.Settings.POS.1conf": "1 потвърждение",
     "views.Settings.POS.lnOnly": "Само чрез Ligtning",

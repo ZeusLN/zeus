@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Odstranit produkt",
     "views.Settings.POS.confirmDelete": "Potvrdit odstranění",
     "views.Settings.POS.standalone": "Samostatný",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 potvrzení",
     "views.Settings.POS.1conf": "1 potvrzení",
     "views.Settings.POS.lnOnly": "Pouze Lightning",

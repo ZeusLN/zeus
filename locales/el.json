@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Διαγραφή προϊόντος",
     "views.Settings.POS.confirmDelete": "Επιβεβαίωση διαγραφής",
     "views.Settings.POS.standalone": "Αυτόνομο",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 επιβεβαιώσεις",
     "views.Settings.POS.1conf": "1 επιβεβαίωση",
     "views.Settings.POS.lnOnly": "Μόνο Lightning",

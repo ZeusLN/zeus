@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Elimina prodotto",
     "views.Settings.POS.confirmDelete": "Conferma cancellazione",
     "views.Settings.POS.standalone": "Indipendente",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 conferme",
     "views.Settings.POS.1conf": "1 conferma",
     "views.Settings.POS.lnOnly": "Solo Lightning",
