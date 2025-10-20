@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Xoá sản phẩm",
     "views.Settings.POS.confirmDelete": "Xác nhận xoá",
     "views.Settings.POS.standalone": "Riêng biệt",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 xác nhận",
     "views.Settings.POS.1conf": "1 xác nhận",
     "views.Settings.POS.lnOnly": "Chỉ lightning",

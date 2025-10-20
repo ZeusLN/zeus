@@ -999,6 +999,7 @@
     "views.Settings.POS.deleteProduct": "Ștergeți produsul",
     "views.Settings.POS.confirmDelete": "Confirmă ștergerea",
     "views.Settings.POS.standalone": "De sine stătătoare",
+    "views.Settings.POS.quickPay": "Quick pay",
     "views.Settings.POS.0conf": "0 confirmari",
     "views.Settings.POS.1conf": "1 confirmare",
     "views.Settings.POS.lnOnly": "Doar Lightning",
