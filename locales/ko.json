@@ -999,7 +999,7 @@
     "views.Settings.POS.deleteProduct": "제품 삭제",
     "views.Settings.POS.confirmDelete": "정말로 삭제합니다.",
     "views.Settings.POS.standalone": "독립실행형",
-    "views.Settings.POS.quickPay": "Quick pay",
+    "views.Settings.POS.quickPay": "빠른 결제",
     "views.Settings.POS.0conf": "0 컨펌 필요",
     "views.Settings.POS.1conf": "1 컨펌 필요",
     "views.Settings.POS.lnOnly": "라이트닝으로만",
