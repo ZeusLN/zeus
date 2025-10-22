@@ -999,7 +999,7 @@
     "views.Settings.POS.deleteProduct": "删除产品",
     "views.Settings.POS.confirmDelete": "确认删除",
     "views.Settings.POS.standalone": "独立式",
-    "views.Settings.POS.quickPay": "Quick pay",
+    "views.Settings.POS.quickPay": "快速支付",
     "views.Settings.POS.0conf": "零次确认",
     "views.Settings.POS.1conf": " 1 次确认",
     "views.Settings.POS.lnOnly": "仅限闪电网络",
