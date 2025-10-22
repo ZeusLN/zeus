@@ -91,6 +91,36 @@ const ZeusPayAnimated = () => {
     );
 };
 
+const NostrichAnimated = () => {
+    let state = new Animated.Value(1);
+    Animated.loop(
+        Animated.sequence([
+            Animated.timing(state, {
+                toValue: 0,
+                duration: 300,
+                delay: 500,
+                useNativeDriver: true
+            }),
+            Animated.timing(state, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ])
+    ).start();
+
+    return (
+        <Animated.View
+            style={{
+                alignSelf: 'center',
+                opacity: state
+            }}
+        >
+            <Nostrich fill={themeColor('highlight')} width={30} height={30} />
+        </Animated.View>
+    );
+};
+
 const ActivityButton = ({
     navigation
 }: {
@@ -638,11 +668,7 @@ export default class WalletHeader extends React.Component<
                                 )}
                                 {!connecting && nwcloading && (
                                     <View style={{ paddingRight: 15 }}>
-                                        <Nostrich
-                                            fill={themeColor('highlight')}
-                                            width={30}
-                                            height={30}
-                                        />
+                                        <NostrichAnimated />
                                     </View>
                                 )}
 
