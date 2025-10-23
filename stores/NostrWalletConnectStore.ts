@@ -7,6 +7,28 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
 import 'websocket-polyfill';
 import { action, computed, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
+import type {
+    Nip47GetInfoResponse,
+    Nip47GetBalanceResponse,
+    Nip47PayInvoiceRequest,
+    Nip47PayResponse,
+    Nip47MakeInvoiceRequest,
+    Nip47LookupInvoiceRequest,
+    Nip47ListTransactionsRequest,
+    Nip47ListTransactionsResponse,
+    Nip47PayKeysendRequest,
+    Nip47Transaction,
+    Nip47SignMessageResponse,
+    Nip47SignMessageRequest,
+    Nip47SingleMethod,
+    Nip47Method
+} from '@getalby/sdk/dist/nwc/types';
+
+import type {
+    NWCWalletServiceRequestHandler,
+    NWCWalletServiceResponsePromise
+} from '@getalby/sdk/dist/nwc';
+
 import {
     getPublicKey,
     generatePrivateKey,
@@ -16,6 +38,8 @@ import {
     UnsignedEvent
 } from 'nostr-tools';
 import * as nip04 from '@nostr/tools/nip04';
+
+import bolt11 from 'bolt11';
 import { Platform, NativeModules } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -44,30 +68,6 @@ import CashuStore from './CashuStore';
 import InvoicesStore from './InvoicesStore';
 import MessageSignStore from './MessageSignStore';
 import LightningAddressStore from './LightningAddressStore';
-
-import type {
-    Nip47GetInfoResponse,
-    Nip47GetBalanceResponse,
-    Nip47PayInvoiceRequest,
-    Nip47PayResponse,
-    Nip47MakeInvoiceRequest,
-    Nip47LookupInvoiceRequest,
-    Nip47ListTransactionsRequest,
-    Nip47ListTransactionsResponse,
-    Nip47PayKeysendRequest,
-    Nip47Transaction,
-    Nip47SignMessageResponse,
-    Nip47SignMessageRequest,
-    Nip47SingleMethod,
-    Nip47Method
-} from '@getalby/sdk/dist/nwc/types';
-
-import type {
-    NWCWalletServiceRequestHandler,
-    NWCWalletServiceResponsePromise
-} from '@getalby/sdk/dist/nwc';
-
-import bolt11 from 'bolt11';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
@@ -2732,7 +2732,7 @@ export default class NostrWalletConnectStore {
         this.iosHandoffInProgress = false;
     }
 
-    //  For handoff request to notification server
+    // IOS: handoff request to notification server
     @action
     public sendHandoffRequest = async (): Promise<boolean | void> => {
         if (Platform.OS !== 'ios') return;
