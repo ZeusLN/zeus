@@ -273,7 +273,8 @@ export default class CLNRest {
                     paid_at: invoice[7],
                     payment_preimage: invoice[8],
                     description: invoice[9],
-                    expires_at: invoice[10]
+                    expires_at: invoice[10],
+                    bolt12: invoice[2]
                 });
             });
 
@@ -450,7 +451,6 @@ export default class CLNRest {
             description
         });
     };
-    listWithdrawalRequests = () => this.postRequest('/v1/listinvoicerequests');
     redeemWithdrawalRequest = ({
         invreq,
         label
@@ -463,7 +463,6 @@ export default class CLNRest {
             label
         });
     };
-    listInvoices = () => this.postRequest('/v1/listinvoices');
     createOffer = ({
         description,
         label,
