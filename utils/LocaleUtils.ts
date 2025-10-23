@@ -73,7 +73,9 @@ const TaiwaneseMandarin: any = zh_TW;
 // strings that are needed on the java layer
 const JAVA_LAYER_STRINGS = [
     'androidNotification.lndRunningBackground',
-    'androidNotification.shutdown'
+    'androidNotification.shutdown',
+    'androidNotification.nwcRunningBackground',
+    'androidNotification.nwcShutdown'
 ];
 
 export function localeString(
