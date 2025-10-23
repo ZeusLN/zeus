@@ -1355,7 +1355,7 @@
   resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-5.2.1.tgz#861f025218e3d4dc5fb8fe55a16b33c66fb93a56"
   integrity sha512-dxOmJLJAh6qJ8rsbA5/Bwj7MSI9X3RkxxqmCedl5rfP+yKwNSdfu8i4EiCZN/tk2hNBJb8GHSCcPRNZfwfmEHg==
 
-"@getalby/sdk@^5.1.2":
+"@getalby/sdk@5.1.2":
   version "5.1.2"
   resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-5.1.2.tgz#485e0ad535eb1d6beccaea1360b3072eace68a72"
   integrity sha512-yUF9LhuvdIFOwjV1aG0ryzfwDiGBFk/CRLkRvrrM9dsE38SUjKsf1FDga5jxsKMu80nWcPZR9TiGGASWedoYPA==
@@ -1831,9 +1831,9 @@
     websocket-polyfill "^0.0.3"
 
 "@nostr/tools@npm:@jsr/nostr__tools":
-  version "2.16.2"
-  resolved "https://npm.jsr.io/~/11/@jsr/nostr__tools/2.16.2.tgz#C69302A40FEBE957618DC6F71824A5CCC889A89C"
-  integrity sha512-QK1XwHvAnqEwbimD+ywbLQ3T2iI+/qE/zrRgOhmtjoEGlCWgtbPTNJ6Y/MEunXr6H/MnuHV+s400i/Yk4suvGQ==
+  version "2.17.0"
+  resolved "https://npm.jsr.io/~/11/@jsr/nostr__tools/2.17.0.tgz#DF216DEAA71AD93E63DC022157286CE97FE7971A"
+  integrity sha512-xnaKa3A+Hilx44X+o3nN1uqdztzpBd0P6vYYSl/EJHo8ccwnkDPcNfugZJ5tcVR0tgHm7L5IE6X6OKXKVmtrCA==
   dependencies:
     "@noble/ciphers" "^0.5.1"
     "@noble/curves" "1.2.0"
