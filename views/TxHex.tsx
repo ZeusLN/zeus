@@ -4,7 +4,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    Alert
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
@@ -12,6 +13,7 @@ import { UR, UREncoder } from '@ngraveio/bc-ur';
 import clone from 'lodash/clone';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { runInAction } from 'mobx';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -34,6 +36,7 @@ import UrlUtils from '../utils/UrlUtils';
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
+import SettingsStore from '../stores/SettingsStore';
 import {
     getQRAnimationInterval,
     QRAnimationSpeed
@@ -41,6 +44,7 @@ import {
 
 interface TxHexProps {
     navigation: StackNavigationProp<any, any>;
+    SettingsStore: SettingsStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
@@ -59,7 +63,7 @@ interface TxHexState {
     qrAnimationSpeed: QRAnimationSpeed;
 }
 
-@inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
+@inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
 @observer
 export default class TxHex extends React.Component<TxHexProps, TxHexState> {
     private qrAnimationInterval?: any;
@@ -146,6 +150,67 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             clearInterval(this.qrAnimationInterval);
         }
     }
+
+    handleBroadcast = async () => {
+        const { txHex } = this.state;
+        const { navigation, SettingsStore, TransactionsStore, ChannelsStore } =
+            this.props;
+        const { pending_chan_ids } = ChannelsStore;
+
+        try {
+            if (pending_chan_ids.length > 0) {
+                await TransactionsStore.finalizeTxHexAndBroadcastChannel(
+                    txHex,
+                    pending_chan_ids
+                );
+                navigation.navigate('SendingOnChain');
+                return;
+            }
+
+            if (SettingsStore.implementation === 'cln-rest') {
+                const userConfirmed = await new Promise<boolean>((resolve) => {
+                    Alert.alert(
+                        localeString('views.TxHex.broadcastingViaMempool'),
+                        localeString('views.TxHex.thirdPartyBroadcastWarning'),
+                        [
+                            {
+                                text: localeString('general.cancel'),
+                                style: 'cancel',
+                                onPress: () => resolve(false)
+                            },
+                            { text: 'OK', onPress: () => resolve(true) }
+                        ]
+                    );
+                });
+
+                if (!userConfirmed) {
+                    runInAction(() => {
+                        TransactionsStore.error = true;
+                        TransactionsStore.error_msg = localeString(
+                            'views.TxHex.transactionBroadcastCancelled'
+                        );
+                        TransactionsStore.loading = false;
+                    });
+                    return;
+                }
+            }
+
+            await TransactionsStore.broadcast(txHex);
+
+            if (!TransactionsStore.error) {
+                navigation.navigate('SendingOnChain');
+            }
+        } catch (error: any) {
+            console.error('Broadcast failed:', error);
+
+            runInAction(() => {
+                TransactionsStore.error = true;
+                TransactionsStore.error_msg =
+                    error?.message || 'Broadcast failed';
+                TransactionsStore.loading = false;
+            });
+        }
+    };
 
     render() {
         const { ChannelsStore, NodeInfoStore, TransactionsStore, navigation } =
@@ -415,28 +480,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                     ? 'views.TxHex.finalizeFlowAndBroadcast'
                                                     : 'views.TxHex.broadcast'
                                             )}
-                                            onPress={() => {
-                                                if (
-                                                    pending_chan_ids.length > 0
-                                                ) {
-                                                    TransactionsStore.finalizeTxHexAndBroadcastChannel(
-                                                        txHex,
-                                                        pending_chan_ids
-                                                    ).then(() => {
-                                                        navigation.navigate(
-                                                            'SendingOnChain'
-                                                        );
-                                                    });
-                                                } else {
-                                                    TransactionsStore.broadcast(
-                                                        txHex
-                                                    ).then(() => {
-                                                        navigation.navigate(
-                                                            'SendingOnChain'
-                                                        );
-                                                    });
-                                                }
-                                            }}
+                                            onPress={this.handleBroadcast}
                                             containerStyle={{ width: '100%' }}
                                             buttonStyle={{ height: 40 }}
                                             tertiary

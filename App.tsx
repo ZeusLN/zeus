@@ -38,7 +38,8 @@ import {
     syncStore,
     transactionsStore,
     unitsStore,
-    utxosStore
+    utxosStore,
+    sweepStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -258,6 +259,7 @@ import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
 import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
 import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
 import ShareIntentProcessing from './views/ShareIntentProcessing';
+import WIFSweeper from './views/Tools/WIFSweeper';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
@@ -345,6 +347,7 @@ export default class App extends React.PureComponent {
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
+                SweepStore={sweepStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -1263,6 +1266,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             ChangeDonationSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WIFSweeper" // @ts-ignore:next-line
+                                                        component={WIFSweeper}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
