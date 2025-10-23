@@ -34,13 +34,14 @@ export default class NFCButton extends React.Component<
             this.stopSimulation();
         }
     }
-
-    UNSAFE_componentWillUpdate = () => {
-        if (this.state.nfcBroadcast) {
+    componentDidUpdate(
+        _: Readonly<NFCButtonProps>,
+        prevState: Readonly<NFCButtonState>
+    ): void {
+        if (prevState.nfcBroadcast) {
             this.stopSimulation();
         }
-    };
-
+    }
     toggleNfc = () => {
         if (this.state.nfcBroadcast) {
             this.stopSimulation();

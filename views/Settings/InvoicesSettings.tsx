@@ -60,7 +60,7 @@ export default class InvoicesSettings extends React.Component<
         showCustomPreimageField: false
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

@@ -37,7 +37,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
         selected: { backup: '' }
     };
 
-    UNSAFE_componentWillMount(): void {
+    componentDidMount(): void {
         const { ChannelBackupStore } = this.props;
         ChannelBackupStore.reset();
         ChannelBackupStore.advancedRecoveryList();

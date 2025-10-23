@@ -40,16 +40,18 @@ interface SettingsProps {
 @inject('SettingsStore')
 @observer
 export default class Settings extends React.Component<SettingsProps, {}> {
-    UNSAFE_componentWillMount() {
+    focusListener: any = null;
+
+    componentDidMount() {
         const { navigation } = this.props;
 
-        // triggers when loaded from navigation or back action
-        navigation.addListener('focus', this.handleFocus);
+        this.focusListener = navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
-        this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('focus', this.handleFocus);
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     handleFocus = () => this.props.SettingsStore.getSettings();

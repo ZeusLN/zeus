@@ -60,7 +60,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         selectedIndex: 0
     };
 
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         const { PosStore } = this.props;
         PosStore.getOrdersHistorical();
     }

@@ -42,17 +42,13 @@ export default class NWCAddressSettings extends React.Component<
     NWCAddressSettingsProps,
     NWCAddressSettingsState
 > {
-    state = {
-        routeHints: false,
-        allowComments: true,
-        notifications: 1
-    };
+    constructor(props: NWCAddressSettingsProps) {
+        super(props);
 
-    async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
-        this.setState({
+        this.state = {
             routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
@@ -61,7 +57,7 @@ export default class NWCAddressSettings extends React.Component<
                 settings.lightningAddress?.notifications !== undefined
                     ? settings.lightningAddress.notifications
                     : 1
-        });
+        };
     }
 
     confirmDelete = () => {
@@ -145,7 +141,7 @@ export default class NWCAddressSettings extends React.Component<
                                 style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
-                                    value={allowComments}
+                                    value={allowComments ?? true}
                                     disabled={
                                         SettingsStore.settingsUpdateInProgress
                                     }

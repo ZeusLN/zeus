@@ -92,6 +92,7 @@ export default class CashuPaymentRequest extends React.Component<
 > {
     listener: any;
     isComponentMounted: boolean = false;
+    focusListener: any = null;
     payReqDisposer: any;
     state = {
         customAmount: '',
@@ -105,6 +106,7 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     async componentDidMount() {
+        this.isComponentMounted = true;
         const { SettingsStore, CashuStore } = this.props;
         const settings = await SettingsStore.getSettings();
         const { defaultDonationPercentage } = settings.payments;
@@ -132,26 +134,28 @@ export default class CashuPaymentRequest extends React.Component<
                 }
             }
         );
-    }
 
-    async UNSAFE_componentWillMount() {
-        this.isComponentMounted = true;
-        const { CashuStore, SettingsStore } = this.props;
         const { paymentRequest, getPayReq } = CashuStore;
-        const settings = await SettingsStore.getSettings();
 
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
 
-        // Reload pay req info if mint is changed
-        this.props.navigation.addListener('focus', () => {
+        this.focusListener = this.props.navigation.addListener('focus', () => {
             getPayReq(paymentRequest!!);
         });
     }
 
     componentWillUnmount(): void {
         this.isComponentMounted = false;
+
+        if (this.payReqDisposer) {
+            this.payReqDisposer();
+        }
+
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     sendPayment = ({

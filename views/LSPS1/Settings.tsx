@@ -57,7 +57,7 @@ export default class LSPS1Settings extends React.Component<
         };
     }
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { LSPStore, SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
