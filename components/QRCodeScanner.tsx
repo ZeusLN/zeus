@@ -16,20 +16,19 @@ import {
 } from 'react-native-vision-camera';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
-
-import RNQRGenerator from 'rn-qr-generator';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 import Header from './Header';
 import Button from '../components/Button';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { detectQRFromBase64 } from '../utils/QRDecoder';
 
 import FlashOffIcon from '../assets/images/SVG/Flash Off.svg';
 import FlashOnIcon from '../assets/images/SVG/Flash On.svg';
 import GalleryIcon from '../assets/images/SVG/Gallery.svg';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { runOnJS } from 'react-native-reanimated';
 
 const createHash = require('create-hash');
 
@@ -96,10 +95,13 @@ export default function QRCodeScanner({
                 if (!response.didCancel) {
                     const asset = response.assets?.[0];
                     if (asset?.base64) {
-                        const result = await RNQRGenerator.detect({
+                        const result = await detectQRFromBase64({
                             base64: asset.base64
                         });
-                        if (result?.values.length > 0) {
+                        if (
+                            result?.values?.length &&
+                            result.values.length > 0
+                        ) {
                             handleRead(result.values[0]);
                         } else {
                             Alert.alert(

@@ -3,13 +3,13 @@ import { View, Text, NativeModules, Alert } from 'react-native';
 import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
-import RNQRGenerator from 'rn-qr-generator';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { detectQRFromBase64 } from '../utils/QRDecoder';
 import handleAnything from '../utils/handleAnything';
 
 const { MobileTools } = NativeModules;
@@ -109,11 +109,11 @@ class ShareIntentProcessing extends React.Component<
             if (qrData) {
                 finalQrData = qrData;
             } else if (base64Image) {
-                const result = await RNQRGenerator.detect({
+                const result = await detectQRFromBase64({
                     base64: base64Image
                 });
 
-                if (result?.values.length > 0) {
+                if (result?.values?.length && result.values.length > 0) {
                     finalQrData = result.values[0];
                 } else {
                     try {
