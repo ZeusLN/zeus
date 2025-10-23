@@ -285,7 +285,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
-        } else if (nextAppState === 'inactive') {
+            NostrWalletConnectStore.reset();
+        } else if (nextAppState === 'background') {
             NostrWalletConnectStore.reset();
         } else if (nextAppState === 'active') {
             if (SettingsStore.loginRequired()) {
