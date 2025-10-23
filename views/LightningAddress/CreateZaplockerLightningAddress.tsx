@@ -79,17 +79,19 @@ export default class CreateZaplockerLightningAddress extends React.Component<
         this.generateNostrKeys();
     }
 
-    UNSAFE_componentWillReceiveProps = (
-        newProps: CreateZaplockerLightningAddressProps
-    ) => {
-        const { route } = newProps;
+    componentDidUpdate(prevProps: CreateZaplockerLightningAddressProps): void {
+        const { route } = this.props;
         const nostrRelays = route.params?.relays;
-        if (nostrRelays) {
+
+        if (nostrRelays && nostrRelays !== prevProps.route.params?.relays) {
             this.setState({ nostrRelays });
         }
 
         const nostrPrivateKey = route.params?.nostrPrivateKey ?? '';
-        if (nostrPrivateKey) {
+        if (
+            nostrPrivateKey &&
+            nostrPrivateKey !== prevProps.route.params?.nostrPrivateKey
+        ) {
             const nostrPublicKey = getPublicKey(nostrPrivateKey);
             const nostrNpub = nip19.npubEncode(nostrPublicKey);
 
@@ -99,7 +101,7 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                 nostrNpub
             });
         }
-    };
+    }
 
     render() {
         const { navigation, LightningAddressStore, SettingsStore, route } =

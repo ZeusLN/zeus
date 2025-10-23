@@ -48,14 +48,9 @@ export default class CashuLightningAddressSettings extends React.Component<
     CashuLightningAddressSettingsProps,
     CashuLightningAddressSettingsState
 > {
-    state = {
-        automaticallyAccept: true,
-        allowComments: true,
-        mintList: [],
-        mintUrl: ''
-    };
+    constructor(props: CashuLightningAddressSettingsProps) {
+        super(props);
 
-    async UNSAFE_componentWillMount() {
         const { SettingsStore, CashuStore } = this.props;
         const { settings } = SettingsStore;
         const { selectedMintUrl, mintUrls, cashuWallets } = CashuStore;
@@ -69,22 +64,19 @@ export default class CashuLightningAddressSettings extends React.Component<
               })
             : [];
 
-        this.setState({
-            mintList,
-            mintUrl: selectedMintUrl
-        });
+        const defaultMintUrl =
+            settings.lightningAddress?.mintUrl ?? selectedMintUrl ?? '';
 
-        this.setState({
+        this.state = {
+            mintList: mintList ?? [],
             automaticallyAccept: settings.lightningAddress?.automaticallyAccept
                 ? true
                 : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
-            mintUrl: settings.lightningAddress?.mintUrl
-                ? settings.lightningAddress.mintUrl
-                : ''
-        });
+            mintUrl: defaultMintUrl
+        };
     }
 
     confirmDelete = () => {
@@ -172,7 +164,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
-                                    value={automaticallyAccept}
+                                    value={automaticallyAccept ?? false}
                                     disabled={
                                         SettingsStore.settingsUpdateInProgress
                                     }
@@ -216,7 +208,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
-                                    value={allowComments}
+                                    value={allowComments ?? false}
                                     disabled={
                                         SettingsStore.settingsUpdateInProgress
                                     }

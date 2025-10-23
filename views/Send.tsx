@@ -194,27 +194,46 @@ export default class Send extends React.Component<SendProps, SendState> {
         };
     }
 
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+    async componentDidUpdate(prevProps: SendProps, prevState: SendState) {
+        const { route, UnitsStore, InvoicesStore } = this.props;
+        const { route: prevRoute } = prevProps;
 
-        if (settings.privacy && settings.privacy.clipboard) {
-            const clipboard = await Clipboard.getString();
-            if (await isClipboardValue(clipboard)) {
-                this.setState({
-                    clipboard
-                });
+        if (JSON.stringify(route.params) !== JSON.stringify(prevRoute.params)) {
+            const {
+                destination,
+                bolt12,
+                satAmount,
+                transactionType,
+                contactName
+            } = route.params ?? {};
+
+            if (transactionType === 'Lightning') {
+                InvoicesStore.getPayReq(destination);
             }
+
+            const stateUpdate: Partial<SendState> = {
+                transactionType,
+                destination,
+                bolt12,
+                isValid: true,
+                contactName
+            };
+
+            if (satAmount) {
+                const amount =
+                    UnitsStore.getAmountFromSats(satAmount) || satAmount;
+                stateUpdate.amount = amount;
+                stateUpdate.satAmount = satAmount;
+            }
+            this.setState(stateUpdate as SendState);
         }
 
-        if (this.listener && this.listener.stop) this.listener.stop();
-    }
-
-    async componentDidUpdate() {
         const { SwapStore } = this.props;
 
-        if (this.state.satAmount !== '0') {
+        if (
+            this.state.satAmount !== prevState.satAmount &&
+            this.state.satAmount !== '0'
+        ) {
             const reverseInfo: any = SwapStore.reverseInfo;
 
             const validAmountToSwap = this.isAmountValidToSwap(
@@ -279,33 +298,20 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
     };
 
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { route, UnitsStore } = nextProps;
-        const { destination, bolt12, satAmount, transactionType, contactName } =
-            route.params ?? {};
-
-        if (transactionType === 'Lightning') {
-            this.props.InvoicesStore.getPayReq(destination);
-        }
-
-        this.setState({
-            transactionType,
-            destination,
-            bolt12,
-            isValid: true,
-            contactName
-        });
-
-        if (satAmount) {
-            const amount = UnitsStore.getAmountFromSats(satAmount) || satAmount;
-            this.setState({
-                amount,
-                satAmount
-            });
-        }
-    }
-
     async componentDidMount() {
+        const { SettingsStore } = this.props;
+        const { getSettings } = SettingsStore;
+        const settings = await getSettings();
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+            if (await isClipboardValue(clipboard)) {
+                this.setState({
+                    clipboard
+                });
+            }
+        }
+
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
@@ -318,6 +324,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
+        if (this.listener && this.listener.stop) this.listener.stop();
     }
 
     subscribePayment = (streamingCall: string) => {

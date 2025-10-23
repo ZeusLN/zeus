@@ -54,7 +54,7 @@ export default class FeeLimit extends React.Component<
         };
     }
 
-    async UNSAFE_componentWillMount(): Promise<void> {
+    async componentDidMount(): Promise<void> {
         const { SettingsStore, feeOption, satAmount, onFeeLimitSatChange } =
             this.props;
         const { getSettings } = SettingsStore;
@@ -101,33 +101,36 @@ export default class FeeLimit extends React.Component<
         );
     }
 
-    UNSAFE_componentWillReceiveProps(newProps: any) {
-        const { satAmount, onFeeLimitSatChange } = newProps;
+    componentDidUpdate(prevProps: any): void {
+        const { satAmount, onFeeLimitSatChange } = this.props;
         const { feeLimitSat, feeOption } = this.state;
 
-        const percentAmount = this.calculatePercentAmount(satAmount);
-        const percentUpdated = percentAmount !== this.state.percentAmount;
+        if (satAmount !== prevProps.satAmount) {
+            const percentAmount = this.calculatePercentAmount(satAmount);
+            const percentUpdated = percentAmount !== this.state.percentAmount;
 
-        const satAmountUpdated = satAmount !== this.state.satAmount;
+            const satAmountUpdated = satAmount !== this.state.satAmount;
 
-        if (percentUpdated) {
-            this.setState({
-                percentAmount
-            });
-        }
+            if (percentUpdated) {
+                this.setState({
+                    percentAmount
+                });
+            }
 
-        if (satAmountUpdated) {
-            this.setState({
-                satAmount
-            });
-        }
+            if (satAmountUpdated) {
+                this.setState({
+                    satAmount:
+                        satAmount !== '' ? JSON.stringify(satAmount) : '0'
+                });
+            }
 
-        if (percentUpdated || satAmountUpdated) {
-            onFeeLimitSatChange(
-                BackendUtils.isLNDBased() && feeOption === 'percent'
-                    ? percentAmount
-                    : feeLimitSat
-            );
+            if (percentUpdated || satAmountUpdated) {
+                onFeeLimitSatChange(
+                    BackendUtils.isLNDBased() && feeOption === 'percent'
+                        ? percentAmount
+                        : feeLimitSat
+                );
+            }
         }
     }
 

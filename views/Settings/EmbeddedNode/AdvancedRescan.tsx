@@ -33,17 +33,9 @@ export default class EmbeddedNodeAdvancedRescanSettings extends React.Component<
     EmbeddedNodeAdvancedRescanSettingsState
 > {
     state = {
-        blockHeight: ''
+        blockHeight:
+            this.props.NodeInfoStore.nodeInfo?.block_height?.toString() || '0'
     };
-
-    UNSAFE_componentWillMount() {
-        const { NodeInfoStore } = this.props;
-        const { nodeInfo } = NodeInfoStore;
-
-        this.setState({
-            blockHeight: nodeInfo?.block_height?.toString() || '0'
-        });
-    }
 
     render() {
         const { navigation, UTXOsStore } = this.props;
