@@ -8,11 +8,18 @@
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|dateformat)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|dateformat|nostr-tools|@noble|@scure)/)"
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts"
-    ]
+    ],
+    "moduleNameMapper": {
+      "^@noble/hashes/_assert$": "<rootDir>/node_modules/@noble/hashes/_assert.js",
+      "^@noble/hashes/pbkdf2$": "<rootDir>/node_modules/@noble/hashes/pbkdf2.js",
+      "^@noble/hashes/sha256$": "<rootDir>/node_modules/@noble/hashes/sha256.js",
+      "^@noble/hashes/sha512$": "<rootDir>/node_modules/@noble/hashes/sha512.js",
+      "^@noble/hashes/utils$": "<rootDir>/node_modules/@noble/hashes/utils.js"
+    }
   },
   "scripts": {
     "start": "react-native start",
