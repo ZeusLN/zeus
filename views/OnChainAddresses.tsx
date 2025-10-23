@@ -23,7 +23,7 @@ import DropdownSetting from '../components/DropdownSetting';
 import { Row } from '../components/layout/Row';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
-import AddressUtils from '../utils/AddressUtils';
+import addressUtils from '../utils/AddressUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -85,7 +85,7 @@ const AddressGroup = (props: any) => {
                                     {localeString('general.accountName')}:{' '}
                                     {addressGroup.accountName + '\n'}
                                     {localeString('general.addressType')}:{' '}
-                                    {AddressUtils.snakeToHumanReadable(
+                                    {addressUtils.snakeToHumanReadable(
                                         addressGroup.addressType
                                     )}
                                     {' \n'}
@@ -130,10 +130,14 @@ const AddressGroup = (props: any) => {
             {!isCollapsed &&
                 addressGroup.addresses.map((address: Address) => {
                     const isSelected =
-                        selectionMode && address.address === selectedAddress;
+                        selectionMode &&
+                        addressUtils.extractAddressValue(address) ===
+                            selectedAddress;
                     return (
                         <ListItem
-                            key={`address-${address.address}`}
+                            key={`address-${addressUtils.extractAddressValue(
+                                address
+                            )}`}
                             containerStyle={{
                                 borderBottomWidth: 0,
                                 backgroundColor: isSelected
@@ -143,15 +147,22 @@ const AddressGroup = (props: any) => {
                             onPress={() => {
                                 if (selectionMode) {
                                     // Only update local selection, don't call callback yet
-                                    onAddressSelected(address.address);
+                                    onAddressSelected(
+                                        addressUtils.extractAddressValue(
+                                            address
+                                        )
+                                    );
                                 } else {
-                                    const addressStr = address.address;
+                                    const addressStr =
+                                        addressUtils.extractAddressValue(
+                                            address
+                                        ) || '';
                                     NavigationService.navigate('QR', {
                                         value: `bitcoin:${
                                             addressStr ===
                                             addressStr.toLowerCase()
-                                                ? address.address.toUpperCase()
-                                                : address.address
+                                                ? addressStr.toUpperCase()
+                                                : addressStr
                                         }`,
                                         copyValue: addressStr
                                     });
@@ -177,7 +188,9 @@ const AddressGroup = (props: any) => {
                                         fontSize: 14
                                     }}
                                 >
-                                    {address.address}
+                                    {addressUtils.extractAddressValue(
+                                        address
+                                    ) || ''}
                                 </ListItem.Subtitle>
                             </ListItem.Content>
                         </ListItem>
@@ -278,10 +291,21 @@ export default class OnChainAddresses extends React.Component<
     }
 
     loadAddresses = async () => {
-        const accounts = await this.props.UTXOsStore.listAddresses();
-        this.setState({
-            accounts: cloneDeep(accounts)
-        });
+        try {
+            const accounts = await this.props.UTXOsStore.listAddresses();
+
+            if (!accounts || !Array.isArray(accounts)) {
+                this.setState({ accounts: [] });
+                return;
+            }
+
+            this.setState({
+                accounts: cloneDeep(accounts)
+            });
+        } catch (error) {
+            console.error('OnChainAddresses: Error loading addresses:', error);
+            this.setState({ accounts: [] });
+        }
     };
 
     // Update search text as the user types and filter results
@@ -348,89 +372,167 @@ export default class OnChainAddresses extends React.Component<
         let addressGroups: AddressGroup[] | undefined;
 
         if (
+            accounts &&
+            Array.isArray(accounts) &&
             accounts.length > 0 &&
             !loadingAddresses &&
             !loadingAddressesError
         ) {
+            (accounts as any[]).forEach((account) => {
+                if (!account.addresses || !Array.isArray(account.addresses)) {
+                    account.addresses = [];
+                }
+            });
+
             if (sortBy === SortBy.creationTimeAscending) {
-                accounts?.forEach((account: Account) =>
-                    account.addresses.sort(
-                        (a, b) =>
-                            Number(a.derivation_path.split('/').at(-1)) -
-                            Number(b.derivation_path.split('/').at(-1))
-                    )
-                );
+                accounts.forEach((account: Account) => {
+                    if (account.addresses && account.addresses.length > 0) {
+                        account.addresses.sort((a, b) => {
+                            if (!a.derivation_path || !b.derivation_path)
+                                return 0;
+                            const aPath = a.derivation_path.split('/');
+                            const bPath = b.derivation_path.split('/');
+                            return (
+                                Number(aPath[aPath.length - 1]) -
+                                Number(bPath[bPath.length - 1])
+                            );
+                        });
+                    }
+                });
             } else if (sortBy === SortBy.creationTimeDescending) {
-                accounts?.forEach((account: Account) =>
-                    account.addresses.sort(
-                        (a, b) =>
-                            Number(b.derivation_path.split('/').at(-1)) -
-                            Number(a.derivation_path.split('/').at(-1))
-                    )
-                );
+                accounts.forEach((account: Account) => {
+                    if (account.addresses && account.addresses.length > 0) {
+                        account.addresses.sort((a, b) => {
+                            if (!a.derivation_path || !b.derivation_path)
+                                return 0;
+                            const aPath = a.derivation_path.split('/');
+                            const bPath = b.derivation_path.split('/');
+                            return (
+                                Number(bPath[bPath.length - 1]) -
+                                Number(aPath[aPath.length - 1])
+                            );
+                        });
+                    }
+                });
             } else if (sortBy === SortBy.balanceAscending) {
-                accounts?.forEach((account: Account) =>
-                    account.addresses.sort(
-                        (a, b) => Number(a.balance) - Number(b.balance)
-                    )
-                );
+                accounts.forEach((account: Account) => {
+                    if (account.addresses && account.addresses.length > 0) {
+                        account.addresses.sort(
+                            (a, b) =>
+                                Number(a.balance || 0) - Number(b.balance || 0)
+                        );
+                    }
+                });
             } else if (sortBy === SortBy.balanceDescending) {
-                accounts?.forEach((account: Account) =>
-                    account.addresses.sort(
-                        (a, b) => Number(b.balance) - Number(a.balance)
-                    )
-                );
+                accounts.forEach((account: Account) => {
+                    if (account.addresses && account.addresses.length > 0) {
+                        account.addresses.sort(
+                            (a, b) =>
+                                Number(b.balance || 0) - Number(a.balance || 0)
+                        );
+                    }
+                });
             }
 
             addressGroups = chain(
                 JSON.parse(JSON.stringify(accounts)) as Account[]
             )
-                .flatMap((account) =>
-                    account.addresses.map((address) => ({ account, address }))
-                )
-                .groupBy(
-                    (t) =>
-                        `${t.account.name};${t.account.address_type};${t.address.is_internal}`
-                )
-                .map((g) => ({
-                    accountName: g[0].account.name,
-                    addressType: g[0].account.address_type,
-                    changeAddresses: g[0].address.is_internal,
-                    addresses: g.map((a) => a.address)
-                }))
+                .flatMap((account) => {
+                    if (
+                        !account.addresses ||
+                        !Array.isArray(account.addresses)
+                    ) {
+                        return [];
+                    }
+                    return account.addresses.map((address) => ({
+                        account: {
+                            name: account.name || 'default',
+                            address_type: account.address_type || 'bech32'
+                        },
+                        address
+                    }));
+                })
+                .groupBy((t) => {
+                    if (!t || !t.account || !t.address) {
+                        return 'default;bech32;false';
+                    }
+                    const accountName = t.account?.name || 'default';
+                    const addressType = t.account?.address_type || 'bech32';
+                    const isInternal = t.address?.is_internal || false;
+                    return `${accountName};${addressType};${isInternal}`;
+                })
+                .map((g) => {
+                    if (!g || !g[0]) {
+                        return {
+                            accountName: 'default',
+                            addressType: 'bech32',
+                            changeAddresses: false,
+                            addresses: []
+                        };
+                    }
+                    return {
+                        accountName: g[0]?.account?.name || 'default',
+                        addressType: g[0]?.account?.address_type || 'bech32',
+                        changeAddresses: g[0]?.address?.is_internal || false,
+                        addresses: g
+                            .map((a) => a.address)
+                            .filter((addr) => addr && typeof addr === 'object')
+                    };
+                })
                 .value();
 
-            if (hideZeroBalance) {
-                addressGroups.forEach(
-                    (acc) =>
-                        (acc.addresses = acc.addresses.filter(
-                            (addr) => addr.balance && addr.balance !== '0'
-                        ))
-                );
+            if (hideZeroBalance && addressGroups) {
+                addressGroups.forEach((acc) => {
+                    if (acc.addresses && Array.isArray(acc.addresses)) {
+                        acc.addresses = acc.addresses.filter(
+                            (addr) =>
+                                addr && addr.balance && addr.balance !== '0'
+                        );
+                    }
+                });
             }
 
-            if (hideChangeAddresses) {
+            if (hideChangeAddresses && addressGroups) {
                 addressGroups = addressGroups.filter((a) => !a.changeAddresses);
             }
 
             // Apply search filter
-            if (searchText) {
+            if (searchText && addressGroups) {
                 addressGroups = addressGroups
                     .map((group) => {
                         const filteredGroup = { ...group };
-                        filteredGroup.addresses = group.addresses.filter(
-                            (addr) =>
-                                addr.address
-                                    .toLowerCase()
-                                    .includes(searchText.toLowerCase()) ||
-                                (group.accountName &&
-                                    group.accountName
-                                        .toLowerCase()
-                                        .includes(searchText.toLowerCase()))
-                        );
+                        if (
+                            filteredGroup.addresses &&
+                            Array.isArray(filteredGroup.addresses)
+                        ) {
+                            filteredGroup.addresses = group.addresses.filter(
+                                (addr) => {
+                                    const addressValue =
+                                        addressUtils.extractAddressValue(addr);
+                                    return (
+                                        (addressValue &&
+                                            addressValue
+                                                .toLowerCase()
+                                                .includes(
+                                                    searchText.toLowerCase()
+                                                )) ||
+                                        (group.accountName &&
+                                            group.accountName
+                                                .toLowerCase()
+                                                .includes(
+                                                    searchText.toLowerCase()
+                                                ))
+                                    );
+                                }
+                            );
+                        } else {
+                            filteredGroup.addresses = [];
+                        }
                         return filteredGroup;
                     })
-                    .filter((group) => group.addresses.length > 0);
+                    .filter(
+                        (group) => group.addresses && group.addresses.length > 0
+                    );
             }
         }
 

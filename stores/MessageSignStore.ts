@@ -94,128 +94,213 @@ export default class MessageSignStore {
         this.selectedAddress = address;
     }
 
+    private processAddress = (addr: any, account?: any): any => {
+        try {
+            const addressValue = addressUtils.extractAddressValue(addr);
+
+            if (!addressValue) {
+                console.warn(
+                    'Address missing required address/bech32/p2tr property:',
+                    addr
+                );
+                return null;
+            }
+
+            return {
+                address: addressValue,
+                type: addr.type || addressUtils.getAddressType(addressValue),
+                accountName: account?.name,
+                addressType: account?.address_type
+            };
+        } catch (err) {
+            console.warn('Error processing address:', err, addr);
+            return null;
+        }
+    };
+
+    private processAddresses = (addresses: any[], account?: any): any[] => {
+        return addresses
+            .filter((addr: any) => addr)
+            .map((addr: any) => this.processAddress(addr, account))
+            .filter((addr: any) => addr !== null);
+    };
+
+    private addressResponseHandlers = {
+        // account_with_addresses format
+        accountWithAddresses: (data: any): any[] => {
+            const allAddresses: any[] = [];
+            data.account_with_addresses.forEach((account: any) => {
+                if (account.addresses && account.addresses.length > 0) {
+                    const processedAddresses = this.processAddresses(
+                        account.addresses,
+                        account
+                    );
+                    allAddresses.push(...processedAddresses);
+                }
+            });
+            return allAddresses;
+        },
+
+        // flat addresses array format
+        flatAddresses: (data: any): any[] => {
+            return this.processAddresses(data.addresses);
+        },
+
+        // Array of accounts format
+        accountsArray: (data: any): any[] => {
+            const allAddresses: any[] = [];
+            data.forEach((account: any) => {
+                if (account.addresses && account.addresses.length > 0) {
+                    const processedAddresses = this.processAddresses(
+                        account.addresses,
+                        account
+                    );
+                    allAddresses.push(...processedAddresses);
+                }
+            });
+            return allAddresses;
+        }
+    };
+
+    private getAddressHandler = (data: any): ((data: any) => any[]) | null => {
+        if (data && data.account_with_addresses) {
+            return this.addressResponseHandlers.accountWithAddresses;
+        }
+        if (data && data.addresses) {
+            return this.addressResponseHandlers.flatAddresses;
+        }
+        if (Array.isArray(data)) {
+            return this.addressResponseHandlers.accountsArray;
+        }
+        return null;
+    };
+
+    private handleAddressSelection = (previouslySelectedAddress: string) => {
+        const addressStillExists =
+            previouslySelectedAddress &&
+            this.addresses.some(
+                (addr) =>
+                    addressUtils.extractAddressValue(addr) ===
+                    previouslySelectedAddress
+            );
+
+        if (addressStillExists) {
+            this.selectedAddress = previouslySelectedAddress;
+        } else if (this.addresses.length > 0) {
+            this.selectedAddress =
+                addressUtils.extractAddressValue(this.addresses[0]) || '';
+            console.log(`Selected address: ${this.selectedAddress}`);
+        } else {
+            console.log('No addresses available');
+        }
+    };
+
     @action
     public loadAddresses = () => {
         this.loading = true;
-
         const previouslySelectedAddress = this.selectedAddress;
 
         BackendUtils.listAddresses()
             .then((data: any) => {
-                // Handle response format from UTXOsStore
-                if (data && data.account_with_addresses) {
-                    // Flatten all addresses from all accounts
-                    const allAddresses: any[] = [];
-                    data.account_with_addresses.forEach((account: any) => {
-                        if (account.addresses && account.addresses.length > 0) {
-                            account.addresses.forEach((addr: any) => {
-                                allAddresses.push({
-                                    address: addr.address,
-                                    type: addressUtils.getAddressType(
-                                        addr.address
-                                    ),
-                                    accountName: account.name,
-                                    addressType: account.address_type
-                                });
-                            });
-                        }
-                    });
+                try {
+                    const handler = this.getAddressHandler(data);
 
-                    this.addresses = allAddresses;
-                } else if (data && data.addresses) {
-                    // Format directly with addresses array (current format)
-                    this.addresses = data.addresses.map((addr: any) => ({
-                        address: addr.address,
-                        type:
-                            addr.type ||
-                            addressUtils.getAddressType(addr.address)
-                    }));
-                } else {
-                    this.addresses = [];
+                    if (handler) {
+                        this.addresses = handler(data);
+                    } else {
+                        this.addresses = [];
+                        this.error = true;
+                        console.log(
+                            'MessageSignStore: No valid address data found'
+                        );
+                    }
+
+                    this.handleAddressSelection(previouslySelectedAddress);
+                } catch (err: any) {
+                    console.error('Error processing addresses:', err);
                     this.error = true;
-                }
-
-                // Check if the previously selected address is still in the list
-                const addressStillExists =
-                    previouslySelectedAddress &&
-                    this.addresses.some(
-                        (addr) => addr.address === previouslySelectedAddress
-                    );
-
-                if (addressStillExists) {
-                    // Keep the previously selected address
-                    this.selectedAddress = previouslySelectedAddress;
-                } else if (this.addresses.length > 0) {
-                    // Only set to first address if there was no previous selection or it no longer exists
-                    this.selectedAddress = this.addresses[0].address;
-                    console.log(`Selected address: ${this.selectedAddress}`);
-                } else {
-                    console.log('No addresses available');
+                    this.errorMessage = `Error processing addresses: ${
+                        err.message || err
+                    }`;
+                    this.addresses = [];
                 }
             })
             .catch((error: any) => {
                 console.log('Error loading addresses:', error);
                 this.error = true;
                 this.errorMessage = error.toString();
+                this.addresses = [];
             })
             .finally(() => {
                 this.loading = false;
             });
     };
 
+    private executeAsyncOperation = async (
+        operation: Promise<any>,
+        successCallback: (data: any) => void,
+        errorMessage: string,
+        resetState: boolean = false
+    ): Promise<void> => {
+        try {
+            if (!operation || typeof operation.then !== 'function') {
+                throw new Error('Operation did not return a valid Promise');
+            }
+
+            const result = await operation;
+            successCallback(result);
+            this.error = false;
+            this.errorMessage = '';
+        } catch (error: any) {
+            this.handleError(error, errorMessage, resetState);
+        } finally {
+            this.loading = false;
+        }
+    };
+
     @action
     public signMessage = (text: string) => {
         this.loading = true;
 
-        try {
-            const signOperation =
-                this.signingMode === 'lightning'
-                    ? BackendUtils.signMessage(text)
-                    : BackendUtils.signMessageWithAddr(
-                          text,
-                          this.selectedAddress
-                      );
-
-            // Check if signOperation is a valid Promise
-            if (signOperation && typeof signOperation.then === 'function') {
-                signOperation
-                    .then((data: any) => {
-                        if (data) {
-                            this.signature = data.zbase || data.signature;
-                            this.error = false;
-                            this.errorMessage = '';
-                        } else {
-                            throw new Error(
-                                localeString(
-                                    'views.Settings.SignMessage.noDataReceived'
-                                )
-                            );
-                        }
-                    })
-                    .catch((error: any) => {
-                        this.handleError(error, 'Unknown signing error', true);
-                    })
-                    .finally(() => {
-                        this.loading = false;
-                    });
-            } else {
-                console.error('Sign operation did not return a valid Promise');
-                this.error = true;
-                this.errorMessage = localeString(
-                    'views.Settings.SignMessage.signOperationFailed'
-                );
-                this.loading = false;
-            }
-        } catch (error: any) {
-            this.handleError(error, 'Unknown signing error');
+        // Validation
+        if (this.signingMode === 'onchain' && !this.selectedAddress) {
+            this.error = true;
+            this.errorMessage = localeString(
+                'views.Settings.SignMessage.noAddressForSigning'
+            );
+            this.loading = false;
+            return;
         }
+
+        const signOperation =
+            this.signingMode === 'lightning'
+                ? BackendUtils.signMessage(text)
+                : BackendUtils.signMessageWithAddr(text, this.selectedAddress);
+
+        this.executeAsyncOperation(
+            signOperation,
+            (data: any) => {
+                if (data) {
+                    this.signature =
+                        data.base64 || data.zbase || data.signature;
+                } else {
+                    throw new Error(
+                        localeString(
+                            'views.Settings.SignMessage.noDataReceived'
+                        )
+                    );
+                }
+            },
+            'Unknown signing error',
+            true
+        );
     };
 
     @action
     public verifyMessage = (data: VerificationRequest) => {
         this.loading = true;
 
-        // Extra validation for onchain verification
+        // Validation for onchain verification
         if (
             this.signingMode === 'onchain' &&
             (!data.addr || data.addr.trim() === '')
@@ -228,59 +313,36 @@ export default class MessageSignStore {
             return;
         }
 
-        try {
-            const verifyOperation =
-                this.signingMode === 'lightning'
-                    ? BackendUtils.verifyMessage({
-                          msg: data.msg,
-                          signature: data.signature
-                      })
-                    : BackendUtils.verifyMessageWithAddr(
-                          data.msg,
-                          data.signature,
-                          data.addr || ''
-                      );
+        const verifyOperation =
+            this.signingMode === 'lightning'
+                ? BackendUtils.verifyMessage({
+                      msg: data.msg,
+                      signature: data.signature
+                  })
+                : BackendUtils.verifyMessageWithAddr(
+                      data.msg,
+                      data.signature,
+                      data.addr || ''
+                  );
 
-            // Check if verifyOperation is a valid Promise
-            if (verifyOperation && typeof verifyOperation.then === 'function') {
-                verifyOperation
-                    .then((result: any) => {
-                        this.valid = result.valid || result.verified || false;
-                        const rawPubkey = result.pubkey || result.publicKey;
-                        if (rawPubkey) {
-                            if (rawPubkey instanceof Uint8Array) {
-                                this.pubkey = Array.from(rawPubkey, (byte) =>
-                                    byte.toString(16).padStart(2, '0')
-                                ).join('');
-                            } else {
-                                this.pubkey = rawPubkey;
-                            }
-                        } else {
-                            this.pubkey = null;
-                        }
-                        this.error = false;
-                        this.errorMessage = '';
-                    })
-                    .catch((error: any) => {
-                        this.valid = false;
-                        this.handleError(error, 'Unknown verification error');
-                    })
-                    .finally(() => {
-                        this.loading = false;
-                    });
-            } else {
-                console.error(
-                    'Verify operation did not return a valid Promise'
-                );
-                this.error = true;
-                this.errorMessage = localeString(
-                    'views.Settings.SignMessage.verificationOperationFailed'
-                );
-                this.loading = false;
-            }
-        } catch (error: any) {
-            this.valid = false;
-            this.handleError(error, 'Unknown verification error');
-        }
+        this.executeAsyncOperation(
+            verifyOperation,
+            (result: any) => {
+                this.valid = result.valid || result.verified || false;
+                const rawPubkey = result.pubkey || result.publicKey;
+
+                if (rawPubkey) {
+                    this.pubkey =
+                        rawPubkey instanceof Uint8Array
+                            ? Array.from(rawPubkey, (byte) =>
+                                  byte.toString(16).padStart(2, '0')
+                              ).join('')
+                            : rawPubkey;
+                } else {
+                    this.pubkey = null;
+                }
+            },
+            'Unknown verification error'
+        );
     };
 }

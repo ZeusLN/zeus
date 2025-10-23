@@ -26,6 +26,7 @@ import TextInput from '../../components/TextInput';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import addressUtils from '../../utils/AddressUtils';
 
 import MessageSignStore from '../../stores/MessageSignStore';
 
@@ -44,6 +45,7 @@ interface SignVerifyMessageState {
     selectedAddress: string;
     signingMode: string;
     supportsAddressMessageSigning: boolean;
+    supportsAddressMessageVerification: boolean;
     loading: boolean;
 }
 
@@ -64,6 +66,7 @@ export default class SignVerifyMessage extends React.Component<
         selectedAddress: '',
         signingMode: 'lightning',
         supportsAddressMessageSigning: false,
+        supportsAddressMessageVerification: false,
         loading: false
     };
 
@@ -71,9 +74,17 @@ export default class SignVerifyMessage extends React.Component<
         const { MessageSignStore, navigation, route } = this.props;
         MessageSignStore.reset();
 
+        const canSignWithAddress = BackendUtils.supportsAddressMessageSigning();
+        const canVerifyWithAddress =
+            BackendUtils.supportsAddressMessageVerification();
+
+        this.setState({
+            supportsAddressMessageSigning: canSignWithAddress,
+            supportsAddressMessageVerification: canVerifyWithAddress
+        });
+
         // Load addresses right away and also when the screen comes into focus
-        if (BackendUtils.supportsAddressMessageSigning()) {
-            this.setState({ supportsAddressMessageSigning: true });
+        if (canSignWithAddress) {
             MessageSignStore.loadAddresses();
 
             // Also reload addresses whenever the screen comes into focus
@@ -343,7 +354,7 @@ export default class SignVerifyMessage extends React.Component<
 
         // For signing, use the address picker since you can only sign with your own addresses
         const currentAddressDetails = addresses.find(
-            (addr) => addr.address === selectedAddress
+            (addr) => addressUtils.extractAddressValue(addr) === selectedAddress
         );
         const displayLabel = selectedAddress;
 
@@ -693,7 +704,16 @@ export default class SignVerifyMessage extends React.Component<
         } = this.state;
         const { signMessage, pubkey, valid, signature } = MessageSignStore;
 
-        const { supportsAddressMessageSigning } = this.state;
+        const {
+            supportsAddressMessageSigning,
+            supportsAddressMessageVerification
+        } = this.state;
+
+        const isVerifyingWithOnchain =
+            selectedIndex === 1 && signingMode === 'onchain';
+        const disableVerificationInputs =
+            isVerifyingWithOnchain && !supportsAddressMessageVerification;
+
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -803,9 +823,12 @@ export default class SignVerifyMessage extends React.Component<
 
                         {supportsAddressMessageSigning &&
                             signingMode === 'onchain' &&
-                            (selectedIndex === 1
+                            (selectedIndex === 1 &&
+                            supportsAddressMessageVerification
                                 ? this.renderAddressSelector('verify')
-                                : this.renderAddressSelector('sign'))}
+                                : selectedIndex === 0
+                                ? this.renderAddressSelector('sign')
+                                : null)}
                     </View>
 
                     {selectedIndex === 0 && (
@@ -850,6 +873,14 @@ export default class SignVerifyMessage extends React.Component<
                                     }}
                                     onPress={() => {
                                         if (this.validateSigningInput()) {
+                                            if (
+                                                this.state.signingMode ===
+                                                'onchain'
+                                            ) {
+                                                MessageSignStore.setSelectedAddress(
+                                                    this.state.selectedAddress
+                                                );
+                                            }
                                             signMessage(messageToSign);
                                         }
                                     }}
@@ -894,75 +925,96 @@ export default class SignVerifyMessage extends React.Component<
 
                     {selectedIndex === 1 && (
                         <View>
-                            <View style={styles.form}>
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.SignMessage.messageToVerify'
+                            {disableVerificationInputs && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Settings.SignMessage.addressVerificationNotSupported'
                                     )}
-                                </Text>
-                                <TextInput
-                                    placeholder={localeString(
-                                        'views.Settings.SignMessage.placeHolder'
-                                    )}
-                                    value={messageToVerify}
-                                    onChangeText={(text: string) => {
-                                        this.handleTextInputChange(
-                                            'messageToVerify',
-                                            text
-                                        );
-                                    }}
-                                    locked={loading}
-                                    multiline
-                                    style={{
-                                        height: 100
-                                    }}
                                 />
-                            </View>
+                            )}
 
-                            <View style={styles.form}>
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.SignMessage.signatureToVerify'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    value={signatureToVerify}
-                                    onChangeText={(text: string) => {
-                                        this.handleTextInputChange(
-                                            'signatureToVerify',
-                                            text
-                                        );
-                                    }}
-                                    multiline
-                                    style={{
-                                        height: 100
-                                    }}
-                                    locked={loading}
-                                />
-                            </View>
+                            <View
+                                style={
+                                    disableVerificationInputs
+                                        ? styles.disabledContainer
+                                        : null
+                                }
+                            >
+                                <View style={styles.form}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.SignMessage.messageToVerify'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'views.Settings.SignMessage.placeHolder'
+                                        )}
+                                        value={messageToVerify}
+                                        onChangeText={(text: string) => {
+                                            this.handleTextInputChange(
+                                                'messageToVerify',
+                                                text
+                                            );
+                                        }}
+                                        locked={
+                                            loading || disableVerificationInputs
+                                        }
+                                        multiline
+                                        style={{
+                                            height: 100
+                                        }}
+                                    />
+                                </View>
 
-                            {this.renderVerificationResult()}
+                                <View style={styles.form}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.SignMessage.signatureToVerify'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={signatureToVerify}
+                                        onChangeText={(text: string) => {
+                                            this.handleTextInputChange(
+                                                'signatureToVerify',
+                                                text
+                                            );
+                                        }}
+                                        multiline
+                                        style={{
+                                            height: 100
+                                        }}
+                                        locked={
+                                            loading || disableVerificationInputs
+                                        }
+                                    />
+                                </View>
 
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.signMessage.buttonVerify'
-                                    )}
-                                    icon={{
-                                        name: 'check'
-                                    }}
-                                    onPress={this.verifyMessage}
-                                />
+                                {this.renderVerificationResult()}
+
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.signMessage.buttonVerify'
+                                        )}
+                                        icon={{
+                                            name: 'check'
+                                        }}
+                                        onPress={this.verifyMessage}
+                                        disabled={disableVerificationInputs}
+                                    />
+                                </View>
                             </View>
 
                             {valid && pubkey && (
@@ -1008,15 +1060,27 @@ export default class SignVerifyMessage extends React.Component<
             return;
         }
 
-        const { supportsAddressMessageSigning } = this.state;
+        if (signingMode === 'onchain' && selectedAddress) {
+            const canVerifyWithAddress =
+                this.state.supportsAddressMessageVerification;
+
+            if (!canVerifyWithAddress) {
+                Alert.alert(
+                    localeString('views.Settings.SignMessage.error'),
+                    localeString(
+                        'views.Settings.SignMessage.addressVerificationNotSupported'
+                    )
+                );
+                return;
+            }
+
+            MessageSignStore.setSelectedAddress(selectedAddress);
+        }
 
         const verifyRequest = {
             msg: messageToVerify,
             signature: signatureToVerify,
-            addr:
-                supportsAddressMessageSigning && signingMode === 'onchain'
-                    ? selectedAddress
-                    : undefined
+            addr: signingMode === 'onchain' ? selectedAddress : undefined
         };
 
         MessageSignStore.verifyMessage(verifyRequest);
@@ -1062,5 +1126,8 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 6,
         marginTop: 10
+    },
+    disabledContainer: {
+        opacity: 0.25
     }
 });
