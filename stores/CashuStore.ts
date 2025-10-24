@@ -1167,11 +1167,9 @@ export default class CashuStore {
                 });
                 this.restorationProgress = Math.floor(((i + 1) / ksLen) * 100);
 
+                // Only update highestCount, don't set counter yet
                 if (count > highestCount) {
                     highestCount = count;
-                    // Update the counter for this keyset
-                    console.log('SETTING COUNT', count + 1);
-                    await this.setMintCounter(mintUrl, count + 1);
                 }
 
                 const restoredAmount =
@@ -1183,6 +1181,13 @@ export default class CashuStore {
                     );
                 }
             }
+
+            // Set counter only once at the end with the highest count
+            if (highestCount > 0) {
+                console.log('SETTING FINAL COUNT', highestCount);
+                await this.setMintCounter(mintUrl, highestCount);
+            }
+
             console.log(RESTORE_PROOFS_EVENT_NAME, 'end');
             this.restorationProgress = undefined;
             this.restorationKeyset = undefined;
@@ -1220,13 +1225,13 @@ export default class CashuStore {
                 keyset.id
             );
 
+            let restoredProofs: any[] = [];
+
             // Check proof states similar to the original
             console.log(
                 RESTORE_PROOFS_EVENT_NAME,
                 `Checking proof states for keyset ${keyset.id}`
             );
-
-            let restoredProofs: any[] = [];
 
             // Process proofs in batches to avoid potential issues with large sets
             for (let i = 0; i < keysetProofs.length; i += BATCH_SIZE) {
@@ -1235,20 +1240,17 @@ export default class CashuStore {
 
                 const proofStates = await wallet.checkProofsStates(batchProofs);
 
-                // Filter for unspent proofs using the approach from the original code
-                const unspentProofStateYs = proofStates
-                    .filter((ps) => ps.state === 'UNSPENT')
-                    .map((ps) => ps.Y);
-
-                const unspentKeysetProofs = batchProofs.filter((_, idx) =>
-                    unspentProofStateYs.includes(proofStates[idx].Y)
-                );
+                const unspentProofs = batchProofs.filter((_, idx) => {
+                    const state = proofStates[idx];
+                    return state && state.state === 'UNSPENT';
+                });
 
                 // Store only new proofs
-                const existingProofSecrets =
-                    this.cashuWallets[mint.mintUrl].proofs;
-                const newProofs = unspentKeysetProofs.filter(
-                    (p) => !existingProofSecrets.includes(p)
+                const existingProofSecrets = this.cashuWallets[
+                    mint.mintUrl
+                ].proofs.map((p) => p.secret);
+                const newProofs = unspentProofs.filter(
+                    (p) => !existingProofSecrets.includes(p.secret)
                 );
 
                 if (newProofs.length > 0) {
@@ -1259,6 +1261,9 @@ export default class CashuStore {
                     const balanceSats = CashuUtils.sumProofsValue(mintProofs);
                     await this.setMintProofs(mint.mintUrl, mintProofs);
                     await this.setMintBalance(mint.mintUrl, balanceSats);
+
+                    // Populate restoredProofs
+                    restoredProofs.push(...newProofs);
                 }
             }
 
@@ -1299,7 +1304,7 @@ export default class CashuStore {
                         `> Restored ${proofs.length} proofs with sum ${proofsSum} - starting at ${start}`
                     );
                     noProofsFoundCounter = 0;
-                    lastFound = start + proofs.length + 1;
+                    lastFound = start + proofs.length;
                 } else {
                     noProofsFoundCounter++;
                     console.log(
@@ -1310,8 +1315,8 @@ export default class CashuStore {
                 start = start + BATCH_SIZE;
             } while (noProofsFoundCounter < noProofsFoundLimit);
 
-            console.log(lastFound + 1, 'setting count');
-            return { keysetProofs, count: lastFound + 1 };
+            console.log(lastFound, 'setting count');
+            return { keysetProofs, count: lastFound };
         } catch (error: any) {
             console.log(
                 RESTORE_PROOFS_EVENT_NAME,
