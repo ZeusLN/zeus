@@ -642,16 +642,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
 
         const SettingsBtn = () => (
-            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
-                <Icon
-                    name="settings"
-                    onPress={() => {
-                        this.props.navigation.navigate('SwapSettings');
-                    }}
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={33}
-                />
+            <TouchableOpacity
+                style={{ marginTop: -10, marginRight: 6 }}
+                onPress={() => {
+                    this.props.navigation.navigate('SwapSettings');
+                }}
+            >
+                <Icon name="settings" color={themeColor('text')} size={33} />
             </TouchableOpacity>
         );
 
@@ -828,10 +825,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             | string
                                                             | number
                                                     ) => {
-                                                        this.setState({
-                                                            error: '',
-                                                            invoice: ''
-                                                        });
+                                                        this.setState(
+                                                            (prevState) => ({
+                                                                error: '',
+                                                                invoice:
+                                                                    prevState.reverse
+                                                                        ? prevState.invoice
+                                                                        : ''
+                                                            })
+                                                        );
 
                                                         // remove commas
                                                         const sanitizedSatAmount =
@@ -1047,10 +1049,17 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 | string
                                                                 | number
                                                         ) => {
-                                                            this.setState({
-                                                                error: '',
-                                                                invoice: ''
-                                                            });
+                                                            this.setState(
+                                                                (
+                                                                    prevState
+                                                                ) => ({
+                                                                    error: '',
+                                                                    invoice:
+                                                                        prevState.reverse
+                                                                            ? prevState.invoice
+                                                                            : ''
+                                                                })
+                                                            );
 
                                                             // remove commas
                                                             const sanitizedSatAmount =
@@ -1905,6 +1914,24 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             }
                                         />
                                     )}
+                                </View>
+                                <View>
+                                    <Button
+                                        title={localeString('general.scan')}
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'HandleAnythingQRScanner',
+                                                { fromSwaps: true }
+                                            )
+                                        }
+                                        buttonStyle={{ marginTop: 4 }}
+                                        icon={{
+                                            name: 'qrcode',
+                                            type: 'font-awesome',
+                                            size: 25
+                                        }}
+                                        secondary
+                                    />
                                 </View>
                                 {reverse && (
                                     <View style={{ paddingHorizontal: 20 }}>

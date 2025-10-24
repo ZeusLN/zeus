@@ -6,19 +6,30 @@ import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
 import { Bytes, CryptoAccount, CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
+
+import { nodeInfoStore } from '../stores/Stores';
 
 import handleAnything from '../utils/handleAnything';
 import Base64Utils from '../utils/Base64Utils';
 import { joinQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import AddressUtils from '../utils/AddressUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 interface HandleAnythingQRProps {
     navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'HandleAnythingQRScanner',
+        {
+            fromSwaps?: boolean;
+        }
+    >;
 }
 
 interface HandleAnythingQRState {
@@ -45,8 +56,112 @@ export default class HandleAnythingQRScanner extends React.Component<
         };
     }
 
+    getAmountFromDecodedInvoice = (decodedInvoice: any): number => {
+        if (!decodedInvoice) {
+            return 0;
+        }
+        if (decodedInvoice.num_satoshis) {
+            return Number(decodedInvoice.num_satoshis);
+        }
+        if (decodedInvoice.num_msat) {
+            return Math.floor(Number(decodedInvoice.num_msat) / 1000);
+        }
+        if (decodedInvoice.numSatoshis) {
+            return Number(decodedInvoice.numSatoshis);
+        }
+        if (decodedInvoice.numMsat) {
+            return Math.floor(Number(decodedInvoice.numMsat) / 1000);
+        }
+        if (decodedInvoice.amount_msat) {
+            return Math.floor(Number(decodedInvoice.amount_msat) / 1000);
+        }
+        if (decodedInvoice.amount) {
+            return Number(decodedInvoice.amount);
+        }
+        if (decodedInvoice.value) {
+            return Number(decodedInvoice.value);
+        }
+        if (decodedInvoice.valueSat) {
+            return Number(decodedInvoice.valueSat);
+        }
+        if (decodedInvoice.valueMsat) {
+            return Math.floor(Number(decodedInvoice.valueMsat) / 1000);
+        }
+        return 0;
+    };
+
     handleAnythingScanned = async (data: string) => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
+        const fromSwaps = route.params?.fromSwaps;
+
+        if (fromSwaps) {
+            this.setState({ loading: true });
+            try {
+                const { value, satAmount, lightning }: any =
+                    AddressUtils.processBIP21Uri(data);
+
+                const { nodeInfo } = nodeInfoStore;
+                const { isTestNet, isRegTest, isSigNet } = nodeInfo;
+
+                // Reverse Swap
+                if (
+                    AddressUtils.isValidBitcoinAddress(
+                        value,
+                        isTestNet || isRegTest || isSigNet
+                    )
+                ) {
+                    navigation.goBack();
+                    navigation.navigate('Swaps', {
+                        initialInvoice: value,
+                        initialAmountSats: Number(satAmount) || 0,
+                        initialReverse: true
+                    });
+                    return;
+                }
+
+                const invoice = lightning || value;
+
+                // Submarine Swap
+                if (AddressUtils.isValidLightningPaymentRequest(invoice)) {
+                    const decodedInvoice =
+                        await BackendUtils.decodePaymentRequest([invoice]);
+
+                    if (!decodedInvoice) {
+                        return false;
+                    }
+
+                    const amount =
+                        this.getAmountFromDecodedInvoice(decodedInvoice);
+
+                    navigation.goBack();
+                    navigation.navigate('Swaps', {
+                        initialInvoice: invoice,
+                        initialAmountSats: amount,
+                        initialReverse: false
+                    });
+                    return;
+                }
+
+                throw new Error('Invalid QR code for a swap');
+            } catch (err: any) {
+                console.error(err.message);
+                Alert.alert(
+                    localeString('general.error'),
+                    (err as Error).message ||
+                        localeString('utils.handleAnything.notValid'),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+                this.setState({ loading: false });
+                navigation.goBack();
+            }
+            return;
+        }
 
         let handleData;
 
