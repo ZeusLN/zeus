@@ -637,7 +637,10 @@ export default class NostrContacts extends React.Component<
                             await this.importContacts();
                             navigation.popTo('Contacts');
                         }}
-                        containerStyle={{ paddingBottom: 12, paddingTop: 8 }}
+                        containerStyle={{
+                            paddingBottom: 12,
+                            paddingTop: 8
+                        }}
                         secondary
                         disabled={
                             isSelectionMode && selectedContacts.length === 0

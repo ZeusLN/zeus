@@ -16,6 +16,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
+import ExpressGraphSyncDetector from '../utils/ExpressGraphSyncDetector';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -67,11 +68,15 @@ export default class TransactionsStore {
     @observable broadcast_err: string | null;
     // coin control
     @observable funded_psbt: string = '';
+    // Express Graph Sync modal
+    @observable expressGraphSyncModalCallback: (() => void) | null = null;
+    @observable pendingPaymentForModal: any = null;
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
     channelsStore: ChannelsStore;
     balanceStore: BalanceStore;
+    expressGraphSyncDetector: ExpressGraphSyncDetector;
 
     constructor(
         settingsStore: SettingsStore,
@@ -83,6 +88,9 @@ export default class TransactionsStore {
         this.nodeInfoStore = nodeInfoStore;
         this.channelsStore = channelsStore;
         this.balanceStore = balanceStore;
+        this.expressGraphSyncDetector = new ExpressGraphSyncDetector(
+            settingsStore
+        );
     }
 
     @action
@@ -106,6 +114,20 @@ export default class TransactionsStore {
         this.funded_psbt = '';
         this.paymentStartTime = null;
         this.paymentDuration = null;
+        this.expressGraphSyncModalCallback = null;
+        this.pendingPaymentForModal = null;
+    };
+
+    @action
+    public setExpressGraphSyncModalCallback = (
+        callback: (() => void) | null
+    ) => {
+        this.expressGraphSyncModalCallback = callback;
+    };
+
+    @action
+    public setPendingPaymentForModal = (paymentData: any) => {
+        this.pendingPaymentForModal = paymentData;
     };
 
     public getTransactions = async () => {
@@ -602,6 +624,76 @@ export default class TransactionsStore {
                 ? BackendUtils.sendKeysend
                 : BackendUtils.payLightningInvoice;
 
+        // Check if this is the first payment attempt and Express Graph Sync is disabled
+        // Only for Embedded LND nodes
+        if (this.settingsStore.implementation === 'embedded-lnd') {
+            this.expressGraphSyncDetector
+                .detectPaymentAttempt()
+                .then(async (detectionResult) => {
+                    if (
+                        detectionResult.shouldPrompt &&
+                        this.expressGraphSyncModalCallback
+                    ) {
+                        // Store the payment data for later execution
+                        this.setPendingPaymentForModal({
+                            payment_request,
+                            amount,
+                            pubkey,
+                            max_parts,
+                            max_shard_amt,
+                            fee_limit_sat,
+                            max_fee_percent,
+                            outgoing_chan_id,
+                            last_hop_pubkey,
+                            message,
+                            amp,
+                            timeout_seconds
+                        });
+
+                        // Trigger the modal display via callback
+                        this.expressGraphSyncModalCallback();
+
+                        // Return early - payment will be executed after modal interaction
+                        return;
+                    }
+
+                    // If no prompt needed, continue with payment
+                    this.executePayment(data, payFunc);
+                })
+                .catch((error) => {
+                    console.error(
+                        'Error detecting first payment attempt:',
+                        error
+                    );
+                    // On error, continue with payment
+                    this.executePayment(data, payFunc);
+                });
+        } else {
+            // For non-embedded LND, continue with payment directly
+            this.executePayment(data, payFunc);
+        }
+
+        // For LNC, we need to return something for streaming
+        if (this.settingsStore.implementation === 'lightning-node-connect') {
+            return payFunc(data);
+        }
+    };
+
+    @action
+    public executePaymentAfterModal = () => {
+        if (!this.pendingPaymentForModal) {
+            console.error('No pending payment data for modal');
+            return;
+        }
+
+        const paymentData = this.pendingPaymentForModal;
+        this.pendingPaymentForModal = null;
+
+        // Reconstruct the payment request
+        this.sendPayment(paymentData);
+    };
+
+    private executePayment = (data: any, payFunc: any) => {
         if (this.settingsStore.implementation === 'lightning-node-connect') {
             return payFunc(data);
         } else {
