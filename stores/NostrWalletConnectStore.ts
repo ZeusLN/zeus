@@ -2737,6 +2737,7 @@ export default class NostrWalletConnectStore {
     public sendHandoffRequest = async (): Promise<boolean | void> => {
         if (Platform.OS !== 'ios') return;
         if (this.activeConnections.length === 0) return;
+        const timeSeconds = this.isInNWCConnectionQRView ? 30 : 4;
         if (this.isInNWCConnectionQRView) {
             await this.startIOSBackgroundTask();
             this.startIOSBackgroundTimer();
@@ -2776,13 +2777,12 @@ export default class NostrWalletConnectStore {
             clearTimeout(timeoutId);
             if (response.ok) {
                 console.info('iOS NWC: Handoff request sent successfully');
-                if (this.isInNWCConnectionQRView) {
-                    console.info(
-                        'iOS NWC: Keeping background task alive for 30 seconds to make connection with nostr client'
-                    );
-                    await new Promise((resolve) => setTimeout(resolve, 30000));
-                    console.log('iOS NWC: Background task timeout completed');
-                }
+                console.info(
+                    `iOS NWC: Keeping background task alive for ${timeSeconds} seconds`
+                );
+                await new Promise((resolve) =>
+                    setTimeout(resolve, timeSeconds * 1000)
+                );
                 return true;
             } else {
                 console.warn(
