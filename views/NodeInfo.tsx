@@ -27,7 +27,7 @@ interface NodeInfoProps {
 @inject('NodeInfoStore', 'SettingsStore', 'CashuStore')
 @observer
 export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         const { NodeInfoStore } = this.props;
         NodeInfoStore.getNodeInfo();
     }

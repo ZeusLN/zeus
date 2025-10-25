@@ -32,7 +32,7 @@ export default class ZeroConfPeers extends React.Component<
     ZeroConfPeersState
 > {
     state = {
-        zeroConfPeers: [],
+        zeroConfPeers: this.props.SettingsStore.settings.zeroConfPeers || [],
         addPeer: ''
     };
 
@@ -41,15 +41,6 @@ export default class ZeroConfPeers extends React.Component<
             return el !== elementToRemove;
         });
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            zeroConfPeers: settings.zeroConfPeers || []
-        });
-    }
 
     render() {
         const { navigation, SettingsStore } = this.props;

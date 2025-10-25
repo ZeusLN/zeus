@@ -143,7 +143,7 @@ export default class ReceiveEcash extends React.Component<
     lnInterval: any;
     hopPickerRef: HopPicker | null;
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { CashuStore, SettingsStore, LightningAddressStore, route } =
             this.props;
         const { clearInvoice } = CashuStore;
@@ -216,9 +216,7 @@ export default class ReceiveEcash extends React.Component<
         this.setState({
             loading: false
         });
-    }
 
-    async componentDidMount() {
         const nfcSupported = await NfcManager.isSupported();
         this.setState({ nfcSupported });
     }

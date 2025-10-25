@@ -38,24 +38,17 @@ export default class ExpressGraphSync extends React.Component<
     ExpressGraphSyncState
 > {
     state = {
-        expressGraphSync: false,
-        resetExpressGraphSyncOnStartup: false,
-        speedloader: DEFAULT_SPEEDLOADER,
-        customSpeedloader: ''
+        expressGraphSync:
+            this.props.SettingsStore.settings.expressGraphSync || false,
+        resetExpressGraphSyncOnStartup:
+            this.props.SettingsStore.settings.resetExpressGraphSyncOnStartup ||
+            false,
+        speedloader:
+            this.props.SettingsStore.settings.speedloader ||
+            DEFAULT_SPEEDLOADER,
+        customSpeedloader:
+            this.props.SettingsStore.settings.customSpeedloader || ''
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            expressGraphSync: settings.expressGraphSync,
-            resetExpressGraphSyncOnStartup:
-                settings.resetExpressGraphSyncOnStartup,
-            speedloader: settings.speedloader || DEFAULT_SPEEDLOADER,
-            customSpeedloader: settings.customSpeedloader || ''
-        });
-    }
 
     render() {
         const { navigation, SettingsStore } = this.props;

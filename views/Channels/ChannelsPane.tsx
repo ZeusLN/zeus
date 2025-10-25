@@ -125,15 +125,25 @@ export default class ChannelsPane extends React.PureComponent<
     }
 
     async componentDidMount() {
+        const { ChannelsStore } = this.props;
+
+        ChannelsStore?.resetOpenChannel();
+
         this.disposeReaction = reaction(
-            () => this.props.ChannelsStore?.channelsView,
+            () => ChannelsStore?.channelsView,
             () => {
-                this.props.ChannelsStore?.resetOpenChannel();
+                ChannelsStore?.resetOpenChannel();
             }
         );
-        const { ChannelsStore } = this.props;
+
         ChannelsStore?.getPeers();
         this.initFromProps(this.props);
+    }
+
+    componentDidUpdate(prevProps: any) {
+        if (prevProps !== this.props) {
+            this.initFromProps(this.props);
+        }
     }
 
     componentWillUnmount() {
@@ -190,15 +200,6 @@ export default class ChannelsPane extends React.PureComponent<
             NfcManager.registerTagEvent();
         });
     };
-
-    UNSAFE_componentWillMount(): void {
-        const { ChannelsStore } = this.props;
-        ChannelsStore?.resetOpenChannel();
-    }
-
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        this.initFromProps(nextProps);
-    }
 
     initFromProps(props: ChannelsProps) {
         const { NodeInfoStore, SettingsStore } = props;

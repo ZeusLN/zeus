@@ -64,13 +64,32 @@ export default class SendEcash extends React.Component<
     SendEcashProps,
     SendEcashState
 > {
+    focusListener: any = null;
+
     constructor(props: SendEcashProps) {
         super(props);
+
+        const { CashuStore, route } = this.props;
+        const { clearToken } = CashuStore;
+
+        clearToken();
+
+        const params: SendEcashParams = route.params ?? {};
+        const { amount } = params;
+
+        let value = '';
+        let satAmount: string | number = '';
+
+        if (amount && amount != '0') {
+            value = amount;
+            satAmount = getSatAmount(amount);
+        }
+
         this.state = {
             loading: true,
             memo: '',
-            value: '',
-            satAmount: '',
+            value: value || '',
+            satAmount: satAmount || '',
             pubkey: '',
             contactName: '',
             duration: '',
@@ -83,30 +102,17 @@ export default class SendEcash extends React.Component<
         this.handleLockSettingsPress = this.handleLockSettingsPress.bind(this);
     }
 
-    async UNSAFE_componentWillMount() {
-        const { CashuStore, route } = this.props;
-        const { clearToken } = CashuStore;
-
-        clearToken();
-
-        const params: SendEcashParams = route.params ?? {};
-        const { amount } = params;
-
-        if (amount && amount != '0') {
-            this.setState({
-                value: amount,
-                satAmount: getSatAmount(amount)
-            });
-        }
-        this.setState({
-            loading: false
-        });
-
-        this.props.navigation.addListener('focus', this.handleScreenFocus);
+    componentDidMount() {
+        this.focusListener = this.props.navigation.addListener(
+            'focus',
+            this.handleScreenFocus
+        );
     }
 
     componentWillUnmount() {
-        this.props.navigation.removeListener('focus', this.handleScreenFocus);
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     handleScreenFocus = () => {

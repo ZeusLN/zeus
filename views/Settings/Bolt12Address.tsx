@@ -51,7 +51,7 @@ export default class Bolt12AddressSettings extends React.Component<
         error: ''
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

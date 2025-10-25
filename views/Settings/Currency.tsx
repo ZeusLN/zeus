@@ -40,21 +40,12 @@ export default class Currency extends React.Component<
     CurrencyState
 > {
     state = {
-        fiatEnabled: false,
-        selectedCurrency: '',
-        fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
+        fiatEnabled: this.props.SettingsStore.settings.fiatEnabled || false,
+        selectedCurrency: this.props.SettingsStore.settings.fiat || '',
+        fiatRatesSource:
+            this.props.SettingsStore.settings.fiatRatesSource ??
+            DEFAULT_FIAT_RATES_SOURCE
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            fiatEnabled: settings.fiatEnabled,
-            selectedCurrency: settings.fiat,
-            fiatRatesSource: settings.fiatRatesSource
-        });
-    }
 
     async componentDidUpdate(
         _prevProps: Readonly<CurrencyProps>,

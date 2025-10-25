@@ -45,7 +45,7 @@ export default class PendingHTLCs extends React.PureComponent<
         pendingHTLCs: []
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const persistentMode = await AsyncStorage.getItem(PERSISTENT_KEY);
         const pending_htlcs = this.props.route.params?.pending_htlcs;
 

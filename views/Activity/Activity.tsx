@@ -491,11 +491,18 @@ export default class Activity extends React.PureComponent<
         this.setState({ loading: false });
     }
 
-    UNSAFE_componentWillReceiveProps = (newProps: any) => {
-        const { ActivityStore, SettingsStore } = newProps;
+    async componentDidUpdate(prevProps: any) {
+        const { ActivityStore, SettingsStore } = this.props;
         const { getActivityAndFilter } = ActivityStore;
-        getActivityAndFilter(SettingsStore.settings.locale);
-    };
+
+        if (
+            SettingsStore.settings.locale !==
+            prevProps.SettingsStore.settings.locale
+        ) {
+            const filters = await ActivityStore.getFilters();
+            await getActivityAndFilter(SettingsStore.settings.locale, filters);
+        }
+    }
 
     componentWillUnmount() {
         if (this.transactionListener) this.transactionListener.remove();

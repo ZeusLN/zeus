@@ -144,30 +144,23 @@ export default class AmountInput extends React.Component<
         };
     }
 
-    componentDidMount() {
-        const { amount, onAmountChange }: any = this.props;
-        const satAmount = getSatAmount(amount, this.props.forceUnit);
-        onAmountChange(amount, satAmount);
-        this.setState({ satAmount });
-    }
+    componentDidUpdate(prevProps: Readonly<AmountInputProps>): void {
+        const { amount, forceUnit, onAmountChange } = this.props;
+        if (amount !== prevProps.amount || forceUnit !== prevProps.forceUnit) {
+            if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
+                const currentSatAmount = getSatAmount(
+                    amount || '',
+                    prevProps.forceUnit
+                );
+                this.setState({ satAmount: currentSatAmount });
 
-    UNSAFE_componentWillReceiveProps(
-        nextProps: Readonly<AmountInputProps>
-    ): void {
-        const { amount, forceUnit } = nextProps;
-        if (forceUnit === 'sats' && forceUnit !== this.props.forceUnit) {
-            const currentSatAmount = getSatAmount(
-                amount || '',
-                this.props.forceUnit
-            );
-            this.setState({ satAmount: currentSatAmount });
-            this.props.onAmountChange(
-                currentSatAmount.toString(),
-                currentSatAmount
-            );
-        } else {
-            const satAmount = getSatAmount(amount || '', forceUnit);
-            this.setState({ satAmount });
+                onAmountChange(currentSatAmount.toString(), currentSatAmount);
+            } else {
+                const satAmount = getSatAmount(amount || '', forceUnit);
+                if (satAmount !== this.state.satAmount) {
+                    this.setState({ satAmount });
+                }
+            }
         }
     }
 

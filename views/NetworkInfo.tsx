@@ -21,7 +21,7 @@ interface NetworkInfoProps {
 @inject('NodeInfoStore')
 @observer
 export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         const { NodeInfoStore } = this.props;
         NodeInfoStore.getNetworkInfo();
     }

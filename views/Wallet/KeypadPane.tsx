@@ -79,34 +79,47 @@ export default class KeypadPane extends React.PureComponent<
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
-    state = {
-        amount: '0',
-        needInbound: false,
-        belowMinAmount: false,
-        overrideBelowMinAmount: false,
-        flowLspNotConfigured: true,
-        ecashMode: false
-    };
+    focusListener: any = null;
 
-    async UNSAFE_componentWillMount() {
+    constructor(props: KeypadPaneProps) {
+        super(props);
+
+        let initialEcashMode = false;
         if (BackendUtils.supportsCashuWallet()) {
             const { ChannelsStore, SettingsStore } = this.props;
             const { settings } = SettingsStore!;
-
-            this.setState({
-                ecashMode:
-                    settings?.ecash?.enableCashu &&
-                    ChannelsStore?.channels.length === 0
-                        ? true
-                        : false
-            });
+            initialEcashMode =
+                settings?.ecash?.enableCashu &&
+                ChannelsStore?.channels.length === 0
+                    ? true
+                    : false;
         }
 
+        this.state = {
+            amount: '0',
+            needInbound: false,
+            belowMinAmount: false,
+            overrideBelowMinAmount: false,
+            flowLspNotConfigured: true,
+            ecashMode: initialEcashMode
+        };
+    }
+
+    async componentDidMount() {
         this.handleLsp();
 
-        this.props.navigation.addListener('focus', async () => {
-            this.handleLsp();
-        });
+        this.focusListener = this.props.navigation.addListener(
+            'focus',
+            async () => {
+                this.handleLsp();
+            }
+        );
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     async handleLsp() {

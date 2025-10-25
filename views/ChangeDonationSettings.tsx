@@ -32,12 +32,15 @@ export default class ChangeDonationSettings extends React.Component<
     ChangeDonationSettingsProps,
     ChangeDonationSettingsState
 > {
-    state = {
-        enableDonations: false,
-        donationPercentage: 5
-    };
+    constructor(props: ChangeDonationSettingsProps) {
+        super(props);
+        this.state = {
+            enableDonations: false,
+            donationPercentage: 5
+        };
+    }
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

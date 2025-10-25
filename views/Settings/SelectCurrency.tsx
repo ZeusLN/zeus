@@ -43,7 +43,7 @@ export default class SelectCurrency extends React.Component<
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

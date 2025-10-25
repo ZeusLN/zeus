@@ -23,7 +23,7 @@ interface MortalsProps {
 @inject('SettingsStore')
 @observer
 export default class Mortals extends React.Component<MortalsProps, {}> {
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         this.props.SettingsStore.fetchSponsors();
     }
 

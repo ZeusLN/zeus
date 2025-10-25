@@ -55,19 +55,6 @@ export default class SwapSettings extends React.Component<
         };
     }
 
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore, NodeInfoStore } = this.props;
-        const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            host: isTestnet
-                ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
-                : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customHost: settings.swaps?.customHost || '',
-            proEnabled: settings.swaps?.proEnabled || false
-        });
-    }
     render() {
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { customHost, host, proEnabled } = this.state;

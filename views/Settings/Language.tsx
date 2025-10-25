@@ -35,7 +35,7 @@ export default class Language extends React.Component<
         locales: LOCALE_KEYS
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

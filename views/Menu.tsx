@@ -69,16 +69,17 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
         easterEggCount: 0
     };
 
-    UNSAFE_componentWillMount() {
-        const { navigation } = this.props;
+    focusListener: any = null;
 
-        // triggers when loaded from navigation or back action
-        navigation.addListener('focus', this.handleFocus);
+    componentDidMount() {
+        const { navigation } = this.props;
+        this.focusListener = navigation.addListener('focus', this.handleFocus);
     }
 
     componentWillUnmount() {
-        this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('focus', this.handleFocus);
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     handleFocus = () => this.props.SettingsStore.getSettings();

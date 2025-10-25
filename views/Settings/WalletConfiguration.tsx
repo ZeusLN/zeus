@@ -214,26 +214,6 @@ export default class WalletConfiguration extends React.Component<
 
     scrollViewRef = React.createRef<ScrollView>();
 
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        if (settings.privacy && settings.privacy.clipboard) {
-            const clipboard = await Clipboard.getString();
-
-            if (
-                clipboard.includes('lndconnect://') ||
-                clipboard.includes('lndhub://') ||
-                clipboard.includes('bluewallet:') ||
-                clipboard.includes('clnrest://')
-            ) {
-                this.setState({
-                    suggestImport: clipboard
-                });
-            }
-        }
-    }
-
     importClipboard = () => {
         const { suggestImport } = this.state;
 
@@ -311,6 +291,24 @@ export default class WalletConfiguration extends React.Component<
     };
 
     async componentDidMount() {
+        const { SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+
+        if (settings.privacy && settings.privacy.clipboard) {
+            const clipboard = await Clipboard.getString();
+
+            if (
+                clipboard.includes('lndconnect://') ||
+                clipboard.includes('lndhub://') ||
+                clipboard.includes('bluewallet:') ||
+                clipboard.includes('clnrest://')
+            ) {
+                this.setState({
+                    suggestImport: clipboard
+                });
+            }
+        }
+
         await this.initFromProps(this.props);
 
         const { implementation, pairingPhrase } = this.state;
@@ -329,10 +327,11 @@ export default class WalletConfiguration extends React.Component<
         }
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        this.initFromProps(nextProps);
+    async componentDidUpdate(prevProps: any) {
+        if (prevProps !== this.props) {
+            await this.initFromProps(this.props);
+        }
     }
-
     componentWillUnmount() {
         const { SettingsStore } = this.props;
         SettingsStore.createAccountError = '';

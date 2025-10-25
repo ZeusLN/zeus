@@ -32,8 +32,9 @@ export default class LNDLogs extends React.Component<
     state = {
         log: ''
     };
+    logListener: any = null;
 
-    UNSAFE_componentWillMount(): void {
+    async componentDidMount(): Promise<void> {
         const { SettingsStore } = this.props;
         const { embeddedLndNetwork, lndDir } = SettingsStore;
         (async () => {
@@ -49,12 +50,15 @@ export default class LNDLogs extends React.Component<
                 .map((row) => row.slice(11))
                 .join('\n');
 
-            LndMobileToolsEventEmitter.addListener('lndlog', (data: string) => {
-                log = log + data.slice(11);
-                this.setState({
-                    log
-                });
-            });
+            this.logListener = LndMobileToolsEventEmitter.addListener(
+                'lndlog',
+                (data: string) => {
+                    log = log + data.slice(11);
+                    this.setState({
+                        log
+                    });
+                }
+            );
 
             NativeModules.LndMobileTools.observeLndLogFile(
                 lndDir || 'lnd',
@@ -64,6 +68,12 @@ export default class LNDLogs extends React.Component<
                 log
             });
         })();
+    }
+
+    componentWillUnmount(): void {
+        if (this.logListener) {
+            this.logListener.remove();
+        }
     }
 
     render() {

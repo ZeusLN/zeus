@@ -57,36 +57,31 @@ export default class NeutrinoPeers extends React.Component<
     NeutrinoPeersProps,
     NeutrinoPeersState
 > {
-    state = {
-        dontAllowOtherPeers: false,
-        neutrinoPeers: [],
-        addPeer: '',
-        pingTime: 0,
-        pingTimeout: false,
-        pingHost: '',
-        loading: false
-    };
+    constructor(props: NeutrinoPeersProps) {
+        super(props);
+
+        const { SettingsStore } = this.props;
+        const { settings, embeddedLndNetwork } = SettingsStore;
+
+        this.state = {
+            dontAllowOtherPeers: settings.dontAllowOtherPeers ?? false,
+            neutrinoPeers:
+                embeddedLndNetwork === 'Testnet'
+                    ? settings.neutrinoPeersTestnet
+                    : settings.neutrinoPeersMainnet,
+            addPeer: '',
+            pingTime: 0,
+            pingTimeout: false,
+            pingHost: '',
+            loading: false
+        };
+    }
 
     remove = (arrOriginal: Array<string>, elementToRemove: any) => {
         return arrOriginal.filter(function (el) {
             return el !== elementToRemove;
         });
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings, embeddedLndNetwork } = SettingsStore;
-        this.setState({
-            dontAllowOtherPeers:
-                settings.dontAllowOtherPeers !== undefined
-                    ? settings.dontAllowOtherPeers
-                    : false,
-            neutrinoPeers:
-                embeddedLndNetwork === 'Testnet'
-                    ? settings.neutrinoPeersTestnet
-                    : settings.neutrinoPeersMainnet
-        });
-    }
 
     render() {
         const { navigation, SettingsStore } = this.props;
@@ -210,7 +205,7 @@ export default class NeutrinoPeers extends React.Component<
                                         }}
                                     >
                                         <Switch
-                                            value={dontAllowOtherPeers}
+                                            value={dontAllowOtherPeers ?? false}
                                             onValueChange={async () => {
                                                 this.setState({
                                                     dontAllowOtherPeers:

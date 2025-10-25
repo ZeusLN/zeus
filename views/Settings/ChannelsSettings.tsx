@@ -39,7 +39,7 @@ export default class ChannelsSettings extends React.Component<
         simpleTaprootChannel: false
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

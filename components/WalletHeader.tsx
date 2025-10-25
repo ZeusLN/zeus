@@ -253,13 +253,21 @@ export default class WalletHeader extends React.Component<
         clipboard: ''
     };
 
-    async UNSAFE_componentWillMount() {
+    focusListener: any = null;
+
+    componentDidMount() {
         this.readClipboard();
-        this.props.navigation.addListener('focus', this.readClipboard);
+
+        this.focusListener = this.props.navigation.addListener(
+            'focus',
+            this.readClipboard
+        );
     }
 
     componentWillUnmount(): void {
-        this.props.navigation.removeListener('focus', this.readClipboard);
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     readClipboard = async () => {

@@ -48,21 +48,13 @@ export default class LightningAddressSettings extends React.Component<
     LightningAddressSettingsProps,
     LightningAddressSettingsState
 > {
-    state = {
-        automaticallyAccept: true,
-        automaticallyAcceptAttestationLevel: 2,
-        routeHints: false,
-        allowComments: true,
-        nostrPrivateKey: '',
-        nostrRelays: [],
-        notifications: 1
-    };
+    constructor(props: LightningAddressSettingsProps) {
+        super(props);
 
-    async UNSAFE_componentWillMount() {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
-        this.setState({
+        this.state = {
             automaticallyAccept: settings.lightningAddress?.automaticallyAccept
                 ? true
                 : false,
@@ -80,7 +72,7 @@ export default class LightningAddressSettings extends React.Component<
                 settings.lightningAddress?.notifications !== undefined
                     ? settings.lightningAddress.notifications
                     : 1
-        });
+        };
     }
 
     confirmDelete = () => {
@@ -171,7 +163,7 @@ export default class LightningAddressSettings extends React.Component<
                                 style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
-                                    value={automaticallyAccept}
+                                    value={automaticallyAccept ?? true}
                                     disabled={
                                         SettingsStore.settingsUpdateInProgress
                                     }
@@ -251,7 +243,7 @@ export default class LightningAddressSettings extends React.Component<
                                 style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
-                                    value={routeHints}
+                                    value={routeHints ?? false}
                                     disabled={
                                         SettingsStore.settingsUpdateInProgress
                                     }
@@ -292,7 +284,7 @@ export default class LightningAddressSettings extends React.Component<
                                 style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
-                                    value={allowComments}
+                                    value={allowComments ?? true}
                                     disabled={
                                         SettingsStore.settingsUpdateInProgress
                                     }

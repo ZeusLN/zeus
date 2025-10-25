@@ -61,7 +61,7 @@ export default class BalancePane extends React.PureComponent<
         showBackupPrompt: false
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
         if (isBackedUp !== 'true') {
             this.setState({

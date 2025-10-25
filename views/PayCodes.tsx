@@ -30,16 +30,18 @@ interface PayCodesProps {
 @inject('OffersStore')
 @observer
 export default class PayCodes extends React.Component<PayCodesProps, {}> {
-    UNSAFE_componentWillMount() {
-        const { OffersStore } = this.props;
-        OffersStore.listOffers();
-    }
+    focusListener: any = null;
 
     componentDidMount() {
-        // triggers when loaded from navigation or back action
-        this.props.navigation.addListener('focus', () => {
+        this.focusListener = this.props.navigation.addListener('focus', () => {
             this.props.OffersStore.listOffers();
         });
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     renderSeparator = () => (

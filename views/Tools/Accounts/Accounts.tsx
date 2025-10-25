@@ -63,12 +63,10 @@ export default class Accounts extends React.Component<
         editMode: false
     };
 
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         const { UTXOsStore } = this.props;
         if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
-    }
 
-    componentDidMount() {
         const { route } = this.props;
         const { value, satAmount, lightning, offer, locked } =
             route.params ?? {};

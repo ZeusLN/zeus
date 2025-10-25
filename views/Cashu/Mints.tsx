@@ -41,10 +41,18 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         mints: []
     };
 
-    UNSAFE_componentWillMount(): void {
+    focusListener: any = null;
+
+    componentDidMount(): void {
         const { navigation } = this.props;
-        // triggers when loaded from navigation or back action
-        navigation.addListener('focus', this.handleFocus);
+
+        this.focusListener = navigation.addListener('focus', this.handleFocus);
+    }
+
+    componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     handleFocus = () => {

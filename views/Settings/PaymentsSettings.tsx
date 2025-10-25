@@ -58,7 +58,7 @@ export default class PaymentsSettings extends React.Component<
         mounted: false
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

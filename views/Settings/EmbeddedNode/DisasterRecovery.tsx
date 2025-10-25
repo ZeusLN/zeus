@@ -46,7 +46,8 @@ export default class DisasterRecovery extends React.Component<
     DisasterRecoveryState
 > {
     state = {
-        automaticDisasterRecoveryBackup: true,
+        automaticDisasterRecoveryBackup:
+            settingsStore.settings.automaticDisasterRecoveryBackup || true,
         disasterRecoveryCopied: false,
         disasterRecoveryFileRecovered: false,
         disasterRecoveryFileRecoveredError: false,
@@ -56,15 +57,7 @@ export default class DisasterRecovery extends React.Component<
         lastDisasterRecoveryBackupStatus: '',
         lastDisasterRecoveryBackupTime: ''
     };
-
-    UNSAFE_componentWillMount() {
-        const { settings } = settingsStore;
-
-        this.setState({
-            automaticDisasterRecoveryBackup:
-                settings.automaticDisasterRecoveryBackup
-        });
-
+    componentDidMount() {
         this.getLastBackupStatus();
     }
 

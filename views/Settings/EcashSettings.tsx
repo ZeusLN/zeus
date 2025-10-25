@@ -47,7 +47,7 @@ export default class EcashSettings extends React.Component<
         sweepThresholdSats: '0'
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();

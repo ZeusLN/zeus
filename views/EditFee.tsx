@@ -66,7 +66,7 @@ export default class EditFee extends React.Component<
         };
     }
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { FeeStore, SettingsStore, route } = this.props;
         const fee = route.params?.fee;
         const { settings } = SettingsStore;

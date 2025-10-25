@@ -39,24 +39,15 @@ export default class ChangeAddress extends React.Component<
     ChangeAddressState
 > {
     state = {
-        newLightningAddress: '',
-        currentLightningAddress: '',
-        newLightningDomain: '',
-        currentLightningDomain: ''
+        newLightningAddress:
+            this.props.LightningAddressStore.lightningAddressHandle,
+        currentLightningAddress:
+            this.props.LightningAddressStore.lightningAddressHandle,
+        newLightningDomain:
+            this.props.LightningAddressStore.lightningAddressDomain,
+        currentLightningDomain:
+            this.props.LightningAddressStore.lightningAddressDomain
     };
-
-    async UNSAFE_componentWillMount() {
-        const { LightningAddressStore } = this.props;
-        const { lightningAddressHandle, lightningAddressDomain } =
-            LightningAddressStore;
-
-        this.setState({
-            newLightningAddress: lightningAddressHandle,
-            currentLightningAddress: lightningAddressHandle,
-            newLightningDomain: lightningAddressDomain,
-            currentLightningDomain: lightningAddressDomain
-        });
-    }
 
     render() {
         const { navigation, LightningAddressStore } = this.props;

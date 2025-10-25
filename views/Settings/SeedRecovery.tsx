@@ -126,30 +126,9 @@ export default class SeedRecovery extends React.PureComponent<
 
     async componentDidMount() {
         await this.initFromProps(this.props);
-    }
 
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        this.initFromProps(nextProps);
-    }
-
-    async initFromProps(props: SeedRecoveryProps) {
-        const network = props.route.params?.network ?? 'mainnet';
-        const restoreSwaps = props.route.params?.restoreSwaps ?? false;
-        const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
-        this.setState({ network, restoreSwaps, restoreRescueKey });
-    }
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore, NodeInfoStore } = this.props;
+        const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
-
-        this.setState({
-            rescueHost: isTestnet
-                ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
-                : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customRescueHost: settings.swaps?.customHost || ''
-        });
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -159,6 +138,19 @@ export default class SeedRecovery extends React.PureComponent<
                 this.setState({ seedArray });
             }
         }
+    }
+
+    async componentDidUpdate(prevProps: SeedRecoveryProps) {
+        if (this.props.route.params !== prevProps.route.params) {
+            await this.initFromProps(this.props);
+        }
+    }
+
+    async initFromProps(props: SeedRecoveryProps) {
+        const network = props.route.params?.network ?? 'mainnet';
+        const restoreSwaps = props.route.params?.restoreSwaps ?? false;
+        const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
+        this.setState({ network, restoreSwaps, restoreRescueKey });
     }
 
     saveWalletConfiguration = (recoveryCipherSeed?: string) => {

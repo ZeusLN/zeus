@@ -96,7 +96,7 @@ export default class CashuSeed extends React.PureComponent<
         seedPhrase: []
     };
 
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         const { seedPhrase } = this.props.CashuStore;
         if (seedPhrase) {
             this.setState({

@@ -119,7 +119,7 @@ export default class Lockscreen extends React.Component<
         }
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore, navigation, route } = this.props;
         const { settings } = SettingsStore;
         const {
@@ -212,9 +212,7 @@ export default class Lockscreen extends React.Component<
         } else {
             navigation.popTo('IntroSplash');
         }
-    }
 
-    componentDidMount() {
         this.subscription = AppState.addEventListener(
             'change',
             this.handleAppStateChange

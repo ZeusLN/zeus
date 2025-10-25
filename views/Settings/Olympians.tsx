@@ -23,7 +23,7 @@ interface OlympiansProps {
 @inject('SettingsStore')
 @observer
 export default class Olympians extends React.Component<OlympiansProps, {}> {
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         this.props.SettingsStore.fetchSponsors();
     }
 
