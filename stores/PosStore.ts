@@ -64,6 +64,38 @@ export default class PosStore {
         this.fiatStore = fiatStore;
     }
 
+    private _enrichAndFilterOrders = async (orders: Order[]) => {
+        // fetch hidden orders - orders customers couldn't pay
+        const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
+        const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+
+        const enrichedOrders = await Promise.all(
+            orders.map(async (order: any) => {
+                const payment = await Storage.getItem(`pos-${order.id}`);
+                if (hiddenOrders.includes(order.id)) {
+                    order.hidden = true;
+                }
+                if (payment) {
+                    order.payment = JSON.parse(payment);
+                }
+                return order;
+            })
+        );
+
+        const openOrders = enrichedOrders.filter(
+            (order: any) => !order.payment && !order.hidden
+        );
+        const paidOrders = enrichedOrders.filter((order: any) => order.payment);
+
+        runInAction(() => {
+            this.openOrders = openOrders;
+            this.filteredOpenOrders = openOrders;
+            this.paidOrders = paidOrders;
+            this.filteredPaidOrders = paidOrders;
+            this.loading = false;
+        });
+    };
+
     @action
     public hideOrder = async (orderId: string) => {
         const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
@@ -329,42 +361,11 @@ export default class PosStore {
 
         const soOrders = await Storage.getItem(POS_STANDALONE_KEY);
 
-        // fetch hidden orders - orders customers couldn't pay
-        const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
-        const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
-
         const orders = JSON.parse(soOrders || '[]').map(
             (order: any) => new Order(order)
         );
 
-        const enrichedOrders = await Promise.all(
-            orders.map(async (order: any) => {
-                const payment = await Storage.getItem(`pos-${order.id}`);
-                // mark order if hidden
-                if (hiddenOrders.includes(order.id)) {
-                    order.hidden = true;
-                }
-                if (payment) order.payment = JSON.parse(payment);
-
-                return order;
-            })
-        );
-
-        const openOrders = enrichedOrders.filter((order: any) => {
-            return !order.payment && !order.hidden;
-        });
-        const paidOrders = enrichedOrders.filter((order: any) => {
-            return order.payment;
-        });
-
-        runInAction(() => {
-            this.openOrders = openOrders;
-            this.filteredOpenOrders = openOrders;
-            this.paidOrders = paidOrders;
-            this.filteredPaidOrders = paidOrders;
-
-            this.loading = false;
-        });
+        await this._enrichAndFilterOrders(orders);
     };
 
     @action
@@ -417,39 +418,7 @@ export default class PosStore {
                             );
                         });
 
-                    // fetch hidden orders - orders customers couldn't pay
-                    const hiddenOrdersItem = await Storage.getItem(
-                        POS_HIDDEN_KEY
-                    );
-                    const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
-
-                    const enrichedOrders = await Promise.all(
-                        orders.map(async (order: any) => {
-                            const payment = await Storage.getItem(
-                                `pos-${order.id}`
-                            );
-                            // mark order if hidden
-                            if (hiddenOrders.includes(order.id)) {
-                                order.hidden = true;
-                            }
-                            if (payment) order.payment = JSON.parse(payment);
-                            return order;
-                        })
-                    );
-
-                    const openOrders = enrichedOrders.filter((order: any) => {
-                        return !order.payment && !order.hidden;
-                    });
-                    const paidOrders = enrichedOrders.filter((order: any) => {
-                        return order.payment;
-                    });
-
-                    runInAction(() => {
-                        this.openOrders = openOrders;
-                        this.filteredOpenOrders = openOrders;
-                        this.paidOrders = paidOrders;
-                        this.filteredPaidOrders = paidOrders;
-                    });
+                    await this._enrichAndFilterOrders(orders);
                 } else {
                     runInAction(() => {
                         this.openOrders = [];
