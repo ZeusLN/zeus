@@ -27,7 +27,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 
 interface ToolsProps {
     navigation: StackNavigationProp<any, any>;

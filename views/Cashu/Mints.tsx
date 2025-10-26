@@ -6,7 +6,7 @@ import {
     StyleSheet,
     TouchableOpacity
 } from 'react-native';
-import { Button, Icon, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';

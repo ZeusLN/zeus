@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Platform, NativeModules, ScrollView, Text, View } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StackNavigationProp } from '@react-navigation/stack';

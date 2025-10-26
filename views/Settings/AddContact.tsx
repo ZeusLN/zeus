@@ -12,7 +12,7 @@ import {
     TextInput
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Icon, Divider } from 'react-native-elements';
+import { Icon, Divider } from '@rneui/themed';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';

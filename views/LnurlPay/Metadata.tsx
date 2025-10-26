@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, Image, View, ScrollView } from 'react-native';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 
 import { themeColor } from '../../utils/ThemeUtils';
 

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { ListItem, Divider } from 'react-native-elements';
+import { ListItem, Divider } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 

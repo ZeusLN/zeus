@@ -57,7 +57,7 @@ import ExchangeFiatSVG from '../../assets/images/SVG/ExchangeFiat.svg';
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import History from '../../assets/images/SVG/History.svg';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
 
 import Storage from '../../storage';

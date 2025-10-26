@@ -4,7 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { Chip, Icon, ButtonGroup } from 'react-native-elements';
+import { Icon, ButtonGroup } from '@rneui/themed';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
@@ -469,21 +469,24 @@ export default class CashuLockSettings extends React.Component<
                                     top: 22
                                 }}
                             >
-                                <Chip
-                                    title={contactName}
-                                    titleStyle={{
-                                        ...styles.text,
-                                        color: themeColor('background'),
-                                        backgroundColor: themeColor('chain')
-                                    }}
-                                    // @ts-ignore:next-line
-                                    type="inline"
-                                    containerStyle={{
+                                <View
+                                    style={{
                                         backgroundColor: themeColor('chain'),
                                         borderRadius: 8,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 4,
                                         paddingRight: 24
                                     }}
-                                />
+                                >
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('background')
+                                        }}
+                                    >
+                                        {contactName}
+                                    </Text>
+                                </View>
                                 <TouchableOpacity
                                     onPress={() => {
                                         this.setState({

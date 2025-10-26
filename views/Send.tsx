@@ -13,7 +13,7 @@ import {
     BackHandler,
     NativeEventSubscription
 } from 'react-native';
-import { Chip, Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, {
@@ -976,23 +976,27 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             top: 22
                                         }}
                                     >
-                                        <Chip
-                                            title={contactName}
-                                            titleStyle={{
-                                                ...styles.text,
-                                                color: themeColor('background'),
-                                                backgroundColor:
-                                                    themeColor('chain')
-                                            }}
-                                            // @ts-ignore:next-line
-                                            type="inline"
-                                            containerStyle={{
+                                        <View
+                                            style={{
                                                 backgroundColor:
                                                     themeColor('chain'),
                                                 borderRadius: 8,
+                                                paddingHorizontal: 8,
+                                                paddingVertical: 4,
                                                 paddingRight: 24
                                             }}
-                                        />
+                                        >
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'background'
+                                                    )
+                                                }}
+                                            >
+                                                {contactName}
+                                            </Text>
+                                        </View>
                                         <TouchableOpacity
                                             onPress={() => {
                                                 this.setState({

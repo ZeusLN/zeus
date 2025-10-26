@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dimensions, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { SearchBar } from 'react-native-elements';
+import { SearchBar } from '@rneui/themed';
 
 import { Row } from '../../components/layout/Row';
 import { FilterOptions } from '../../components/Channels/FilterOptions';
@@ -183,14 +183,8 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                         onClear={() => ChannelsStore!.setSearch('')}
                         onFocus={() => {}}
                         onBlur={() => {}}
-                        onCancel={() => {
-                            ChannelsStore!.setSearch('');
-                        }}
-                        cancelButtonTitle="Cancel"
-                        cancelButtonProps={{}}
                         searchIcon={{ name: 'search', type: 'font-awesome' }}
                         clearIcon={{ name: 'close', type: 'font-awesome' }}
-                        showCancel={true}
                     />
                     {channelsView === ChannelsView.Channels && (
                         <SortButton

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button as ElementsButton } from 'react-native-elements';
+import { Button as ElementsButton } from '@rneui/themed';
 import { themeColor } from './../utils/ThemeUtils';
 import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Badge } from 'react-native-elements';
+import { Badge } from '@rneui/themed';
 import {
     Animated,
     Dimensions,

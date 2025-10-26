@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { ButtonGroup, Icon } from 'react-native-elements';
+import { ButtonGroup } from '@rneui/themed';
+import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 import NfcManager, {
@@ -1317,7 +1318,6 @@ export default class Receive extends React.Component<
                     InvoicesStore.clearUnified();
                 }}
                 color={themeColor('text')}
-                underlayColor="transparent"
                 size={30}
             />
         );

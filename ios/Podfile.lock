@@ -1314,7 +1314,7 @@ PODS:
     - React-Core
   - react-native-get-random-values (1.9.0):
     - React-Core
-  - react-native-hce (0.1.2):
+  - react-native-hce (0.3.0):
     - React
   - react-native-image-picker (5.0.1):
     - React-Core
@@ -2488,7 +2488,7 @@ SPEC CHECKSUMS:
   fast_float: 06eeec4fe712a76acc9376682e4808b05ce978b6
   FBLazyVector: e053802577a711add20e45bbbf5dd1180b6ca62e
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
-  glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
+  glog: eb93e2f488219332457c3c4eafd2738ddc7e80b8
   hermes-engine: b5c9cfbe6415f1b0b24759f2942c8f33e9af6347
   lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
   lottie-react-native: 5d89c05930d4180a1e39b1757d46e6c0eec90255
@@ -2528,7 +2528,7 @@ SPEC CHECKSUMS:
   react-native-document-picker: 4eea571bafacde686393413d5e3faaf96493ac6f
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
   react-native-get-random-values: 419569b6ed3d15bfb9b6781b2f2e058f8e8d2698
-  react-native-hce: f42561549a16f53ae98edb7f1b68ad87b6e732e1
+  react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
   react-native-image-picker: b15a9e61c326c99b8215659d968accee6eddf639
   react-native-nfc-manager: f74a1e52807a916d27c2f428633e474cf661d611
   react-native-notifications: 3bafa1237ae8a47569a84801f17d80242fe9f6a5
@@ -2591,6 +2591,6 @@ SPEC CHECKSUMS:
   Yoga: eca8dd841b7cd47d82d66be58af8e3aeb819012f
   ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: a93e6994b62de6e5978058843e78440db8946e1a
+PODFILE CHECKSUM: 4e6c1cbb035531e90d1854ea8ad9e86da3a8c1cb
 
 COCOAPODS: 1.16.2

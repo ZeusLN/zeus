@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Dimensions, FlatList, Text } from 'react-native';
-import { Avatar, ListItem } from 'react-native-elements';
+import { ListItem, Avatar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 

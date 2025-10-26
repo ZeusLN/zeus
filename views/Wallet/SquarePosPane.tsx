@@ -8,7 +8,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import BigNumber from 'bignumber.js';
-import { ButtonGroup, SearchBar } from 'react-native-elements';
+import { ButtonGroup, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Swipeable } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';

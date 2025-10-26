@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
-import { CheckBox } from 'react-native-elements';
+import { CheckBox } from '@rneui/themed';
 import { StackNavigationProp } from '@react-navigation/stack';
 import RNFS from 'react-native-fs';
 import { pick, types, keepLocalCopy } from '@react-native-documents/picker';

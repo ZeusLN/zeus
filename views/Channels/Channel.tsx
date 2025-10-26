@@ -14,7 +14,7 @@ import {
     Divider,
     Icon,
     ListItem
-} from 'react-native-elements';
+} from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';

@@ -6,7 +6,7 @@ import {
     KeyboardAvoidingView,
     Platform
 } from 'react-native';
-import { Button, Icon, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import isEqual from 'lodash/isEqual';
 import DatePicker from 'react-native-date-picker';

@@ -5,7 +5,7 @@ def node_require(script)
     "require.resolve(
       '#{script}',
       {paths: [process.argv[1]]},
-    )", __dir__]).strip
+    )", File.expand_path('..', __dir__)]).strip
 end
 
 node_require('react-native/scripts/react_native_pods.rb')

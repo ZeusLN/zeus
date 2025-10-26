@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Divider } from 'react-native-elements';
+import { Divider } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 
 import LoadingIndicator from '../components/LoadingIndicator';
