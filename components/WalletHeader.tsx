@@ -23,7 +23,6 @@ import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
-import TransactionsStore from '../stores/TransactionsStore';
 
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -143,125 +142,18 @@ const MenuBadge = ({
     </TouchableOpacity>
 );
 
-const checkAutoPayAndProcess = async (
-    invoice: string,
-    navigation: StackNavigationProp<any, any>,
-    settingsStore: SettingsStore,
-    transactionsStore: TransactionsStore
-) => {
-    try {
-        const decodedInvoice = await BackendUtils.decodePaymentRequest([
-            invoice
-        ]);
-
-        if (!decodedInvoice) {
-            const response = await handleAnything(invoice);
-            const [route, props] = response;
-            navigation.navigate(route, props);
-            return;
-        }
-
-        const getAmountFromDecodedInvoice = (decodedInvoice: any): number => {
-            // LND format (with underscores)
-
-            if (decodedInvoice.num_satoshis) {
-                return Number(decodedInvoice.num_satoshis);
-            }
-            if (decodedInvoice.num_msat) {
-                return Number(decodedInvoice.num_msat) / 1000;
-            }
-
-            if (decodedInvoice.numSatoshis) {
-                return Number(decodedInvoice.numSatoshis);
-            }
-            if (decodedInvoice.numMsat) {
-                return Number(decodedInvoice.numMsat) / 1000;
-            }
-
-            // Core Lightning format
-            if (decodedInvoice.amount_msat) {
-                return Number(decodedInvoice.amount_msat) / 1000;
-            }
-
-            // Other possible formats
-            if (decodedInvoice.amount) {
-                return Number(decodedInvoice.amount);
-            }
-            if (decodedInvoice.value) {
-                return Number(decodedInvoice.value);
-            }
-            if (decodedInvoice.valueSat) {
-                return Number(decodedInvoice.valueSat);
-            }
-            if (decodedInvoice.valueMsat) {
-                return Number(decodedInvoice.valueMsat) / 1000;
-            }
-
-            return 0;
-        };
-
-        const amount = getAmountFromDecodedInvoice(decodedInvoice);
-
-        const autoPayThreshold =
-            settingsStore.settings?.payments?.autoPayThreshold || 0;
-
-        if (
-            settingsStore.settings?.payments?.autoPayEnabled &&
-            amount > 0 &&
-            amount <= autoPayThreshold
-        ) {
-            transactionsStore.sendPayment({
-                payment_request: invoice
-            });
-
-            navigation.navigate('SendingLightning', {
-                enableDonations: false
-            });
-        } else {
-            const response = await handleAnything(invoice);
-            const [route, props] = response;
-            navigation.navigate(route, props);
-        }
-    } catch (error) {
-        console.error('Error checking auto-pay:', error);
-        // Normal processing
-        const response = await handleAnything(invoice);
-        const [route, props] = response;
-        navigation.navigate(route, props);
-    }
-};
-
 const ClipboardBadge = ({
     navigation,
-    clipboard,
-    settingsStore,
-    transactionsStore
+    clipboard
 }: {
     navigation: StackNavigationProp<any, any>;
     clipboard: string;
-    settingsStore: SettingsStore;
-    transactionsStore: TransactionsStore;
 }) => (
     <TouchableOpacity
         onPress={async () => {
-            const trimmedContent = clipboard.trim();
-
-            if (
-                trimmedContent.toLowerCase().startsWith('lnbc') ||
-                trimmedContent.toLowerCase().startsWith('lnbcrt') ||
-                trimmedContent.toLowerCase().startsWith('lntb')
-            ) {
-                await checkAutoPayAndProcess(
-                    trimmedContent,
-                    navigation,
-                    settingsStore,
-                    transactionsStore
-                );
-            } else {
-                const response = await handleAnything(clipboard);
-                const [route, props] = response;
-                navigation.navigate(route, props);
-            }
+            const response = await handleAnything(clipboard);
+            const [route, props] = response;
+            navigation.navigate(route, props);
         }}
     >
         <ClipboardSVG fill={themeColor('text')} width="24" height="30" />
@@ -329,7 +221,6 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
-    TransactionsStore?: TransactionsStore;
     navigation: StackNavigationProp<any, any>;
     connecting?: boolean;
     loading?: boolean;
@@ -351,8 +242,7 @@ interface WalletHeaderState {
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
-    'SyncStore',
-    'TransactionsStore'
+    'SyncStore'
 )
 @observer
 export default class WalletHeader extends React.Component<
@@ -403,8 +293,7 @@ export default class WalletHeader extends React.Component<
             LightningAddressStore,
             ModalStore,
             PosStore,
-            SyncStore,
-            TransactionsStore
+            SyncStore
         } = this.props;
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
@@ -738,10 +627,6 @@ export default class WalletHeader extends React.Component<
                                         <ClipboardBadge
                                             navigation={navigation}
                                             clipboard={clipboard}
-                                            settingsStore={SettingsStore!}
-                                            transactionsStore={
-                                                TransactionsStore!
-                                            }
                                         />
                                     </View>
                                 )}
