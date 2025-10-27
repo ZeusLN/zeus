@@ -25,6 +25,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
+import AutoPayUtils from '../utils/AutoPayUtils';
 
 import BalanceStore from '../stores/BalanceStore';
 import ContactStore from '../stores/ContactStore';
@@ -468,13 +469,33 @@ export default class Send extends React.Component<SendProps, SendState> {
         );
     };
 
-    validateAddress = (text: string) => {
-        const { navigation } = this.props;
+    validateAddress = async (text: string) => {
+        const { navigation, SettingsStore, TransactionsStore } = this.props;
         this.setState({
             loading: true,
             isValid: true,
             error_msg: ''
         });
+
+        if (AutoPayUtils.shouldTryAutoPay(text)) {
+            try {
+                const autoPayProcessed =
+                    await AutoPayUtils.checkAutoPayAndProcess(
+                        text,
+                        navigation,
+                        SettingsStore!,
+                        TransactionsStore!
+                    );
+
+                if (autoPayProcessed) {
+                    this.setState({ loading: false });
+                    return;
+                }
+            } catch (error) {
+                console.error('Auto-pay check failed:', error);
+            }
+        }
+
         handleAnything(text, this.state.satAmount.toString())
             .then((response) => {
                 try {
