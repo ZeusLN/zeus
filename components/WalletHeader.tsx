@@ -271,7 +271,6 @@ const checkAutoPayAndProcess = async (
         navigation.navigate(route, props);
     }
 };
-
 const ClipboardBadge = ({
     navigation,
     clipboard,
@@ -397,7 +396,8 @@ interface WalletHeaderState {
     'PosStore',
     'SyncStore',
     'NostrWalletConnectStore',
-    'TransactionsStore'
+    'TransactionsStore',
+    'SyncStore'
 )
 @observer
 export default class WalletHeader extends React.Component<
