@@ -412,12 +412,14 @@ export default class NostrWalletConnectStore {
     // iOS: Always reset (except when in NWC connection QR view)
     // Android: Only reset if persistentNWCServicesEnabled is false
     @action
-    public reset = () => {
-        if (Platform.OS === 'ios')
-            this.sendHandoffRequest().catch((error) => {
+    public reset = async () => {
+        if (Platform.OS === 'ios') {
+            try {
+                await this.sendHandoffRequest();
+            } catch (error) {
                 console.error('failed to send handoff request', error);
-            });
-
+            }
+        }
         if (
             (Platform.OS === 'ios' && !this.isInNWCConnectionQRView) ||
             (Platform.OS === 'android' && !this.persistentNWCServiceEnabled)
@@ -2414,11 +2416,11 @@ export default class NostrWalletConnectStore {
                     this.iosBackgroundTaskActive = true;
                 });
             } else {
-                console.warn('iOS NWC: Failed to start background task');
+                console.warn('IOS NWC: Failed to start background task');
             }
             return started;
         } catch (error) {
-            console.error('iOS NWC: Failed to start background task:', error);
+            console.error('IOS NWC: Failed to start background task:', error);
             return false;
         }
     }
@@ -2737,15 +2739,15 @@ export default class NostrWalletConnectStore {
     public sendHandoffRequest = async (): Promise<boolean | void> => {
         if (Platform.OS !== 'ios') return;
         if (this.activeConnections.length === 0) return;
-        if (this.isInNWCConnectionQRView) {
-            await this.startIOSBackgroundTask();
-            this.startIOSBackgroundTimer();
-        }
+        const timeSeconds = this.isInNWCConnectionQRView ? 30 : 5;
+        await this.startIOSBackgroundTask();
+        console.log('IOS NWC: Background Task Started');
+        if (this.isInNWCConnectionQRView) this.startIOSBackgroundTimer();
         try {
             const deviceToken = this.lightningAddressStore.currentDeviceToken;
             if (!deviceToken) {
                 console.warn(
-                    'iOS NWC: Cannot send handoff request - device token not available'
+                    'IOS NWC: Cannot send handoff request - device token not available'
                 );
                 return false;
             }
@@ -2775,24 +2777,26 @@ export default class NostrWalletConnectStore {
             );
             clearTimeout(timeoutId);
             if (response.ok) {
-                console.info('iOS NWC: Handoff request sent successfully');
-                if (this.isInNWCConnectionQRView) {
-                    console.info(
-                        'iOS NWC: Keeping background task alive for 30 seconds to make connection with nostr client'
-                    );
-                    await new Promise((resolve) => setTimeout(resolve, 30000));
-                    console.log('iOS NWC: Background task timeout completed');
-                }
+                console.info('IOS NWC: Handoff request sent successfully');
+                console.info(
+                    `IOS NWC: Keeping background task alive for ${timeSeconds} seconds`
+                );
+                await new Promise((resolve) =>
+                    setTimeout(resolve, timeSeconds * 1000)
+                );
+                console.log(
+                    `IOS NWC: Background Task Ended in ${timeSeconds} seconds`
+                );
                 return true;
             } else {
                 console.warn(
-                    'iOS NWC: Handoff request failed with status:',
+                    'IOS NWC: Handoff request failed with status:',
                     response.status
                 );
                 return false;
             }
         } catch (error) {
-            console.error('iOS NWC: Failed to send handoff request:', error);
+            console.error('IOS NWC: Failed to send handoff request:', error);
             return false;
         } finally {
             this.stopIOSBackgroundTimer();
