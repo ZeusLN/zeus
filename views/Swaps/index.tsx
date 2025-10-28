@@ -59,6 +59,7 @@ import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import History from '../../assets/images/SVG/History.svg';
 import { Icon } from 'react-native-elements';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
+import Scan from '../../assets/images/SVG/Scan.svg';
 
 import Storage from '../../storage';
 
@@ -1760,39 +1761,65 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         </View>
                                     )}
 
-                                <View>
-                                    <TextInput
-                                        onChangeText={(text: string) => {
-                                            this.setState(
-                                                {
-                                                    invoice: text,
-                                                    error: '',
-                                                    apiUpdates: ''
-                                                },
-                                                () => this.checkIsValid()
-                                            );
-                                        }}
-                                        placeholder={
-                                            fetchingInvoice
-                                                ? ''
-                                                : reverse
-                                                ? localeString(
-                                                      'views.Settings.AddContact.onchainAddress'
-                                                  )
-                                                : localeString(
-                                                      'views.PaymentRequest.title'
-                                                  )
-                                        }
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        marginHorizontal: 20
+                                    }}
+                                >
+                                    <View
                                         style={{
-                                            marginHorizontal: 20
+                                            flex: 1,
+                                            position: 'relative'
                                         }}
-                                        value={invoice}
-                                    />
-                                    {fetchingInvoice && (
-                                        <View style={styles.loadingOverlay}>
-                                            <LoadingIndicator />
-                                        </View>
-                                    )}
+                                    >
+                                        <TextInput
+                                            onChangeText={(text: string) => {
+                                                this.setState(
+                                                    {
+                                                        invoice: text,
+                                                        error: '',
+                                                        apiUpdates: ''
+                                                    },
+                                                    () => this.checkIsValid()
+                                                );
+                                            }}
+                                            placeholder={
+                                                fetchingInvoice
+                                                    ? ''
+                                                    : reverse
+                                                    ? localeString(
+                                                          'views.Settings.AddContact.onchainAddress'
+                                                      )
+                                                    : localeString(
+                                                          'views.PaymentRequest.title'
+                                                      )
+                                            }
+                                            value={invoice}
+                                        />
+                                        {fetchingInvoice && (
+                                            <View style={styles.loadingOverlay}>
+                                                <LoadingIndicator />
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'HandleAnythingQRScanner',
+                                                { fromSwaps: true }
+                                            )
+                                        }
+                                        style={{ marginLeft: 10 }}
+                                    >
+                                        <Scan
+                                            width={25}
+                                            height={25}
+                                            fill={themeColor('text')}
+                                        />
+                                    </TouchableOpacity>
                                 </View>
 
                                 <View
@@ -1914,24 +1941,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             }
                                         />
                                     )}
-                                </View>
-                                <View>
-                                    <Button
-                                        title={localeString('general.scan')}
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'HandleAnythingQRScanner',
-                                                { fromSwaps: true }
-                                            )
-                                        }
-                                        buttonStyle={{ marginTop: 4 }}
-                                        icon={{
-                                            name: 'qrcode',
-                                            type: 'font-awesome',
-                                            size: 25
-                                        }}
-                                        secondary
-                                    />
                                 </View>
                                 {reverse && (
                                     <View style={{ paddingHorizontal: 20 }}>
