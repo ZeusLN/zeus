@@ -1565,6 +1565,7 @@
     "views.Settings.NostrWalletConnect.custom": "Custom",
     "views.Settings.NostrWalletConnect.customDescription": "I want to define exactly what access this app has to my wallet",
     "views.Settings.NostrWalletConnect.authorizeAppTo": "Authorize the app to:",
+    "views.Settings.NostrWalletConnect.budgetAmount": "Budget amount",
     "views.Settings.NostrWalletConnect.budgetDescription": "Set spending limits for this connection",
     "views.Settings.NostrWalletConnect.connectionExpiration": "Connection expiration",
     "views.Settings.NostrWalletConnect.connectionExpirationDescription": "Set when this connection should expire",
