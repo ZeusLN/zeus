@@ -70,7 +70,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
     state: TxHexState = {
         infoIndex: 0,
         selectedIndex: 0,
-        txHex: '',
+        txHex: this.props.route.params?.txHex || '',
         frameIndex: 0,
         bbqrParts: [],
         bcurEncoder: undefined,
@@ -79,10 +79,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         qrAnimationSpeed: 'medium'
     };
 
-    UNSAFE_componentWillMount(): void {
-        const { route } = this.props;
-        const txHex = route.params?.txHex;
-        this.setState({ txHex }, () => this.generateInfo());
+    componentDidMount(): void {
+        this.generateInfo();
     }
 
     generateInfo = () => {

@@ -49,7 +49,7 @@ export default class Routing extends React.PureComponent<
         selectedIndex: 0
     };
 
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         const { FeeStore } = this.props;
         FeeStore.getFees();
         if (BackendUtils.supportsForwardingHistory()) {

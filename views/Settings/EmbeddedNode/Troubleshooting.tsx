@@ -37,23 +37,14 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
     EmbeddedNodeTroubleshootingState
 > {
     state = {
-        expressGraphSync: false,
-        resetExpressGraphSyncOnStartup: false,
-        compactDb: false,
+        expressGraphSync:
+            this.props.SettingsStore.settings.expressGraphSync ?? false,
+        resetExpressGraphSyncOnStartup:
+            this.props.SettingsStore.settings.resetExpressGraphSyncOnStartup ??
+            false,
+        compactDb: this.props.SettingsStore.settings.compactDb ?? false,
         resetMissionControlSuccess: false
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            expressGraphSync: settings.expressGraphSync,
-            resetExpressGraphSyncOnStartup:
-                settings.resetExpressGraphSyncOnStartup,
-            compactDb: settings.compactDb
-        });
-    }
 
     render() {
         const { navigation, SettingsStore } = this.props;

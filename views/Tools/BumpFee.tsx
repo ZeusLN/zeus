@@ -69,7 +69,7 @@ export default class BumpFee extends React.PureComponent<
         };
     }
 
-    UNSAFE_componentWillMount(): void {
+    componentDidMount(): void {
         this.props.FeeStore.resetErrors();
     }
 

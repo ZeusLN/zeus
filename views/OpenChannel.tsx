@@ -133,7 +133,7 @@ export default class OpenChannel extends React.Component<
         };
     }
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { ChannelsStore, SettingsStore } = this.props;
         const { settings } = SettingsStore;
 
@@ -164,9 +164,7 @@ export default class OpenChannel extends React.Component<
                     ? settings.channels.simpleTaprootChannel
                     : false
         });
-    }
 
-    componentDidMount() {
         this.initFromProps(this.props);
 
         if (this.props.ChannelsStore.channelsView === ChannelsView.Peers) {
@@ -223,8 +221,13 @@ export default class OpenChannel extends React.Component<
         });
     };
 
-    UNSAFE_componentWillReceiveProps(nextProps: any) {
-        this.initFromProps(nextProps);
+    componentDidUpdate(prevProps: OpenChannelProps) {
+        if (
+            this.props.route.params !== prevProps.route.params ||
+            this.props.NodeInfoStore !== prevProps.NodeInfoStore
+        ) {
+            this.initFromProps(this.props);
+        }
     }
 
     initFromProps(props: OpenChannelProps) {

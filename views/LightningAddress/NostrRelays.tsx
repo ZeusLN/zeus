@@ -56,7 +56,7 @@ export default class NostrRelays extends React.Component<
         });
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore, route } = this.props;
         const { settings, getSettings } = SettingsStore;
 

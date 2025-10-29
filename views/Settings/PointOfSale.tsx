@@ -65,7 +65,7 @@ export default class PointOfSale extends React.Component<
         defaultView: 'Products'
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
