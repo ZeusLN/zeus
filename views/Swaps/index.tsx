@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
+import { TouchableOpacity, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -15,7 +15,7 @@ import KeyValue from '../../components/KeyValue';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
-import TextInput from '../../components/TextInput';
+import AddressInput from '../../components/AddressInput';
 import AmountInput from '../../components/AmountInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import {
@@ -59,7 +59,6 @@ import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import History from '../../assets/images/SVG/History.svg';
 import { Icon } from 'react-native-elements';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
-import Scan from '../../assets/images/SVG/Scan.svg';
 
 import Storage from '../../storage';
 
@@ -1761,66 +1760,38 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         </View>
                                     )}
 
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        marginHorizontal: 20
+                                <AddressInput
+                                    value={invoice}
+                                    onChangeText={(text: string) => {
+                                        this.setState(
+                                            {
+                                                invoice: text,
+                                                error: '',
+                                                apiUpdates: ''
+                                            },
+                                            () => this.checkIsValid()
+                                        );
                                     }}
-                                >
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            position: 'relative'
-                                        }}
-                                    >
-                                        <TextInput
-                                            onChangeText={(text: string) => {
-                                                this.setState(
-                                                    {
-                                                        invoice: text,
-                                                        error: '',
-                                                        apiUpdates: ''
-                                                    },
-                                                    () => this.checkIsValid()
-                                                );
-                                            }}
-                                            placeholder={
-                                                fetchingInvoice
-                                                    ? ''
-                                                    : reverse
-                                                    ? localeString(
-                                                          'views.Settings.AddContact.onchainAddress'
-                                                      )
-                                                    : localeString(
-                                                          'views.PaymentRequest.title'
-                                                      )
-                                            }
-                                            value={invoice}
-                                        />
-                                        {fetchingInvoice && (
-                                            <View style={styles.loadingOverlay}>
-                                                <LoadingIndicator />
-                                            </View>
-                                        )}
-                                    </View>
-
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'HandleAnythingQRScanner',
-                                                { fromSwaps: true }
-                                            )
-                                        }
-                                        style={{ marginLeft: 10 }}
-                                    >
-                                        <Scan
-                                            width={25}
-                                            height={25}
-                                            fill={themeColor('text')}
-                                        />
-                                    </TouchableOpacity>
-                                </View>
+                                    onScan={() =>
+                                        navigation.navigate(
+                                            'HandleAnythingQRScanner',
+                                            { fromSwaps: true }
+                                        )
+                                    }
+                                    placeholder={
+                                        fetchingInvoice
+                                            ? ''
+                                            : reverse
+                                            ? localeString(
+                                                  'views.Settings.AddContact.onchainAddress'
+                                              )
+                                            : localeString(
+                                                  'views.PaymentRequest.title'
+                                              )
+                                    }
+                                    loading={fetchingInvoice}
+                                    style={{ marginHorizontal: 20 }}
+                                />
 
                                 <View
                                     style={{
@@ -2059,21 +2030,3 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
     }
 }
-
-const styles = StyleSheet.create({
-    loadingOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center'
-    }
-});
