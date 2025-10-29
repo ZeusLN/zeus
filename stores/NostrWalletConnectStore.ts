@@ -206,6 +206,7 @@ export default class NostrWalletConnectStore {
 
     @action
     public initializeService = async () => {
+        if (this.isInNWCConnectionQRView) this.endIOSBackgroundTask();
         await this.retryWithBackoff(async () => {
             runInAction(() => {
                 this.error = false;
@@ -228,8 +229,10 @@ export default class NostrWalletConnectStore {
 
                 await this.startService();
 
-                if (Platform.OS === 'ios')
+                if (Platform.OS === 'ios') {
                     await this.fetchAndProcessPendingEvents();
+                    await this.sendHandoffRequest();
+                }
 
                 runInAction(() => {
                     this.loadingMsg = undefined;
@@ -413,13 +416,7 @@ export default class NostrWalletConnectStore {
     // Android: Only reset if persistentNWCServicesEnabled is false
     @action
     public reset = async () => {
-        if (Platform.OS === 'ios') {
-            try {
-                await this.sendHandoffRequest();
-            } catch (error) {
-                console.error('failed to send handoff request', error);
-            }
-        }
+        if (this.isInNWCConnectionQRView) this.startIOSBackgroundTask();
         if (
             (Platform.OS === 'ios' && !this.isInNWCConnectionQRView) ||
             (Platform.OS === 'android' && !this.persistentNWCServiceEnabled)
@@ -2118,15 +2115,6 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-    private async loadClientKeys(): Promise<ClientKeys> {
-        try {
-            const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
-            return storedKeys ? JSON.parse(storedKeys) : {};
-        } catch (error) {
-            console.error('Failed to load client keys:', error);
-            return {};
-        }
-    }
 
     private async storeClientKeys(
         pubkey: string,
@@ -2403,25 +2391,47 @@ export default class NostrWalletConnectStore {
         }, HEALTH_CHECK_INTERVAL_MS); // 10 minutes - less frequent
     }
 
-    // iOS background task: allows up to ~30s of extra execution time to complete Nostr client connection
     @action
-    public async startIOSBackgroundTask(): Promise<boolean> {
+    public async startIOSBackgroundTask(
+        duration: number = 30000
+    ): Promise<boolean> {
         if (Platform.OS !== 'ios') {
             return false;
         }
         try {
             const started = await IOSBackgroundTaskUtils.startBackgroundTask();
-            if (started) {
-                runInAction(() => {
-                    this.iosBackgroundTaskActive = true;
-                });
-            } else {
+            if (!started) {
                 console.warn('IOS NWC: Failed to start background task');
+                return false;
             }
-            return started;
+            runInAction(() => {
+                this.iosBackgroundTaskActive = true;
+                this.iosBackgroundTimeRemaining = 30;
+                this.iosHandoffInProgress = true;
+            });
+
+            if (this.iosBackgroundTimerInterval) {
+                clearInterval(this.iosBackgroundTimerInterval);
+            }
+
+            this.iosBackgroundTimerInterval = setInterval(() => {
+                runInAction(() => {
+                    if (this.iosBackgroundTimeRemaining > 0) {
+                        this.iosBackgroundTimeRemaining--;
+                    } else {
+                        this.endIOSBackgroundTask();
+                    }
+                });
+            }, 1000);
+
+            await new Promise((resolve) => setTimeout(resolve, duration));
+
+            return true;
         } catch (error) {
             console.error('IOS NWC: Failed to start background task:', error);
             return false;
+        } finally {
+            this.endIOSBackgroundTask();
         }
     }
 
@@ -2430,6 +2440,16 @@ export default class NostrWalletConnectStore {
         if (Platform.OS !== 'ios' || !this.iosBackgroundTaskActive) {
             return;
         }
+
+        if (this.iosBackgroundTimerInterval) {
+            clearInterval(this.iosBackgroundTimerInterval);
+            this.iosBackgroundTimerInterval = null;
+        }
+
+        runInAction(() => {
+            this.iosBackgroundTimeRemaining = 0;
+            this.iosHandoffInProgress = false;
+        });
 
         try {
             await IOSBackgroundTaskUtils.endBackgroundTask();
@@ -2440,6 +2460,7 @@ export default class NostrWalletConnectStore {
             console.error('iOS NWC: Failed to end background task:', error);
         }
     }
+
     // for IOS fetch and process pending events
     @action
     public async fetchAndProcessPendingEvents(
@@ -2451,9 +2472,6 @@ export default class NostrWalletConnectStore {
         }
         if (this.connections.length === 0) return;
 
-        if (this.isInNWCConnectionQRView) {
-            await this.startIOSBackgroundTask();
-        }
         runInAction(() => {
             this.error = false;
             this.loadingMsg = localeString(
@@ -2485,15 +2503,11 @@ export default class NostrWalletConnectStore {
             runInAction(() => {
                 this.loadingMsg = undefined;
             });
-            if (this.isInNWCConnectionQRView) {
-                await this.endIOSBackgroundTask();
-            }
         }
     }
     private async fetchPendingEvents(
         deviceToken: string
     ): Promise<RestoreResponse | void> {
-        this.stopIOSBackgroundTimer();
         if (this.activeConnections.length === 0) return;
         try {
             const controller = new AbortController();
@@ -2523,10 +2537,7 @@ export default class NostrWalletConnectStore {
             throw error;
         }
     }
-    private async validateAndParsePendingEvent(
-        eventStr: string,
-        clientKey: ClientKeys
-    ): Promise<{
+    private async validateAndParsePendingEvent(eventStr: string): Promise<{
         request: NWCRequest;
         connection: NWCConnection;
         eventId: string;
@@ -2557,16 +2568,16 @@ export default class NostrWalletConnectStore {
             });
             throw new Error('Connection not found for event');
         }
-        const privateKey = clientKey[connection.pubkey];
-        if (!privateKey) {
-            console.warn('NWC: No private key for connection', {
-                pubkey: connection.pubkey
-            });
-            throw new Error('No private key for connection');
-        }
         let request: NWCRequest;
         try {
             const privateKey = this.walletServiceKeys!.privateKey;
+            if (!privateKey) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
+                    )
+                );
+            }
             const decryptedContent = nip04.decrypt(
                 privateKey,
                 connection.pubkey,
@@ -2588,16 +2599,12 @@ export default class NostrWalletConnectStore {
             console.info('NWC: No pending events to process');
             return;
         }
-        const clientKeys = await this.loadClientKeys();
         for (const eventStr of events) {
             try {
                 const { request, connection, eventId } =
                     await this.retryWithBackoff(
                         async () =>
-                            await this.validateAndParsePendingEvent(
-                                eventStr,
-                                clientKeys
-                            ),
+                            await this.validateAndParsePendingEvent(eventStr),
                         3
                     );
                 await this.handleEventRequest(connection, request, eventId);
@@ -2700,49 +2707,11 @@ export default class NostrWalletConnectStore {
         }, MAX_RELAY_ATTEMPTS);
     }
 
-    @action
-    private startIOSBackgroundTimer(): void {
-        if (Platform.OS !== 'ios') {
-            return;
-        }
-
-        this.iosBackgroundTimeRemaining = 30;
-        this.iosHandoffInProgress = true;
-
-        if (this.iosBackgroundTimerInterval) {
-            clearInterval(this.iosBackgroundTimerInterval);
-        }
-
-        this.iosBackgroundTimerInterval = setInterval(() => {
-            runInAction(() => {
-                if (this.iosBackgroundTimeRemaining > 0) {
-                    this.iosBackgroundTimeRemaining--;
-                } else {
-                    this.stopIOSBackgroundTimer();
-                }
-            });
-        }, 1000);
-    }
-
-    @action
-    private stopIOSBackgroundTimer(): void {
-        if (this.iosBackgroundTimerInterval) {
-            clearInterval(this.iosBackgroundTimerInterval);
-            this.iosBackgroundTimerInterval = null;
-        }
-        this.iosBackgroundTimeRemaining = 0;
-        this.iosHandoffInProgress = false;
-    }
-
     // IOS: handoff request to notification server
     @action
     public sendHandoffRequest = async (): Promise<boolean | void> => {
         if (Platform.OS !== 'ios') return;
         if (this.activeConnections.length === 0) return;
-        const timeSeconds = this.isInNWCConnectionQRView ? 30 : 5;
-        await this.startIOSBackgroundTask();
-        console.log('IOS NWC: Background Task Started');
-        if (this.isInNWCConnectionQRView) this.startIOSBackgroundTimer();
         try {
             const deviceToken = this.lightningAddressStore.currentDeviceToken;
             if (!deviceToken) {
@@ -2778,29 +2747,16 @@ export default class NostrWalletConnectStore {
             clearTimeout(timeoutId);
             if (response.ok) {
                 console.info('IOS NWC: Handoff request sent successfully');
-                console.info(
-                    `IOS NWC: Keeping background task alive for ${timeSeconds} seconds`
-                );
-                await new Promise((resolve) =>
-                    setTimeout(resolve, timeSeconds * 1000)
-                );
-                console.log(
-                    `IOS NWC: Background Task Ended in ${timeSeconds} seconds`
-                );
                 return true;
-            } else {
-                console.warn(
-                    'IOS NWC: Handoff request failed with status:',
-                    response.status
-                );
-                return false;
             }
+            console.warn(
+                'IOS NWC: Handoff request failed with status:',
+                response.status
+            );
+            return false;
         } catch (error) {
             console.error('IOS NWC: Failed to send handoff request:', error);
             return false;
-        } finally {
-            this.stopIOSBackgroundTimer();
-            await this.endIOSBackgroundTask();
         }
     };
 
