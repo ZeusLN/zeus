@@ -62,7 +62,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
     state: PSBTState = {
         infoIndex: 0,
         selectedIndex: 0,
-        fundedPsbt: '',
+        fundedPsbt: this.props.route.params?.psbt || '',
         frameIndex: 0,
         bbqrParts: [],
         bcurEncoder: undefined,
@@ -71,30 +71,24 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         qrAnimationSpeed: 'medium'
     };
 
-    UNSAFE_componentWillMount(): void {
-        const { route } = this.props;
-        const psbt = route.params?.psbt;
-        this.setState(
-            {
-                fundedPsbt: psbt
-            },
-            () => {
-                this.generateInfo();
-            }
-        );
+    componentDidMount(): void {
+        this.generateInfo();
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps: any): void {
-        const { route } = nextProps;
-        const psbt = route.params?.psbt;
-        this.setState(
-            {
-                fundedPsbt: psbt
-            },
-            () => {
-                this.generateInfo();
-            }
-        );
+    componentDidUpdate(prevProps: any): void {
+        const oldPsbt = prevProps.route.params?.psbt;
+        const newPsbt = this.props.route.params?.psbt;
+
+        if (newPsbt !== oldPsbt) {
+            this.setState(
+                {
+                    fundedPsbt: newPsbt
+                },
+                () => {
+                    this.generateInfo();
+                }
+            );
+        }
     }
 
     componentWillUnmount() {

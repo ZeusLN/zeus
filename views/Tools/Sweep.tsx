@@ -73,12 +73,21 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         };
     }
 
-    async UNSAFE_componentWillMount() {
-        if (this.listener && this.listener.stop) this.listener.stop();
+    componentWillUnmount() {
+        if (this.listener && this.listener.stop) {
+            this.listener.stop();
+        }
     }
 
-    UNSAFE_componentWillReceiveProps(nextProps: SweepProps) {
-        this.setState({ destination: nextProps.route.params?.destination });
+    componentDidUpdate(prevProps: SweepProps) {
+        if (
+            this.props.route.params?.destination !==
+            prevProps.route.params?.destination
+        ) {
+            this.setState({
+                destination: this.props.route.params?.destination
+            });
+        }
     }
 
     subscribePayment = (streamingCall: string) => {

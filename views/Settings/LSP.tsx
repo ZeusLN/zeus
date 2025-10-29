@@ -36,28 +36,20 @@ interface LSPState {
 @inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class LSP extends React.Component<LSPProps, LSPState> {
-    state = {
-        enableLSP: true,
-        lsp: '',
-        accessKey: '',
-        requestSimpleTaproot: true
-    };
+    constructor(props: LSPProps) {
+        super(props);
 
-    async UNSAFE_componentWillMount() {
         const { SettingsStore, NodeInfoStore } = this.props;
         const { settings } = SettingsStore;
 
-        this.setState({
-            enableLSP: settings.enableLSP,
+        this.state = {
+            enableLSP: settings.enableLSP ?? true,
             lsp: NodeInfoStore!.nodeInfo.isTestNet
                 ? settings.lspTestnet
                 : settings.lspMainnet,
-            accessKey: settings.lspAccessKey,
-            requestSimpleTaproot:
-                settings?.requestSimpleTaproot !== null
-                    ? settings.requestSimpleTaproot
-                    : true
-        });
+            accessKey: settings.lspAccessKey ?? '',
+            requestSimpleTaproot: settings?.requestSimpleTaproot ?? true
+        };
     }
 
     render() {
@@ -193,7 +185,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     }}
                                 >
                                     <Switch
-                                        value={enableLSP}
+                                        value={enableLSP ?? true}
                                         onValueChange={async () => {
                                             this.setState({
                                                 enableLSP: !enableLSP

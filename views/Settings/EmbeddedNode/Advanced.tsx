@@ -55,7 +55,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
         customFeeEstimator: ''
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore;
 

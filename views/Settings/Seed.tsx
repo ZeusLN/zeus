@@ -115,7 +115,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         isDeleteModalVisible: false
     };
 
-    UNSAFE_componentWillMount() {
+    componentDidMount() {
         // make sure we have latest settings and the seed phrase is accessible
         this.props.SettingsStore.getSettings();
     }

@@ -215,8 +215,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         }
     };
 
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore, NodeInfoStore } = this.props;
+    async componentDidMount() {
+        const { SettingsStore, NodeInfoStore, SwapStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
@@ -227,10 +227,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             enableLSP: settings?.enableLSP,
             flowLspNotConfigured
         });
-    }
-
-    async componentDidMount() {
-        const { SwapStore } = this.props;
 
         const checkAndShowModal = async () => {
             if (!SwapStore.loading) {

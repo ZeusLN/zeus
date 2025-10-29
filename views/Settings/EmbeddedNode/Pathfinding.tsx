@@ -34,18 +34,10 @@ export default class Pathfinding extends React.Component<
     PathfindingState
 > {
     state = {
-        bimodalPathfinding: false,
+        bimodalPathfinding:
+            this.props.SettingsStore.settings.bimodalPathfinding ?? false,
         resetMissionControlSuccess: false
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            bimodalPathfinding: settings.bimodalPathfinding
-        });
-    }
 
     render() {
         const { navigation, SettingsStore } = this.props;

@@ -76,7 +76,7 @@ export default class ImportAccount extends React.Component<
     ImportAccountProps,
     ImportAccountState
 > {
-    constructor(props: any) {
+    constructor(props: ImportAccountProps) {
         super(props);
         this.state = {
             name: '',
@@ -88,6 +88,8 @@ export default class ImportAccount extends React.Component<
             addresses_to_generate: 50,
             understood: false
         };
+
+        this.handleParams(props);
     }
 
     handleParams = (props: ImportAccountProps) => {
@@ -121,13 +123,14 @@ export default class ImportAccount extends React.Component<
         }
     };
 
-    UNSAFE_componentWillMount = () => {
-        this.handleParams(this.props);
-    };
-
-    UNSAFE_componentWillReceiveProps = (newProps: ImportAccountProps) => {
-        this.handleParams(newProps);
-    };
+    componentDidUpdate(prevProps: ImportAccountProps) {
+        if (
+            this.props.route.params !== prevProps.route.params ||
+            this.props.NodeInfoStore !== prevProps.NodeInfoStore
+        ) {
+            this.handleParams(this.props);
+        }
+    }
 
     render() {
         const { navigation, UTXOsStore, SettingsStore } = this.props;

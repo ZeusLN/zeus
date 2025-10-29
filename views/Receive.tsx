@@ -238,7 +238,7 @@ export default class Receive extends React.Component<
     onChainInterval: any;
     hopPickerRef: HopPicker | null;
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const {
             InvoicesStore,
             SettingsStore,
@@ -422,55 +422,57 @@ export default class Receive extends React.Component<
         } else if (autoGenerateOnChain) {
             this.autoGenerateOnChainAddress(account, addressType);
         }
-    }
 
-    async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { route, InvoicesStore } = nextProps;
-        const { reset } = InvoicesStore;
-
-        reset();
-        const { amount, lnurlParams: lnurl } = route.params ?? {};
-
-        if (amount && amount != '0') {
-            let needInbound = false;
-            if (
-                this.state.lspIsActive &&
-                getSatAmount(amount) != '0' &&
-                new BigNumber(getSatAmount(amount)).gt(
-                    this.props.ChannelsStore.totalInbound
-                )
-            ) {
-                needInbound = true;
-            }
-            this.setState({
-                value: amount,
-                satAmount: getSatAmount(amount),
-                needInbound
-            });
-        }
-
-        if (lnurl) {
-            let needInbound = false;
-            if (
-                this.state.lspIsActive &&
-                new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
-                    this.props.ChannelsStore.totalInbound
-                )
-            ) {
-                needInbound = true;
-            }
-            this.setState({
-                memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString(),
-                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000),
-                needInbound
-            });
-        }
-    }
-
-    async componentDidMount() {
         const nfcSupported = await NfcManager.isSupported();
         this.setState({ nfcSupported });
+    }
+
+    async componentDidUpdate(prevProps: ReceiveProps) {
+        const { route, InvoicesStore } = this.props;
+        const { route: prevRoute } = prevProps;
+
+        if (route.params?.amount !== prevRoute.params?.amount) {
+            const { reset } = InvoicesStore;
+
+            reset();
+            const { amount, lnurlParams: lnurl } = route.params ?? {};
+
+            if (amount && amount != '0') {
+                let needInbound = false;
+                if (
+                    this.state.lspIsActive &&
+                    getSatAmount(amount) != '0' &&
+                    new BigNumber(getSatAmount(amount)).gt(
+                        this.props.ChannelsStore.totalInbound
+                    )
+                ) {
+                    needInbound = true;
+                }
+                this.setState({
+                    value: amount,
+                    satAmount: getSatAmount(amount),
+                    needInbound
+                });
+            }
+
+            if (lnurl) {
+                let needInbound = false;
+                if (
+                    this.state.lspIsActive &&
+                    new BigNumber(
+                        getSatAmount(lnurl.maxWithdrawable / 1000)
+                    ).gt(this.props.ChannelsStore.totalInbound)
+                ) {
+                    needInbound = true;
+                }
+                this.setState({
+                    memo: lnurl.defaultDescription,
+                    value: (lnurl.maxWithdrawable / 1000).toString(),
+                    satAmount: getSatAmount(lnurl.maxWithdrawable / 1000),
+                    needInbound
+                });
+            }
+        }
     }
 
     clearListeners = () => {

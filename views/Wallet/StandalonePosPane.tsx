@@ -112,7 +112,7 @@ export default class StandalonePosPane extends React.PureComponent<
         ).start();
     }
 
-    async UNSAFE_componentWillMount(): Promise<void> {
+    async componentDidMount(): Promise<void> {
         this.fetchProducts();
         this.loadCurrentOrder();
     }

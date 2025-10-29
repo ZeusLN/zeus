@@ -57,32 +57,9 @@ export default class NostrKey extends React.Component<
     NostrKeyProps,
     NostrKeyState
 > {
-    state = {
-        existingNostrPrivateKey: '',
-        nostrPrivateKey: '',
-        nostrPublicKey: '',
-        nostrNpub: '',
-        nostrNsec: '',
-        setup: false,
-        editMode: false,
-        revealSensitive: false
-    };
+    constructor(props: NostrKeyProps) {
+        super(props);
 
-    generateNostrKeys = () => {
-        const nostrPrivateKey = generatePrivateKey();
-        const nostrPublicKey = getPublicKey(nostrPrivateKey);
-        const nostrNsec = nip19.nsecEncode(nostrPrivateKey);
-        const nostrNpub = nip19.npubEncode(nostrPublicKey);
-
-        this.setState({
-            nostrPrivateKey,
-            nostrPublicKey,
-            nostrNsec,
-            nostrNpub
-        });
-    };
-
-    async UNSAFE_componentWillMount() {
         const { SettingsStore, route } = this.props;
         const { settings } = SettingsStore;
 
@@ -98,7 +75,7 @@ export default class NostrKey extends React.Component<
             nostrNpub = nip19.npubEncode(nostrPublicKey);
         }
 
-        this.setState({
+        this.state = {
             existingNostrPrivateKey: nostrPrivateKey,
             nostrPrivateKey,
             nostrPublicKey: nostrPublicKey ? nostrPublicKey : '',
@@ -107,8 +84,22 @@ export default class NostrKey extends React.Component<
             setup,
             editMode: setup,
             revealSensitive: false
-        });
+        };
     }
+
+    generateNostrKeys = () => {
+        const nostrPrivateKey = generatePrivateKey();
+        const nostrPublicKey = getPublicKey(nostrPrivateKey);
+        const nostrNsec = nip19.nsecEncode(nostrPrivateKey);
+        const nostrNpub = nip19.npubEncode(nostrPublicKey);
+
+        this.setState({
+            nostrPrivateKey,
+            nostrPublicKey,
+            nostrNsec,
+            nostrNpub
+        });
+    };
 
     render() {
         const { navigation, LightningAddressStore, SettingsStore } = this.props;

@@ -47,27 +47,18 @@ export default class WebPortalPOS extends React.Component<
     WebPortalPOSState
 > {
     state = {
-        posEnabled: false,
-        fiatEnabled: false,
-        selectedCurrency: '',
-        merchantName: '',
-        taxPercentage: '',
-        disableTips: false
+        posEnabled:
+            this.props.SettingsStore.settings.lightningAddress?.posEnabled ||
+            false,
+        fiatEnabled: this.props.SettingsStore.settings.fiatEnabled || false,
+        selectedCurrency: this.props.SettingsStore.settings.fiat,
+        merchantName:
+            this.props.SettingsStore.settings?.pos?.merchantName || '',
+        taxPercentage:
+            this.props.SettingsStore.settings?.pos?.taxPercentage || '',
+        disableTips:
+            this.props.SettingsStore.settings?.pos?.disableTips || false
     };
-
-    async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-
-        this.setState({
-            posEnabled: settings.lightningAddress?.posEnabled,
-            fiatEnabled: settings.fiatEnabled,
-            selectedCurrency: settings.fiat,
-            merchantName: settings?.pos?.merchantName || '',
-            taxPercentage: settings?.pos?.taxPercentage || '',
-            disableTips: settings?.pos?.disableTips || false
-        });
-    }
 
     async componentDidUpdate(
         _prevProps: Readonly<WebPortalPOSProps>,

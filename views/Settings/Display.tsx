@@ -50,7 +50,7 @@ export default class Display extends React.Component<
         selectNodeOnStartup: false
     };
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
