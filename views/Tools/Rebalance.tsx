@@ -6,39 +6,41 @@ import {
     View,
     Alert,
     NativeModules,
-    NativeEventEmitter
+    NativeEventEmitter,
+    EmitterSubscription
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 
-import Amount from '../components/Amount';
-import Button from '../components/Button';
-import Header from '../components/Header';
-import HopPicker from '../components/HopPicker';
-import KeyValue from '../components/KeyValue';
-import Screen from '../components/Screen';
-import Text from '../components/Text';
-import TextInput from '../components/TextInput';
-import { Row } from '../components/layout/Row';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import HopPicker from '../../components/HopPicker';
+import KeyValue from '../../components/KeyValue';
+import Screen from '../../components/Screen';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
+import { Row } from '../../components/layout/Row';
 
-import ChannelsStore from '../stores/ChannelsStore';
-import TransactionsStore from '../stores/TransactionsStore';
-import SettingsStore from '../stores/SettingsStore';
-import UnitsStore from '../stores/UnitsStore';
-import NodeInfoStore from '../stores/NodeInfoStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+import TransactionsStore from '../../stores/TransactionsStore';
+import SettingsStore from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import BackendUtils from '../utils/BackendUtils';
-import { localeString } from '../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import { themeColor } from '../utils/ThemeUtils';
-import Channel from '../models/Channel';
-import { ChannelItem } from '../components/Channels/ChannelItem';
+import { themeColor } from '../../utils/ThemeUtils';
+import Channel from '../../models/Channel';
+import { ChannelItem } from '../../components/Channels/ChannelItem';
 
-import SyncIcon from '../assets/images/SVG/Sync.svg';
-import CaretDown from '../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../assets/images/SVG/Caret Right.svg';
-import CloseIcon from '../assets/images/SVG/Close.svg';
+import SyncIcon from '../../assets/images/SVG/Sync.svg';
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
+import CloseIcon from '../../assets/images/SVG/Close.svg';
 
 const REBALANCE_CONSTANTS = {
     DEFAULT_FEE_LIMIT: '100',
@@ -47,15 +49,61 @@ const REBALANCE_CONSTANTS = {
     MAX_PAYMENT_PARTS: 5,
     PAYMENT_CHECK_DELAY: 3000,
     MIN_REBALANCE_AMOUNT: 1,
-    CIRCULAR_LAYER_NAME: 'circular-rebalance',
-    DEFAULT_FINAL_CLTV: 9,
-    MIN_FEE_PERCENT: 1.0
+    CIRCULAR_LAYER_NAME: 'circular-rebalance'
 } as const;
 
 type ChannelType = 'source' | 'destination';
 
+interface InvoiceData {
+    payment_request?: string;
+    bolt11?: string;
+    payment_hash: string;
+    payment_secret?: string;
+    min_final_cltv_expiry?: number;
+}
+
+interface PaymentResult {
+    status?: string;
+    state?: string;
+    failure_reason?: string;
+    failure_string?: string;
+    payment_hash?: string;
+    payment_preimage?: string;
+    payment_route?: any;
+    route?: any;
+    route_details?: any;
+    attempts?: any;
+    fee_sat?: number;
+    fee?: number;
+    fee_msat?: number;
+    value_sat?: number;
+    creation_date?: number;
+    htlcs?: any;
+    preimage?: string;
+    result?: any;
+    payment_error?: string;
+}
+
+interface RebalanceResultData {
+    success: boolean;
+    error?: string;
+    sourceChannel: Channel;
+    destinationChannel: Channel;
+    rebalanceAmount: number;
+    fee?: number;
+    paymentPreimage?: string;
+    paymentHash?: string;
+    paymentRoute?: any;
+    route?: any;
+    isProcessing?: boolean;
+}
+
 interface RebalanceProps {
     navigation: StackNavigationProp<any, any>;
+    route: Route<
+        'Rebalance',
+        { restoreRebalanceState?: Partial<RebalanceState> }
+    >;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
@@ -94,9 +142,9 @@ export default class Rebalance extends React.Component<
     RebalanceProps,
     RebalanceState
 > {
-    private listener: any = null;
-    private paymentTimeoutId: any = null;
-    private navigationUnsubscribe: any = null;
+    private listener: EmitterSubscription | null = null;
+    private paymentTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    private navigationUnsubscribe: (() => void) | null = null;
 
     constructor(props: RebalanceProps) {
         super(props);
@@ -117,7 +165,7 @@ export default class Rebalance extends React.Component<
             originalSourceBalance: 0,
             originalDestinationBalance: 0,
             totalBalance: 0,
-            balanceSliderValue: REBALANCE_CONSTANTS.DEFAULT_SLIDER_VALUE // Start at 0 (no rebalance)
+            balanceSliderValue: REBALANCE_CONSTANTS.DEFAULT_SLIDER_VALUE
         };
     }
 
@@ -132,10 +180,43 @@ export default class Rebalance extends React.Component<
 
         const unsubscribe = navigation.addListener('focus', () => {
             ChannelsStore.getChannels();
+
+            // Check if we need to restore state from route params
+            const restoreStateParam =
+                this.props.route?.params?.restoreRebalanceState;
+            if (restoreStateParam) {
+                this.restoreRebalanceState(restoreStateParam);
+            }
         });
 
         this.navigationUnsubscribe = unsubscribe;
+
+        // Check for state restoration parameters on initial mount
+        const restoreStateParam =
+            this.props.route?.params?.restoreRebalanceState;
+        if (restoreStateParam) {
+            this.restoreRebalanceState(restoreStateParam);
+        }
     }
+
+    private restoreRebalanceState = (
+        restoredState: Partial<RebalanceState>
+    ) => {
+        this.setState(restoredState as RebalanceState, () => {
+            this.updateDerivedState();
+
+            const { rebalanceAmount } = this.state;
+            if (rebalanceAmount > 0) {
+                this.updateStateWithCallback({
+                    balanceSliderValue: rebalanceAmount
+                });
+            }
+
+            this.props.navigation.setParams({
+                restoreRebalanceState: undefined
+            });
+        });
+    };
 
     componentWillUnmount() {
         this.cleanupPaymentListener();
@@ -266,19 +347,27 @@ export default class Rebalance extends React.Component<
             : Number(channel.receivingCapacity) || 0;
 
         if (capacity <= 0) {
-            const channelTypeLabel = isSource ? 'source' : 'destination';
+            const channelTypeLabel = isSource
+                ? localeString('views.Settings.Currency.source')
+                : localeString('general.destination');
             const liquidityType = isSource
-                ? 'outbound liquidity'
-                : 'inbound capacity';
+                ? localeString('views.Rebalance.liquidityType.outbound')
+                : localeString('views.Rebalance.liquidityType.inbound');
             const actionRequired = isSource
-                ? 'available outbound capacity to send funds from'
-                : 'available inbound capacity to receive funds';
+                ? localeString('views.Rebalance.actionRequired.outbound')
+                : localeString('views.Rebalance.actionRequired.inbound');
 
-            this.createAlert(
-                'Channel Selection Error',
-                `The selected ${channelTypeLabel} channel "${channel.displayName}" has insufficient ${liquidityType}.\n\nFor rebalancing to work, you need to select a channel with ${actionRequired}.`,
-                [{ text: 'Got it' }]
-            );
+            const message = localeString(
+                'views.Rebalance.error.insufficientCapacity'
+            )
+                .replace('{channelType}', channelTypeLabel)
+                .replace('{channelName}', channel.displayName || '')
+                .replace('{liquidityType}', liquidityType)
+                .replace('{actionRequired}', actionRequired);
+
+            this.createAlert(localeString('general.error'), message, [
+                { text: localeString('general.ok') }
+            ]);
             return false;
         }
         return true;
@@ -292,7 +381,6 @@ export default class Rebalance extends React.Component<
         this.handleChannelSelect(channels[0], 'destination');
     };
 
-    // Initialize balance slider when both channels are selected
     initializeBalanceSlider = () => {
         const { selectedSourceChannel, selectedDestinationChannel } =
             this.state;
@@ -317,10 +405,8 @@ export default class Rebalance extends React.Component<
         const { originalSourceBalance, originalDestinationBalance } =
             this.state;
 
-        // Value is the actual rebalance amount in sats (0 to maxAmount)
         const rebalanceAmount = Math.round(value);
 
-        // Calculate projected balances after rebalancing
         const projectedSourceBalance = Math.max(
             0,
             originalSourceBalance - rebalanceAmount
@@ -345,9 +431,8 @@ export default class Rebalance extends React.Component<
         this.updateStateWithCallback({
             adjustedSourceBalance: originalSourceBalance,
             adjustedDestinationBalance: originalDestinationBalance,
-            balanceSliderValue: 0, // Reset to 0 (no rebalance)
+            balanceSliderValue: 0,
             rebalanceAmount: 0,
-            // Reset projected balances to original values
             projectedSourceBalance: originalSourceBalance,
             projectedDestinationBalance: originalDestinationBalance
         });
@@ -386,7 +471,7 @@ export default class Rebalance extends React.Component<
         return ownPubkey;
     };
 
-    private createRebalanceInvoice = async (): Promise<any> => {
+    private createRebalanceInvoice = async (): Promise<InvoiceData> => {
         const {
             selectedSourceChannel,
             selectedDestinationChannel,
@@ -394,19 +479,30 @@ export default class Rebalance extends React.Component<
         } = this.state;
 
         if (!selectedSourceChannel || !selectedDestinationChannel) {
-            throw new Error('Channels not selected');
+            throw new Error(
+                localeString('views.Rebalance.error.channelNotSelected')
+            );
         }
 
-        return BackendUtils.createInvoice({
-            memo: this.generateInvoiceMemo(
-                selectedSourceChannel,
-                selectedDestinationChannel
-            ),
-            value: rebalanceAmount
-        });
+        const memo = this.generateInvoiceMemo(
+            selectedSourceChannel,
+            selectedDestinationChannel
+        );
+
+        try {
+            const invoiceResult = await BackendUtils.createInvoice({
+                memo,
+                value: rebalanceAmount
+            });
+            return invoiceResult;
+        } catch (error) {
+            console.error('[Rebalance] Invoice creation FAILED:', error);
+            throw new Error(
+                localeString('views.Rebalance.error.createInvoice')
+            );
+        }
     };
 
-    // Memo generation
     private generateInvoiceMemo = (
         sourceChannel: Channel,
         destChannel: Channel
@@ -420,13 +516,17 @@ export default class Rebalance extends React.Component<
         );
     };
 
-    private executePayment = async (invoiceData: any): Promise<any> => {
+    private executePayment = async (
+        invoiceData: InvoiceData
+    ): Promise<PaymentResult> => {
         const { selectedSourceChannel, selectedDestinationChannel } =
             this.state;
         const { SettingsStore } = this.props;
 
         if (!selectedSourceChannel || !selectedDestinationChannel) {
-            throw new Error('Channels not selected');
+            throw new Error(
+                localeString('views.Rebalance.error.channelNotSelected')
+            );
         }
 
         const implementation = SettingsStore.implementation;
@@ -441,7 +541,9 @@ export default class Rebalance extends React.Component<
 
                     // If result is a string (subscription ID), subscribe to payment updates
                     if (typeof result === 'string') {
-                        return await this.subscribePayment(result);
+                        return (await this.subscribePayment(
+                            result
+                        )) as PaymentResult;
                     }
                     return result;
 
@@ -453,121 +555,175 @@ export default class Rebalance extends React.Component<
                 `Error executing payment with ${implementation}:`,
                 error.message
             );
+
             throw error;
         }
     };
 
-    // CLN Rest circular rebalancing implementation with fallback mechanism
+    private handleBackendError = (error: any, backendType: string): never => {
+        console.error(`[${backendType} Rebalance] FAILED:`, {
+            error: error.message,
+            stack: error.stack,
+            code: error.code,
+            details: error
+        });
+
+        if (error.message && typeof error.message === 'string') {
+            const errorMessage = error.message.toLowerCase();
+            if (errorMessage.includes('timeout_seconds must be specified')) {
+                throw new Error(
+                    localeString('views.Rebalance.error.invalidTimeout')
+                );
+            } else if (
+                errorMessage.includes('invalid') ||
+                errorMessage.includes('must be') ||
+                errorMessage.includes('required') ||
+                errorMessage.includes('should be')
+            ) {
+                throw new Error(error.message);
+            }
+        }
+
+        // For other errors, use our localized message
+        throw new Error(localeString('views.Rebalance.error.paymentExecution'));
+    };
+
     private executeClnRestRebalance = async (
-        invoiceData: any
-    ): Promise<any> => {
+        invoiceData: InvoiceData
+    ): Promise<PaymentResult> => {
         const {
             selectedSourceChannel,
+            selectedDestinationChannel,
             feeLimit,
-            timeoutSeconds,
             rebalanceAmount
         } = this.state;
         const { NodeInfoStore } = this.props;
 
-        if (!selectedSourceChannel) {
-            throw new Error('Source channel not selected');
+        if (!selectedSourceChannel || !selectedDestinationChannel) {
+            throw new Error(
+                localeString('views.Rebalance.error.channelNotSelected')
+            );
         }
 
         const ownNodePubkey =
             NodeInfoStore.nodeInfo?.identity_pubkey ||
             NodeInfoStore.nodeInfo?.id;
 
-        if (!ownNodePubkey) {
-            throw new Error(
-                'Could not get own node pubkey for circular rebalancing'
-            );
-        }
-
-        // Try direction /1 first, then fallback to /0
-        const directions = ['/1', '/0'];
-        let lastError: Error | null = null;
-
-        for (const direction of directions) {
-            let layerCreated = false;
-
+        try {
             try {
-                // Create new layer
-                await BackendUtils.askReneCreateLayer({
+                await BackendUtils.askReneRemoveLayer({
                     layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
                 });
-                layerCreated = true;
+            } catch (removeError) {
+                console.error('No existing layer to remove (expected)');
+            }
 
-                // Update channel to force alternative routing with current direction
-                await BackendUtils.askReneUpdateChannel({
-                    short_channel_id_dir:
-                        selectedSourceChannel.short_channel_id + direction,
-                    layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME,
-                    enabled: false
-                });
+            await BackendUtils.askReneCreateLayer({
+                layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
+            });
 
-                // Get routes using the layer
-                await BackendUtils.getRoutes({
-                    source: selectedSourceChannel.remotePubkey,
-                    destination: ownNodePubkey,
-                    amount_msat: rebalanceAmount * 1000,
-                    maxfee_msat: Number(feeLimit) * 1000,
-                    layers: [REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME],
-                    final_cltv: REBALANCE_CONSTANTS.DEFAULT_FINAL_CLTV
-                });
+            const allChannels = this.getAvailableChannels();
 
-                // Execute payment using the same invoice for both attempts
-                const paymentData = await BackendUtils.payLightningInvoice({
-                    payment_request: invoiceData.bolt11,
-                    amount_msat: rebalanceAmount * 1000,
-                    maxfeepercent: Math.max(
-                        REBALANCE_CONSTANTS.MIN_FEE_PERCENT,
-                        (Number(feeLimit) / rebalanceAmount) * 100
-                    ),
-                    retry_for: Number(timeoutSeconds),
-                    exclude: [],
-                    localinvreqid: null,
-                    description: `Circular rebalance ${rebalanceAmount} sats (direction ${direction})`
-                });
+            for (const channel of allChannels) {
+                if (
+                    channel.short_channel_id !==
+                    selectedDestinationChannel.short_channel_id
+                ) {
+                    const outgoingDirection =
+                        ownNodePubkey < channel.remotePubkey ? '0' : '1';
+                    const incomingDirection =
+                        ownNodePubkey < channel.remotePubkey ? '1' : '0';
 
-                return paymentData;
-            } catch (error: any) {
-                console.error(
-                    `CLN Rest circular rebalancing failed with direction ${direction}:`,
-                    error
-                );
-                lastError = error;
+                    await BackendUtils.askReneUpdateChannel({
+                        short_channel_id_dir: `${channel.short_channel_id}/${outgoingDirection}`,
+                        layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME,
+                        enabled: false
+                    });
 
-                // If this was the first direction (/1) and it failed, prepare for fallback
-                if (direction === '/1' && directions.indexOf('/0') !== -1) {
-                    console.log(
-                        'Direction /1 failed, attempting fallback to /0 with same invoice'
-                    );
-                }
-            } finally {
-                if (layerCreated) {
-                    try {
-                        await BackendUtils.askReneRemoveLayer({
-                            layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
-                        });
-                    } catch (cleanupError) {
-                        console.error(
-                            `Error cleaning up askrene layer for direction ${direction}:`,
-                            cleanupError
-                        );
-                    }
+                    await BackendUtils.askReneUpdateChannel({
+                        short_channel_id_dir: `${channel.short_channel_id}/${incomingDirection}`,
+                        layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME,
+                        enabled: false
+                    });
                 }
             }
-        }
 
-        throw new Error(
-            `Circular rebalancing failed with both directions (/1 and /0). Last error: ${
-                lastError?.message || 'Unknown error'
-            }`
-        );
+            const routeParams = {
+                source: selectedSourceChannel.remotePubkey,
+                destination: ownNodePubkey,
+                amount_msat: rebalanceAmount * 1000,
+                maxfee_msat: Number(feeLimit) * 1000,
+                layers: [REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME],
+                final_cltv: invoiceData.min_final_cltv_expiry || 144
+            };
+
+            const routeResponse = await BackendUtils.getRoutes(routeParams);
+
+            if (!routeResponse.routes || routeResponse.routes.length === 0) {
+                throw new Error(localeString('views.Rebalance.error.noRoute'));
+            }
+
+            const partialRoute = routeResponse.routes[0].path;
+            const completeRoute = [];
+
+            completeRoute.push({
+                amount_msat: partialRoute[0].amount_msat,
+                delay: partialRoute[0].delay,
+                id: selectedSourceChannel.remotePubkey,
+                channel: selectedSourceChannel.short_channel_id
+            });
+
+            for (let i = 0; i < partialRoute.length; i++) {
+                const hop = partialRoute[i];
+                completeRoute.push({
+                    amount_msat:
+                        i === partialRoute.length - 1
+                            ? routeResponse.routes[0].amount_msat
+                            : partialRoute[i + 1].amount_msat,
+                    delay:
+                        i === partialRoute.length - 1
+                            ? routeResponse.routes[0].final_cltv
+                            : partialRoute[i + 1].delay,
+                    id: hop.next_node_id,
+                    channel: hop.short_channel_id_dir.split('/')[0]
+                });
+            }
+
+            const sendPayParams = {
+                route: completeRoute,
+                payment_hash: invoiceData.payment_hash,
+                payment_secret: invoiceData.payment_secret,
+                bolt11: invoiceData.bolt11
+            };
+
+            await BackendUtils.sendPay(sendPayParams);
+
+            const waitResponse = await BackendUtils.waitSendPay({
+                payment_hash: invoiceData.payment_hash
+            });
+
+            console.log('Payment completed successfully:', waitResponse);
+            return waitResponse;
+        } catch (error: any) {
+            this.handleBackendError(error, 'CLN');
+            throw error;
+        } finally {
+            try {
+                await BackendUtils.askReneRemoveLayer({
+                    layer: REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME
+                });
+            } catch (cleanupError) {
+                console.error(
+                    '[CLN Rebalance] Cleanup: Error removing layer:',
+                    cleanupError
+                );
+            }
+        }
     };
 
-    // LND rebalancing implementation
-    private executeLndRebalance = async (invoiceData: any): Promise<any> => {
+    private executeLndRebalance = async (
+        invoiceData: InvoiceData
+    ): Promise<PaymentResult> => {
         const {
             selectedSourceChannel,
             selectedDestinationChannel,
@@ -576,12 +732,21 @@ export default class Rebalance extends React.Component<
         } = this.state;
 
         if (!selectedSourceChannel || !selectedDestinationChannel) {
-            throw new Error('Channels not selected for LND rebalancing');
+            throw new Error(
+                localeString('views.Rebalance.error.channelNotSelected')
+            );
         }
 
-        return BackendUtils.payLightningInvoice({
+        const channelIdString = selectedSourceChannel.channelId;
+        if (!channelIdString) {
+            throw new Error(
+                localeString('views.Rebalance.error.channelIdMissing')
+            );
+        }
+
+        const paymentParams = {
             payment_request: invoiceData.payment_request,
-            outgoing_chan_id: Number(selectedSourceChannel.channelId),
+            outgoing_chan_ids: [channelIdString],
             last_hop_pubkey: Buffer.from(
                 selectedDestinationChannel.remotePubkey,
                 'hex'
@@ -590,11 +755,20 @@ export default class Rebalance extends React.Component<
             allow_self_payment: true,
             timeout_seconds: Number(timeoutSeconds),
             max_parts: REBALANCE_CONSTANTS.MAX_PAYMENT_PARTS
-        });
+        };
+
+        try {
+            const result = await BackendUtils.payLightningInvoice(
+                paymentParams
+            );
+            return result;
+        } catch (error: any) {
+            this.handleBackendError(error, 'LND');
+            throw error;
+        }
     };
 
-    // Payment result handling
-    private handlePaymentResult = (result: any) => {
+    private handlePaymentResult = (result: PaymentResult) => {
         const { SettingsStore } = this.props;
         const isClnRest = SettingsStore.implementation === 'cln-rest';
         const isLNC = SettingsStore.implementation === 'lightning-node-connect';
@@ -608,7 +782,7 @@ export default class Rebalance extends React.Component<
         }
     };
 
-    private handleClnRestPaymentResult = (result: any) => {
+    private handleClnRestPaymentResult = (result: PaymentResult) => {
         console.log(`CLN Rest payment result: ${JSON.stringify(result)}`);
         if (result && result.status === 'complete') {
             this.handleSuccessfulPayment(result);
@@ -632,7 +806,7 @@ export default class Rebalance extends React.Component<
         }
     };
 
-    private handleLncPaymentResult = (result: any) => {
+    private handleLncPaymentResult = (result: PaymentResult) => {
         if (!result) {
             this.handleUnclearPaymentStatus({ status: 'UNKNOWN' });
             return;
@@ -666,7 +840,7 @@ export default class Rebalance extends React.Component<
     };
 
     // LND payment result handler
-    private handleLndPaymentResult = (result: any) => {
+    private handleLndPaymentResult = (result: PaymentResult) => {
         if (result && result.result) {
             this.handleDirectPaymentResult(result.result);
         } else if (result && result.payment_error) {
@@ -682,7 +856,7 @@ export default class Rebalance extends React.Component<
     };
 
     // Direct payment result handler
-    private handleDirectPaymentResult = (payment: any) => {
+    private handleDirectPaymentResult = (payment: PaymentResult) => {
         console.log(
             `Amount: ${payment.value_sat} sats, Fee: ${payment.fee_sat} sats`
         );
@@ -697,12 +871,12 @@ export default class Rebalance extends React.Component<
     };
 
     // Successful payment handler
-    private handleSuccessfulPayment = (paymentData?: any) => {
+    private handleSuccessfulPayment = (paymentData?: PaymentResult) => {
         const { TransactionsStore } = this.props;
 
         if (paymentData?.payment_preimage || paymentData?.preimage) {
             TransactionsStore.payment_preimage =
-                paymentData.payment_preimage || paymentData.preimage;
+                paymentData.payment_preimage || paymentData.preimage || null;
         }
 
         if (paymentData?.payment_hash) {
@@ -725,30 +899,8 @@ export default class Rebalance extends React.Component<
         this.navigateToSendingRebalance(rebalanceData);
     };
 
-    // Reset the entire component state to initial values
-    private resetComponentState = () => {
-        this.setState({
-            selectedSourceChannel: null,
-            selectedDestinationChannel: null,
-            rebalanceAmount: 0,
-            maxAmount: 0,
-            feeLimit: REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
-            timeoutSeconds: REBALANCE_CONSTANTS.DEFAULT_TIMEOUT,
-            showAdvanced: false,
-            executing: false,
-            projectedSourceBalance: 0,
-            projectedDestinationBalance: 0,
-            adjustedSourceBalance: 0,
-            adjustedDestinationBalance: 0,
-            originalSourceBalance: 0,
-            originalDestinationBalance: 0,
-            totalBalance: 0,
-            balanceSliderValue: REBALANCE_CONSTANTS.DEFAULT_SLIDER_VALUE
-        });
-    };
-
     // Failed payment handler
-    private handleFailedPayment = (payment: any) => {
+    private handleFailedPayment = (payment: PaymentResult) => {
         this.props.TransactionsStore.loading = false;
         const errorMsg =
             payment.failure_reason || 'Payment failed for unknown reason';
@@ -761,7 +913,7 @@ export default class Rebalance extends React.Component<
     };
 
     // Unclear payment status handler
-    private handleUnclearPaymentStatus = (payment: any) => {
+    private handleUnclearPaymentStatus = (payment: PaymentResult) => {
         this.props.TransactionsStore.loading = false;
         const statusMessage = `${localeString(
             'views.Rebalance.status.message'
@@ -776,7 +928,6 @@ export default class Rebalance extends React.Component<
         this.navigateToSendingRebalance(rebalanceData);
     };
 
-    // Fallback payment check for other implementations
     private handleFallbackPaymentCheck = () => {
         const { TransactionsStore } = this.props;
 
@@ -816,51 +967,27 @@ export default class Rebalance extends React.Component<
         }, REBALANCE_CONSTANTS.PAYMENT_CHECK_DELAY);
     };
 
-    // Error handling
     private handleRebalanceError = (error: any) => {
         console.log('Rebalance error:', error.message);
 
-        if (error.message && typeof error.message === 'string') {
-            if (error.message.includes('timeout')) {
-                this.createAlert(
-                    localeString('views.PaymentRequest.timeout.title'),
-                    localeString('views.PaymentRequest.timeout.message'),
-                    [
-                        {
-                            text: localeString(
-                                'views.PaymentRequest.timeout.showAdvanced'
-                            ),
-                            onPress: () => this.setState({ showAdvanced: true })
-                        },
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => {
-                                this.props.TransactionsStore.loading = false;
-                                const rebalanceData =
-                                    this.createRebalanceResult(
-                                        false,
-                                        error.message
-                                    );
-                                this.navigateToSendingRebalance(rebalanceData);
-                            }
-                        }
-                    ]
-                );
-                return;
-            }
+        this.props.TransactionsStore.loading = false;
 
+        const errorMessage =
+            error.message || localeString('views.Rebalance.error.generic');
+
+        if (error.message && typeof error.message === 'string') {
             if (
                 error.message.includes('no route') ||
                 error.message.includes('NO_ROUTE') ||
                 error.message.includes('unable to find a path')
             ) {
                 this.props.TransactionsStore.loading = false;
-                const errorMessage = localeString(
+                const localizedErrorMessage = localeString(
                     'views.Rebalance.error.noRoute'
                 );
                 const rebalanceData = this.createRebalanceResult(
                     false,
-                    errorMessage
+                    localizedErrorMessage
                 );
                 this.navigateToSendingRebalance(rebalanceData);
                 return;
@@ -871,12 +998,12 @@ export default class Rebalance extends React.Component<
                 error.message.includes('INSUFFICIENT_BALANCE')
             ) {
                 this.props.TransactionsStore.loading = false;
-                const errorMessage = localeString(
+                const localizedErrorMessage = localeString(
                     'views.Rebalance.error.insufficientBalance'
                 );
                 const rebalanceData = this.createRebalanceResult(
                     false,
-                    errorMessage
+                    localizedErrorMessage
                 );
                 this.navigateToSendingRebalance(rebalanceData);
                 return;
@@ -886,25 +1013,20 @@ export default class Rebalance extends React.Component<
                 error.message.includes('fee') &&
                 error.message.includes('limit')
             ) {
-                const errorMessage = `${localeString(
+                const localizedErrorMessage = `${localeString(
                     'views.Rebalance.error.feeLimit'
                 )}: ${error.message}`;
                 const rebalanceData = this.createRebalanceResult(
                     false,
-                    errorMessage
+                    localizedErrorMessage
                 );
                 this.navigateToSendingRebalance(rebalanceData);
                 return;
             }
         }
 
-        this.props.TransactionsStore.loading = false;
-        const errorMessage =
-            error.message || localeString('views.Rebalance.error.generic');
         const rebalanceData = this.createRebalanceResult(false, errorMessage);
         this.navigateToSendingRebalance(rebalanceData);
-
-        this.resetComponentState();
     };
 
     executeRebalanceWithParameters = async () => {
@@ -913,7 +1035,7 @@ export default class Rebalance extends React.Component<
         const initialRebalanceData = this.createRebalanceResult(
             false,
             'Processing...',
-            null
+            undefined
         );
 
         this.navigateToSendingRebalance(initialRebalanceData);
@@ -949,6 +1071,10 @@ export default class Rebalance extends React.Component<
             // Step 4: Handle result - this will clear loading and navigate with final result
             this.handlePaymentResult(result);
         } catch (error: any) {
+            console.error(
+                '[Rebalance] EXCEPTION in executeRebalanceWithParameters:',
+                error
+            );
             this.props.TransactionsStore.loading = false;
             this.handleRebalanceError(error);
             this.cleanupPaymentListener();
@@ -1172,7 +1298,12 @@ export default class Rebalance extends React.Component<
                         { backgroundColor: themeColor('highlight') }
                     ]}
                 >
-                    <Text style={styles.rebalanceAmountLabel}>
+                    <Text
+                        style={{
+                            ...styles.rebalanceAmountLabel,
+                            color: themeColor('background')
+                        }}
+                    >
                         {localeString('views.Rebalance.rebalanceAmount') +
                             ' : '}
                     </Text>
@@ -1309,7 +1440,7 @@ export default class Rebalance extends React.Component<
         return new Promise((resolve, reject) => {
             this.listener = eventEmitter.addListener(
                 streamingCall,
-                (event: any) => {
+                (event: { result?: string }) => {
                     if (event.result && event.result !== 'EOF') {
                         try {
                             const result =
@@ -1390,9 +1521,9 @@ export default class Rebalance extends React.Component<
     private createRebalanceResult = (
         success: boolean,
         error?: string,
-        paymentData?: any,
+        paymentData?: PaymentResult,
         isProcessing?: boolean
-    ) => {
+    ): RebalanceResultData => {
         const {
             selectedSourceChannel,
             selectedDestinationChannel,
@@ -1401,7 +1532,9 @@ export default class Rebalance extends React.Component<
         const { SettingsStore } = this.props;
 
         if (!selectedSourceChannel || !selectedDestinationChannel) {
-            throw new Error('Source or destination channel not selected');
+            throw new Error(
+                localeString('views.Rebalance.error.channelNotSelected')
+            );
         }
 
         let paymentRoute = null;
@@ -1427,8 +1560,7 @@ export default class Rebalance extends React.Component<
             fee: paymentData?.fee_sat || paymentData?.fee,
             paymentPreimage:
                 paymentData?.payment_preimage || paymentData?.preimage,
-            paymentHash:
-                paymentData?.payment_hash || paymentData?.payment_request,
+            paymentHash: paymentData?.payment_hash || undefined,
             paymentRoute,
             route: paymentRoute, // Also add as 'route' for additional compatibility
             isProcessing: isProcessing || false
@@ -1437,10 +1569,32 @@ export default class Rebalance extends React.Component<
         return result;
     };
 
-    private navigateToSendingRebalance = (rebalanceData: any) => {
+    private navigateToSendingRebalance = (
+        rebalanceData: RebalanceResultData
+    ) => {
+        const currentRebalanceState = {
+            selectedSourceChannel: this.state.selectedSourceChannel,
+            selectedDestinationChannel: this.state.selectedDestinationChannel,
+            rebalanceAmount: this.state.rebalanceAmount,
+            maxAmount: this.state.maxAmount,
+            feeLimit: this.state.feeLimit,
+            timeoutSeconds: this.state.timeoutSeconds,
+            showAdvanced: this.state.showAdvanced,
+            executing: false, // Reset executing state
+            projectedSourceBalance: this.state.projectedSourceBalance,
+            projectedDestinationBalance: this.state.projectedDestinationBalance,
+            adjustedSourceBalance: this.state.adjustedSourceBalance,
+            adjustedDestinationBalance: this.state.adjustedDestinationBalance,
+            originalSourceBalance: this.state.originalSourceBalance,
+            originalDestinationBalance: this.state.originalDestinationBalance,
+            totalBalance: this.state.totalBalance,
+            balanceSliderValue: this.state.balanceSliderValue
+        };
+
         this.props.navigation.navigate('SendingLightning', {
             rebalanceData,
-            isRebalance: true
+            isRebalance: true,
+            currentRebalanceState
         });
 
         this.setState({ executing: false });
@@ -1528,51 +1682,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'PPNeueMontreal-Book'
     },
-    description: {
-        fontSize: 14,
-        marginBottom: 15,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     channelInfo: {
         padding: 6,
         borderRadius: 10,
         marginTop: 5
-    },
-    channelName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    amountContainer: {
-        alignItems: 'center'
-    },
-    amountText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    slider: {
-        width: '100%',
-        height: 40
-    },
-    sliderLabel: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    projectionContainer: {
-        gap: 20
-    },
-    projectionChannel: {
-        padding: 15,
-        borderRadius: 10
-    },
-    projectionLabel: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
     },
     inputContainer: {
         marginBottom: 8
@@ -1580,9 +1693,6 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontSize: 14,
         fontFamily: 'PPNeueMontreal-Book'
-    },
-    textInput: {
-        fontSize: 16
     },
     buttonContainer: {
         marginTop: 30,
@@ -1620,7 +1730,7 @@ const styles = StyleSheet.create({
     },
     rebalanceAmountLabel: {
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '500',
         fontFamily: 'PPNeueMontreal-Book'
     },
     contentContainer: {

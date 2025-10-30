@@ -8,7 +8,13 @@ import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import WithdrawalRequest from '../models/WithdrawalRequest';
 
+import { localeString } from './LocaleUtils';
+
 class ActivityFilterUtils {
+    private isCircularRebalance(memo: string): boolean {
+        const rebalanceMemoPrefix = localeString('views.Rebalance.memo');
+        return memo.includes(rebalanceMemoPrefix);
+    }
     public filterActivities(
         activities: Array<Invoice | Payment | Transaction | WithdrawalRequest>,
         filter: Filter
@@ -136,12 +142,12 @@ class ActivityFilterUtils {
 
                 if (isPayment) {
                     const memo = activity.getMemo ? activity.getMemo : '';
-                    return !memo.includes('Circular Rebalance from');
+                    return !this.isCircularRebalance(memo);
                 }
 
                 if (isInvoice) {
                     const memo = activity.memo ? activity.memo : '';
-                    return !memo.includes('Circular Rebalance from');
+                    return !this.isCircularRebalance(memo);
                 }
 
                 return true;

@@ -48,7 +48,6 @@ import Clock from '../assets/images/SVG/Clock.svg';
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import Gift from '../assets/images/SVG/gift.svg';
-import Sync from '../assets/images/SVG/Sync.svg';
 import CopyBox from '../components/CopyBox';
 import BigNumber from 'bignumber.js';
 
@@ -127,7 +126,6 @@ export default class SendingLightning extends React.Component<
     constructor(props: SendingLightningProps) {
         super(props);
 
-        // Get rebalance processing state if available
         const rebalanceData = this.getRebalanceData();
         const isProcessing = rebalanceData?.isProcessing || false;
 
@@ -152,7 +150,6 @@ export default class SendingLightning extends React.Component<
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
-        // Handle initial rebalance processing timeout
         if (this.state.isInitialProcessing) {
             setTimeout(() => {
                 this.setState({ isInitialProcessing: false });
@@ -188,7 +185,6 @@ export default class SendingLightning extends React.Component<
 
         this.navigationUnsubscribe = this.focusListener;
 
-        // Initial load of stored notes
         const isRebalance = this.isRebalanceMode();
         const rebalanceData = this.getRebalanceData();
         const initialNoteKey: string | null =
@@ -264,22 +260,13 @@ export default class SendingLightning extends React.Component<
 
     private handleTryAgain = () => {
         const { navigation } = this.props;
-        const isRebalance = this.isRebalanceMode();
-        const currentRebalanceState =
-            this.props.route?.params?.currentRebalanceState;
-
-        if (isRebalance && currentRebalanceState) {
-            navigation.replace('Rebalance', {
-                restoreRebalanceState: currentRebalanceState
-            });
-        } else {
-            navigation.goBack();
-        }
+        navigation.goBack();
     };
 
     private navigateToRebalanceSummary() {
         const { navigation } = this.props;
         const rebalanceData = this.getRebalanceData();
+        const { currentPayment } = this.state;
 
         if (!rebalanceData) return;
 
@@ -312,9 +299,20 @@ export default class SendingLightning extends React.Component<
         destinationChannel.local_balance = newDestLocal.toString();
         destinationChannel.remote_balance = newDestRemote.toString();
 
+        let actualFee = rebalanceData.fee || 0;
+
+        if (currentPayment?.getFee) {
+            actualFee = Number(currentPayment.getFee);
+        } else if (currentPayment?.fee_msat) {
+            actualFee = Number(currentPayment.fee_msat) / 1000;
+        }
+
         const routingEvent = {
-            fee: rebalanceData.rebalanceAmount || 0,
-            rebalanceFees: rebalanceData.fee || 0,
+            fee: actualFee,
+            rebalanceFees: actualFee,
+            rebalanceAmount: rebalanceData.rebalanceAmount,
+            inAmt: rebalanceData.rebalanceAmount,
+            outAmt: rebalanceData.rebalanceAmount,
             inChannelId: sourceChannel.chan_id || sourceChannel.channel_id,
             outChannelId:
                 destinationChannel.chan_id || destinationChannel.channel_id,
@@ -660,149 +658,6 @@ export default class SendingLightning extends React.Component<
         );
     };
 
-    private renderRebalanceContent(): React.ReactNode {
-        const rebalanceData = this.getRebalanceData();
-        if (!rebalanceData) return null;
-
-        const { sourceChannel, destinationChannel, rebalanceAmount, fee } =
-            rebalanceData;
-
-        const renderChannelCard = (channel: any, title: string) => (
-            <View>
-                <Text
-                    style={[styles.channelTitle, { color: themeColor('text') }]}
-                >
-                    {title}
-                </Text>
-                <View style={{ marginLeft: 16 }}>
-                    <KeyValue
-                        keyValue={localeString('general.node')}
-                        value={
-                            channel.display_name ||
-                            channel.alias ||
-                            localeString('general.unknown')
-                        }
-                    />
-                    <KeyValue
-                        keyValue={localeString('views.Channel.channelId')}
-                        value={
-                            channel.chan_id ||
-                            channel.channelId ||
-                            localeString('general.unknown')
-                        }
-                    />
-                    <KeyValue
-                        keyValue={localeString('views.Channel.localBalance')}
-                        value={
-                            <Amount
-                                sats={
-                                    channel.local_balance ||
-                                    channel.localBalance ||
-                                    0
-                                }
-                            />
-                        }
-                    />
-                    <KeyValue
-                        keyValue={localeString('views.Channel.remoteBalance')}
-                        value={
-                            <Amount
-                                sats={
-                                    channel.remote_balance ||
-                                    channel.remoteBalance ||
-                                    0
-                                }
-                            />
-                        }
-                    />
-                </View>
-            </View>
-        );
-
-        return (
-            <View style={styles.rebalanceContainer}>
-                {/* Source Channel */}
-                <View
-                    style={{
-                        height: 1,
-                        backgroundColor: themeColor('separator'),
-                        marginVertical: 16
-                    }}
-                />
-                {renderChannelCard(
-                    sourceChannel,
-                    localeString('views.Routing.RoutingEvent.sourceChannel')
-                )}
-
-                <View
-                    style={{
-                        height: 1,
-                        backgroundColor: themeColor('separator'),
-                        marginVertical: 16
-                    }}
-                />
-
-                <View
-                    style={{
-                        ...styles.syncContainer,
-                        borderColor: themeColor('highlight')
-                    }}
-                >
-                    <View>
-                        <Sync
-                            width={30}
-                            height={30}
-                            fill={themeColor('highlight')}
-                        />
-                    </View>
-                    <View>
-                        <Text
-                            style={[
-                                styles.transactionAmount,
-                                { color: themeColor('text') }
-                            ]}
-                        >
-                            <Amount sats={rebalanceAmount} toggleable />
-                        </Text>
-                        {fee !== undefined && (
-                            <Text
-                                style={[
-                                    styles.transactionFee,
-                                    { color: themeColor('text') }
-                                ]}
-                            >
-                                {localeString('views.EditFee.titleDisplayOnly')}
-                                : {fee} sats
-                            </Text>
-                        )}
-                    </View>
-                </View>
-                <View
-                    style={{
-                        height: 1,
-                        backgroundColor: themeColor('separator'),
-                        marginVertical: 16
-                    }}
-                />
-
-                {/* Destination Channel */}
-                {renderChannelCard(
-                    destinationChannel,
-                    localeString(
-                        'views.Routing.RoutingEvent.destinationChannel'
-                    )
-                )}
-                <View
-                    style={{
-                        height: 1,
-                        backgroundColor: themeColor('separator'),
-                        marginVertical: 16
-                    }}
-                />
-            </View>
-        );
-    }
-
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
 
@@ -862,7 +717,6 @@ export default class SendingLightning extends React.Component<
     private successfullySent(transactionStore: TransactionsStore): boolean {
         const { SettingsStore } = this.props;
 
-        // For CLN Rest, payment_route is not available, so rely on status only
         if (SettingsStore.implementation === 'cln-rest') {
             return (
                 transactionStore.status === 'complete' ||
@@ -1195,15 +1049,6 @@ export default class SendingLightning extends React.Component<
                                         />
                                     </View>
                                 )}
-                            {isRebalance &&
-                                rebalanceData &&
-                                rebalanceData.success && (
-                                    <View
-                                        style={{ width: '90%', marginTop: 5 }}
-                                    >
-                                        {this.renderRebalanceContent()}
-                                    </View>
-                                )}
                             {!!payment_preimage &&
                                 !isIncomplete &&
                                 !error &&
@@ -1455,7 +1300,6 @@ export default class SendingLightning extends React.Component<
                                         onPress={() => {
                                             navigation.popTo('Wallet');
 
-                                            // If rebalance was successful, refresh channels
                                             if (isRebalance && success) {
                                                 this.props.ChannelsStore?.getChannels();
                                             }
@@ -1523,35 +1367,6 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         gap: 15,
         bottom: 15
-    },
-    rebalanceContainer: {
-        width: '100%'
-    },
-    channelTitle: {
-        fontFamily: 'PPNeueMontreal-Medium',
-        fontSize: 16,
-        marginBottom: 12,
-        textAlign: 'center',
-        textTransform: 'uppercase'
-    },
-    syncContainer: {
-        alignItems: 'center',
-        margin: 10,
-        padding: 15,
-        borderWidth: 0.5,
-        borderRadius: 10,
-        backgroundColor: 'transparent'
-    },
-    transactionAmount: {
-        fontFamily: 'PPNeueMontreal-Medium',
-        fontSize: 16,
-        textAlign: 'center'
-    },
-    transactionFee: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 12,
-        textAlign: 'center',
-        marginTop: 2
     },
     preImageContainer: {
         width: '90%'
