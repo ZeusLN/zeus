@@ -6,20 +6,18 @@ import Transaction from '../models/Transaction';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
-import WithdrawalRequest from '../models/WithdrawalRequest';
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<Invoice | Payment | Transaction | WithdrawalRequest>,
+        activities: Array<Invoice | Payment | Transaction>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction | WithdrawalRequest> {
+    ): Array<Invoice | Payment | Transaction> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
                     !(
                         activity instanceof Invoice ||
-                        activity instanceof WithdrawalRequest ||
                         activity instanceof Payment
                     )
             );
@@ -151,9 +149,6 @@ class ActivityFilterUtils {
                 filter.startDate.getDate()
             );
             filteredActivity = filteredActivity.filter((activity) => {
-                if (activity instanceof WithdrawalRequest) {
-                    return true;
-                }
                 return activity.getDate.getTime() >= startDate.getTime();
             });
         }
@@ -169,9 +164,6 @@ class ActivityFilterUtils {
                 .add(1, 'day')
                 .toDate();
             filteredActivity = filteredActivity.filter((activity) => {
-                if (activity instanceof WithdrawalRequest) {
-                    return true;
-                }
                 return activity.getDate.getTime() < endDate.getTime();
             });
         }
