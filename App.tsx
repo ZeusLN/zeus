@@ -64,6 +64,7 @@ import HandleAnythingQRScanner from './views/HandleAnythingQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
+import VerifyOnChain from './views/VerifyOnChain';
 import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
@@ -616,6 +617,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="OpenChannel" // @ts-ignore:next-line
                                                         component={OpenChannel}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="VerifyOnChain" // @ts-ignore:next-line
+                                                        component={
+                                                            VerifyOnChain
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="SendingOnChain" // @ts-ignore:next-line
