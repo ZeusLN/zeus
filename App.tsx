@@ -264,7 +264,6 @@ import WIFSweeper from './views/Tools/WIFSweeper';
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
-import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
@@ -1237,12 +1236,6 @@ export default class App extends React.PureComponent {
                                                         name="CreateWithdrawalRequest" // @ts-ignore:next-line
                                                         component={
                                                             CreateWithdrawalRequest
-                                                        }
-                                                    />
-                                                    <Stack.Screen
-                                                        name="WithdrawalRequestView" // @ts-ignore:next-line
-                                                        component={
-                                                            WithdrawalRequestView
                                                         }
                                                     />
                                                     <Stack.Screen
