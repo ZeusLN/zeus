@@ -67,6 +67,8 @@ export default class Invoice extends BaseModel {
     public status: string;
     public amount_msat: number;
     public invoice_amount_msat: string | number;
+    public bolt12: string;
+    public payment_preimage: string;
     // pay req
     public timestamp?: string | number;
     public destination?: string;

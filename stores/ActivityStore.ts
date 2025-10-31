@@ -3,7 +3,6 @@ import { action, observable, runInAction } from 'mobx';
 // LN
 import Payment from './../models/Payment';
 import Invoice from './../models/Invoice';
-import WithdrawalRequest from '../models/WithdrawalRequest';
 // on-chain
 import Transaction from './../models/Transaction';
 
@@ -64,11 +63,9 @@ export const DEFAULT_FILTERS = {
 
 export default class ActivityStore {
     @observable public error = false;
-    @observable public activity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest
-    > = [];
+    @observable public activity: Array<Invoice | Payment | Transaction> = [];
     @observable public filteredActivity: Array<
-        Invoice | Payment | Transaction | WithdrawalRequest
+        Invoice | Payment | Transaction
     > = [];
     @observable public filters: Filter = DEFAULT_FILTERS;
     settingsStore: SettingsStore;
@@ -172,10 +169,8 @@ export default class ActivityStore {
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
-        const withdrawalRequests = this.invoicesStore.withdrawalRequests;
 
         let additions = payments.concat(invoices);
-        additions = additions.concat(withdrawalRequests);
         if (BackendUtils.supportsOnchainSends()) {
             additions = additions.concat(transactions);
         }
@@ -196,21 +191,12 @@ export default class ActivityStore {
                 .concat(cashuSentTokens);
         }
 
-        // push payments, txs, invoices and withdrawal requests to one array
+        // push payments, txs, invoices to one array
         activity.push.apply(activity, additions);
         // sort activity by timestamp
         const resolvedTuples = await Promise.all(
             activity.map(async (item: any) => {
-                let timestamp: number;
-
-                if (!item.getTimestamp && item.bolt12) {
-                    const ts = await Storage.getItem(
-                        `withdrawalRequest_${item.bolt12}`
-                    );
-                    timestamp = Math.round(Number(ts) / 1000);
-                } else {
-                    timestamp = item.getTimestamp;
-                }
+                let timestamp = item.getTimestamp;
                 return [item, timestamp] as const;
             })
         );
@@ -228,10 +214,6 @@ export default class ActivityStore {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
-        if (BackendUtils.supportsWithdrawalRequests()) {
-            await this.invoicesStore.getWithdrawalRequests();
-            await this.invoicesStore.getRedeemedWithdrawalRequests();
-        }
         const sortedActivity = await this.getSortedActivity();
 
         runInAction(() => {
@@ -242,15 +224,6 @@ export default class ActivityStore {
 
     public updateInvoices = async (locale: string | undefined) => {
         await this.invoicesStore.getInvoices();
-        await runInAction(async () => {
-            this.activity = await this.getSortedActivity();
-            await this.setFilters(this.filters, locale);
-        });
-    };
-
-    public updateWithdrawalRequest = async (locale: string | undefined) => {
-        if (BackendUtils.supportsWithdrawalRequests())
-            await this.invoicesStore.getWithdrawalRequests();
         await runInAction(async () => {
             this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);
