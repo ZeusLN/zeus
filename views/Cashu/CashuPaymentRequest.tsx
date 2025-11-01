@@ -181,8 +181,13 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { LnurlPayStore } = this.props;
+        const { LnurlPayStore, navigation, SettingsStore } = this.props;
         const { satAmount } = this.state;
+
+        if (SettingsStore.settings.ecash.enableMultiMint) {
+            navigation.navigate('MultimintPayment');
+            return;
+        }
 
         // Zaplocker
         const { isZaplocker } = LnurlPayStore;
