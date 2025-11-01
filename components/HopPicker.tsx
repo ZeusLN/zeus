@@ -20,6 +20,7 @@ import backendUtils from '../utils/BackendUtils';
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
 import ChannelsFilter from './Channels/ChannelsFilter';
+import { Status } from '../views/Channels/ChannelsPane';
 
 import Channel from '../models/Channel';
 
@@ -140,11 +141,24 @@ export default class ChannelPicker extends React.Component<
 
         const selected = selectedChannels.includes(item);
 
+        const getStatus = () => {
+            if (item.isActive) {
+                return Status.Online;
+            } else if (item.pendingOpen) {
+                return Status.Opening;
+            } else if (item.pendingClose || item.forceClose || item.closing) {
+                return Status.Closing;
+            } else {
+                return Status.Offline;
+            }
+        };
+
         if (channelsType === ChannelsType.Open) {
             return (
                 <TouchableHighlight onPress={() => this.toggleItem(item)}>
                     <ChannelItem
                         title={item.displayName}
+                        status={getStatus()}
                         localBalance={item.localBalance}
                         remoteBalance={item.remoteBalance}
                         sendingCapacity={item.sendingCapacity}
@@ -163,6 +177,7 @@ export default class ChannelPicker extends React.Component<
             <TouchableHighlight onPress={() => this.toggleItem(item)}>
                 <ChannelItem
                     title={item.displayName}
+                    status={getStatus()}
                     localBalance={item.localBalance}
                     remoteBalance={item.remoteBalance}
                     sendingCapacity={item.sendingCapacity}
