@@ -508,43 +508,38 @@ export default class InvoicesStore {
 
                         const route: any[] = [];
 
-                        if (response.route_hints?.length) {
-                            response.route_hints.forEach((hintGroup: any) => {
-                                (hintGroup.hop_hints || []).forEach(
-                                    (hint: any) => {
-                                        const hop: any = {
-                                            pubKey: hint.node_id,
-                                            node: hint.node_id,
-                                            forwarded: amount,
-                                            fee: hint.fee_base_msat
-                                                ? Math.round(
-                                                      Number(
-                                                          hint.fee_base_msat
-                                                      ) / 1000
-                                                  )
-                                                : 0
-                                        };
+                        if (htlc.chan_id) {
+                            const chanId = String(htlc.chan_id);
 
-                                        if (
-                                            this.channelsStore?.nodes?.[
-                                                hop.pubKey
-                                            ]?.alias
-                                        ) {
-                                            hop.alias =
-                                                this.channelsStore.nodes[
-                                                    hop.pubKey
-                                                ].alias;
-                                            hop.node = hop.alias;
-                                        }
+                            const channel = this.channelsStore?.channels.find(
+                                (c) =>
+                                    String(c.chan_id) === chanId ||
+                                    String(c.channelId) === chanId ||
+                                    (c.channel_point &&
+                                        c.channel_point.split(':')[0] ===
+                                            chanId)
+                            );
 
-                                        route.push(hop);
-                                    }
-                                );
-                            });
-                        } else if (htlc.chan_id) {
+                            const pubKey =
+                                channel?.remotePubkey ||
+                                htlc.custom_records?.['34349334']?.toString(
+                                    'hex'
+                                ) ||
+                                localeString('general.unknown');
+
+                            const alias =
+                                (pubKey !== localeString('general.unknown') &&
+                                    this.channelsStore?.nodes?.[pubKey]
+                                        ?.alias) ||
+                                this.channelsStore?.aliasesById?.[chanId] ||
+                                (pubKey !== localeString('general.unknown') &&
+                                    this.channelsStore?.aliasMap?.get(pubKey));
+
                             route.push({
-                                pubKey: htlc.chan_id,
-                                node: htlc.chan_id,
+                                pubKey,
+                                chan_id: chanId,
+                                node: alias || pubKey,
+                                alias,
                                 forwarded: amount,
                                 fee: 0
                             });
@@ -554,18 +549,10 @@ export default class InvoicesStore {
                     }
                 });
             }
-            enhancedPath.push('incoming');
+
             return enhancedPath;
         } catch (error) {
             console.error(error);
-            runInAction(() => {
-                this.error = true;
-                this.error_msg =
-                    error?.toString() ||
-                    localeString(
-                        'stores.InvoicesStore.errorFetchingEnhancedPath'
-                    );
-            });
             return [];
         }
     };
