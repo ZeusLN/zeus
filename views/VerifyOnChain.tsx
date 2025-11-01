@@ -23,6 +23,8 @@ import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 import FiatStore from '../stores/FiatStore';
 
+import QR from '../assets/images/SVG/QR.svg';
+
 interface VerifyOnChainParams {
     destination: string;
     fee: string;
@@ -73,7 +75,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     };
     renderTotal = () => {
         const { route } = this.props;
-        const { satAmount, amount, additionalOutputs } = route.params;
+        const { satAmount, amount, additionalOutputs } = route?.params || {};
 
         const primary = satAmount || amount || '0';
         let total = Number(primary || 0);
@@ -144,7 +146,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
             account,
             additionalOutputs,
             fundMax
-        } = route.params;
+        } = route?.params || {};
 
         const request: any = {
             addr: destination,
@@ -172,7 +174,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     renderOutputs = (destination: string, primaryAmount: string | number) => {
         const { route } = this.props;
         const { bitcoinUnits } = this.state;
-        const { additionalOutputs } = route.params;
+        const { additionalOutputs } = route?.params || {};
         const hasAdditional =
             Array.isArray(additionalOutputs) && additionalOutputs.length > 0;
         return (
@@ -254,7 +256,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
 
     renderInputs = () => {
         const { route } = this.props;
-        const { utxos } = route.params;
+        const { utxos } = route?.params || {};
         if (!Array.isArray(utxos) || utxos.length === 0) return null;
         return (
             <View style={{ marginTop: 10 }}>
@@ -276,6 +278,48 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         );
     };
 
+    getDestinationAddresses = () => {
+        const { route } = this.props;
+        const { destination, additionalOutputs } = route?.params || {};
+
+        const addresses: string[] = [];
+        if (destination) {
+            addresses.push(destination);
+        }
+        if (Array.isArray(additionalOutputs)) {
+            additionalOutputs.forEach((output) => {
+                if (output?.address) {
+                    addresses.push(output.address);
+                }
+            });
+        }
+        return addresses;
+    };
+
+    renderQRButton = () => {
+        const { navigation } = this.props;
+        const addresses = this.getDestinationAddresses();
+
+        if (!addresses || addresses.length === 0) {
+            return <View />;
+        }
+
+        const addPrefixToAddresses = (addresses: string[], prefix: string) =>
+            addresses.filter(Boolean).map((address) => `${prefix}${address}`);
+
+        return (
+            <TouchableOpacity
+                onPress={() => {
+                    navigation.navigate('ContactQR', {
+                        addressData: addPrefixToAddresses(addresses, 'bitcoin:')
+                    });
+                }}
+            >
+                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
+            </TouchableOpacity>
+        );
+    };
+
     render() {
         const { navigation, route } = this.props;
         const {
@@ -286,7 +330,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
             account,
             fundMax,
             additionalOutputs
-        } = route?.params || {};
+        } = route?.params;
         const { slideToPayThreshold } = this.state;
 
         const primary = satAmount || amount;
@@ -308,6 +352,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={this.renderQRButton()}
                     navigation={navigation}
                 />
                 <ScrollView contentContainerStyle={styles.content}>
