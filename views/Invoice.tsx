@@ -1,12 +1,18 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
+import {
+    StyleSheet,
+    ScrollView,
+    View,
+    TouchableOpacity,
+    Text
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Icon, ListItem } from 'react-native-elements';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore from '../stores/SettingsStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import ChannelsStore from '../stores/ChannelsStore';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -21,15 +27,17 @@ import Invoice from '../models/Invoice';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
-import BackendUtils from '../utils/BackendUtils';
 
 interface InvoiceProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
     InvoicesStore?: InvoicesStore;
+    ChannelsStore?: ChannelsStore;
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
@@ -39,7 +47,7 @@ interface InvoiceState {
     loading: boolean;
 }
 
-@inject('SettingsStore', 'InvoicesStore')
+@inject('SettingsStore', 'InvoicesStore', 'ChannelsStore')
 @observer
 export default class InvoiceView extends React.Component<
     InvoiceProps,
@@ -49,6 +57,106 @@ export default class InvoiceView extends React.Component<
         storedNote: '',
         enhancedPath: [],
         loading: false
+    };
+
+    renderIncomingChannel = () => {
+        const { navigation, ChannelsStore } = this.props;
+        const { enhancedPath: path } = this.state;
+
+        if (!BackendUtils.isLNDBased() || !path.length || !path[0][0])
+            return null;
+
+        const channels = path
+            .map((route) => {
+                const hop = route[0];
+                if (!hop) return null;
+
+                const pubkey = hop.pubKey;
+
+                const channelByPub = ChannelsStore?.channels.find(
+                    (c) => c.remotePubkey === pubkey
+                );
+
+                const chanId = hop.chan_id || hop.short_channel_id;
+                const channelById =
+                    !channelByPub && chanId
+                        ? ChannelsStore?.channels.find(
+                              (c) =>
+                                  c.chan_id === chanId ||
+                                  (c.channel_point &&
+                                      c.channel_point.split(':')[0] === chanId)
+                          )
+                        : null;
+
+                const finalChannel = channelByPub || channelById;
+
+                const alias =
+                    ChannelsStore?.nodes?.[pubkey]?.alias ||
+                    ChannelsStore?.aliasMap.get(pubkey);
+
+                const nodeName = alias || hop.node || pubkey;
+                const displayName = PrivacyUtils.sensitiveValue(nodeName);
+                const formattedName =
+                    typeof displayName === 'string' && displayName.length >= 66
+                        ? `${displayName.slice(0, 14)}...${displayName.slice(
+                              -14
+                          )}`
+                        : displayName || localeString('general.unknown');
+
+                return {
+                    channel: finalChannel,
+                    name: formattedName,
+                    isOpen: finalChannel?.active
+                };
+            })
+            .filter(
+                (
+                    item
+                ): item is { channel: any; name: string; isOpen: boolean } =>
+                    item !== null
+            );
+
+        if (!channels.length) return null;
+
+        if (channels.length === 1) {
+            const { channel, name, isOpen } = channels[0];
+
+            return (
+                <KeyValue
+                    keyValue={localeString('views.Channel.title')}
+                    value={
+                        <TouchableOpacity
+                            onPress={() =>
+                                channel &&
+                                navigation.navigate('Channel', { channel })
+                            }
+                        >
+                            <Text
+                                style={{
+                                    color: isOpen
+                                        ? themeColor('highlight')
+                                        : themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {name}
+                            </Text>
+                        </TouchableOpacity>
+                    }
+                    sensitive
+                />
+            );
+        }
+
+        return (
+            <KeyValue
+                keyValue={`${localeString('views.Wallet.Wallet.channels')}s (${
+                    channels.length
+                })`}
+                value={channels.map((c) => c.name).join(', ')}
+                sensitive
+            />
+        );
     };
 
     async componentDidMount() {
@@ -69,7 +177,7 @@ export default class InvoiceView extends React.Component<
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { storedNote, enhancedPath, loading } = this.state;
+        const { storedNote, loading } = this.state;
         const invoice = route.params?.invoice;
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
@@ -140,7 +248,11 @@ export default class InvoiceView extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            {loading && <LoadingIndicator />}
+                            {loading && (
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={35} />
+                                </View>
+                            )}
                             {invoice.isZeusPay && (
                                 <AttestationButton
                                     hash={invoice.payment_hash || getRHash}
@@ -353,52 +465,7 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        {enhancedPath.length > 0 && enhancedPath[0][0] && (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent',
-                                    marginLeft: -16,
-                                    marginRight: -16
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('PaymentPaths', {
-                                        enhancedPath
-                                    })
-                                }
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {(() => {
-                                            const isIncoming =
-                                                enhancedPath[
-                                                    enhancedPath.length - 1
-                                                ] === 'incoming';
-                                            const numberOfPaths = isIncoming
-                                                ? enhancedPath.length - 1
-                                                : enhancedPath.length;
-
-                                            return numberOfPaths > 1
-                                                ? `${localeString(
-                                                      'views.Payment.paths'
-                                                  )} (${numberOfPaths})`
-                                                : localeString(
-                                                      'views.Payment.path'
-                                                  );
-                                        })()}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                                <Icon
-                                    name="keyboard-arrow-right"
-                                    color={themeColor('secondaryText')}
-                                />
-                            </ListItem>
-                        )}
+                        {this.renderIncomingChannel()}
                     </View>
                 </ScrollView>
                 <View style={{ bottom: 15 }}>

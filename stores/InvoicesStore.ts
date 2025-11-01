@@ -543,8 +543,12 @@ export default class InvoicesStore {
                             });
                         } else if (htlc.chan_id) {
                             route.push({
-                                pubKey: htlc.chan_id,
-                                node: htlc.chan_id,
+                                pubKey:
+                                    htlc.custom_records?.['34349334']?.toString(
+                                        'hex'
+                                    ) || localeString('general.unknown'),
+                                chan_id: htlc.chan_id.toString(),
+                                node: htlc.chan_id.toString(),
                                 forwarded: amount,
                                 fee: 0
                             });
@@ -554,18 +558,9 @@ export default class InvoicesStore {
                     }
                 });
             }
-            enhancedPath.push('incoming');
             return enhancedPath;
         } catch (error) {
             console.error(error);
-            runInAction(() => {
-                this.error = true;
-                this.error_msg =
-                    error?.toString() ||
-                    localeString(
-                        'stores.InvoicesStore.errorFetchingEnhancedPath'
-                    );
-            });
             return [];
         }
     };
