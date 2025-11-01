@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
+import { TouchableOpacity, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -15,7 +15,7 @@ import KeyValue from '../../components/KeyValue';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
-import TextInput from '../../components/TextInput';
+import AddressInput from '../../components/AddressInput';
 import AmountInput from '../../components/AmountInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import {
@@ -638,16 +638,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
 
         const SettingsBtn = () => (
-            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
-                <Icon
-                    name="settings"
-                    onPress={() => {
-                        this.props.navigation.navigate('SwapSettings');
-                    }}
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={33}
-                />
+            <TouchableOpacity
+                style={{ marginTop: -10, marginRight: 6 }}
+                onPress={() => {
+                    this.props.navigation.navigate('SwapSettings');
+                }}
+            >
+                <Icon name="settings" color={themeColor('text')} size={33} />
             </TouchableOpacity>
         );
 
@@ -824,10 +821,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             | string
                                                             | number
                                                     ) => {
-                                                        this.setState({
-                                                            error: '',
-                                                            invoice: ''
-                                                        });
+                                                        this.setState(
+                                                            (prevState) => ({
+                                                                error: '',
+                                                                invoice:
+                                                                    prevState.reverse
+                                                                        ? prevState.invoice
+                                                                        : ''
+                                                            })
+                                                        );
 
                                                         // remove commas
                                                         const sanitizedSatAmount =
@@ -1043,10 +1045,17 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 | string
                                                                 | number
                                                         ) => {
-                                                            this.setState({
-                                                                error: '',
-                                                                invoice: ''
-                                                            });
+                                                            this.setState(
+                                                                (
+                                                                    prevState
+                                                                ) => ({
+                                                                    error: '',
+                                                                    invoice:
+                                                                        prevState.reverse
+                                                                            ? prevState.invoice
+                                                                            : ''
+                                                                })
+                                                            );
 
                                                             // remove commas
                                                             const sanitizedSatAmount =
@@ -1747,40 +1756,38 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         </View>
                                     )}
 
-                                <View>
-                                    <TextInput
-                                        onChangeText={(text: string) => {
-                                            this.setState(
-                                                {
-                                                    invoice: text,
-                                                    error: '',
-                                                    apiUpdates: ''
-                                                },
-                                                () => this.checkIsValid()
-                                            );
-                                        }}
-                                        placeholder={
-                                            fetchingInvoice
-                                                ? ''
-                                                : reverse
-                                                ? localeString(
-                                                      'views.Settings.AddContact.onchainAddress'
-                                                  )
-                                                : localeString(
-                                                      'views.PaymentRequest.title'
-                                                  )
-                                        }
-                                        style={{
-                                            marginHorizontal: 20
-                                        }}
-                                        value={invoice}
-                                    />
-                                    {fetchingInvoice && (
-                                        <View style={styles.loadingOverlay}>
-                                            <LoadingIndicator />
-                                        </View>
-                                    )}
-                                </View>
+                                <AddressInput
+                                    value={invoice}
+                                    onChangeText={(text: string) => {
+                                        this.setState(
+                                            {
+                                                invoice: text,
+                                                error: '',
+                                                apiUpdates: ''
+                                            },
+                                            () => this.checkIsValid()
+                                        );
+                                    }}
+                                    onScan={() =>
+                                        navigation.navigate(
+                                            'HandleAnythingQRScanner',
+                                            { view: 'Swaps' }
+                                        )
+                                    }
+                                    placeholder={
+                                        fetchingInvoice
+                                            ? ''
+                                            : reverse
+                                            ? localeString(
+                                                  'views.Settings.AddContact.onchainAddress'
+                                              )
+                                            : localeString(
+                                                  'views.PaymentRequest.title'
+                                              )
+                                    }
+                                    loading={fetchingInvoice}
+                                    style={{ marginHorizontal: 20 }}
+                                />
 
                                 <View
                                     style={{
@@ -2019,21 +2026,3 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
     }
 }
-
-const styles = StyleSheet.create({
-    loadingOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center'
-    }
-});
