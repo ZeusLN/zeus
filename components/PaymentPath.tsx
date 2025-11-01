@@ -96,19 +96,9 @@ const Hop = (props: any) => {
 };
 
 const ExpandedHop = (props: any) => {
-    const { pathIndex, hop, path, aliasMap, loading, isIncoming } = props;
+    const { pathIndex, hop, path, aliasMap, loading } = props;
     const isOrigin = hop.sent != null;
     const isDestination = pathIndex === path.length;
-    const isOurNode = hop.pubKey === nodeInfoStore.nodeInfo.nodeId;
-
-    /*
-     * yourNode logic:
-     * 1. It's the origin of an outgoing payment.
-     * 2. It's the destination of an incoming payment.
-     */
-    const showYourNodeLabel =
-        isOrigin || (isIncoming && isDestination && isOurNode);
-
     return (
         <View
             key={pathIndex}
@@ -165,7 +155,7 @@ const ExpandedHop = (props: any) => {
                             }}
                         >
                             {`${
-                                showYourNodeLabel
+                                isOrigin
                                     ? localeString('views.Channel.yourNode')
                                     : aliasMap.get(hop.pubKey)
                                     ? PrivacyUtils.sensitiveValue(
@@ -267,9 +257,6 @@ export default class PaymentPath extends React.Component<
 
     prefetchAliases(paths: any[]) {
         paths.forEach((path) => {
-            if (!Array.isArray(path)) {
-                return;
-            }
             path.forEach((hop: any) => {
                 const aliasMap = channelsStore.aliasMap;
                 if (hop?.pubKey && !hop.alias && !aliasMap.get(hop.pubKey)) {
@@ -286,145 +273,67 @@ export default class PaymentPath extends React.Component<
         const aliasMap = channelsStore.aliasMap;
         const ourPubKey = nodeInfoStore.nodeInfo.nodeId;
 
-        const isIncoming =
-            enhancedPath.length > 0 &&
-            typeof enhancedPath[enhancedPath.length - 1] === 'string' &&
-            enhancedPath[enhancedPath.length - 1] === 'incoming';
-        const actualPaths = isIncoming
-            ? (enhancedPath.slice(0, -1) as any[][])
-            : enhancedPath;
-
         const paths: any[] = [];
         const updateMap = (k: number, v: boolean) => {
             this.setState({
                 expanded: new Map(expanded.set(k, v))
             });
         };
-
-        actualPaths.forEach((path: any[], index: number) => {
-            if (!path || path.length === 0) return;
+        enhancedPath.forEach((path: any[], index: number) => {
             const hops: any = [];
-
-            if (isIncoming) {
-                let title = '';
-                path.forEach((hop) => {
-                    const displayName = aliasMap.get(hop.pubKey) || hop.node;
-                    if (title) title += ', ';
-                    const sensitiveDisplayName =
-                        PrivacyUtils.sensitiveValue(displayName);
-                    title +=
-                        typeof sensitiveDisplayName === 'string' &&
-                        sensitiveDisplayName.length >= 66
-                            ? `${(sensitiveDisplayName as string).slice(
-                                  0,
-                                  6
-                              )}...`
-                            : sensitiveDisplayName ?? '';
-                });
-                if (title) title += ', ';
-                title += localeString('views.Channel.yourNode');
-
-                if (actualPaths.length > 1) {
-                    hops.push(
-                        <Hop
-                            key={`hop-${index}`}
-                            index={index}
-                            title={title}
-                            path={path}
-                            updateMap={updateMap}
-                            expanded={expanded}
-                        />
-                    );
-                }
-                if (expanded.get(index) || actualPaths.length === 1) {
-                    path.forEach((hop: any, pathIndex: number) => {
-                        const loading = !hop.alias && !aliasMap.get(hop.pubKey);
-                        hops.push(
-                            <ExpandedHop
-                                key={`hop-${index}-${pathIndex}`}
-                                pathIndex={pathIndex}
-                                path={path}
-                                hop={hop}
-                                aliasMap={aliasMap}
-                                loading={loading}
-                                isIncoming={isIncoming}
-                            />
-                        );
-                    });
-                    const destination = {
-                        forwarded: Number(path[path.length - 1].forwarded),
-                        pubKey: ourPubKey
-                    };
-                    hops.push(
-                        <ExpandedHop
-                            key={`destination-${index}`}
-                            pathIndex={path.length}
-                            path={path}
-                            hop={destination}
-                            aliasMap={aliasMap}
-                            loading={false}
-                            isIncoming={isIncoming}
-                        />
-                    );
-                }
-            } else {
-                let title = localeString('views.Channel.yourNode');
-                path.forEach((hop) => {
-                    const displayName = aliasMap.get(hop.pubKey) || hop.node;
-                    title += ', ';
-                    const sensitiveDisplayName =
-                        PrivacyUtils.sensitiveValue(displayName);
-                    title +=
-                        typeof sensitiveDisplayName === 'string' &&
-                        sensitiveDisplayName.length >= 66
-                            ? `${(sensitiveDisplayName as string).slice(
-                                  0,
-                                  6
-                              )}...`
-                            : sensitiveDisplayName ?? '';
-                });
-                if (enhancedPath.length > 1) {
-                    hops.push(
-                        <Hop
-                            key={`hop-${index}`}
-                            index={index}
-                            title={title}
-                            path={path}
-                            updateMap={updateMap}
-                            expanded={expanded}
-                        />
-                    );
-                }
-                const origin = {
-                    sent: Number(path[0].forwarded) + Number(path[0].fee),
-                    pubKey: ourPubKey
-                };
-                if (expanded.get(index) || enhancedPath.length === 1) {
-                    hops.push(
-                        <ExpandedHop
-                            key={`origin-${index}`}
-                            pathIndex={0}
-                            path={path}
-                            hop={origin}
-                            aliasMap={aliasMap}
-                        />
-                    );
-                }
-                path.forEach((hop: any, pathIndex: number) => {
-                    const loading = !hop.alias && !aliasMap.get(hop.pubKey);
-                    (expanded.get(index) || enhancedPath.length === 1) &&
-                        hops.push(
-                            <ExpandedHop
-                                key={`hop-${index}-${pathIndex}`}
-                                pathIndex={pathIndex + 1}
-                                path={path}
-                                hop={hop}
-                                aliasMap={aliasMap}
-                                loading={loading}
-                            />
-                        );
-                });
+            let title = localeString('views.Channel.yourNode');
+            path.forEach((hop) => {
+                const displayName = aliasMap.get(hop.pubKey) || hop.node;
+                title += ', ';
+                const sensitiveDisplayName =
+                    PrivacyUtils.sensitiveValue(displayName);
+                title +=
+                    typeof sensitiveDisplayName === 'string' &&
+                    sensitiveDisplayName.length >= 66
+                        ? `${(sensitiveDisplayName as string).slice(0, 6)}...`
+                        : sensitiveDisplayName ?? '';
+            });
+            if (enhancedPath.length > 1) {
+                hops.push(
+                    <Hop
+                        key={`hop-${index}`}
+                        index={index}
+                        title={title}
+                        path={path}
+                        updateMap={updateMap}
+                        expanded={expanded}
+                    />
+                );
             }
+            const origin = {
+                sent: Number(path[0].forwarded) + Number(path[0].fee),
+                pubKey: ourPubKey
+            };
+            if (expanded.get(index) || enhancedPath.length === 1) {
+                hops.push(
+                    <ExpandedHop
+                        key={`origin-${index}`}
+                        pathIndex={0}
+                        path={path}
+                        hop={origin}
+                        aliasMap={aliasMap}
+                    />
+                );
+            }
+            path.forEach((hop: any, pathIndex: number) => {
+                const loading = !hop.alias && !aliasMap.get(hop.pubKey);
+                (expanded.get(index) || enhancedPath.length === 1) &&
+                    hops.push(
+                        <ExpandedHop
+                            key={`hop-${index}-${pathIndex}`}
+                            pathIndex={pathIndex + 1}
+                            path={path}
+                            hop={hop}
+                            aliasMap={aliasMap}
+                            loading={loading}
+                        />
+                    );
+            });
             paths.push(hops);
         });
 

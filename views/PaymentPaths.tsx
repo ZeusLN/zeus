@@ -28,22 +28,12 @@ export default class PaymentPathsView extends React.Component<PaymentPathsViewPr
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: (() => {
-                            const isIncoming =
-                                enhancedPath.length > 0 &&
-                                enhancedPath[enhancedPath.length - 1] ===
-                                    'incoming';
-                            const numberOfPaths = isIncoming
-                                ? enhancedPath.length - 1
-                                : enhancedPath.length;
-
-                            if (numberOfPaths > 1) {
-                                return `${localeString(
-                                    'views.Payment.paths'
-                                )} (${numberOfPaths})`;
-                            }
-                            return localeString('views.Payment.path');
-                        })(),
+                        text:
+                            enhancedPath.length > 1
+                                ? `${localeString('views.Payment.paths')} (${
+                                      enhancedPath.length
+                                  })`
+                                : localeString('views.Payment.path'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
