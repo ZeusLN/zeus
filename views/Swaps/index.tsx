@@ -1775,7 +1775,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     onScan={() =>
                                         navigation.navigate(
                                             'HandleAnythingQRScanner',
-                                            { fromSwaps: true }
+                                            { view: 'Swaps' }
                                         )
                                     }
                                     placeholder={
