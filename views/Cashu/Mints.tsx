@@ -11,6 +11,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import cloneDeep from 'lodash/cloneDeep';
+import { runInAction } from 'mobx';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -34,7 +35,7 @@ interface MintsProps {
 }
 
 interface MintsState {
-    mints: any;
+    mints: any[];
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -58,43 +59,56 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         }
     }
 
-    componentWillUnmount(): void {
-        const { CashuStore } = this.props;
-        CashuStore.setFromCashuSend(false);
-    }
-
     handleFocus = () => {
         const { CashuStore, SettingsStore } = this.props;
-        const { cashuWallets, mintUrls, selectedMintUrls } = CashuStore;
-        let mints: any = [];
+        const { cashuWallets, mintUrls } = CashuStore;
 
-        mintUrls.forEach((mintUrl) => {
-            const wallet = cashuWallets[mintUrl];
-            const mintInfo = wallet.mintInfo;
-            mints.push({
-                ...mintInfo,
-                mintUrl,
-                mintBalance: wallet.balanceSats,
-                errorConnecting: wallet.errorConnecting
-            });
-        });
+        const allMints = mintUrls.map((mintUrl) => ({
+            ...(cashuWallets[mintUrl]?.mintInfo || {}),
+            mintUrl,
+            mintBalance: cashuWallets[mintUrl]?.balanceSats ?? 0,
+            errorConnecting: cashuWallets[mintUrl]?.errorConnecting ?? false
+        }));
 
-        if (
-            SettingsStore.settings.ecash.enableMultiMint &&
-            (!selectedMintUrls || selectedMintUrls.length === 0)
-        ) {
-            CashuStore.selectedMintUrls = [...mintUrls];
+        this.setState({ mints: allMints });
+
+        if (SettingsStore.settings.ecash.enableMultiMint) {
+            this.syncMultiMintSelection(allMints);
+        }
+    };
+
+    syncMultiMintSelection = (allMints: any[]) => {
+        const { CashuStore, SettingsStore } = this.props;
+
+        const nut15MintUrls = allMints
+            .filter((m) => m.nuts && m.nuts[15])
+            .map((m) => m.mintUrl);
+
+        const selectedFromSettings =
+            SettingsStore.settings.lightningAddress.mintUrls || [];
+
+        let validSelection = selectedFromSettings.filter((url) =>
+            nut15MintUrls.includes(url)
+        );
+
+        if (validSelection.length === 0 && nut15MintUrls.length > 0) {
+            validSelection = nut15MintUrls;
         }
 
-        this.setState({ mints });
+        SettingsStore.updateSettings({
+            lightningAddress: {
+                mintUrls: validSelection
+            }
+        });
+
+        runInAction(() => {
+            CashuStore.selectedMintUrls = validSelection;
+        });
     };
 
     renderSeparator = () => (
         <View
-            style={{
-                height: 0.4,
-                backgroundColor: themeColor('separator')
-            }}
+            style={{ height: 0.4, backgroundColor: themeColor('separator') }}
         />
     );
 
@@ -109,9 +123,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             toggleMintSelection
         } = CashuStore;
 
-        const multiMint =
-            CashuStore.fromCashuSend &&
-            SettingsStore.settings.ecash.enableMultiMint;
+        const { settings } = SettingsStore;
+        const multiMint = settings.ecash.enableMultiMint;
+
+        const filteredMints = multiMint
+            ? mints.filter((mint: any) => mint.nuts && mint.nuts[15])
+            : mints;
+
         const AddMintButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('AddMint')}
@@ -132,9 +150,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     leftComponent="Back"
                     centerComponent={{
                         text:
-                            mints.length > 0
+                            filteredMints.length > 0
                                 ? `${localeString('cashu.mints')} (${
-                                      mints.length
+                                      filteredMints.length
                                   })`
                                 : localeString('cashu.mints'),
                         style: {
@@ -144,14 +162,12 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     }}
                     rightComponent={<AddMintButton />}
                     navigation={navigation}
-                    onBack={() => {
-                        clearInvoice();
-                    }}
+                    onBack={clearInvoice}
                 />
 
-                {!!mints && mints.length > 0 ? (
+                {!!filteredMints && filteredMints.length > 0 ? (
                     <FlatList
-                        data={mints}
+                        data={filteredMints}
                         renderItem={({
                             item,
                             index
@@ -163,8 +179,8 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             const isSelectedMint = multiMint
                                 ? selectedMintUrls.includes(mintInfo?.mintUrl)
                                 : selectedMintUrl === mintInfo?.mintUrl;
-
                             const errorConnecting = item.errorConnecting;
+
                             let subTitle = isSelectedMint
                                 ? `${localeString('general.selected')} | ${
                                       item.mintUrl
@@ -178,26 +194,14 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             }
 
                             return (
-                                <React.Fragment>
+                                <React.Fragment key={`mint-${index}`}>
                                     <ListItem
-                                        key={`mint-${index}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor: 'transparent'
                                         }}
                                         onPress={async () => {
                                             if (multiMint) {
-                                                const isCurrentlySelected =
-                                                    selectedMintUrls.includes(
-                                                        mintInfo?.mintUrl
-                                                    );
-                                                if (
-                                                    isCurrentlySelected &&
-                                                    selectedMintUrls.length ===
-                                                        1
-                                                ) {
-                                                    return;
-                                                }
                                                 await toggleMintSelection(
                                                     mintInfo?.mintUrl
                                                 );
@@ -229,7 +233,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 style={{ marginRight: 10 }}
                                             />
                                         )}
-
                                         {mintInfo?.icon_url && (
                                             <Image
                                                 source={{
@@ -243,7 +246,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 }}
                                             />
                                         )}
-
                                         <ListItem.Content>
                                             <View>
                                                 <View style={styles.row}>
@@ -286,7 +288,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 </View>
                                             </View>
                                         </ListItem.Content>
-
                                         <View>
                                             <Row>
                                                 <View style={{ right: 15 }}>
@@ -339,7 +340,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         }}
                     />
                 )}
-
                 {multiMint && (
                     <View
                         style={{
