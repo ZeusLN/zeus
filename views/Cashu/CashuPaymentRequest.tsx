@@ -23,7 +23,6 @@ import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
-import Switch from '../../components/Switch';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -137,6 +136,7 @@ export default class CashuPaymentRequest extends React.Component<
                 }
             }
         );
+
         const { paymentRequest, getPayReq } = CashuStore;
 
         this.setState({
@@ -338,7 +338,9 @@ export default class CashuPaymentRequest extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => clearPayReq()}
+                    onBack={() => {
+                        clearPayReq();
+                    }}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -390,7 +392,6 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
-
                                     {!BackendUtils.supportsLightningSends() && (
                                         <View
                                             style={{
@@ -405,7 +406,6 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-
                                     {noBalance &&
                                         BackendUtils.supportsLightningSends() && (
                                             <View
@@ -421,7 +421,6 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
-
                                     {isNoAmountInvoice ? (
                                         <AmountInput
                                             amount={customAmount}
@@ -857,10 +856,7 @@ export default class CashuPaymentRequest extends React.Component<
                                 style={{
                                     alignSelf: 'center',
                                     width: '85%',
-                                    marginBottom: 30,
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between'
+                                    marginBottom: 30
                                 }}
                             >
                                 <Text
@@ -873,57 +869,10 @@ export default class CashuPaymentRequest extends React.Component<
                                         'views.Cashu.CashuPaymentRequest.sendingFrom'
                                     )}
                                 </Text>
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            marginLeft: 6,
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 15
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Cashu.CashuPaymentRequest.multiMint'
-                                        )}
-                                    </Text>
-                                    <Switch
-                                        value={
-                                            SettingsStore.settings.ecash
-                                                .enableMultiMint
-                                        }
-                                        trackEnabledColor={themeColor(
-                                            'highlight'
-                                        )}
-                                    />
+                                <View style={{ marginTop: 10 }}>
+                                    <EcashMintPicker navigation={navigation} />
                                 </View>
                             </View>
-
-                            <View
-                                style={{
-                                    alignSelf: 'center',
-                                    width: '85%',
-                                    marginBottom: SettingsStore.settings.ecash
-                                        .enableMultiMint
-                                        ? CashuStore.selectedMintUrls.length > 2
-                                            ? 115
-                                            : CashuStore.selectedMintUrls
-                                                  .length <= 1
-                                            ? 30
-                                            : 72
-                                        : 30
-                                }}
-                            >
-                                <EcashMintPicker
-                                    showMore={true}
-                                    navigation={navigation}
-                                />
-                            </View>
-
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton

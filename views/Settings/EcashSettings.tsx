@@ -169,28 +169,27 @@ export default class EcashSettings extends React.Component<
                             <Switch
                                 value={enableCashu}
                                 onValueChange={async () => {
-                                    const newEnableCashu = !enableCashu;
                                     this.setState({
-                                        enableCashu: newEnableCashu,
+                                        enableCashu: !enableCashu,
                                         loading: true
                                     });
 
                                     await updateSettings({
                                         ecash: {
                                             ...settings.ecash,
-                                            enableCashu: newEnableCashu,
-                                            enableMultiMint: newEnableCashu
+                                            enableCashu: !enableCashu,
+                                            enableMultiMint: !enableCashu
                                                 ? enableMultiMint
                                                 : false
                                         }
                                     });
 
-                                    if (newEnableCashu) {
+                                    if (!enableCashu) {
                                         await CashuStore.initializeWallets();
                                     }
 
                                     this.setState({
-                                        enableMultiMint: newEnableCashu
+                                        enableMultiMint: !enableCashu
                                             ? enableMultiMint
                                             : false,
                                         loading: false
