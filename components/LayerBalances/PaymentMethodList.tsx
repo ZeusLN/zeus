@@ -9,6 +9,7 @@ import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
 import EcashSwipeableRow from './EcashSwipeableRow';
+import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -29,6 +30,16 @@ interface PaymentMethodListProps {
     ecash?: string;
     offer?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
+    lightningBalance?: number | string;
+    onchainBalance?: number | string;
+    ecashBalance?: number | string;
+    accounts?: Array<{
+        name: string;
+        balance: number;
+        XFP?: string;
+        watch_only?: boolean;
+        hidden?: boolean;
+    }>;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -38,6 +49,9 @@ type DataRow = {
     layer: string;
     subtitle?: string;
     disabled?: boolean;
+    balance?: number | string;
+    account?: string;
+    hidden?: boolean;
 };
 
 const Row = ({ item }: { item: DataRow }) => {
@@ -71,7 +85,8 @@ const Row = ({ item }: { item: DataRow }) => {
                     <Spacer width={5} />
                     <View
                         style={{
-                            flexDirection: 'column'
+                            flexDirection: 'column',
+                            flex: 1
                         }}
                     >
                         <Text
@@ -110,6 +125,15 @@ const Row = ({ item }: { item: DataRow }) => {
                         )}
                     </View>
                 </View>
+                {item.balance !== undefined && (
+                    <View style={styles.balanceContainer}>
+                        <Amount
+                            sats={item.balance}
+                            sensitive
+                            colorOverride={themeColor('buttonText')}
+                        />
+                    </View>
+                )}
             </LinearGradient>
         </RectButton>
     );
@@ -189,14 +213,16 @@ const SwipeableRow = ({
         );
     }
 
-    if (item.layer === 'On-chain') {
+    if (item.layer === 'On-chain' || item.account) {
         return (
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
                 satAmount={satAmount}
                 locked={true}
+                hidden={item.hidden}
                 disabled={item.disabled}
+                account={item.account}
             >
                 <Row item={item} />
             </OnchainSwipeableRow>
@@ -216,7 +242,11 @@ export default class PaymentMethodList extends Component<
             lightning,
             lightningAddress,
             offer,
-            lnurlParams
+            lnurlParams,
+            lightningBalance,
+            onchainBalance,
+            ecashBalance,
+            accounts
         } = this.props;
 
         let DATA: DataRow[] = [];
@@ -226,7 +256,8 @@ export default class PaymentMethodList extends Component<
                 layer: 'Lightning',
                 subtitle: lightning
                     ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag
+                    : lnurlParams?.tag,
+                balance: lightningBalance
             });
         }
 
@@ -239,14 +270,16 @@ export default class PaymentMethodList extends Component<
                 layer: 'Lightning via ecash',
                 subtitle: lightning
                     ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag
+                    : lnurlParams?.tag,
+                balance: ecashBalance
             });
         }
 
         if (lightningAddress) {
             DATA.push({
                 layer: 'Lightning address',
-                subtitle: lightningAddress
+                subtitle: lightningAddress,
+                balance: lightningBalance
             });
         }
 
@@ -254,7 +287,8 @@ export default class PaymentMethodList extends Component<
             DATA.push({
                 layer: 'Offer',
                 subtitle: `${offer?.slice(0, 12)}...${offer?.slice(-12)}`,
-                disabled: !nodeInfoStore.supportsOffers
+                disabled: !nodeInfoStore.supportsOffers,
+                balance: lightningBalance
             });
         }
 
@@ -265,10 +299,28 @@ export default class PaymentMethodList extends Component<
                 subtitle: value
                     ? `${value.slice(0, 12)}...${value.slice(-12)}`
                     : undefined,
-                disabled: !BackendUtils.supportsOnchainSends()
+                disabled: !BackendUtils.supportsOnchainSends(),
+                balance: onchainBalance,
+                account: 'default'
             });
-        }
 
+            if (accounts && accounts.length > 0) {
+                accounts.forEach((account) => {
+                    if (!account.hidden && !account.watch_only) {
+                        DATA.push({
+                            layer: account.name,
+                            subtitle: value
+                                ? `${value.slice(0, 12)}...${value.slice(-12)}`
+                                : account.XFP,
+                            disabled: false,
+                            balance: account.balance,
+                            account: account.name,
+                            hidden: account.hidden
+                        });
+                    }
+                });
+            }
+        }
         return (
             <View style={{ flex: 1 }}>
                 <FlatList
@@ -328,7 +380,13 @@ const styles = StyleSheet.create({
     left: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-start'
+        justifyContent: 'flex-start',
+        flex: 1
+    },
+    balanceContainer: {
+        flexShrink: 0,
+        marginLeft: 10,
+        maxWidth: '40%'
     },
     separator: {
         backgroundColor: 'transparent',
