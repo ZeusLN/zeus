@@ -4,6 +4,7 @@ import Storage from '../storage';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import addressUtils from '../utils/AddressUtils';
 
 import Account from '../models/Account';
 import Utxo from '../models/Utxo';
@@ -33,7 +34,7 @@ export default class UTXOsStore {
     @observable public rescanErrorMsg: string;
     // addresses
     @observable public loadingAddresses: boolean = false;
-    @observable public accountsWithAddresses = [];
+    @observable public accountsWithAddresses: any[] = [];
     @observable public loadingAddressesError: string = '';
     //
     settingsStore: SettingsStore;
@@ -331,8 +332,97 @@ export default class UTXOsStore {
             BackendUtils.listAddresses()
                 .then((response: any) => {
                     runInAction(() => {
-                        this.accountsWithAddresses =
-                            response.account_with_addresses;
+                        try {
+                            let processedAccounts: any[] = [];
+
+                            if (response && Array.isArray(response.addresses)) {
+                                // Create a single default account with all addresses
+                                const addresses = this.processAddresses(
+                                    response.addresses
+                                );
+
+                                if (addresses.length > 0) {
+                                    processedAccounts = [
+                                        {
+                                            name: 'default',
+                                            address_type: 'mixed',
+                                            derivation_path: '',
+                                            addresses
+                                        }
+                                    ];
+                                }
+                            } else if (Array.isArray(response)) {
+                                processedAccounts = response.map(
+                                    (account: any) => {
+                                        const processedAccount: any = {
+                                            name: account.name || 'default',
+                                            address_type:
+                                                account.address_type ||
+                                                'bech32',
+                                            derivation_path:
+                                                account.derivation_path || '',
+                                            addresses: []
+                                        };
+
+                                        // Processing addresses - these might be in bech32/p2tr format
+                                        if (Array.isArray(account.addresses)) {
+                                            processedAccount.addresses =
+                                                this.processAddresses(
+                                                    account.addresses
+                                                );
+                                        }
+
+                                        return processedAccount;
+                                    }
+                                );
+                            }
+
+                            // account_with_addresses format (standard LND)
+                            else if (
+                                response &&
+                                response.account_with_addresses
+                            ) {
+                                processedAccounts =
+                                    response.account_with_addresses.map(
+                                        (account: any) => {
+                                            const processedAccount = {
+                                                ...account
+                                            };
+
+                                            if (
+                                                Array.isArray(account.addresses)
+                                            ) {
+                                                processedAccount.addresses =
+                                                    this.processAddresses(
+                                                        account.addresses
+                                                    );
+                                            }
+
+                                            return processedAccount;
+                                        }
+                                    );
+                            } else {
+                                // Empty or invalid response
+                                console.log(
+                                    'UTXOsStore: Invalid or empty address response'
+                                );
+                                processedAccounts = [];
+                                this.loadingAddressesError =
+                                    'Invalid address format received';
+                            }
+
+                            this.accountsWithAddresses = processedAccounts;
+                        } catch (error: any) {
+                            console.error(
+                                'UTXOsStore: Error processing addresses:',
+                                error
+                            );
+                            this.loadingAddressesError =
+                                'Error processing addresses: ' +
+                                error.toString();
+                            this.accountsWithAddresses = [];
+                        }
+
                         this.loadingAddresses = false;
                     });
                     resolve(this.accountsWithAddresses);
@@ -345,5 +435,30 @@ export default class UTXOsStore {
                     reject();
                 });
         });
+    };
+
+    private processAddress = (addr: any): any => {
+        const addressValue = addressUtils.extractAddressValue(addr);
+
+        if (!addressValue) {
+            return null;
+        }
+
+        return {
+            address: addressValue,
+            is_internal: addr.is_internal || false,
+            balance: addr.balance || '0',
+            derivation_path: addr.derivation_path || '',
+            public_key: addr.public_key || '',
+            // Store original data for reference
+            original: addr
+        };
+    };
+
+    private processAddresses = (addresses: any[]): any[] => {
+        return addresses
+            .filter((addr: any) => addr)
+            .map(this.processAddress)
+            .filter((addr: any) => addr !== null);
     };
 }

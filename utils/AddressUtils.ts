@@ -483,20 +483,47 @@ class AddressUtils {
         throw new Error('Unknown scriptPubKey format');
     };
 
+    extractAddressValue = (addr: any): string | undefined => {
+        if (!addr) return undefined;
+
+        if (addr.address) return addr.address;
+
+        if (addr.bech32) return addr.bech32;
+        if (addr.p2tr) return addr.p2tr;
+
+        if (typeof addr === 'string') return addr;
+
+        return undefined;
+    };
+
     getAddressType = (address: string): string => {
-        // Address type detection based on LND's supported types
-        if (address.startsWith('bc1q')) return 'P2WPKH (Segwit)';
-        if (address.startsWith('bc1p')) return 'P2TR (Taproot)';
-        if (address.startsWith('3')) return 'NP2WKH (Nested Segwit)';
-        if (address.startsWith('1')) return 'P2PKH (Legacy)';
-        if (address.startsWith('tb1q')) return 'P2WPKH (Testnet Segwit)';
-        if (address.startsWith('tb1p')) return 'P2TR (Testnet Taproot)';
-        if (address.startsWith('2')) return 'NP2WKH (Testnet Nested Segwit)';
-        if (address.startsWith('m') || address.startsWith('n'))
-            return 'P2PKH (Testnet Legacy)';
-        if (address.startsWith('bcrt1q')) return 'P2WPKH (Regtest Segwit)';
-        if (address.startsWith('bcrt1p')) return 'P2TR (Regtest Taproot)';
-        return 'Unknown';
+        if (!address || typeof address !== 'string') {
+            console.warn(
+                'Invalid address provided to getAddressType:',
+                address
+            );
+            return 'Unknown';
+        }
+
+        try {
+            // Address type detection based on LND's supported types
+            if (address.startsWith('bc1q')) return 'P2WPKH (Segwit)';
+            if (address.startsWith('bc1p')) return 'P2TR (Taproot)';
+            if (address.startsWith('3')) return 'NP2WKH (Nested Segwit)';
+            if (address.startsWith('1')) return 'P2PKH (Legacy)';
+            if (address.startsWith('tb1q')) return 'P2WPKH (Testnet Segwit)';
+            if (address.startsWith('tb1p')) return 'P2TR (Testnet Taproot)';
+            if (address.startsWith('2'))
+                return 'NP2WKH (Testnet Nested Segwit)';
+            if (address.startsWith('m') || address.startsWith('n'))
+                return 'P2PKH (Testnet Legacy)';
+            if (address.startsWith('bcrt1q')) return 'P2WPKH (Regtest Segwit)';
+            if (address.startsWith('bcrt1p')) return 'P2TR (Regtest Taproot)';
+            return 'Unknown';
+        } catch (err) {
+            console.warn('Error in getAddressType:', err);
+            return 'Unknown';
+        }
     };
 }
 
