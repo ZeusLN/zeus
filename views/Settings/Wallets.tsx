@@ -314,7 +314,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     implementation;
                                                 if (
                                                     currentImplementation ===
-                                                    'lightning-node-connect'
+                                                        'lightning-node-connect' ||
+                                                    currentImplementation ===
+                                                        'lnsocket'
                                                 ) {
                                                     BackendUtils.disconnect();
                                                 }
