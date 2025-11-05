@@ -5,13 +5,14 @@ import {
     TouchableOpacity,
     Image,
     StyleSheet,
-    FlatListProps
+    FlatListProps,
+    Platform
 } from 'react-native';
 
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { StackNavigationProp } from '@react-navigation/stack';
 import cloneDeep from 'lodash/cloneDeep';
 
 import Button from '../../components/Button';
@@ -28,8 +29,8 @@ import SettingsStore, {
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { sleep } from '../../utils/SleepUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
@@ -43,7 +44,7 @@ interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
 
 interface NodesProps {
     nodes: any[];
-    navigation: NativeStackNavigationProp<any, any>;
+    navigation: StackNavigationProp<any, any>;
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
@@ -51,10 +52,6 @@ interface NodesProps {
     route?: any;
 }
 
-interface RouteParams {
-    fromStartup?: boolean;
-    shareIntentData?: any;
-}
 interface NodesState {
     nodes: any[];
     selectedNode: number | null;
@@ -81,10 +78,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentDidMount() {
         this.refreshSettings();
 
-        const routeParams = this.props.route?.params as RouteParams;
-
         // Check if we're coming from startup based on route param
-        if (routeParams?.fromStartup) {
+        if (this.props.route?.params?.fromStartup) {
             this.setState({
                 fromStartup: true,
                 isSelecting: true, // Hide back button when coming from startup
@@ -128,38 +123,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         }
     };
 
-    handleJustDeletedWallet = async () => {
-        const { SettingsStore } = this.props;
-        const { settings, updateSettings, setConnectingStatus } = SettingsStore;
-
-        if (!settings?.justDeletedWallet) return;
-        setConnectingStatus(true);
-        await sleep(2000);
-        const { nodes, selectedNode } = settings;
-        const newSelectedNode = nodes?.[selectedNode ?? 0];
-        if (newSelectedNode) {
-            try {
-                console.log(
-                    'Wallet deleted - restarting selected node:',
-                    selectedNode
-                );
-                await updateSettings({ justDeletedWallet: false });
-                this.navigateAfterWalletSelection();
-            } catch (error) {
-                console.error('Error restarting after wallet deletion:', error);
-                setConnectingStatus(false);
-                await updateSettings({ justDeletedWallet: false });
-            }
-        } else {
-            await updateSettings({ justDeletedWallet: false });
-        }
-    };
-
     async refreshSettings() {
         this.setState({
             loading: true
         });
-
         await this.props.SettingsStore.getSettings().then((settings) => {
             // If we're in startup mode, we don't want to set a selected node
             // Otherwise, use the one from settings
@@ -194,8 +161,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             setConnectingStatus,
             setInitialStart,
             implementation,
+            embeddedLndStarted,
             initialStart
-        } = SettingsStore;
+        }: any = SettingsStore;
 
         const implementationDisplayValue: { [key: string]: string } = {};
 
@@ -254,55 +222,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             });
         };
 
-        const onWalletPress = async (
-            nodeIndex: number,
-            nodeActive: boolean
-        ) => {
-            if (SettingsStore.settings?.justDeletedWallet) {
-                await this.handleJustDeletedWallet();
-                return;
-            }
-            if (initialStart) {
-                setInitialStart(false);
-            }
-            if (nodeActive) {
-                // if already on selected node, just pop to
-                // the Wallet view, skip connecting procedures
-                this.navigateAfterWalletSelection();
-            } else {
-                // Immediately set isSelecting to true to hide back button
-                // This will prevent the back button from appearing
-                // even after fromStartup is set to false
-                this.setState({
-                    isSelecting: true
-                });
-
-                const currentImplementation = implementation;
-                if (currentImplementation === 'lightning-node-connect') {
-                    BackendUtils.disconnect();
-                }
-
-                // Store startup state before updating settings
-                const wasFromStartup = this.state.fromStartup;
-
-                // If in startup mode, update local state
-                if (wasFromStartup) {
-                    this.setState({
-                        fromStartup: false,
-                        selectedNode: nodeIndex // Highlight the selected wallet immediately
-                    });
-                }
-
-                await updateSettings({
-                    nodes,
-                    selectedNode: nodeIndex
-                }).then(() => {
-                    setConnectingStatus(true);
-                    this.navigateAfterWalletSelection();
-                });
-            }
-        };
-
         return (
             <Screen>
                 <Header
@@ -318,22 +237,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    onBack={
-                        SettingsStore.settings?.justDeletedWallet
-                            ? async () => {
-                                  await this.handleJustDeletedWallet();
-                              }
-                            : undefined
-                    }
-                    navigateBackOnBackPress={
-                        !SettingsStore.settings?.justDeletedWallet
-                    }
                     rightComponent={<AddButton />}
                     navigation={navigation}
                 />
                 {loading && <LoadingIndicator />}
                 {!loading && !!nodes && nodes.length > 0 && (
-                    <View style={{ flex: 1 }}>
+                    <View style={{ marginBottom: 50 }}>
                         <TypedDragList
                             onReordered={onReordered}
                             data={nodes}
@@ -366,13 +275,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         item.implementation
                                     ];
 
-                                if (item.implementation === 'embedded-lnd') {
-                                    if (item.embeddedLndNetwork) {
-                                        nodeSubtitle += ` (${item.embeddedLndNetwork})`;
-                                    }
-                                    if (!item.isSqlite) {
-                                        nodeSubtitle += ' [Bolt]';
-                                    }
+                                if (
+                                    item.implementation === 'embedded-lnd' &&
+                                    item.embeddedLndNetwork
+                                ) {
+                                    nodeSubtitle += ` (${item.embeddedLndNetwork})`;
                                 }
 
                                 return (
@@ -387,9 +294,68 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                   ) || themeColor('secondary')
                                                 : 'transparent'
                                         }}
-                                        onPress={() =>
-                                            onWalletPress(index, nodeActive)
-                                        }
+                                        onPress={async () => {
+                                            if (initialStart) {
+                                                setInitialStart(false);
+                                            }
+                                            if (nodeActive) {
+                                                // if already on selected node, just pop to
+                                                // the Wallet view, skip connecting procedures
+                                                this.navigateAfterWalletSelection();
+                                            } else {
+                                                // Immediately set isSelecting to true to hide back button
+                                                // This will prevent the back button from appearing
+                                                // even after fromStartup is set to false
+                                                this.setState({
+                                                    isSelecting: true
+                                                });
+
+                                                const currentImplementation =
+                                                    implementation;
+                                                if (
+                                                    currentImplementation ===
+                                                        'lightning-node-connect' ||
+                                                    currentImplementation ===
+                                                        'lnsocket'
+                                                ) {
+                                                    BackendUtils.disconnect();
+                                                }
+
+                                                // Store startup state before updating settings
+                                                const wasFromStartup =
+                                                    this.state.fromStartup;
+
+                                                // If in startup mode, update local state
+                                                if (wasFromStartup) {
+                                                    this.setState({
+                                                        fromStartup: false,
+                                                        selectedNode: index // Highlight the selected wallet immediately
+                                                    });
+                                                }
+
+                                                await updateSettings({
+                                                    nodes,
+                                                    selectedNode: index
+                                                }).then(() => {
+                                                    // Never show restart needed if coming from startup
+                                                    if (
+                                                        item.implementation ===
+                                                            'embedded-lnd' &&
+                                                        Platform.OS ===
+                                                            'android' &&
+                                                        embeddedLndStarted &&
+                                                        !wasFromStartup // Skip restart if coming from startup
+                                                    ) {
+                                                        restartNeeded(true);
+                                                    } else {
+                                                        setConnectingStatus(
+                                                            true
+                                                        );
+                                                        this.navigateAfterWalletSelection();
+                                                    }
+                                                });
+                                            }
+                                        }}
                                     >
                                         <ListItem
                                             containerStyle={{
@@ -416,8 +382,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
                                             <ListItem.Content>
                                                 <ListItem.Title
-                                                    numberOfLines={1}
-                                                    ellipsizeMode="tail"
                                                     style={{
                                                         color: nodeActive
                                                             ? themeColor(
@@ -430,7 +394,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                             'PPNeueMontreal-Book'
                                                     }}
                                                 >
-                                                    {NodeTitle(item)}
+                                                    {NodeTitle(item, 32)}
                                                 </ListItem.Title>
                                                 <ListItem.Subtitle
                                                     style={{
