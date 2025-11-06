@@ -299,6 +299,7 @@ export default class ContactDetails extends React.Component<
                             contactDataWithoutPhoto
                         )}`;
                         navigation.navigate('ContactQR', {
+                            fromContactDetailsView: true,
                             contactData: zeusContactData,
                             addressData: [
                                 ...addPrefixToAddresses(
