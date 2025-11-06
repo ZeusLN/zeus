@@ -7,14 +7,21 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import Swap from '../models/Swap';
+import { LSPOrderState, LSPS1Activity, LSPS7Activity } from '../models/LSP';
 
-import { LSPOrderState } from '../models/LSP';
+type ActivityItem =
+    | Invoice
+    | Payment
+    | Transaction
+    | Swap
+    | LSPS1Activity
+    | LSPS7Activity;
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<any>,
+        activities: Array<ActivityItem>,
         filter: Filter
-    ): Array<any> {
+    ): Array<ActivityItem> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -77,7 +84,7 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (activity.model !== 'LSPS1Order') return true;
 
-                const state = activity.state as LSPOrderState;
+                const state = (activity as LSPS1Activity).state;
                 if (
                     filter.lsps1State[LSPOrderState.CREATED] &&
                     state === LSPOrderState.CREATED
@@ -106,7 +113,7 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (activity.model !== 'LSPS7Order') return true;
 
-                const state = activity.state as LSPOrderState;
+                const state = (activity as LSPS7Activity).state;
                 if (
                     filter.lsps7State[LSPOrderState.CREATED] &&
                     state === LSPOrderState.CREATED
@@ -258,15 +265,16 @@ class ActivityFilterUtils {
             const memoFilter = filter.memo.toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
-                let note = activity.getNote
-                    ? activity.getNote.toLowerCase()
-                    : '';
+                const note =
+                    'getNote' in activity && activity.getNote
+                        ? activity.getNote.toLowerCase()
+                        : '';
                 let memo = '';
                 if (activity instanceof Invoice) {
                     memo = activity.memo ? activity.memo.toLowerCase() : '';
                 } else if (activity instanceof Payment) {
                     memo = activity.getMemo
-                        ? activity.getMemo.toLowerCase()
+                        ? (activity.getMemo as string).toLowerCase()
                         : '';
                 }
                 return note.includes(memoFilter) || memo.includes(memoFilter);
