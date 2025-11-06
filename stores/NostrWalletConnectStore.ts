@@ -42,6 +42,7 @@ import * as nip04 from '@nostr/tools/nip04';
 import bolt11 from 'bolt11';
 import { Platform, NativeModules } from 'react-native';
 import { Notifications } from 'react-native-notifications';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -81,7 +82,6 @@ const RATE_LIMIT_MS = 500;
 const HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
 const CONNECTION_RETRY_INTERVAL_MS = 60000;
 const MAX_RELAY_ATTEMPTS = 5;
-const FETCH_TIMEOUT_MS = 10000;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
 const MILLISATS_PER_SAT = 1000;
@@ -2510,29 +2510,23 @@ export default class NostrWalletConnectStore {
     ): Promise<RestoreResponse | void> {
         if (this.activeConnections.length === 0) return;
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(
-                () => controller.abort(),
-                FETCH_TIMEOUT_MS
-            );
-            const response = await fetch(
+            const response = await ReactNativeBlobUtil.config({
+                trusty: true
+            }).fetch(
+                'GET',
                 `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/restore?device_token=${encodeURIComponent(
                     deviceToken
                 )}`,
-                {
-                    method: 'GET',
-                    headers: { 'Content-Type': 'application/json' },
-                    signal: controller.signal
-                }
+                { 'Content-Type': 'application/json' }
             );
-            clearTimeout(timeoutId);
-            if (!response.ok) {
+            if (response.info().status !== 200) {
                 throw new Error(
-                    `HTTP error ${response.status}: ${await response.text()}`
+                    `HTTP error ${
+                        response.info().status
+                    }: ${await response.text()}`
                 );
             }
-
-            return await response.json();
+            return await JSON.parse(response.data);
         } catch (error) {
             throw error;
         }
@@ -2709,7 +2703,7 @@ export default class NostrWalletConnectStore {
 
     // IOS: handoff request to notification server
     @action
-    public sendHandoffRequest = async (): Promise<boolean | void> => {
+    public sendHandoffRequest = async (): Promise<void> => {
         if (Platform.OS !== 'ios') return;
         if (this.activeConnections.length === 0) return;
         try {
@@ -2718,7 +2712,7 @@ export default class NostrWalletConnectStore {
                 console.warn(
                     'IOS NWC: Cannot send handoff request - device token not available'
                 );
-                return false;
+                return;
             }
             const handoffData = {
                 device_token: deviceToken,
@@ -2728,35 +2722,26 @@ export default class NostrWalletConnectStore {
                     name: conn.name
                 }))
             };
-            const controller = new AbortController();
-            const timeoutId = setTimeout(
-                () => controller.abort(),
-                FETCH_TIMEOUT_MS
-            );
-            const response = await fetch(
+            const response = await ReactNativeBlobUtil.config({
+                trusty: true
+            }).fetch(
+                'POST',
                 `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/handoff`,
                 {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(handoffData),
-                    signal: controller.signal
-                }
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify(handoffData)
             );
-            clearTimeout(timeoutId);
-            if (response.ok) {
-                console.info('IOS NWC: Handoff request sent successfully');
-                return true;
+            if (response.info().status !== 200) {
+                console.warn(
+                    'IOS NWC: Handoff request failed with status:',
+                    response.info().status
+                );
+                return;
             }
-            console.warn(
-                'IOS NWC: Handoff request failed with status:',
-                response.status
-            );
-            return false;
+            console.info('IOS NWC: Handoff request sent successfully');
         } catch (error) {
             console.error('IOS NWC: Failed to send handoff request:', error);
-            return false;
         }
     };
 
