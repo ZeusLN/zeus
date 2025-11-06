@@ -2,8 +2,14 @@ jest.mock('../stores/ChannelBackupStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('react-native-notifications', () => ({}));
 
-import { invoicesStore } from '../stores/Stores';
+import {
+    invoicesStore,
+    settingsStore,
+    transactionsStore
+} from '../stores/Stores';
 import handleAnything from './handleAnything';
+import AutoPayUtils from './AutoPayUtils';
+import BackendUtils from './BackendUtils';
 
 let mockProcessBIP21Uri = jest.fn();
 let mockIsValidBitcoinAddress = false;
@@ -11,6 +17,7 @@ let mockIsValidLightningPubKey = false;
 let mockIsValidLightningPaymentRequest = false;
 let mockSupportsOnchainSends = true;
 let mockGetLnurlParams = {};
+let mockSupportsCashuWallet = false;
 
 jest.mock('./AddressUtils', () => ({
     processBIP21Uri: (...args: string[]) => mockProcessBIP21Uri(...args),
@@ -28,12 +35,28 @@ jest.mock('./TorUtils', () => ({}));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => false,
-    supportsCashuWallet: () => false
+    supportsCashuWallet: () => mockSupportsCashuWallet,
+    decodePaymentRequest: jest.fn()
+}));
+jest.mock('./AutoPayUtils', () => ({
+    shouldTryAutoPay: jest.fn(),
+    checkAutoPayAndProcess: jest.fn()
 }));
 jest.mock('../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
     invoicesStore: { getPayReq: jest.fn() },
-    settingsStore: { settings: { locale: 'en' } }
+    settingsStore: {
+        settings: {
+            locale: 'en',
+            ecash: { enableCashu: false },
+            payments: {
+                autoPayEnabled: false,
+                autoPayThreshold: 0,
+                enableDonations: false
+            }
+        }
+    },
+    transactionsStore: { sendPayment: jest.fn() }
 }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('react-native-encrypted-storage', () => ({}));
@@ -242,6 +265,137 @@ describe('handleAnything', () => {
             const result = await handleAnything(data, undefined, true);
 
             expect(result).toEqual(true);
+        });
+    });
+
+    describe('Auto-pay integration', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            mockSupportsCashuWallet = false;
+            mockIsValidLightningPaymentRequest = true;
+            mockProcessBIP21Uri.mockImplementation((data) => ({ value: data }));
+            (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+                num_satoshis: '1500',
+                value: '1500'
+            });
+        });
+
+        it('should process auto-pay for valid Lightning invoice when enabled', async () => {
+            const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
+
+            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
+
+            (settingsStore.settings.payments as any).autoPayEnabled = true;
+            (settingsStore.settings.payments as any).autoPayThreshold = 2000;
+
+            const result = await handleAnything(invoice);
+
+            expect(result).toEqual([
+                'SendingLightning',
+                {
+                    enableDonations: false
+                }
+            ]);
+            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
+            expect(transactionsStore.sendPayment).toHaveBeenCalledWith({
+                payment_request: invoice
+            });
+        });
+
+        it('should fallback to PaymentRequest when auto-pay threshold is exceeded', async () => {
+            const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
+
+            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
+
+            (settingsStore.settings.payments as any).autoPayEnabled = true;
+            (settingsStore.settings.payments as any).autoPayThreshold = 1000;
+
+            const result = await handleAnything(invoice);
+
+            expect(result).toEqual(['PaymentRequest', {}]);
+            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
+            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+        });
+
+        it('should skip auto-pay when AutoPayUtils.shouldTryAutoPay returns false', async () => {
+            const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
+
+            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(false);
+
+            const result = await handleAnything(invoice);
+
+            expect(result).toEqual(['PaymentRequest', {}]);
+            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
+            expect(BackendUtils.decodePaymentRequest).not.toHaveBeenCalled();
+            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+        });
+
+        it('should handle auto-pay errors gracefully', async () => {
+            const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
+            const error = new Error('Decode failed');
+
+            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
+
+            (BackendUtils.decodePaymentRequest as jest.Mock).mockRejectedValue(
+                error
+            );
+
+            const result = await handleAnything(invoice);
+
+            expect(result).toEqual(['PaymentRequest', {}]);
+            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
+            expect(BackendUtils.decodePaymentRequest).toHaveBeenCalledWith([
+                invoice
+            ]);
+            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+        });
+
+        it('should not interfere with non-lightning addresses', async () => {
+            const bitcoinAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+            mockIsValidBitcoinAddress = true;
+            mockIsValidLightningPaymentRequest = false;
+            mockProcessBIP21Uri.mockReturnValue({ value: bitcoinAddress });
+
+            const result = await handleAnything(bitcoinAddress);
+
+            expect(result).toEqual([
+                'Send',
+                {
+                    destination: bitcoinAddress,
+                    transactionType: 'On-chain',
+                    isValid: true
+                }
+            ]);
+            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
+            expect(AutoPayUtils.checkAutoPayAndProcess).not.toHaveBeenCalled();
+        });
+
+        it('should return true from clipboard for Lightning invoices', async () => {
+            const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
+
+            const result = await handleAnything(invoice, undefined, true);
+
+            expect(result).toEqual(true);
+            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
+            expect(BackendUtils.decodePaymentRequest).not.toHaveBeenCalled();
+            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+        });
+
+        it('should handle auto-pay when not disabled by settings', async () => {
+            const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
+
+            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
+
+            (settingsStore.settings.payments as any).autoPayEnabled = false;
+
+            const result = await handleAnything(invoice);
+
+            expect(result).toEqual(['PaymentRequest', {}]);
+            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
+            expect(BackendUtils.decodePaymentRequest).toHaveBeenCalledWith([
+                invoice
+            ]);
+            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
     });
 });
