@@ -2,9 +2,15 @@ import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
+import {
+    nodeInfoStore,
+    invoicesStore,
+    settingsStore,
+    transactionsStore
+} from '../stores/Stores';
 
 import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
+import AutoPayUtils from './AutoPayUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
@@ -13,6 +19,7 @@ import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
+import Invoice from '../models/Invoice';
 import CashuToken from '../models/CashuToken';
 
 // Nostr
@@ -23,6 +30,46 @@ import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
+
+const checkAutoPayAndRedirect = async (paymentRequest: string) => {
+    if (AutoPayUtils.shouldTryAutoPay(paymentRequest)) {
+        try {
+            const decodedInvoice = await BackendUtils.decodePaymentRequest([
+                paymentRequest
+            ]);
+            console.log('[AutoPayUtils] : decoded invoice', decodedInvoice);
+            if (decodedInvoice) {
+                const invoiceModel = new Invoice(decodedInvoice);
+                const amount = invoiceModel.getAmount;
+
+                const { payments } = settingsStore.settings;
+                const autoPayThreshold = payments?.autoPayThreshold || 0;
+
+                if (
+                    payments?.autoPayEnabled &&
+                    amount > 0 &&
+                    amount <= autoPayThreshold
+                ) {
+                    transactionsStore.sendPayment({
+                        payment_request: paymentRequest
+                    });
+
+                    return [
+                        'SendingLightning',
+                        {
+                            enableDonations: payments?.enableDonations || false
+                        }
+                    ];
+                }
+            }
+        } catch (error) {
+            console.error('Auto-pay check failed:', error);
+        }
+    }
+
+    // Auto-pay didn't trigger or failed, continue with normal flow
+    return ['PaymentRequest', {}];
+};
 
 const attemptNip05Lookup = async (data: string) => {
     try {
@@ -310,7 +357,7 @@ const handleAnything = async (
                     ];
                 } else {
                     await invoicesStore.getPayReq(lightning);
-                    return ['PaymentRequest', {}];
+                    return await checkAutoPayAndRedirect(lightning);
                 }
             }
         }
@@ -365,7 +412,7 @@ const handleAnything = async (
             ];
         } else {
             await invoicesStore.getPayReq(value || lightning);
-            return ['PaymentRequest', {}];
+            return await checkAutoPayAndRedirect(value || lightning);
         }
     } else if (
         !hasAt &&
