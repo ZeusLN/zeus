@@ -23,16 +23,19 @@ interface ContactQRProps {
         {
             contactData: string;
             addressData: string[];
+            fromContactDetailsView?: boolean;
         }
     >;
 }
 
 const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     const [addressData, setAddressData] = useState(['']);
+    const [fromContactDetailsView, setFromContactDetailsView] = useState(false);
     const { navigation, route } = props;
-
     useEffect(() => {
-        const { contactData, addressData } = route.params ?? {};
+        const { contactData, addressData, fromContactDetailsView } =
+            route.params ?? {};
+        setFromContactDetailsView(fromContactDetailsView ?? false);
         let parsedContact: any = null;
 
         if (
@@ -75,13 +78,12 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     const progressValue = useSharedValue<number>(0);
 
     screenWidth = Dimensions.get('window').width;
-
     const renderItem = ({ item, index }: { item: any; index: number }) => (
         <CollapsedQR
             showShare={true}
             value={item}
             expanded
-            hideText={index === 0}
+            hideText={fromContactDetailsView && index === 0}
             iconOnly={true}
         />
     );
