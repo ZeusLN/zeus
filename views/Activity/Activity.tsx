@@ -51,8 +51,6 @@ import { SwapType } from '../../models/Swap';
 
 import { LSPOrderState } from '../../models/LSP';
 
-import Storage from '../../storage';
-
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;

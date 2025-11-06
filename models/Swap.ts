@@ -1,6 +1,5 @@
 import { computed } from 'mobx';
 import BaseModel from './BaseModel';
-import { notesStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 
@@ -125,13 +124,5 @@ export default class Swap extends BaseModel {
             return this.invoice;
         }
         return undefined;
-    }
-
-    @computed public get getNoteKey(): string {
-        return `note-${this.id}`;
-    }
-
-    @computed public get getNote(): string {
-        return notesStore.notes[this.getNoteKey] || '';
     }
 }
