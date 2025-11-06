@@ -7,15 +7,9 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 import Swap from '../models/Swap';
-import { LSPOrderState, LSPS1Activity, LSPS7Activity } from '../models/LSP';
+import { LSPActivity, LSPOrderState } from '../models/LSP';
 
-type ActivityItem =
-    | Invoice
-    | Payment
-    | Transaction
-    | Swap
-    | LSPS1Activity
-    | LSPS7Activity;
+type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -84,7 +78,7 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (activity.model !== 'LSPS1Order') return true;
 
-                const state = (activity as LSPS1Activity).state;
+                const state = (activity as LSPActivity).state;
                 if (
                     filter.lsps1State[LSPOrderState.CREATED] &&
                     state === LSPOrderState.CREATED
@@ -113,7 +107,7 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter((activity) => {
                 if (activity.model !== 'LSPS7Order') return true;
 
-                const state = (activity as LSPS7Activity).state;
+                const state = (activity as LSPActivity).state;
                 if (
                     filter.lsps7State[LSPOrderState.CREATED] &&
                     state === LSPOrderState.CREATED

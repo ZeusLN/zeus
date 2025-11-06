@@ -9,7 +9,7 @@ import Swap, { SwapState } from './../models/Swap';
 //on-chain
 import Transaction from './../models/Transaction';
 
-import { LSPOrderState, LSPS1Activity, LSPS7Activity } from './../models/LSP';
+import { LSPActivity, LSPOrderState } from './../models/LSP';
 
 import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
@@ -45,13 +45,7 @@ const createSwapStateRecord = (
     }, {} as Record<SwapState, boolean>);
 };
 
-type ActivityItem =
-    | Invoice
-    | Payment
-    | Transaction
-    | Swap
-    | LSPS1Activity
-    | LSPS7Activity;
+type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
 
 export interface Filter {
     [index: string]: any;
