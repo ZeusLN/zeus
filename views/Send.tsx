@@ -57,6 +57,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { getUnformattedAmount } from '../utils/AmountUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
@@ -142,7 +143,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     constructor(props: SendProps) {
         super(props);
-        const { route, UnitsStore } = props;
+        const { route } = props;
         const {
             destination,
             satAmount,
@@ -160,7 +161,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         let amount;
         if (satAmount) {
             amount =
-                UnitsStore.getUnformattedAmount({
+                getUnformattedAmount({
                     sats: satAmount
                 }).amount || satAmount;
         }

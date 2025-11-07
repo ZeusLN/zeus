@@ -16,17 +16,6 @@ type Units = 'sats' | 'BTC' | 'fiat';
 export const LEGACY_UNIT_KEY = 'zeus-units';
 export const UNIT_KEY = 'zeus-units-v2';
 
-interface ValueDisplayProps {
-    amount: string;
-    unit: Units;
-    symbol?: string;
-    negative?: boolean;
-    plural?: boolean;
-    rtl?: boolean;
-    space?: boolean;
-    error?: string;
-}
-
 export default class UnitsStore {
     @observable public units: Units | string = 'sats';
     settingsStore: SettingsStore;
@@ -67,96 +56,6 @@ export default class UnitsStore {
     };
 
     public resetUnits = () => (this.units = 'sats');
-
-    @action
-    public getUnformattedAmount = ({
-        sats = 0,
-        fixedUnits
-    }: {
-        sats?: string | number;
-        fixedUnits?: string;
-    }): ValueDisplayProps => {
-        const { settings } = this.settingsStore;
-        const { fiat, display } = settings;
-        const showAllDecimalPlaces: boolean =
-            (display && display.showAllDecimalPlaces) || false;
-        const units = fixedUnits || this.units;
-
-        const satsNumber = Number(sats);
-        const negative = satsNumber < 0;
-        const absValueSats = Math.abs(satsNumber);
-
-        if (units === 'BTC') {
-            return {
-                amount: FeeUtils.toFixed(
-                    absValueSats / SATS_PER_BTC,
-                    showAllDecimalPlaces
-                ),
-                unit: 'BTC',
-                negative,
-                space: false
-            };
-        } else if (units === 'sats') {
-            return {
-                amount: absValueSats.toString(),
-                unit: 'sats',
-                negative,
-                plural: !(satsNumber === 1 || satsNumber === -1)
-            };
-        } else {
-            const currency = fiat;
-
-            // TODO: is this the right place to catch this?
-            if (!currency) {
-                return {
-                    amount: 'Disabled',
-                    unit: 'fiat',
-                    symbol: '$'
-                };
-            }
-
-            if (this.fiatStore.fiatRates) {
-                const fiatEntry = this.fiatStore.fiatRates.filter(
-                    (entry: any) => entry.code === fiat
-                )[0];
-
-                if (!fiatEntry?.rate) {
-                    return {
-                        amount: 'Disabled',
-                        unit: 'fiat',
-                        error: 'Rate for selected currency not available'
-                    };
-                }
-
-                const rate = (fiatEntry && fiatEntry.rate) || 0;
-                const { symbol, space, rtl, decimalPlaces } =
-                    this.fiatStore.getSymbol();
-
-                const decimals =
-                    decimalPlaces !== undefined ? decimalPlaces : 2;
-
-                const amount = (
-                    FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
-                ).toFixed(decimals);
-
-                return {
-                    amount,
-                    unit: 'fiat',
-                    symbol,
-                    negative,
-                    plural: false,
-                    rtl,
-                    space
-                };
-            } else {
-                return {
-                    amount: 'Disabled',
-                    unit: 'fiat',
-                    error: 'Error fetching fiat rates'
-                };
-            }
-        }
-    };
 
     @action
     public getAmountFromSats = (
