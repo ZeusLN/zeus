@@ -6,6 +6,18 @@ import {
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
 
+jest.mock('./LocaleUtils', () => ({
+    localeString: (key: string) => {
+        const translations: { [key: string]: string } = {
+            'general.disabled': 'Disabled',
+            'general.fiatRateNotAvailable':
+                'Rate for selected currency not available',
+            'general.errorFetchingFiatRates': 'Error fetching fiat rates'
+        };
+        return translations[key] || key;
+    }
+}));
+
 jest.mock('../stores/Stores', () => {
     const mockUnitsStore = { units: 'sats' };
     const mockSettingsStore = {
