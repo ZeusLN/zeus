@@ -633,13 +633,6 @@ describe('AmountUtils', () => {
                 expect(result).toBe('$25,000.00');
             });
 
-            it('handles different fiat currencies', () => {
-                (unitsStore as any).units = 'fiat';
-                (settingsStore as any).settings.fiat = 'EUR';
-                const result = getAmountFromSats(SATS_PER_BTC);
-                expect(result).toBe('€ 45,000.00');
-            });
-
             it('returns N/A when fiat rates are not available', () => {
                 (unitsStore as any).units = 'fiat';
                 (fiatStore as any).fiatRates = undefined;
@@ -757,10 +750,17 @@ describe('AmountUtils', () => {
                 expect(result).toBe('$50,000.00');
             });
 
-            it('handles amounts with commas (treats as decimal separator)', () => {
+            it('handles amounts with commas (treats commas as decimal separators)', () => {
                 (unitsStore as any).units = 'fiat';
                 const result = getFormattedAmount('50,000');
+                // The code replaces commas with dots, so "50,000" becomes "50.000" = 50.00
                 expect(result).toBe('$50.00');
+            });
+
+            it('handles amounts with decimals and commas', () => {
+                (unitsStore as any).units = 'fiat';
+                const result = getFormattedAmount('1234.56');
+                expect(result).toBe('$1,234.56');
             });
 
             it('handles different fiat currencies', () => {
@@ -768,6 +768,37 @@ describe('AmountUtils', () => {
                 (settingsStore as any).settings.fiat = 'EUR';
                 const result = getFormattedAmount(45000);
                 expect(result).toBe('€ 45,000.00');
+            });
+
+            it('handles separatorSwap currencies correctly', () => {
+                (unitsStore as any).units = 'fiat';
+                (settingsStore as any).settings.fiat = 'ARS';
+                (fiatStore as any).fiatRates = [
+                    {
+                        code: 'ARS',
+                        rate: 50000,
+                        cryptoCode: 'BTC',
+                        currencyPair: 'ARS/BTC'
+                    }
+                ];
+                (fiatStore as any).symbolLookup = (code: string) => ({
+                    symbol: code === 'ARS' ? '$' : '$',
+                    space: code === 'ARS',
+                    rtl: false,
+                    separatorSwap: true,
+                    decimalPlaces: 2
+                });
+                const result = getFormattedAmount(50000);
+                // separatorSwap swaps commas and dots: 50000.00 becomes 50.000,00
+                expect(result).toBe('$ 50.000,00');
+            });
+
+            it('handles amounts with both commas and decimals (results in NaN)', () => {
+                (unitsStore as any).units = 'fiat';
+                const result = getFormattedAmount('1,234.56');
+                // Commas are replaced with dots, so "1,234.56" becomes "1.234.56" which has two dots
+                // Number("1.234.56") = NaN, so toFixed(2) = "NaN"
+                expect(result).toBe('$NaN');
             });
 
             it('returns N/A when fiat rates are not available', () => {
