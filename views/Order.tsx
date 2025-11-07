@@ -24,6 +24,7 @@ import TextInput from '../components/TextInput';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { getFormattedAmount } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';
 import { calculateTaxSats, calculateTotalSats } from '../utils/PosUtils';
@@ -367,7 +368,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         }
 
         const receiptFormatAmount = (unitsArg: string, amount: number) => {
-            return this.props.UnitsStore.getFormattedAmount(amount, unitsArg);
+            return getFormattedAmount(amount, unitsArg);
         };
 
         const title =
@@ -396,15 +397,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
             let displayValue;
             if (fiatPriced) {
-                displayValue = this.props.UnitsStore.getFormattedAmount(
-                    unitPrice,
-                    'fiat'
-                );
+                displayValue = getFormattedAmount(unitPrice, 'fiat');
             } else {
-                displayValue = this.props.UnitsStore.getFormattedAmount(
-                    unitPrice,
-                    'sats'
-                );
+                displayValue = getFormattedAmount(unitPrice, 'sats');
             }
             templateHtml += receiptHtmlRow(keyValue, displayValue);
         });
@@ -863,7 +858,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         .toFixed(2)
                                 ) + itemTaxRate;
                         } else {
-                            unitDisplayValue = UnitsStore.getFormattedAmount(
+                            unitDisplayValue = getFormattedAmount(
                                 unitPrice,
                                 'sats'
                             );
