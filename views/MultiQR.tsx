@@ -16,10 +16,10 @@ import Header from '../components/Header';
 import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
-interface ContactQRProps {
+interface MultiQRProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<
-        'ContactQR',
+        'MultiQR',
         {
             contactData: string;
             addressData: string[];
@@ -28,14 +28,11 @@ interface ContactQRProps {
     >;
 }
 
-const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
+const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
     const [addressData, setAddressData] = useState(['']);
-    const [fromContactDetailsView, setFromContactDetailsView] = useState(false);
     const { navigation, route } = props;
     useEffect(() => {
-        const { contactData, addressData, fromContactDetailsView } =
-            route.params ?? {};
-        setFromContactDetailsView(fromContactDetailsView ?? false);
+        const { contactData, addressData } = route.params ?? {};
         let parsedContact: any = null;
 
         if (
@@ -83,7 +80,7 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
             showShare={true}
             value={item}
             expanded
-            hideText={fromContactDetailsView && index === 0}
+            hideText={route.params?.fromContactDetailsView && index === 0}
             iconOnly={true}
         />
     );
@@ -210,4 +207,4 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     );
 };
 
-export default ContactQR;
+export default MultiQR;

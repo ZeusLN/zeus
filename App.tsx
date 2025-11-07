@@ -78,7 +78,7 @@ import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
 import NostrContacts from './views/NostrContacts';
-import ContactQR from './views/ContactQR';
+import MultiQR from './views/MultiQR';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -987,8 +987,8 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ContactQR" // @ts-ignore:next-line
-                                                        component={ContactQR}
+                                                        name="MultiQR" // @ts-ignore:next-line
+                                                        component={MultiQR}
                                                     />
                                                     <Stack.Screen
                                                         name="CurrencyConverter" // @ts-ignore:next-line
