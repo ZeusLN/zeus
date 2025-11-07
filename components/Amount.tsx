@@ -15,7 +15,7 @@ import { localeString, formatInlineNoun } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { formatBitcoinWithSpaces } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import { processSatsAmount } from '../utils/AmountUtils';
+import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 
@@ -349,7 +349,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
 
-        const unformattedAmount = UnitsStore.getUnformattedAmount({
+        const unformattedAmount = getUnformattedAmount({
             sats: value,
             fixedUnits: units
         });

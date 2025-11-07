@@ -1,9 +1,23 @@
-import { settingsStore } from '../stores/Stores';
-import { numberWithCommas } from './UnitsUtils';
+import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
+import { numberWithCommas, SATS_PER_BTC } from './UnitsUtils';
+import FeeUtils from './FeeUtils';
 
 export interface AmountDisplayResult {
     displayAmount: string;
     shouldShowRounding: boolean;
+}
+
+type Units = 'sats' | 'BTC' | 'fiat';
+
+export interface ValueDisplayProps {
+    amount: string;
+    unit: Units;
+    symbol?: string;
+    negative?: boolean;
+    plural?: boolean;
+    rtl?: boolean;
+    space?: boolean;
+    error?: string;
 }
 
 /**
@@ -61,4 +75,97 @@ export function processSatsAmount(
  */
 export function shouldHideMillisatoshiAmounts(): boolean {
     return !settingsStore?.settings?.display?.showMillisatoshiAmounts;
+}
+
+/**
+ * Converts satoshi amounts to unformatted display values based on the current unit setting
+ * @param sats - The amount in satoshis (string or number)
+ * @param fixedUnits - Optional unit override ('sats', 'BTC', or 'fiat')
+ * @returns Object containing the amount string, unit, and display properties
+ */
+export function getUnformattedAmount({
+    sats = 0,
+    fixedUnits
+}: {
+    sats?: string | number;
+    fixedUnits?: string;
+}): ValueDisplayProps {
+    const { settings } = settingsStore;
+    const { fiat, display } = settings;
+    const showAllDecimalPlaces: boolean =
+        (display && display.showAllDecimalPlaces) || false;
+    const effectiveUnits = fixedUnits || unitsStore.units;
+
+    const satsNumber = Number(sats);
+    const negative = satsNumber < 0;
+    const absValueSats = Math.abs(satsNumber);
+
+    if (effectiveUnits === 'BTC') {
+        return {
+            amount: FeeUtils.toFixed(
+                absValueSats / SATS_PER_BTC,
+                showAllDecimalPlaces
+            ),
+            unit: 'BTC',
+            negative,
+            space: false
+        };
+    } else if (effectiveUnits === 'sats') {
+        return {
+            amount: absValueSats.toString(),
+            unit: 'sats',
+            negative,
+            plural: !(satsNumber === 1 || satsNumber === -1)
+        };
+    } else {
+        const currency = fiat;
+
+        // TODO: is this the right place to catch this?
+        if (!currency) {
+            return {
+                amount: 'Disabled',
+                unit: 'fiat',
+                symbol: '$'
+            };
+        }
+
+        if (fiatStore.fiatRates) {
+            const fiatEntry = fiatStore.fiatRates.filter(
+                (entry: any) => entry.code === fiat
+            )[0];
+
+            if (!fiatEntry?.rate) {
+                return {
+                    amount: 'Disabled',
+                    unit: 'fiat',
+                    error: 'Rate for selected currency not available'
+                };
+            }
+
+            const rate = (fiatEntry && fiatEntry.rate) || 0;
+            const { symbol, space, rtl, decimalPlaces } = fiatStore.getSymbol();
+
+            const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
+
+            const amount = (
+                FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
+            ).toFixed(decimals);
+
+            return {
+                amount,
+                unit: 'fiat',
+                symbol,
+                negative,
+                plural: false,
+                rtl,
+                space
+            };
+        } else {
+            return {
+                amount: 'Disabled',
+                unit: 'fiat',
+                error: 'Error fetching fiat rates'
+            };
+        }
+    }
 }
