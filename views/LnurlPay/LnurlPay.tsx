@@ -79,6 +79,23 @@ export default class LnurlPay extends React.Component<
         }
     }
 
+    // ensure the state is reset to show correct units
+    // for when users navs back
+    resetState = () => {
+        this.setState({
+            ...this.stateFromProps(this.props)
+        });
+    };
+
+    componentDidMount() {
+        this.props.navigation.addListener('focus', this.resetState);
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('focus', this.resetState);
+    }
+
     stateFromProps(props: LnurlPayProps) {
         const { route, UnitsStore } = props;
         const { resetUnits, getUnformattedAmount, units } = UnitsStore;
