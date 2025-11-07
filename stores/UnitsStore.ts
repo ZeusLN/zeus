@@ -71,12 +71,10 @@ export default class UnitsStore {
     @action
     public getUnformattedAmount = ({
         sats = 0,
-        fixedUnits,
-        noCommas
+        fixedUnits
     }: {
         sats?: string | number;
         fixedUnits?: string;
-        noCommas?: boolean;
     }): ValueDisplayProps => {
         const { settings } = this.settingsStore;
         const { fiat, display } = settings;
@@ -100,9 +98,7 @@ export default class UnitsStore {
             };
         } else if (units === 'sats') {
             return {
-                amount: noCommas
-                    ? absValueSats.toString()
-                    : numberWithCommas(absValueSats),
+                amount: absValueSats.toString(),
                 unit: 'sats',
                 negative,
                 plural: !(satsNumber === 1 || satsNumber === -1)
@@ -133,7 +129,7 @@ export default class UnitsStore {
                 }
 
                 const rate = (fiatEntry && fiatEntry.rate) || 0;
-                const { symbol, space, rtl, separatorSwap, decimalPlaces } =
+                const { symbol, space, rtl, decimalPlaces } =
                     this.fiatStore.getSymbol();
 
                 const decimals =
@@ -144,11 +140,7 @@ export default class UnitsStore {
                 ).toFixed(decimals);
 
                 return {
-                    amount: noCommas
-                        ? amount
-                        : separatorSwap
-                        ? numberWithDecimals(amount)
-                        : numberWithCommas(amount),
+                    amount,
                     unit: 'fiat',
                     symbol,
                     negative,
