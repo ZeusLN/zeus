@@ -1,6 +1,7 @@
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { numberWithCommas, SATS_PER_BTC } from './UnitsUtils';
 import FeeUtils from './FeeUtils';
+import { localeString } from './LocaleUtils';
 
 export interface AmountDisplayResult {
     displayAmount: string;
@@ -123,7 +124,7 @@ export function getUnformattedAmount({
         // TODO: is this the right place to catch this?
         if (!currency) {
             return {
-                amount: 'Disabled',
+                amount: localeString('general.disabled'),
                 unit: 'fiat',
                 symbol: '$'
             };
@@ -136,9 +137,9 @@ export function getUnformattedAmount({
 
             if (!fiatEntry?.rate) {
                 return {
-                    amount: 'Disabled',
+                    amount: localeString('general.disabled'),
                     unit: 'fiat',
-                    error: 'Rate for selected currency not available'
+                    error: localeString('general.fiatRateNotAvailable')
                 };
             }
 
@@ -162,9 +163,9 @@ export function getUnformattedAmount({
             };
         } else {
             return {
-                amount: 'Disabled',
+                amount: localeString('general.disabled'),
                 unit: 'fiat',
-                error: 'Error fetching fiat rates'
+                error: localeString('general.errorFetchingFiatRates')
             };
         }
     }
