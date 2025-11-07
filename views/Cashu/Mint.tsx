@@ -404,7 +404,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                                 {`${
                                                     typeof info === 'string' &&
                                                     PrivacyUtils.sensitiveValue(
-                                                        info
+                                                        { input: info }
                                                     )
                                                 }`}
                                             </Text>
