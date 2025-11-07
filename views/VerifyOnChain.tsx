@@ -310,7 +310,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
         return (
             <TouchableOpacity
                 onPress={() => {
-                    navigation.navigate('ContactQR', {
+                    navigation.navigate('MultiQR', {
                         addressData: addPrefixToAddresses(addresses, 'bitcoin:')
                     });
                 }}
