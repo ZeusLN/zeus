@@ -23,6 +23,7 @@ export interface ValueDisplayProps {
     rtl?: boolean;
     space?: boolean;
     error?: string;
+    separatorSwap?: boolean;
 }
 
 /**
@@ -148,7 +149,8 @@ export function getUnformattedAmount({
             }
 
             const rate = (fiatEntry && fiatEntry.rate) || 0;
-            const { symbol, space, rtl, decimalPlaces } = fiatStore.getSymbol();
+            const { symbol, space, rtl, decimalPlaces, separatorSwap } =
+                fiatStore.getSymbol();
 
             const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
 
@@ -163,7 +165,8 @@ export function getUnformattedAmount({
                 negative,
                 plural: false,
                 rtl,
-                space
+                space,
+                separatorSwap
             };
         } else {
             return {

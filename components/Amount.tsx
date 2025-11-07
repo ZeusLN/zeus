@@ -13,7 +13,11 @@ import LoadingIndicator from './LoadingIndicator';
 
 import { localeString, formatInlineNoun } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { formatBitcoinWithSpaces } from '../utils/UnitsUtils';
+import {
+    formatBitcoinWithSpaces,
+    numberWithCommas,
+    numberWithDecimals
+} from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
 
@@ -44,6 +48,7 @@ interface AmountDisplayProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     roundAmount?: boolean;
+    separatorSwap?: boolean;
 }
 
 interface SymbolProps {
@@ -66,7 +71,8 @@ function AmountDisplay({
     fiatRatesLoading = false,
     accessible,
     accessibilityLabel,
-    roundAmount = false
+    roundAmount = false,
+    separatorSwap = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -213,6 +219,12 @@ function AmountDisplay({
                     <LoadingIndicator size={20} />
                 ) : unit === 'BTC' ? (
                     formatBitcoinWithSpaces(amount)
+                ) : unit === 'fiat' ? (
+                    separatorSwap ? (
+                        numberWithDecimals(amount)
+                    ) : (
+                        numberWithCommas(amount)
+                    )
                 ) : (
                     amount.toString()
                 )}
