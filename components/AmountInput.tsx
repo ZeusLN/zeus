@@ -304,9 +304,9 @@ export default class AmountInput extends React.Component<
                         }}
                         error={error}
                     />
-                    {!hideUnitChangeButton && (
+                    {!hideUnitChangeButton && !locked && (
                         <TouchableOpacity
-                            onPress={() => !locked && this.onChangeUnits()}
+                            onPress={() => this.onChangeUnits()}
                             style={{ marginLeft: 15 }}
                         >
                             {UnitsStore!.getNextUnit() === 'fiat' ? (
