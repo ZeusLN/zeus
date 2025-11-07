@@ -93,7 +93,7 @@ export function ChannelItem({
                         >
                             {`${
                                 typeof title === 'string' &&
-                                PrivacyUtils.sensitiveValue(title)
+                                PrivacyUtils.sensitiveValue({ input: title })
                             }`}
                         </Body>
                     </View>

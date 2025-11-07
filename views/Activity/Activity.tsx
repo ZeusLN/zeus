@@ -119,9 +119,10 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue(
-                                keysendMessageOrMemo
-                            )?.toString()}
+                            {PrivacyUtils.sensitiveValue({
+                                input: keysendMessageOrMemo,
+                                condenseAtLength: 100
+                            })?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -141,7 +142,10 @@ const ActivityListItem = React.memo(
                     {memo ? ': ' : ''}
                     {memo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue(memo)?.toString()}
+                            {PrivacyUtils.sensitiveValue({
+                                input: memo,
+                                condenseAtLength: 100
+                            })?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -163,7 +167,10 @@ const ActivityListItem = React.memo(
                     {memo ? ': ' : ''}
                     {memo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue(memo)?.toString()}
+                            {PrivacyUtils.sensitiveValue({
+                                input: memo,
+                                condenseAtLength: 100
+                            })?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -183,9 +190,10 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue(
-                                keysendMessageOrMemo
-                            )?.toString()}
+                            {PrivacyUtils.sensitiveValue({
+                                input: keysendMessageOrMemo,
+                                condenseAtLength: 100
+                            })?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -205,9 +213,10 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {PrivacyUtils.sensitiveValue(
-                                keysendMessageOrMemo
-                            )?.toString()}
+                            {PrivacyUtils.sensitiveValue({
+                                input: keysendMessageOrMemo,
+                                condenseAtLength: 100
+                            })?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -376,13 +385,10 @@ const ActivityListItem = React.memo(
                                 }}
                                 ellipsizeMode="tail"
                             >
-                                {note.length > 150
-                                    ? `${PrivacyUtils.sensitiveValue(
-                                          note.substring(0, 150)
-                                      )?.toString()}...`
-                                    : PrivacyUtils.sensitiveValue(
-                                          note
-                                      )?.toString()}
+                                {PrivacyUtils.sensitiveValue({
+                                    input: note,
+                                    condenseAtLength: 100
+                                })?.toString()}
                             </ListItem.Subtitle>
                         </View>
                     )}

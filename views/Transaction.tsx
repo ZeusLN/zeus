@@ -119,7 +119,9 @@ export default class TransactionView extends React.Component<
                             >
                                 {`${
                                     typeof address === 'string' &&
-                                    PrivacyUtils.sensitiveValue(address)
+                                    PrivacyUtils.sensitiveValue({
+                                        input: address
+                                    })
                                 }`}
                             </Text>
                         </TouchableOpacity>
@@ -218,7 +220,9 @@ export default class TransactionView extends React.Component<
                                 >
                                     {`${
                                         typeof tx === 'string' &&
-                                        PrivacyUtils.sensitiveValue(tx)
+                                        PrivacyUtils.sensitiveValue({
+                                            input: tx
+                                        })
                                     }`}
                                 </Text>
                             </TouchableOpacity>
@@ -247,9 +251,9 @@ export default class TransactionView extends React.Component<
                                     >
                                         {`${
                                             typeof block_hash === 'string' &&
-                                            PrivacyUtils.sensitiveValue(
-                                                block_hash
-                                            )
+                                            PrivacyUtils.sensitiveValue({
+                                                input: block_hash
+                                            })
                                         }`}
                                     </Text>
                                 </TouchableOpacity>
@@ -280,11 +284,11 @@ export default class TransactionView extends React.Component<
                                         {`${
                                             typeof getBlockHeight ===
                                                 'string' &&
-                                            PrivacyUtils.sensitiveValue(
-                                                getBlockHeight.toString(),
-                                                5,
-                                                true
-                                            )
+                                            PrivacyUtils.sensitiveValue({
+                                                input: getBlockHeight.toString(),
+                                                fixedLength: 5,
+                                                numberSet: true
+                                            })
                                         }`}
                                     </Text>
                                 </TouchableOpacity>

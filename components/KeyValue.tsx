@@ -144,7 +144,9 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                         fontFamily: 'PPNeueMontreal-Book'
                     }}
                 >
-                    {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+                    {sensitive
+                        ? PrivacyUtils.sensitiveValue({ input: value })
+                        : value}
                 </Text>
             </View>
         );
