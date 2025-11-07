@@ -36,6 +36,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
+import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { calculateTaxSats } from '../../utils/PosUtils';
 
@@ -359,12 +360,7 @@ export default class StandalonePosPane extends React.PureComponent<
     };
 
     renderGridItem = ({ item }: { item: any }) => {
-        const { UnitsStore } = this.props;
-
-        let priceDisplay = UnitsStore?.getFormattedAmount(
-            item.price,
-            item.pricedIn
-        );
+        let priceDisplay = getFormattedAmount(item.price, item.pricedIn);
 
         return (
             <TouchableOpacity
@@ -769,7 +765,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                                   : '') +
                                               (fiatEnabled
                                                   ? this.state.totalMoneyDisplay
-                                                  : ` ${this.props.UnitsStore?.getAmountFromSats(
+                                                  : ` ${getAmountFromSats(
                                                         currentOrder
                                                             ?.total_money?.sats
                                                     )}`)

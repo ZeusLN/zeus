@@ -44,6 +44,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { getFormattedAmount } from '../../utils/AmountUtils';
 
 import Channel from '../../models/Channel';
 import ClosedChannel from '../../models/ClosedChannel';
@@ -404,7 +405,7 @@ export default class ChannelsPane extends React.PureComponent<
     render() {
         const Tab = createBottomTabNavigator();
 
-        const { ChannelsStore, navigation, UnitsStore } = this.props;
+        const { ChannelsStore, navigation } = this.props;
         const {
             loading,
             getChannels,
@@ -824,7 +825,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                             >
                                                                 {`${localeString(
                                                                     'views.ChannelsPane.satsSent'
-                                                                )}: ${UnitsStore?.getFormattedAmount(
+                                                                )}: ${getFormattedAmount(
                                                                     peer.sats_sent,
                                                                     'sats'
                                                                 )}`}
@@ -843,7 +844,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                             >
                                                                 {`${localeString(
                                                                     'views.ChannelsPane.satsRecv'
-                                                                )}: ${UnitsStore?.getFormattedAmount(
+                                                                )}: ${getFormattedAmount(
                                                                     peer.sats_recv,
                                                                     'sats'
                                                                 )}`}

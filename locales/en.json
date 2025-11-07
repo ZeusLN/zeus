@@ -79,6 +79,7 @@
     "general.disabled": "Disabled",
     "general.fiatRateNotAvailable": "Rate for selected currency not available",
     "general.errorFetchingFiatRates": "Error fetching fiat rates",
+    "general.notAvailable": "N/A",
     "general.iUnderstand": "I understand",
     "general.network": "Network",
     "general.tapToLearnMore": "Tap to learn more.",
