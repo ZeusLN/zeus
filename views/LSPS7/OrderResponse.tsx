@@ -7,6 +7,8 @@ import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 
+import { LSPOrderState } from '../../models/LSP';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import handleAnything from '../../utils/handleAnything';
@@ -65,13 +67,14 @@ export default class LSPS7OrderResponse extends React.Component<
                                 )}
                                 value={orderResponse?.order_state}
                                 color={
-                                    orderResponse?.order_state === 'CREATED'
+                                    orderResponse?.order_state ===
+                                    LSPOrderState.CREATED
                                         ? 'orange'
                                         : orderResponse?.order_state ===
-                                          'COMPLETED'
+                                          LSPOrderState.COMPLETED
                                         ? 'green'
                                         : orderResponse?.order_state ===
-                                          'FAILED'
+                                          LSPOrderState.FAILED
                                         ? 'red'
                                         : ''
                                 }
@@ -302,48 +305,18 @@ export default class LSPS7OrderResponse extends React.Component<
                                 )}
                             </>
                         )}
-                        {orderResponse?.order_state === 'CREATED' && orderView && (
-                            <>
-                                {(payment.bolt11?.invoice ||
-                                    payment.lightning_invoice ||
-                                    payment.bolt11_invoice) && (
-                                    <>
-                                        <Button
-                                            title={
-                                                payment.onchain
-                                                    ? localeString(
-                                                          'views.LSPS1.makePaymentLN'
-                                                      )
-                                                    : localeString(
-                                                          'views.LSPS1.makePayment'
-                                                      )
-                                            }
-                                            containerStyle={{
-                                                paddingVertical: 20
-                                            }}
-                                            onPress={() => {
-                                                handleAnything(
-                                                    payment.bolt11?.invoice ||
-                                                        payment.lightning_invoice ||
-                                                        payment.bolt11_invoice
-                                                ).then(([route, props]) => {
-                                                    navigation.navigate(
-                                                        route,
-                                                        props
-                                                    );
-                                                });
-                                            }}
-                                        />
-                                    </>
-                                )}
-                                {payment.onchain?.address &&
-                                    payment.onchain?.fee_total_sat && (
+                        {orderResponse?.order_state === LSPOrderState.CREATED &&
+                            orderView && (
+                                <>
+                                    {(payment.bolt11?.invoice ||
+                                        payment.lightning_invoice ||
+                                        payment.bolt11_invoice) && (
                                         <>
                                             <Button
                                                 title={
-                                                    payment.bolt11
+                                                    payment.onchain
                                                         ? localeString(
-                                                              'views.LSPS1.makePaymentOnchain'
+                                                              'views.LSPS1.makePaymentLN'
                                                           )
                                                         : localeString(
                                                               'views.LSPS1.makePayment'
@@ -353,25 +326,59 @@ export default class LSPS7OrderResponse extends React.Component<
                                                     paddingVertical: 20
                                                 }}
                                                 onPress={() => {
-                                                    navigation.navigate(
-                                                        'Send',
-                                                        {
-                                                            destination:
-                                                                payment.onchain
-                                                                    ?.address,
-                                                            satAmount:
-                                                                payment.onchain
-                                                                    ?.fee_total_sat,
-                                                            transactionType:
-                                                                'On-chain'
-                                                        }
-                                                    );
+                                                    handleAnything(
+                                                        payment.bolt11
+                                                            ?.invoice ||
+                                                            payment.lightning_invoice ||
+                                                            payment.bolt11_invoice
+                                                    ).then(([route, props]) => {
+                                                        navigation.navigate(
+                                                            route,
+                                                            props
+                                                        );
+                                                    });
                                                 }}
                                             />
                                         </>
                                     )}
-                            </>
-                        )}
+                                    {payment.onchain?.address &&
+                                        payment.onchain?.fee_total_sat && (
+                                            <>
+                                                <Button
+                                                    title={
+                                                        payment.bolt11
+                                                            ? localeString(
+                                                                  'views.LSPS1.makePaymentOnchain'
+                                                              )
+                                                            : localeString(
+                                                                  'views.LSPS1.makePayment'
+                                                              )
+                                                    }
+                                                    containerStyle={{
+                                                        paddingVertical: 20
+                                                    }}
+                                                    onPress={() => {
+                                                        navigation.navigate(
+                                                            'Send',
+                                                            {
+                                                                destination:
+                                                                    payment
+                                                                        .onchain
+                                                                        ?.address,
+                                                                satAmount:
+                                                                    payment
+                                                                        .onchain
+                                                                        ?.fee_total_sat,
+                                                                transactionType:
+                                                                    'On-chain'
+                                                            }
+                                                        );
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+                                </>
+                            )}
                     </View>
                 </ScrollView>
             </Screen>
