@@ -161,8 +161,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (satAmount) {
             amount =
                 UnitsStore.getUnformattedAmount({
-                    sats: satAmount,
-                    noCommas: true
+                    sats: satAmount
                 }).amount || satAmount;
         }
 
