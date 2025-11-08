@@ -2704,13 +2704,21 @@ export default class NostrWalletConnectStore {
     // IOS: handoff request to notification server
     @action
     public sendHandoffRequest = async (): Promise<void> => {
-        if (Platform.OS !== 'ios') return;
-        if (this.activeConnections.length === 0) return;
+        if (Platform.OS !== 'ios') {
+            console.log('IOS NWC: Not iOS, skipping handoff request');
+            return;
+        }
+        if (this.activeConnections.length === 0) {
+            console.log(
+                'IOS NWC: No active connections, skipping handoff request'
+            );
+            return;
+        }
         try {
             const deviceToken = this.lightningAddressStore.currentDeviceToken;
             if (!deviceToken) {
                 console.warn(
-                    'IOS NWC: Cannot send handoff request - device token not available'
+                    'IOS NWC: Device token not available, skipping handoff request'
                 );
                 return;
             }
@@ -2733,11 +2741,11 @@ export default class NostrWalletConnectStore {
                 JSON.stringify(handoffData)
             );
             if (response.info().status !== 200) {
-                console.warn(
-                    'IOS NWC: Handoff request failed with status:',
-                    response.info().status
+                throw new Error(
+                    `IOS NWC: Handoff request failed with status ${
+                        response.info().status
+                    }: ${await response.text()}`
                 );
-                return;
             }
             console.info('IOS NWC: Handoff request sent successfully');
         } catch (error) {
