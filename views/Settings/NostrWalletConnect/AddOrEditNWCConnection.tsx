@@ -89,7 +89,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedPermissions: NostrConnectUtils.getFullAccessPermissions(),
             maxAmountSats: '10000',
             selectedBudgetRenewalIndex: 0,
-            expiresAt: new Date(),
+            expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
             description: '',
             error: '',
             loading: false,
