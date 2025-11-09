@@ -4,16 +4,20 @@ import {
     Text,
     TouchableOpacity,
     Vibration,
-    View
+    View,
+    Dimensions,
+    Modal
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
+import { Icon } from 'react-native-elements';
 
 import { Body } from './text/Body';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import ModalStore from '../stores/ModalStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -37,9 +41,38 @@ interface KeyValueProps {
     SettingsStore?: SettingsStore;
 }
 
+interface KeyValueState {
+    showCopiedToast: boolean;
+}
+
 @inject('ModalStore', 'SettingsStore')
 @observer
-export default class KeyValue extends React.Component<KeyValueProps, {}> {
+export default class KeyValue extends React.Component<
+    KeyValueProps,
+    KeyValueState
+> {
+    private toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    state = {
+        showCopiedToast: false
+    };
+
+    copyText = () => {
+        const { value } = this.props;
+        Clipboard.setString(value.toString());
+        Vibration.vibrate(50);
+        this.setState({ showCopiedToast: true });
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(
+            () => this.setState({ showCopiedToast: false }),
+            2000
+        );
+    };
+
+    componentWillUnmount() {
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+    }
+
     render() {
         const {
             keyValue,
@@ -153,7 +186,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         if (!lurkerMode && isCopyable) {
             Value = (
                 <TouchableOpacity
-                    onLongPress={() => copyText()}
+                    onLongPress={() => this.copyText()}
                     onPress={mempoolLink}
                 >
                     {ValueBase}
@@ -162,11 +195,6 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         } else {
             Value = typeof value === 'object' ? value : ValueBase;
         }
-
-        const copyText = () => {
-            Clipboard.setString(value.toString());
-            Vibration.vibrate(50);
-        };
 
         const KeyValueRow = () => (
             <Row justify="space-between">
@@ -182,9 +210,45 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         );
 
         return (
-            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                <KeyValueRow />
-            </View>
+            <>
+                <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                    <KeyValueRow />
+                </View>
+                <Modal
+                    transparent
+                    visible={this.state.showCopiedToast}
+                    animationType="fade"
+                    onRequestClose={() => {}}
+                >
+                    <View style={styles.modalContainer}>
+                        <View
+                            style={[
+                                styles.toast,
+                                {
+                                    backgroundColor: themeColor('text')
+                                }
+                            ]}
+                        >
+                            <Icon
+                                name="check"
+                                size={18}
+                                color={themeColor('background')}
+                                style={{ marginRight: 6 }}
+                            />
+                            <Text
+                                style={[
+                                    styles.toastText,
+                                    {
+                                        color: themeColor('background')
+                                    }
+                                ]}
+                            >
+                                {localeString('components.CopyButton.copied')}
+                            </Text>
+                        </View>
+                    </View>
+                </Modal>
+            </>
         );
     }
 }
@@ -209,5 +273,23 @@ const styles = StyleSheet.create({
     },
     rtlValue: {
         paddingRight: 10
+    },
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        paddingBottom: Math.max(Dimensions.get('window').height * 0.15, 160)
+    },
+    toast: {
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        flexDirection: 'row',
+        alignItems: 'center',
+        elevation: 5
+    },
+    toastText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14
     }
 });
