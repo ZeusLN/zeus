@@ -83,6 +83,20 @@ export function shouldHideMillisatoshiAmounts(): boolean {
 }
 
 /**
+ * Gets the fiat entry from fiatStore for a given currency code
+ * @param currencyCode - The currency code to look up (e.g., 'USD', 'EUR')
+ * @returns The fiat entry object or undefined if not found
+ */
+function getFiatEntry(currencyCode: string): any | undefined {
+    if (!fiatStore.fiatRates || !currencyCode) {
+        return undefined;
+    }
+    return fiatStore.fiatRates.find(
+        (entry: any) => entry.code === currencyCode
+    );
+}
+
+/**
  * Converts satoshi amounts to unformatted display values based on the current unit setting
  * @param sats - The amount in satoshis (string or number)
  * @param fixedUnits - Optional unit override ('sats', 'BTC', or 'fiat')
@@ -135,9 +149,7 @@ export function getUnformattedAmount({
         }
 
         if (fiatStore.fiatRates) {
-            const fiatEntry = fiatStore.fiatRates.filter(
-                (entry: any) => entry.code === fiat
-            )[0];
+            const fiatEntry = getFiatEntry(fiat);
 
             if (!fiatEntry?.rate) {
                 return {
@@ -210,9 +222,10 @@ export function getAmountFromSats(
         return sats;
     } else if (units === 'fiat' && fiat) {
         if (fiatStore.fiatRates) {
-            const fiatEntry = fiatStore.fiatRates.filter(
-                (entry: any) => entry.code === fiat
-            )[0];
+            const fiatEntry = getFiatEntry(fiat);
+            if (!fiatEntry) {
+                return localeString('general.notAvailable');
+            }
             const { code } = fiatEntry;
             const rate = (fiatEntry && fiatEntry.rate) || 0;
             const { symbol, space, rtl, separatorSwap } =
@@ -268,9 +281,10 @@ export function getFormattedAmount(
         return sats;
     } else if (units === 'fiat' && fiat) {
         if (fiatStore.fiatRates) {
-            const fiatEntry = fiatStore.fiatRates.filter(
-                (entry: any) => entry.code === fiat
-            )[0];
+            const fiatEntry = getFiatEntry(fiat);
+            if (!fiatEntry) {
+                return localeString('general.notAvailable');
+            }
             const { code } = fiatEntry;
             const { symbol, space, rtl, separatorSwap } =
                 fiatStore.symbolLookup(code);
