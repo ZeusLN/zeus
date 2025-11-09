@@ -18,12 +18,11 @@ import {
     numberWithCommas,
     numberWithDecimals
 } from '../utils/UnitsUtils';
+import type { Units } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
-
-type Units = 'sats' | 'BTC' | 'fiat';
 
 interface AmountDisplayProps {
     amount: string;

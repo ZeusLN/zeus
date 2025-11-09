@@ -4,6 +4,7 @@ import {
     numberWithDecimals,
     SATS_PER_BTC
 } from './UnitsUtils';
+import type { Units } from './UnitsUtils';
 import FeeUtils from './FeeUtils';
 import { localeString } from './LocaleUtils';
 
@@ -11,8 +12,6 @@ export interface AmountDisplayResult {
     displayAmount: string;
     shouldShowRounding: boolean;
 }
-
-type Units = 'sats' | 'BTC' | 'fiat';
 
 export interface ValueDisplayProps {
     amount: string;

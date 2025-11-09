@@ -3,8 +3,7 @@ import Storage from '../storage';
 
 import SettingsStore from './SettingsStore';
 import FiatStore from './FiatStore';
-
-type Units = 'sats' | 'BTC' | 'fiat';
+import type { Units } from '../utils/UnitsUtils';
 
 export const LEGACY_UNIT_KEY = 'zeus-units';
 export const UNIT_KEY = 'zeus-units-v2';
