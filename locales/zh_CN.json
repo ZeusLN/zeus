@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "付款哈希",
     "views.Invoice.paymentRequest": "付款请求",
     "views.Invoice.copyPaymentRequest": "复制付款请求",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend 消息",
     "views.LNDConnectConfigQRScanner.error": "获取 lndconnect 配置时出错",
     "views.LncQRScanner.error": "解析 LNC 配置时出错",
