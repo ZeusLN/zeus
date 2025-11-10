@@ -29,7 +29,7 @@ interface HandleAnythingQRProps {
     route: Route<
         'HandleAnythingQRScanner',
         {
-            fromSwaps?: boolean;
+            view?: string;
         }
     >;
 }
@@ -60,13 +60,12 @@ export default class HandleAnythingQRScanner extends React.Component<
 
     handleAnythingScanned = async (data: string) => {
         const { navigation, route } = this.props;
-        const fromSwaps = route.params?.fromSwaps;
+        const view = route.params?.view;
 
-        if (fromSwaps) {
+        if (view === 'Swaps') {
             this.setState({ loading: true });
             try {
-                const { value, satAmount, lightning } =
-                    AddressUtils.processBIP21Uri(data);
+                const { value, satAmount } = AddressUtils.processBIP21Uri(data);
 
                 const { nodeInfo } = nodeInfoStore;
                 const { isTestNet, isRegTest, isSigNet } = nodeInfo;
@@ -81,18 +80,16 @@ export default class HandleAnythingQRScanner extends React.Component<
                     navigation.goBack();
                     navigation.navigate('Swaps', {
                         initialInvoice: value,
-                        initialAmountSats: Number(satAmount) || 0,
+                        initialAmountSats: satAmount,
                         initialReverse: true
                     });
                     return;
                 }
 
-                const invoice = lightning || value;
-
                 // Submarine Swap
-                if (AddressUtils.isValidLightningPaymentRequest(invoice)) {
+                if (AddressUtils.isValidLightningPaymentRequest(value)) {
                     const decodedInvoice =
-                        await BackendUtils.decodePaymentRequest([invoice]);
+                        await BackendUtils.decodePaymentRequest([value]);
 
                     if (!decodedInvoice) {
                         throw new Error(
@@ -105,14 +102,58 @@ export default class HandleAnythingQRScanner extends React.Component<
 
                     navigation.goBack();
                     navigation.navigate('Swaps', {
-                        initialInvoice: invoice,
+                        initialInvoice: value,
                         initialAmountSats: amount,
                         initialReverse: false
                     });
                     return;
                 }
 
-                throw new Error('Invalid QR code for a swap');
+                throw new Error(
+                    localeString('components.QRCodeScanner.notRecognized')
+                );
+            } catch (err: any) {
+                console.error(err.message);
+                Alert.alert(
+                    localeString('general.error'),
+                    (err as Error).message ||
+                        localeString('utils.handleAnything.notValid'),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+                this.setState({ loading: false });
+                navigation.goBack();
+            }
+            return;
+        } else if (view === 'RefundSwap') {
+            this.setState({ loading: true });
+            try {
+                const { value } = AddressUtils.processBIP21Uri(data);
+
+                const { nodeInfo } = nodeInfoStore;
+                const { isTestNet, isRegTest, isSigNet } = nodeInfo;
+
+                if (
+                    AddressUtils.isValidBitcoinAddress(
+                        value,
+                        isTestNet || isRegTest || isSigNet
+                    )
+                ) {
+                    navigation.goBack();
+                    navigation.navigate('RefundSwap', {
+                        scannedAddress: value
+                    });
+                    return;
+                }
+
+                throw new Error(
+                    localeString('components.QRCodeScanner.notRecognized')
+                );
             } catch (err: any) {
                 console.error(err.message);
                 Alert.alert(
