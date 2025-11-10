@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "هش پرداخت",
     "views.Invoice.paymentRequest": "درخواست پرداخت",
     "views.Invoice.copyPaymentRequest": "رونویسی درخواست پرداخت",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "پیام کلیدفِرِست",
     "views.LNDConnectConfigQRScanner.error": "خطا در دستیابی به پیکربندی lndconnect",
     "views.LncQRScanner.error": "خطا در تجزیه پیکربندی LNC",
