@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Hash platby",
     "views.Invoice.paymentRequest": "Žádost o platbu",
     "views.Invoice.copyPaymentRequest": "Zkopírovat žádost o platbu",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend zpráva",
     "views.LNDConnectConfigQRScanner.error": "Při načítání konfigurace lndconnect došlo k chybě",
     "views.LncQRScanner.error": "Chyba při parsování konfigurace LNC",
