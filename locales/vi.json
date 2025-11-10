@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Mã băm Thanh toán",
     "views.Invoice.paymentRequest": "Yêu cầu Thanh toán",
     "views.Invoice.copyPaymentRequest": "Sao chép Yêu cầu Thanh toán",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend message",
     "views.LNDConnectConfigQRScanner.error": "Lỗi khi tìm nạp cấu hình lndconnect",
     "views.LncQRScanner.error": "Error parsing LNC config",
