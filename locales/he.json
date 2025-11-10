@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "גיבוב תשלום",
     "views.Invoice.paymentRequest": "בקשת תשלום",
     "views.Invoice.copyPaymentRequest": "העתקת בקשת תשלום",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "הודעת Keysend",
     "views.LNDConnectConfigQRScanner.error": "שגיאה במשיכת הגדרות lndconnect",
     "views.LncQRScanner.error": "שגיאה בניתוח הגדרות LNC",
