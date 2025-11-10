@@ -95,7 +95,7 @@ export default class Currency extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
-                            {localeString('views.Settings.Currency.enabled')}
+                            {localeString('general.enabled')}
                         </ListItem.Title>
                         <View
                             style={{

@@ -59,6 +59,7 @@ import CashuInvoice from '../../models/CashuInvoice';
 import { localeString } from '../../utils/LocaleUtils';
 import NFCUtils from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { getAmountFromSats } from '../../utils/AmountUtils';
 
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import AddressSvg from '../../assets/images/SVG/DynamicSVG/AddressSvg';
@@ -397,7 +398,6 @@ export default class ReceiveEcash extends React.Component<
         const {
             CashuStore,
             SettingsStore,
-            UnitsStore,
             LightningAddressStore,
             NodeInfoStore,
             navigation,
@@ -413,8 +413,6 @@ export default class ReceiveEcash extends React.Component<
         } = this.state;
 
         const { width, scale, fontScale } = Dimensions.get('window');
-
-        const { getAmountFromSats } = UnitsStore;
 
         const {
             createInvoice,

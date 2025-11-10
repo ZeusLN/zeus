@@ -13,13 +13,16 @@ import LoadingIndicator from './LoadingIndicator';
 
 import { localeString, formatInlineNoun } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { formatBitcoinWithSpaces } from '../utils/UnitsUtils';
+import {
+    formatBitcoinWithSpaces,
+    numberWithCommas,
+    numberWithDecimals
+} from '../utils/UnitsUtils';
+import type { Units } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import { processSatsAmount } from '../utils/AmountUtils';
+import { processSatsAmount, getUnformattedAmount } from '../utils/AmountUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
-
-type Units = 'sats' | 'BTC' | 'fiat';
 
 interface AmountDisplayProps {
     amount: string;
@@ -44,6 +47,7 @@ interface AmountDisplayProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     roundAmount?: boolean;
+    separatorSwap?: boolean;
 }
 
 interface SymbolProps {
@@ -66,7 +70,8 @@ function AmountDisplay({
     fiatRatesLoading = false,
     accessible,
     accessibilityLabel,
-    roundAmount = false
+    roundAmount = false,
+    separatorSwap = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -213,6 +218,12 @@ function AmountDisplay({
                     <LoadingIndicator size={20} />
                 ) : unit === 'BTC' ? (
                     formatBitcoinWithSpaces(amount)
+                ) : unit === 'fiat' ? (
+                    separatorSwap ? (
+                        numberWithDecimals(amount)
+                    ) : (
+                        numberWithCommas(amount)
+                    )
                 ) : (
                     amount.toString()
                 )}
@@ -349,7 +360,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
 
-        const unformattedAmount = UnitsStore.getUnformattedAmount({
+        const unformattedAmount = getUnformattedAmount({
             sats: value,
             fixedUnits: units
         });

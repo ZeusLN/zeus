@@ -73,6 +73,8 @@ const formatBitcoinWithSpaces = (x: string | number) => {
     return `${integerFormatted}.${firstTwo} ${rest}`.trim();
 };
 
+type Units = 'sats' | 'BTC' | 'fiat';
+
 export {
     SATS_PER_BTC,
     getDecimalPlaceholder,
@@ -80,3 +82,4 @@ export {
     numberWithDecimals,
     formatBitcoinWithSpaces
 };
+export type { Units };
