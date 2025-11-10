@@ -1179,7 +1179,7 @@ export const POS_CONF_PREF_KEYS = [
 export const POS_ENABLED_KEYS = [
     {
         key: 'Disabled',
-        translateKey: 'views.Settings.disabled',
+        translateKey: 'general.disabled',
         value: PosEnabled.Disabled
     },
     {
@@ -1229,7 +1229,7 @@ export const DEFAULT_NOSTR_RELAYS = [
 ];
 
 export const NOTIFICATIONS_PREF_KEYS = [
-    { key: 'Disabled', translateKey: 'views.Settings.disabled', value: 0 },
+    { key: 'Disabled', translateKey: 'general.disabled', value: 0 },
     {
         key: 'Push',
         translateKey:
@@ -1243,7 +1243,7 @@ export const NOTIFICATIONS_PREF_KEYS = [
 ];
 
 export const AUTOMATIC_ATTESTATION_KEYS = [
-    { key: 'Disabled', translateKey: 'views.Settings.disabled', value: 0 },
+    { key: 'Disabled', translateKey: 'general.disabled', value: 0 },
     {
         key: 'Successful only',
         translateKey:
