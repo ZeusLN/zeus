@@ -39,7 +39,6 @@ import ChannelsStore, {
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
-import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -80,7 +79,6 @@ interface ChannelsProps {
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
     ModalStore?: ModalStore;
-    UnitsStore?: UnitsStore;
 }
 
 interface ChannelsState {
@@ -97,8 +95,7 @@ interface ChannelsState {
     'LSPStore',
     'NodeInfoStore',
     'SettingsStore',
-    'ModalStore',
-    'UnitsStore'
+    'ModalStore'
 )
 @observer
 export default class ChannelsPane extends React.PureComponent<

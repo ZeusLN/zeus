@@ -34,7 +34,6 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 import SwapStore from '../stores/SwapStore';
 import TransactionsStore from '../stores/TransactionsStore';
-import UnitsStore from '../stores/UnitsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 
 import AmountInput from '../components/AmountInput';
@@ -80,7 +79,6 @@ interface SendProps {
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     TransactionsStore: TransactionsStore;
-    UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
     SwapStore: SwapStore;
     route: Route<
@@ -132,7 +130,6 @@ interface SendState {
     'NodeInfoStore',
     'SettingsStore',
     'TransactionsStore',
-    'UnitsStore',
     'UTXOsStore',
     'SwapStore'
 )
