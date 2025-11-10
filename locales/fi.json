@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Maksutiiviste",
     "views.Invoice.paymentRequest": "Maksupyyntö",
     "views.Invoice.copyPaymentRequest": "Kopioi maksupyyntö",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend-viesti",
     "views.LNDConnectConfigQRScanner.error": "Virhe lndconnect-konfiguraation noutamisessa",
     "views.LncQRScanner.error": "Virhe LNC-konfiguraation jäsentämisessä",
