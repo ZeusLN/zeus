@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "결제 해시",
     "views.Invoice.paymentRequest": "결제 요청",
     "views.Invoice.copyPaymentRequest": "결제 요청 복사",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend 메세지",
     "views.LNDConnectConfigQRScanner.error": "lndconnect 구성 가져오기 오류",
     "views.LncQRScanner.error": "LNC 구성 구문 분석 오류",
