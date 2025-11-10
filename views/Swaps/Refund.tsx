@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
@@ -15,7 +15,7 @@ import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
-import TextInput from '../../components/TextInput';
+import AddressInput from '../../components/AddressInput';
 import {
     ErrorMessage,
     SuccessMessage
@@ -41,6 +41,7 @@ interface RefundSwapProps {
         'RefundSwap',
         {
             swapData: Swap;
+            scannedAddress?: string;
         }
     >;
     SwapStore?: SwapStore;
@@ -122,6 +123,20 @@ export default class RefundSwap extends React.Component<
         }
     };
 
+    componentDidUpdate(prevProps: Readonly<RefundSwapProps>) {
+        const { route, navigation } = this.props;
+        const scannedAddress = route.params?.scannedAddress;
+
+        if (
+            scannedAddress &&
+            scannedAddress !== prevProps.route.params?.scannedAddress
+        ) {
+            this.setState({ destinationAddress: scannedAddress, error: '' });
+
+            navigation.setParams({ scannedAddress: undefined });
+        }
+    }
+
     render() {
         const { navigation, SwapStore, InvoicesStore } = this.props;
         const {
@@ -190,23 +205,25 @@ export default class RefundSwap extends React.Component<
                         {localeString('views.Transaction.destAddress')}
                     </Text>
 
-                    <View>
-                        <TextInput
-                            onChangeText={async (text: string) => {
-                                this.setState({
-                                    destinationAddress: text,
-                                    error: ''
-                                });
-                            }}
-                            placeholder={fetchingAddress ? '' : 'bc1...'}
-                            value={destinationAddress}
-                        />
-                        {fetchingAddress && (
-                            <View style={styles.loadingOverlay}>
-                                <LoadingIndicator />
-                            </View>
-                        )}
-                    </View>
+                    <AddressInput
+                        value={destinationAddress}
+                        onChangeText={async (text: string) => {
+                            this.setState({
+                                destinationAddress: text,
+                                error: ''
+                            });
+                        }}
+                        onScan={() =>
+                            this.props.navigation.navigate(
+                                'HandleAnythingQRScanner',
+                                {
+                                    view: 'RefundSwap'
+                                }
+                            )
+                        }
+                        placeholder={fetchingAddress ? '' : 'bc1...'}
+                        loading={fetchingAddress}
+                    />
                     <View
                         style={{
                             marginVertical: 5
@@ -407,15 +424,3 @@ export default class RefundSwap extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    loadingOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center'
-    }
-});
