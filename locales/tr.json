@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Ödeme hashi",
     "views.Invoice.paymentRequest": "Ödeme isteği",
     "views.Invoice.copyPaymentRequest": "Ödeme isteğini kopyala",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend message",
     "views.LNDConnectConfigQRScanner.error": "lndconnect konfigurasyonunu çekmekte hata yaşandı",
     "views.LncQRScanner.error": "LNC konfigürasyonu ayrıştırılırken hata oluştu",
