@@ -79,6 +79,7 @@ import Base64Utils from '../utils/Base64Utils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { getAmountFromSats } from '../utils/AmountUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -1276,7 +1277,6 @@ export default class Receive extends React.Component<
         const { fontScale } = Dimensions.get('window');
 
         const { zeroConfFee, showLspSettings } = LSPStore;
-        const { getAmountFromSats } = UnitsStore;
 
         const {
             createUnifiedInvoice,

@@ -25,6 +25,7 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { getUnformattedAmount } from '../../utils/AmountUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
@@ -79,9 +80,26 @@ export default class LnurlPay extends React.Component<
         }
     }
 
+    // ensure the state is reset to show correct units
+    // for when users navs back
+    resetState = () => {
+        this.setState({
+            ...this.stateFromProps(this.props)
+        });
+    };
+
+    componentDidMount() {
+        this.props.navigation.addListener('focus', this.resetState);
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('focus', this.resetState);
+    }
+
     stateFromProps(props: LnurlPayProps) {
         const { route, UnitsStore } = props;
-        const { resetUnits, getUnformattedAmount, units } = UnitsStore;
+        const { resetUnits, units } = UnitsStore;
         const { lnurlParams: lnurl, amount, satAmount } = route.params ?? {};
 
         // if requested amount is fixed,

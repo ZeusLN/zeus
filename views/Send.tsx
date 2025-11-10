@@ -57,6 +57,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { getUnformattedAmount, getAmountFromSats } from '../utils/AmountUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
@@ -142,7 +143,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     constructor(props: SendProps) {
         super(props);
-        const { route, UnitsStore } = props;
+        const { route } = props;
         const {
             destination,
             satAmount,
@@ -160,9 +161,8 @@ export default class Send extends React.Component<SendProps, SendState> {
         let amount;
         if (satAmount) {
             amount =
-                UnitsStore.getUnformattedAmount({
-                    sats: satAmount,
-                    noCommas: true
+                getUnformattedAmount({
+                    sats: satAmount
                 }).amount || satAmount;
         }
 
@@ -195,7 +195,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidUpdate(prevProps: SendProps, prevState: SendState) {
-        const { route, UnitsStore, InvoicesStore } = this.props;
+        const { route, InvoicesStore } = this.props;
         const { route: prevRoute } = prevProps;
 
         if (JSON.stringify(route.params) !== JSON.stringify(prevRoute.params)) {
@@ -220,8 +220,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             };
 
             if (satAmount) {
-                const amount =
-                    UnitsStore.getAmountFromSats(satAmount) || satAmount;
+                const amount = getAmountFromSats(satAmount) || satAmount;
                 stateUpdate.amount = amount;
                 stateUpdate.satAmount = satAmount;
             }
