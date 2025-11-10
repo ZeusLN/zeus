@@ -20,9 +20,9 @@ import backendUtils from '../utils/BackendUtils';
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
 import ChannelsFilter from './Channels/ChannelsFilter';
-import { Status } from '../views/Channels/ChannelsPane';
 
 import Channel from '../models/Channel';
+import { Status } from '../models/Status';
 
 import ChannelsStore, { ChannelsType } from '../stores/ChannelsStore';
 import UnitsStore from '../stores/UnitsStore';
