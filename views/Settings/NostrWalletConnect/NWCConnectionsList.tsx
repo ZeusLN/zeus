@@ -5,9 +5,10 @@ import {
     FlatList,
     TouchableOpacity,
     Text,
-    RefreshControl
+    RefreshControl,
+    Platform
 } from 'react-native';
-import { Divider, SearchBar } from 'react-native-elements';
+import { Divider, SearchBar, ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -24,10 +25,12 @@ import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 
 import NWCConnection from '../../../models/NWCConnection';
+import { Status, ExpirationStatus } from '../../../models/Status';
 
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
+import { Tag } from '../../../components/Channels/Tag';
 
 interface NWCConnectionsListProps {
     navigation: StackNavigationProp<any, any>;
@@ -35,11 +38,14 @@ interface NWCConnectionsListProps {
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
+type ConnectionFilter = 'active' | 'expired' | 'all';
+
 interface NWCConnectionsListState {
     searchQuery: string;
     connectionsLoading: boolean;
     error: string;
     refreshing: boolean;
+    filter: ConnectionFilter;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -54,7 +60,8 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            refreshing: false
+            refreshing: false,
+            filter: 'all'
         };
     }
 
@@ -102,23 +109,75 @@ export default class NWCConnectionsList extends React.Component<
         }
     };
 
+    getFilterOptions = () => {
+        const { connections } = this.props.NostrWalletConnectStore;
+        return [
+            {
+                key: 'all' as ConnectionFilter,
+                label: localeString('general.all'),
+                count: connections.length
+            },
+            {
+                key: 'active' as ConnectionFilter,
+                label: localeString('general.active'),
+                count: connections.filter((c) => c.isActive).length
+            },
+            {
+                key: 'expired' as ConnectionFilter,
+                label: localeString('channel.expirationStatus.expired'),
+                count: connections.filter((c) => c.isExpired).length
+            }
+        ];
+    };
+
     navigateToConnectionDetails = (connection: NWCConnection) => {
         this.props.navigation.navigate('NWCConnectionDetails', {
             connectionId: connection.id
         });
     };
 
+    getFilterButtonIndex = () => {
+        const filters = this.getFilterOptions();
+        return filters.findIndex((f) => f.key === this.state.filter);
+    };
+
+    handleFilterChange = (selectedIndex: number) => {
+        const filters = this.getFilterOptions();
+        const selectedFilter = filters[selectedIndex];
+        if (selectedFilter) {
+            this.setState({ filter: selectedFilter.key });
+        }
+    };
+
     getFilteredConnections = () => {
         const { connections } = this.props.NostrWalletConnectStore;
-        const { searchQuery } = this.state;
+        const { searchQuery, filter } = this.state;
 
-        if (!searchQuery.trim()) {
-            return connections;
+        let filteredConnections = connections;
+
+        // Apply status filter
+        if (filter === 'active') {
+            filteredConnections = filteredConnections.filter((c) => c.isActive);
+        } else if (filter === 'expired') {
+            filteredConnections = filteredConnections.filter(
+                (c) => c.isExpired
+            );
         }
 
-        return connections.filter((connection) =>
-            connection.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+        // Apply search filter
+        if (searchQuery.trim()) {
+            filteredConnections = filteredConnections.filter((connection) =>
+                connection.name
+                    .toLowerCase()
+                    .includes(searchQuery.toLowerCase())
+            );
+        }
+
+        return filteredConnections;
+    };
+
+    getStatus = (connection: NWCConnection) => {
+        return connection.isExpired ? ExpirationStatus.Expired : Status.Active;
     };
 
     renderConnection = ({ item: connection }: { item: NWCConnection }) => {
@@ -143,23 +202,13 @@ export default class NWCConnectionsList extends React.Component<
                             >
                                 {connection.name}
                             </Text>
-                            {connection.expiresAt && (
-                                <Text
-                                    style={[
-                                        styles.expiryText,
-                                        { color: themeColor('secondaryText') }
-                                    ]}
-                                    numberOfLines={1}
-                                    ellipsizeMode="tail"
-                                >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.expires'
-                                    )}{' '}
-                                    {DateTimeUtils.formatDate(
-                                        connection.expiresAt
-                                    )}
-                                </Text>
-                            )}
+                            <Tag
+                                status={
+                                    connection.isExpired
+                                        ? ExpirationStatus.Expired
+                                        : Status.Active
+                                }
+                            />
                         </View>
                     </View>
 
@@ -300,7 +349,8 @@ export default class NWCConnectionsList extends React.Component<
     );
 
     render() {
-        const { NostrWalletConnectStore, navigation } = this.props;
+        const { NostrWalletConnectStore, navigation, SettingsStore } =
+            this.props;
         const { connections, loading } = NostrWalletConnectStore;
         const { connectionsLoading } = this.state;
 
@@ -348,22 +398,29 @@ export default class NWCConnectionsList extends React.Component<
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate('NWCSettings')
-                                    }
-                                    accessibilityLabel={localeString(
-                                        'views.Settings.title'
-                                    )}
-                                >
-                                    <Gear
-                                        fill={themeColor('text')}
-                                        width={30}
-                                        height={30}
-                                        style={{ alignSelf: 'center' }}
-                                    />
-                                </TouchableOpacity>
+                                {!(
+                                    Platform.OS === 'ios' &&
+                                    (SettingsStore.implementation !==
+                                        'embedded-lnd' ||
+                                        !SettingsStore.settings?.ecash
+                                            ?.enableCashu)
+                                ) && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate('NWCSettings')
+                                        }
+                                        accessibilityLabel={localeString(
+                                            'views.Settings.title'
+                                        )}
+                                    >
+                                        <Gear
+                                            fill={themeColor('text')}
+                                            width={30}
+                                            height={30}
+                                            style={{ alignSelf: 'center' }}
+                                        />
+                                    </TouchableOpacity>
+                                )}
                             </View>
                         )
                     }
@@ -382,64 +439,120 @@ export default class NWCConnectionsList extends React.Component<
                     ) : (
                         <View style={{ paddingHorizontal: 5 }}>
                             {connections.length > 0 && (
-                                <SearchBar
-                                    placeholder={localeString('general.search')}
-                                    onChangeText={(value?: string) =>
-                                        this.setState({
-                                            searchQuery: value ?? ''
-                                        })
-                                    }
-                                    value={this.state.searchQuery}
-                                    inputStyle={[
-                                        styles.searchInput,
-                                        { color: themeColor('text') }
-                                    ]}
-                                    placeholderTextColor={themeColor(
-                                        'secondaryText'
-                                    )}
-                                    containerStyle={{
-                                        backgroundColor: 'transparent',
-                                        borderTopWidth: 0,
-                                        borderBottomWidth: 0,
-                                        paddingHorizontal: 0,
-                                        marginBottom: 10
-                                    }}
-                                    inputContainerStyle={{
-                                        borderRadius: 15,
-                                        backgroundColor: themeColor('secondary')
-                                    }}
-                                    autoCapitalize="none"
-                                    autoCorrect={false}
-                                    keyboardType="visible-password"
-                                    platform="default"
-                                    showLoading={false}
-                                    onClear={() =>
-                                        this.setState({
-                                            searchQuery: ''
-                                        })
-                                    }
-                                    onCancel={() => {
-                                        this.setState({
-                                            searchQuery: ''
-                                        });
-                                    }}
-                                    cancelButtonTitle="Cancel"
-                                    cancelButtonProps={{}}
-                                    searchIcon={{
-                                        name: 'search',
-                                        type: 'font-awesome'
-                                    }}
-                                    clearIcon={{
-                                        name: 'close',
-                                        type: 'font-awesome'
-                                    }}
-                                    showCancel={true}
-                                    onBlur={() => {}}
-                                    onFocus={() => {}}
-                                    loadingProps={{}}
-                                    lightTheme={false}
-                                    round={false}
-                                />
+                                <>
+                                    <SearchBar
+                                        placeholder={localeString(
+                                            'general.search'
+                                        )}
+                                        onChangeText={(value?: string) =>
+                                            this.setState({
+                                                searchQuery: value ?? ''
+                                            })
+                                        }
+                                        value={this.state.searchQuery}
+                                        inputStyle={[
+                                            styles.searchInput,
+                                            { color: themeColor('text') }
+                                        ]}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        containerStyle={{
+                                            backgroundColor: 'transparent',
+                                            borderTopWidth: 0,
+                                            borderBottomWidth: 0,
+                                            paddingHorizontal: 0
+                                        }}
+                                        inputContainerStyle={{
+                                            borderRadius: 15,
+                                            backgroundColor:
+                                                themeColor('secondary')
+                                        }}
+                                        autoCapitalize="none"
+                                        autoCorrect={false}
+                                        keyboardType="visible-password"
+                                        platform="default"
+                                        showLoading={false}
+                                        onClear={() =>
+                                            this.setState({
+                                                searchQuery: ''
+                                            })
+                                        }
+                                        onCancel={() => {
+                                            this.setState({
+                                                searchQuery: ''
+                                            });
+                                        }}
+                                        cancelButtonTitle="Cancel"
+                                        cancelButtonProps={{}}
+                                        searchIcon={{
+                                            name: 'search',
+                                            type: 'font-awesome'
+                                        }}
+                                        clearIcon={{
+                                            name: 'close',
+                                            type: 'font-awesome'
+                                        }}
+                                        showCancel={true}
+                                        onBlur={() => {}}
+                                        onFocus={() => {}}
+                                        loadingProps={{}}
+                                        lightTheme={false}
+                                        round={false}
+                                    />
+
+                                    {/* Filter Buttons */}
+                                    <ButtonGroup
+                                        onPress={this.handleFilterChange}
+                                        selectedIndex={this.getFilterButtonIndex()}
+                                        buttons={this.getFilterOptions().map(
+                                            (option) => {
+                                                const isSelected =
+                                                    this.state.filter ===
+                                                    option.key;
+                                                return {
+                                                    element: () => (
+                                                        <Text
+                                                            style={[
+                                                                styles.filterButtonText,
+                                                                {
+                                                                    color: isSelected
+                                                                        ? themeColor(
+                                                                              'background'
+                                                                          )
+                                                                        : themeColor(
+                                                                              'text'
+                                                                          )
+                                                                }
+                                                            ]}
+                                                        >
+                                                            {option.label} (
+                                                            {option.count})
+                                                        </Text>
+                                                    )
+                                                } as any;
+                                            }
+                                        )}
+                                        selectedButtonStyle={{
+                                            backgroundColor:
+                                                themeColor('highlight'),
+                                            borderRadius: 8
+                                        }}
+                                        containerStyle={{
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderRadius: 12,
+                                            borderColor:
+                                                themeColor('secondary'),
+                                            marginHorizontal: 5,
+                                            marginBottom: 10,
+                                            height: 40
+                                        }}
+                                        innerBorderStyle={{
+                                            color: themeColor('secondary')
+                                        }}
+                                    />
+                                </>
                             )}
 
                             {this.getFilteredConnections().length > 0 ? (
@@ -500,10 +613,6 @@ export default class NWCConnectionsList extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        paddingHorizontal: 12
-    },
     connectionsLoadingContainer: {
         paddingVertical: 40,
         justifyContent: 'center',
@@ -531,12 +640,14 @@ const styles = StyleSheet.create({
     connectionInfo: {
         flex: 1,
         flexDirection: 'row',
-        justifyContent: 'space-between'
-    },
-    nameRow: {
-        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        flex: 1
+        gap: 12
+    },
+    filterButtonText: {
+        fontSize: 13,
+        fontFamily: 'PPNeueMontreal-Book',
+        textAlign: 'center'
     },
     connectionName: {
         fontSize: 16,
@@ -564,11 +675,6 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         height: 8
     },
-    budgetBar: {
-        height: 8,
-        borderRadius: 4,
-        width: '100%'
-    },
     budgetBarBackground: {
         position: 'absolute',
         top: 0,
@@ -583,13 +689,6 @@ const styles = StyleSheet.create({
         left: 0,
         height: 8
     },
-    budgetBarFill: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        height: 8,
-        borderRadius: 4
-    },
     budgetDetails: {
         flexDirection: 'row',
         justifyContent: 'space-between'
@@ -602,13 +701,6 @@ const styles = StyleSheet.create({
         marginTop: 8
     },
     lastUsedText: {
-        fontSize: 13,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    expirySection: {
-        marginTop: 4
-    },
-    expiryText: {
         fontSize: 13,
         fontFamily: 'PPNeueMontreal-Book'
     },

@@ -3,8 +3,8 @@ import { View } from 'react-native';
 import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
-import { ExpirationStatus, Status } from '../../views/Channels/ChannelsPane';
 import { themeColor } from '../../utils/ThemeUtils';
+import { ExpirationStatus, Status } from '../../models/Status';
 
 export function Tag({ status }: { status: Status | ExpirationStatus }) {
     const colors = { background: '', dot: '' };
@@ -12,6 +12,7 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
     // TODO: should all these colors be in the theme?
     switch (status) {
         case Status.Online:
+        case Status.Active:
             colors.background = '#2C553D';
             colors.dot = '#46E80E';
             break;

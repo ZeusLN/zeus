@@ -4,6 +4,7 @@ import { ButtonGroup, Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
+import isEqual from 'lodash/isEqual';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -101,7 +102,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedExpiryPresetIndex: 0,
             showCustomExpiryInput: false,
             customExpiryValue: null,
-            customExpiryUnit: localeString('time.days')
+            customExpiryUnit: TIME_UNITS[1]
         };
     }
 
@@ -136,9 +137,8 @@ export default class AddOrEditNWCConnection extends React.Component<
 
             const showCustomExpiryInput = selectedExpiryPresetIndex === 4;
 
-            let customExpiryValue = connection.customExpiryValue || 0;
-            let customExpiryUnit =
-                connection.customExpiryUnit || localeString('time.days');
+            let customExpiryValue = connection.customExpiryValue || null;
+            let customExpiryUnit = connection.customExpiryUnit || TIME_UNITS[1];
 
             this.setState({
                 connectionName: connection.name,
@@ -165,49 +165,46 @@ export default class AddOrEditNWCConnection extends React.Component<
     checkForChanges = () => {
         const { originalConnection } = this.state;
         if (!originalConnection) return false;
-
-        const currentMaxAmount = this.state.maxAmountSats
-            ? parseInt(this.state.maxAmountSats, 10)
-            : undefined;
-        const currentBudgetRenewal =
-            NostrConnectUtils.getBudgetRenewalOptions()[
-                this.state.selectedBudgetRenewalIndex
-            ]?.key || 'never';
-        const currentExpiryAt = this.state.expiresAt;
-        const originalMaxAmount = originalConnection.maxAmountSats;
-        const originalBudgetRenewal =
-            originalConnection.budgetRenewal || 'never';
-        const originalExpiryAt = originalConnection.expiresAt
-            ? originalConnection.expiresAt
-            : undefined;
-        const nameChanged =
-            this.state.connectionName !== originalConnection.name;
-        const relayChanged =
-            this.state.selectedRelayUrl !==
-            (originalConnection.relayUrl || DEFAULT_NOSTR_RELAYS[0]);
-        const permissionsChanged =
-            JSON.stringify(this.state.selectedPermissions.slice().sort()) !==
-            JSON.stringify(originalConnection.permissions.slice().sort());
-        const maxAmountChanged = currentMaxAmount !== originalMaxAmount;
-        const budgetRenewalChanged =
-            currentBudgetRenewal !== originalBudgetRenewal;
-        const expiryChanged = currentExpiryAt !== originalExpiryAt;
-        const customExpiryValueChanged =
-            this.state.customExpiryValue !==
-            (originalConnection.customExpiryValue || 0);
-        const customExpiryUnitChanged =
-            this.state.customExpiryUnit !== originalConnection.customExpiryUnit;
-
-        return (
-            nameChanged ||
-            relayChanged ||
-            permissionsChanged ||
-            maxAmountChanged ||
-            budgetRenewalChanged ||
-            expiryChanged ||
-            customExpiryValueChanged ||
-            customExpiryUnitChanged
-        );
+        const currentState: any = {
+            name: this.state.connectionName.trim(),
+            relayUrl: this.state.selectedRelayUrl,
+            permissions: [...this.state.selectedPermissions].sort(),
+            maxAmountSats: this.state.maxAmountSats
+                ? parseInt(this.state.maxAmountSats, 10)
+                : undefined,
+            budgetRenewal:
+                NostrConnectUtils.getBudgetRenewalOptions()[
+                    this.state.selectedBudgetRenewalIndex
+                ]?.key || 'never',
+            expiresAt: this.state.expiresAt
+                ? this.state.expiresAt.getTime()
+                : undefined
+        };
+        if (this.state.showCustomExpiryInput) {
+            currentState.customExpiryValue =
+                this.state.customExpiryValue || undefined;
+            currentState.customExpiryUnit = this.state.customExpiryUnit;
+        }
+        const originalState: any = {
+            name: originalConnection.name,
+            relayUrl: originalConnection.relayUrl || DEFAULT_NOSTR_RELAYS[0],
+            permissions: [...originalConnection.permissions].sort(),
+            maxAmountSats: originalConnection.maxAmountSats,
+            budgetRenewal: originalConnection.budgetRenewal || 'never',
+            expiresAt: originalConnection.expiresAt
+                ? new Date(originalConnection.expiresAt).getTime()
+                : undefined
+        };
+        if (
+            originalConnection.customExpiryValue ||
+            originalConnection.customExpiryUnit
+        ) {
+            originalState.customExpiryValue =
+                originalConnection.customExpiryValue || undefined;
+            originalState.customExpiryUnit =
+                originalConnection.customExpiryUnit;
+        }
+        return !isEqual(currentState, originalState);
     };
 
     isRelayChanged = () => {
@@ -943,9 +940,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             <View style={{ marginTop: 10 }}>
                                 <View style={styles.sectionTitleContainer}>
                                     <Body bold>
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.budgetAmount'
-                                        )}
+                                        {localeString('views.BumpFee.budget')}
                                     </Body>
                                 </View>
                                 <View
@@ -988,7 +983,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 {this.state.selectedBudgetPresetIndex === 4 && (
                                     <TextInput
                                         placeholder={localeString(
-                                            'views.Settings.NostrWalletConnect.budgetSats'
+                                            'views.BumpFee.budget'
                                         )}
                                         value={maxAmountSats}
                                         onChangeText={
