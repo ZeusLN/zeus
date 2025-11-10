@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "แฮชการใช้จ่าย",
     "views.Invoice.paymentRequest": "ร้องขอการใช้จ่าย",
     "views.Invoice.copyPaymentRequest": "คัดรองคำร้องขอการใช้จ่าย",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "ข้อความกำกับ",
     "views.LNDConnectConfigQRScanner.error": "เกิดข้อผิดพลาดในการเรียกการตั้งค่า lndconnect",
     "views.LncQRScanner.error": "เกิดข้อผิดพลาดอ่านการตั้งค่า LNC",
