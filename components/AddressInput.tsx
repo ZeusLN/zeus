@@ -41,7 +41,7 @@ const AddressInput: React.FC<AddressInputProps> = ({
             </View>
 
             <TouchableOpacity onPress={onScan} style={styles.scanButton}>
-                <Scan width={25} height={25} fill={themeColor('text')} />
+                <Scan width={30} height={30} fill={themeColor('text')} />
             </TouchableOpacity>
         </View>
     );
