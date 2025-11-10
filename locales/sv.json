@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Betalningshash",
     "views.Invoice.paymentRequest": "Betalningsbegäran",
     "views.Invoice.copyPaymentRequest": "Kopiera betalningsbegäran",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend meddelande",
     "views.LNDConnectConfigQRScanner.error": "Kunde inte hämta lndconnect-konfigurationen",
     "views.LncQRScanner.error": "Fel vid parsning av LNC-konfig",
