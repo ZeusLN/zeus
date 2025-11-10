@@ -254,7 +254,7 @@ const handleAnything = async (
                 isValid: true
             }
         ];
-    } else if (value.includes('clnrest://')) {
+    } else if (value.includes('clnrest://') || value.includes('clnrest+')) {
         if (isClipboardValue) return true;
         const { host, port, rune, implementation, enableTor } =
             ConnectionFormatUtils.processCLNRestConnectUrl(value);
