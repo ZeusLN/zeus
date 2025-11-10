@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Κατακερματισμός πληρωμής",
     "views.Invoice.paymentRequest": "Αίτημα πληρωμής",
     "views.Invoice.copyPaymentRequest": "Αντιγραφή αιτήματος πληρωμής",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend μήνυμα",
     "views.LNDConnectConfigQRScanner.error": "Σφάλμα ανάκτησης ρυθμίσεων lndconnect",
     "views.LncQRScanner.error": "Σφάλμα ανάλυσης ρυθμίσεων LNC",
