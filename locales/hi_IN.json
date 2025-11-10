@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "भुगतान हैश",
     "views.Invoice.paymentRequest": "भुगतान अनुरोध",
     "views.Invoice.copyPaymentRequest": "भुगतान अनुरोध कॉपी करें",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "कीसेंड संदेश",
     "views.LNDConnectConfigQRScanner.error": "lndconnect कॉन्फिग प्राप्त करने में त्रुटि",
     "views.LncQRScanner.error": "LNC कॉन्फिग पार्स करने में त्रुटि",
