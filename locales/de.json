@@ -555,6 +555,7 @@
     "views.Invoice.paymentHash": "Zahlungs-Hash",
     "views.Invoice.paymentRequest": "Zahlungsaufforderung",
     "views.Invoice.copyPaymentRequest": "Zahlungsaufforderung kopieren",
+    "views.Invoice.couldNotDecode": "Could not decode invoice",
     "views.Invoices.keysendMessage": "Keysend-Nachricht",
     "views.LNDConnectConfigQRScanner.error": "Fehler beim Abrufen der lndconnect-Konfiguration",
     "views.LncQRScanner.error": "Fehler beim Parsen der LNC-Konfiguration",
