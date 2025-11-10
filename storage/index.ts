@@ -13,10 +13,7 @@ class Storage {
         const response = await Keychain.setInternetCredentials(
             key,
             key,
-            typeof value === 'string' ? value : JSON.stringify(value),
-            {
-                cloudSync: false
-            }
+            typeof value === 'string' ? value : JSON.stringify(value)
         );
         return response;
     };
