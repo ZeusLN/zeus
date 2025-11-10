@@ -46,6 +46,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
+import { Status, ExpirationStatus } from '../../models/Status';
 import ClosedChannel from '../../models/ClosedChannel';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import ModalStore from '../../stores/ModalStore';
@@ -55,22 +56,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Peer from '../../models/Peer';
 import ModalBox from '../../components/ModalBox';
 import { reaction } from 'mobx';
-
-// TODO: does this belong in the model? Or can it be computed from the model?
-export enum Status {
-    Online = localeString('views.Wallet.Channels.online'),
-    Stable = localeString('channel.status.stable'),
-    Unstable = localeString('channel.status.unstable'),
-    Offline = localeString('channel.status.offline'),
-    Opening = localeString('channel.status.opening'),
-    Closing = localeString('channel.status.closing')
-}
-
-export enum ExpirationStatus {
-    Expiring = localeString('channel.expirationStatus.expiring'),
-    Expired = localeString('channel.expirationStatus.expired'),
-    LSPDiscretion = localeString('general.warning')
-}
 
 interface ChannelsProps {
     navigation: StackNavigationProp<any, any>;
