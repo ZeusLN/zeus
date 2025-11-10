@@ -89,9 +89,6 @@ export default class NWCConnectionQR extends React.Component<
                     <CollapsedQR
                         value={nostrUrl}
                         showShare={true}
-                        copyText={localeString(
-                            'views.Settings.NostrWalletConnect.copyUrl'
-                        )}
                         hideText={true}
                         expanded
                         iconOnly={true}
@@ -196,34 +193,6 @@ export default class NWCConnectionQR extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    },
-    content: {
-        flex: 1,
-        padding: 24,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    header: {
-        alignItems: 'center',
-        marginBottom: 40
-    },
-    title: {
-        fontSize: 24,
-        fontFamily: 'PPNeueMontreal-Book',
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 8
-    },
-    subtitle: {
-        fontSize: 18,
-        fontFamily: 'PPNeueMontreal-Book',
-        textAlign: 'center'
-    },
-    qrContainer: {
-        marginBottom: 40
-    },
     loadingContainer: {
         justifyContent: 'center',
         alignItems: 'center',
