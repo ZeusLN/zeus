@@ -161,8 +161,6 @@ export default class NostrWalletConnectStore {
     @observable public currentConnectionId?: string;
     @observable public connectionJustSucceeded = false;
     @observable public isInNWCConnectionQRView = false;
-    @observable public relayConnectionAttempts: number = 0;
-    @observable public relayConnected: boolean = false;
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
     @observable public cashuEnabled: boolean = false;
     @observable public persistentNWCServiceEnabled: boolean = false;
@@ -433,6 +431,7 @@ export default class NostrWalletConnectStore {
                 clearInterval(this.iosBackgroundTimerInterval);
                 this.iosBackgroundTimerInterval = null;
             }
+            console.info('NWC: Resetting service....');
             this.connections = [];
             this.error = false;
             this.walletServiceKeys = null;
@@ -442,8 +441,6 @@ export default class NostrWalletConnectStore {
             this.waitingForConnection = false;
             this.currentConnectionId = undefined;
             this.connectionJustSucceeded = false;
-            this.relayConnected = false;
-            this.relayConnectionAttempts = 0;
             this.lastConnectionAttempt = 0;
             this.cashuEnabled = false;
             this.persistentNWCServiceEnabled = false;
@@ -453,7 +450,7 @@ export default class NostrWalletConnectStore {
             this.nwcWalletServices.clear();
             this.lastCallTimes.clear();
             this.publishedRelays.clear();
-            this.unsubscribeFromAllConnections();
+            await this.unsubscribeFromAllConnections();
         }
     };
     public isServiceReady(): boolean {
@@ -504,9 +501,10 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-
             const existingConnection = this.connections.find(
-                (c) => c.name.toLowerCase() === params.name.trim().toLowerCase()
+                (c) =>
+                    c.name.trim().toLowerCase() ===
+                    params.name.trim().toLowerCase()
             );
             if (existingConnection) {
                 throw new Error(
@@ -516,15 +514,7 @@ export default class NostrWalletConnectStore {
                 );
             }
             if (!this.nwcWalletServices.has(params.relayUrl)) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.relayNotAvailable',
-                        {
-                            relayUrl: params.relayUrl,
-                            availableRelays: this.availableRelays.join(', ')
-                        }
-                    )
-                );
+                await this.initializeNWCWalletServices();
             }
 
             const connectionId = uuidv4();
@@ -911,11 +901,13 @@ export default class NostrWalletConnectStore {
     }
 
     private async subscribeToAllConnections(): Promise<void> {
-        const activeConnections = this.connections.filter((c) => c.isActive);
-        if (activeConnections.length === 0) {
+        if (this.activeConnections.length === 0) {
+            console.log(
+                'NWC: No active connections to subscribe to, skipping subscribeToAllConnections'
+            );
             return;
         }
-        const subscriptionPromises = activeConnections.map(
+        const subscriptionPromises = this.activeConnections.map(
             async (connection) => {
                 try {
                     await this.subscribeToConnection(connection);

@@ -79,16 +79,7 @@ export default class NWCConnectionDetails extends React.Component<
         const { route, NostrWalletConnectStore } = this.props;
         const connectionId = route.params?.connectionId;
         if (!connectionId) return undefined;
-        const connection = NostrWalletConnectStore.getConnection(connectionId);
-        if (connection) {
-            connection.name;
-            connection.permissions;
-            connection.maxAmountSats;
-            connection.budgetRenewal;
-            connection.expiresAt;
-        }
-
-        return connection;
+        return NostrWalletConnectStore.getConnection(connectionId);
     };
 
     editConnection = (connection: NWCConnection) => {
@@ -227,6 +218,24 @@ export default class NWCConnectionDetails extends React.Component<
 
                                     <KeyValue
                                         keyValue={localeString(
+                                            'views.Transaction.status'
+                                        )}
+                                        valueIndicatorColor={
+                                            connection.isExpired
+                                                ? themeColor('delete')
+                                                : themeColor('success')
+                                        }
+                                        value={
+                                            connection.isExpired
+                                                ? localeString(
+                                                      'channel.expirationStatus.expired'
+                                                  )
+                                                : localeString('general.active')
+                                        }
+                                    />
+
+                                    <KeyValue
+                                        keyValue={localeString(
                                             'views.Settings.NostrWalletConnect.created'
                                         )}
                                         value={DateTimeUtils.listFormattedDateOrder(
@@ -290,7 +299,7 @@ export default class NWCConnectionDetails extends React.Component<
                                     {connection.expiresAt && (
                                         <KeyValue
                                             keyValue={localeString(
-                                                'views.Settings.NostrWalletConnect.expires'
+                                                'general.expiresAt'
                                             )}
                                             value={DateTimeUtils.formatDate(
                                                 connection.expiresAt
@@ -345,8 +354,23 @@ export default class NWCConnectionDetails extends React.Component<
                                     </View>
 
                                     <View style={styles.permissionsList}>
-                                        {NostrConnectUtils.getFullAccessPermissions().map(
-                                            (permission, index) => {
+                                        {NostrConnectUtils.getFullAccessPermissions()
+                                            .sort((a, b) => {
+                                                const aActive =
+                                                    connection.permissions.includes(
+                                                        a
+                                                    );
+                                                const bActive =
+                                                    connection.permissions.includes(
+                                                        b
+                                                    );
+                                                if (aActive && !bActive)
+                                                    return -1;
+                                                if (!aActive && bActive)
+                                                    return 1;
+                                                return 0;
+                                            })
+                                            .map((permission, index) => {
                                                 const isActive =
                                                     connection.permissions.includes(
                                                         permission
@@ -358,22 +382,31 @@ export default class NWCConnectionDetails extends React.Component<
                                                             styles.permissionItem
                                                         }
                                                     >
-                                                        <Checkmark
-                                                            fill={
-                                                                isActive
-                                                                    ? themeColor(
-                                                                          'success'
-                                                                      )
-                                                                    : themeColor(
-                                                                          'secondaryText'
-                                                                      )
-                                                            }
-                                                            width={16}
-                                                            height={16}
-                                                            style={
-                                                                styles.permissionIcon
-                                                            }
-                                                        />
+                                                        <View
+                                                            style={{
+                                                                opacity:
+                                                                    isActive
+                                                                        ? 1
+                                                                        : 0.3
+                                                            }}
+                                                        >
+                                                            <Checkmark
+                                                                fill={
+                                                                    isActive
+                                                                        ? themeColor(
+                                                                              'success'
+                                                                          )
+                                                                        : themeColor(
+                                                                              'secondaryText'
+                                                                          )
+                                                                }
+                                                                width={16}
+                                                                height={16}
+                                                                style={
+                                                                    styles.permissionIcon
+                                                                }
+                                                            />
+                                                        </View>
                                                         <Text
                                                             style={[
                                                                 styles.permissionText,
@@ -395,8 +428,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                         </Text>
                                                     </View>
                                                 );
-                                            }
-                                        )}
+                                            })}
                                     </View>
                                 </View>
                             </View>
