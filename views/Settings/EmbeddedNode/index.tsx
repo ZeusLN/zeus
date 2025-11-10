@@ -75,10 +75,8 @@ export default class EmbeddedNode extends React.Component<
                                     )}
                                     :{' '}
                                     {automaticDisasterRecoveryBackup
-                                        ? localeString('views.Settings.enabled')
-                                        : localeString(
-                                              'views.Settings.disabled'
-                                          )}
+                                        ? localeString('general.enabled')
+                                        : localeString('general.disabled')}
                                 </ListItem.Title>
                             </ListItem.Content>
                             <Icon
@@ -113,12 +111,8 @@ export default class EmbeddedNode extends React.Component<
                                         }}
                                     >
                                         {expressGraphSync
-                                            ? localeString(
-                                                  'views.Settings.enabled'
-                                              )
-                                            : localeString(
-                                                  'views.Settings.disabled'
-                                              )}
+                                            ? localeString('general.enabled')
+                                            : localeString('general.disabled')}
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 <Icon

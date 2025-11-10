@@ -143,7 +143,7 @@ export default class WebPortalPOS extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
-                            {localeString('views.Settings.enabled')}
+                            {localeString('general.enabled')}
                         </ListItem.Title>
                         <View
                             style={{
