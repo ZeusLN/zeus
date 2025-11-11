@@ -28,7 +28,7 @@ export const NodeTitle = (
 
     const title = overrideSensitivity
         ? displayName
-        : PrivacyUtils.sensitiveValue(displayName, 8);
+        : PrivacyUtils.sensitiveValue({ input: displayName, fixedLength: 8 });
     return title.length > maxLength
         ? title.substring(0, maxLength - 3) + '...'
         : title;

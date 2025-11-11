@@ -588,9 +588,9 @@ export default class WalletHeader extends React.Component<
                                             navigation.navigate('Wallets');
                                         }}
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            displayName
-                                        )?.toString()}
+                                        {PrivacyUtils.sensitiveValue({
+                                            input: displayName
+                                        })?.toString()}
                                     </Text>
                                     <StatusBadges />
                                 </Row>

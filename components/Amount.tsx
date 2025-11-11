@@ -437,11 +437,11 @@ export default class Amount extends React.Component<AmountProps, {}> {
 
             // This should be a string because sensitiveValue can only return a date if you pass it a date
             // TODO: can we do better than hardcoding these?
-            unformattedAmount.amount = PrivacyUtils.sensitiveValue(
-                amount,
-                sensitiveLength,
-                true
-            ) as string;
+            unformattedAmount.amount = PrivacyUtils.sensitiveValue({
+                input: amount,
+                fixedLength: sensitiveLength,
+                numberSet: true
+            }) as string;
         }
 
         if (toggleable) {

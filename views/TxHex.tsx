@@ -578,7 +578,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                 }}
                                                                             >
                                                                                 {`${PrivacyUtils.sensitiveValue(
-                                                                                    outpoint
+                                                                                    {
+                                                                                        input: outpoint
+                                                                                    }
                                                                                 )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
@@ -652,7 +654,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                 }}
                                                                             >
                                                                                 {`${PrivacyUtils.sensitiveValue(
-                                                                                    address
+                                                                                    {
+                                                                                        input: address
+                                                                                    }
                                                                                 )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
