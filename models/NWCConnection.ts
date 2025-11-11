@@ -183,32 +183,38 @@ export default class NWCConnection extends BaseModel {
         }
     }
     @action
-    public validateBudgetBeforePayment(amountSats: number): void {
+    public validateBudgetBeforePayment(amountSats: number): {
+        success: boolean;
+        errorMessage?: string;
+    } {
         this.validateAmount(amountSats);
 
         if (this.isExpired) {
-            throw new Error(
-                localeString(
+            return {
+                success: false,
+                errorMessage: localeString(
                     'views.Settings.NostrWalletConnect.error.connectionExpired'
                 )
-            );
+            };
         }
 
         this.checkAndResetBudgetIfNeeded();
 
         if (this.hasBudgetLimit && !this.canSpend(amountSats)) {
-            const error = new Error(
-                localeString(
+            return {
+                success: false,
+                errorMessage: localeString(
                     'views.Settings.NostrWalletConnect.error.paymentExceedsBudget',
                     {
                         amount: amountSats.toString(),
                         remaining: this.remainingBudget.toString()
                     }
                 )
-            );
-            (error as any).code = 'QUOTA_EXCEEDED';
-            throw error;
+            };
         }
+        return {
+            success: true
+        };
     }
 
     @action

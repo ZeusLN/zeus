@@ -120,7 +120,11 @@ export default class NWCSettings extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            {loading && <LoadingIndicator size={30} />}
+                            {loading && (
+                                <View style={{ marginRight: 10 }}>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            )}
                         </View>
                     }
                     navigation={navigation}
