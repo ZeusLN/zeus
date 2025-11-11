@@ -372,7 +372,9 @@ export default class NWCConnectionsList extends React.Component<
                     }}
                     rightComponent={
                         connectionsLoading || loading ? (
-                            <LoadingIndicator size={20} />
+                            <View style={{ marginRight: 10 }}>
+                                <LoadingIndicator size={30} />
+                            </View>
                         ) : (
                             <View
                                 style={{
