@@ -431,8 +431,6 @@ export default class NostrWalletConnectStore {
                 clearInterval(this.iosBackgroundTimerInterval);
                 this.iosBackgroundTimerInterval = null;
             }
-            console.info('NWC: Resetting service....');
-            this.connections = [];
             this.error = false;
             this.walletServiceKeys = null;
             this.errorMessage = '';
@@ -548,6 +546,7 @@ export default class NostrWalletConnectStore {
             });
             await this.saveConnections();
             await this.subscribeToConnection(connection);
+            await this.sendHandoffRequest();
             return connectionUrl;
         } catch (error: any) {
             throw error;
@@ -820,7 +819,7 @@ export default class NostrWalletConnectStore {
             if (!serviceSecretKey) {
                 throw new Error(
                     localeString(
-                        'stores.NostrWalletConnectStore.walletServiceKeyNotFound'
+                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
                     )
                 );
             }
@@ -1027,7 +1026,7 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
         try {
             if (!this.nodeInfoStore.nodeInfo?.identity_pubkey) {
                 await this.nodeInfoStore.getNodeInfo();
@@ -1080,7 +1079,7 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
         try {
             const balance = this.isCashuProperlyConfigured
                 ? this.cashuStore.totalBalanceSats
@@ -1111,14 +1110,14 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
         try {
             if (this.isCashuProperlyConfigured) {
                 return this.handleCashuPayInvoice(connection, request);
             }
             return this.handleLightningPayInvoice(connection, request);
         } catch (error: any) {
-            console.log(error);
+            console.error('NWC: Error in handlePayInvoice:', error);
             return this.handleError(
                 (error instanceof Error ? error.message : String(error)) ||
                     localeString(
@@ -1133,7 +1132,7 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
         if (this.isRateLimited(connection.id, 'make_invoice')) {
             return this.handleError(
                 localeString(
@@ -1273,11 +1272,19 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
         try {
             let paymentHash = this.convertPaymentHashToHex(
                 request.payment_hash!
             );
+            if (!paymentHash) {
+                return this.handleError(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invalidPaymentRequest'
+                    ),
+                    ErrorCodes.INVALID_INVOICE
+                );
+            }
             if (this.isCashuProperlyConfigured) {
                 const cashuInvoices = this.cashuStore.invoices || [];
                 const matchingInvoice = cashuInvoices.find((inv) => {
@@ -1405,7 +1412,7 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
@@ -1415,7 +1422,7 @@ export default class NostrWalletConnectStore {
                 const receivedTokens = this.cashuStore.receivedTokens || [];
                 const sentTokens = this.cashuStore.sentTokens || [];
 
-                // Convert Cashu  to NIP-47 transactions
+                // Convert Cashu payments to NIP-47 transactions
                 const cashuPaymentTransactions: Nip47Transaction[] =
                     cashuPayments.map((payment) => {
                         const timestamp =
@@ -1467,7 +1474,12 @@ export default class NostrWalletConnectStore {
                             ), // Convert to msats
                             fees_paid: 0,
                             settled_at: invoice.isPaid
-                                ? Math.floor(Date.now() / 1000)
+                                ? Math.floor(
+                                      invoice.settleDate?.getTime()
+                                          ? invoice.settleDate.getTime() / 1000
+                                          : Number(invoice.getTimestamp) ||
+                                                Date.now() / 1000
+                                  )
                                 : 0,
                             created_at: Math.floor(timestamp),
                             expires_at: Math.floor(expiresAt)
@@ -1529,7 +1541,11 @@ export default class NostrWalletConnectStore {
                             ), // Convert to msats
                             fees_paid: 0,
                             settled_at: token.spent
-                                ? Math.floor(Date.now() / 1000)
+                                ? Math.floor(
+                                      Number(token.received_at) ||
+                                          Number(token.created_at) ||
+                                          Date.now() / 1000
+                                  )
                                 : 0,
                             created_at: Math.floor(createdAt),
                             expires_at: Math.floor(
@@ -1554,14 +1570,25 @@ export default class NostrWalletConnectStore {
                         const amount = Number(tx.amount);
                         const type: 'incoming' | 'outgoing' =
                             amount >= 0 ? 'incoming' : 'outgoing';
-                        const state: 'settled' | 'pending' | 'failed' =
-                            tx.num_confirmations > 0 ? 'settled' : 'pending';
+                        // Determine state: failed if status indicates failure, settled if confirmed, pending otherwise
+                        let state: 'settled' | 'pending' | 'failed' = 'pending';
+                        if (
+                            tx.status &&
+                            (tx.status === 'failed' ||
+                                tx.status === 'FAILED' ||
+                                tx.status.toLowerCase().includes('fail'))
+                        ) {
+                            state = 'failed';
+                        } else if (tx.num_confirmations > 0) {
+                            state = 'settled';
+                        }
                         const amountMsats =
                             Math.abs(amount) * MILLISATS_PER_SAT;
                         const feesMsats = Math.floor(
                             (Number(tx.total_fees) || 0) * MILLISATS_PER_SAT
                         );
-                        const timestamp = Number(tx.time_stamp);
+                        const timestamp = Number(tx.time_stamp) || 0;
+                        const txHash = tx.tx_hash || tx.txid || '';
 
                         return {
                             type,
@@ -1570,13 +1597,12 @@ export default class NostrWalletConnectStore {
                             description: tx.note || '',
                             description_hash: '',
                             preimage: '',
-                            payment_hash: tx.tx_hash,
+                            payment_hash: txHash,
                             amount: amountMsats,
                             fees_paid: feesMsats,
-                            settled_at: timestamp,
+                            settled_at: state === 'settled' ? timestamp : 0,
                             created_at: timestamp,
-                            expires_at:
-                                timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS,
+                            expires_at: 0, // On-chain transactions don't expire
                             metadata: {
                                 block_height: tx.block_height,
                                 block_hash: tx.block_hash,
@@ -1619,10 +1645,12 @@ export default class NostrWalletConnectStore {
             }
 
             const totalCount = nip47Transactions.length;
-            const offset = request.offset || 0;
-            const limit = request.limit || totalCount;
+            const offset = Math.max(0, request.offset || 0);
+            const MAX_LIMIT = 1000;
+            const limit = request.limit
+                ? Math.min(request.limit, MAX_LIMIT)
+                : Math.min(totalCount, MAX_LIMIT);
             nip47Transactions = nip47Transactions.slice(offset, offset + limit);
-
             return {
                 result: {
                     transactions: nip47Transactions,
@@ -1650,7 +1678,7 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
 
         try {
             const amountSats = Math.floor(request.amount / MILLISATS_PER_SAT);
@@ -1663,21 +1691,59 @@ export default class NostrWalletConnectStore {
                     ErrorCodes.NOT_IMPLEMENTED
                 );
             }
+            const budgetValidation =
+                connection.validateBudgetBeforePayment(amountSats);
+            if (!budgetValidation.success) {
+                return this.handleError(
+                    budgetValidation.errorMessage ||
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.keysendFailed'
+                        ),
+                    ErrorCodes.SEND_KEYSEND_FAILED
+                );
+            }
+            this.transactionsStore.payment_error = null;
+            this.transactionsStore.payment_preimage = null;
+            this.transactionsStore.error = false;
 
-            connection.validateBudgetBeforePayment(amountSats);
-
-            await this.transactionsStore.sendPayment({
+            this.transactionsStore.sendPayment({
                 pubkey: request.pubkey,
                 amount: request.amount.toString()
             });
+            // Wait for payment to complete (either success or failure)
+            const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
+            const pollInterval = 200;
+            const startTime = Date.now();
 
-            await new Promise((resolve) =>
-                setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
-            );
+            while (
+                this.transactionsStore.loading &&
+                Date.now() - startTime < maxWaitTime
+            ) {
+                await new Promise((resolve) =>
+                    setTimeout(resolve, pollInterval)
+                );
+            }
+
+            // If still loading after max wait, consider it timed out
+            if (this.transactionsStore.loading) {
+                await new Promise((resolve) =>
+                    setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
+                );
+            }
 
             if (this.transactionsStore.payment_error) {
                 return this.handleError(
                     this.transactionsStore.payment_error,
+                    ErrorCodes.SEND_KEYSEND_FAILED
+                );
+            }
+
+            if (
+                this.transactionsStore.error &&
+                this.transactionsStore.error_msg
+            ) {
+                return this.handleError(
+                    this.transactionsStore.error_msg,
                     ErrorCodes.SEND_KEYSEND_FAILED
                 );
             }
@@ -1687,6 +1753,12 @@ export default class NostrWalletConnectStore {
             const fee = this.transactionsStore.payment_fee;
 
             if (!preimage || !payment_hash) {
+                if (this.transactionsStore.loading) {
+                    return this.handleError(
+                        localeString('views.SendingLightning.paymentTimedOut'),
+                        ErrorCodes.SEND_KEYSEND_FAILED
+                    );
+                }
                 return this.handleError(
                     localeString(
                         'stores.NostrWalletConnectStore.error.keysendFailed'
@@ -1749,7 +1821,7 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.RATE_LIMITED
             );
         }
-        this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connection.id);
 
         try {
             if (this.isCashuProperlyConfigured) {
@@ -1792,7 +1864,6 @@ export default class NostrWalletConnectStore {
             request.invoice
         ]);
         const amountSats = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
-
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
                 (Number(invoiceInfo.timestamp) + Number(invoiceInfo.expiry)) *
@@ -1811,15 +1882,29 @@ export default class NostrWalletConnectStore {
                 };
             }
         }
-
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
+        const budgetValidation =
+            connection.validateBudgetBeforePayment(amountSats);
+        if (!budgetValidation.success) {
+            return this.handleError(
+                budgetValidation.errorMessage ||
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.connectionInsufficientBalance',
+                        {
+                            amount: amountSats.toString(),
+                            balance: connection.remainingBudget.toString()
+                        }
+                    ),
+                ErrorCodes.INSUFFICIENT_BALANCE
+            );
+        }
         const currentLightningBalance = lightningBalance?.lightningBalance || 0;
         if (currentLightningBalance < amountSats) {
             return this.handleError(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.insufficientBalance',
+                    'stores.NostrWalletConnectStore.error.lightningInsufficientBalance',
                     {
                         amount: amountSats.toString(),
                         balance: currentLightningBalance.toString()
@@ -1828,19 +1913,31 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INSUFFICIENT_BALANCE
             );
         }
-
-        connection.validateBudgetBeforePayment(amountSats);
-
-        await this.transactionsStore.sendPayment({
+        this.transactionsStore.payment_error = null;
+        this.transactionsStore.payment_preimage = null;
+        this.transactionsStore.error = false;
+        this.transactionsStore.sendPayment({
             payment_request: request.invoice,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         });
+        const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
+        const pollInterval = 200;
+        const startTime = Date.now();
 
-        await new Promise((resolve) =>
-            setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
-        );
+        while (
+            this.transactionsStore.loading &&
+            Date.now() - startTime < maxWaitTime
+        ) {
+            await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        }
 
+        // If still loading after max wait, consider it timed out
+        if (this.transactionsStore.loading) {
+            await new Promise((resolve) =>
+                setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
+            );
+        }
         if (this.transactionsStore.payment_error) {
             return this.handleError(
                 this.transactionsStore.payment_error,
@@ -1848,8 +1945,21 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        if (this.transactionsStore.error && this.transactionsStore.error_msg) {
+            return this.handleError(
+                this.transactionsStore.error_msg,
+                ErrorCodes.FAILED_TO_PAY_INVOICE
+            );
+        }
         const preimage = this.transactionsStore.payment_preimage;
         if (!preimage) {
+            if (this.transactionsStore.loading) {
+                return this.handleError(
+                    localeString('views.SendingLightning.paymentTimedOut') ||
+                        'Payment timed out',
+                    ErrorCodes.FAILED_TO_PAY_INVOICE
+                );
+            }
             return this.handleError(
                 localeString(
                     'stores.NostrWalletConnectStore.error.noPreimageReceived'
@@ -1955,11 +2065,26 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        const budgetValidation = connection.validateBudgetBeforePayment(amount);
+        if (!budgetValidation.success) {
+            return this.handleError(
+                budgetValidation.errorMessage ||
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.connectionInsufficientBalance',
+                        {
+                            amount: amount.toString(),
+                            balance: connection.remainingBudget.toString()
+                        }
+                    ),
+                ErrorCodes.INSUFFICIENT_BALANCE
+            );
+        }
+
         const currentBalance = this.cashuStore.totalBalanceSats || 0;
         if (currentBalance < amount) {
             return this.handleError(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.insufficientBalance',
+                    'stores.NostrWalletConnectStore.error.cashuInsufficientBalance',
                     {
                         amount: amount.toString(),
                         balance: currentBalance.toString()
@@ -1968,8 +2093,6 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INSUFFICIENT_BALANCE
             );
         }
-
-        connection.validateBudgetBeforePayment(amount);
 
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
             amount: amount.toString()
@@ -2609,7 +2732,7 @@ export default class NostrWalletConnectStore {
         request: NWCRequest,
         eventId: string
     ): Promise<void> {
-        let response;
+        let response: any;
         try {
             switch (request.method) {
                 case 'pay_invoice':
@@ -2629,18 +2752,28 @@ export default class NostrWalletConnectStore {
             }
         } catch (error) {
             console.warn('NWC: Failed to handle event request', {
-                error,
-                request,
-                connection,
+                error: (error as Error).message,
+                method: request.method,
+                connection: connection.name,
                 eventId
             });
+            response = this.handleError(
+                (error instanceof Error ? error.message : String(error)) ||
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToPayInvoice'
+                    ),
+                ErrorCodes.INTERNAL_ERROR
+            );
         }
-        await this.publishEventToClient(
-            connection,
-            request.method,
-            response,
-            eventId
-        );
+        // Only publish if we have a response
+        if (response) {
+            await this.publishEventToClient(
+                connection,
+                request.method,
+                response,
+                eventId
+            );
+        }
     }
     // Publishing Events to Nostr client
     private async publishEventToClient(
@@ -2897,6 +3030,7 @@ export default class NostrWalletConnectStore {
             return paymentHash;
         } catch (error) {
             console.warn('Failed to convert payment hash to hex:', error);
+            return undefined;
         }
     }
 

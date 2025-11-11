@@ -173,7 +173,9 @@ export default class NWCConnectionDetails extends React.Component<
                     }}
                     rightComponent={
                         loading || storeLoading ? (
-                            <LoadingIndicator size={20} />
+                            <View style={{ marginRight: 10 }}>
+                                <LoadingIndicator size={30} />
+                            </View>
                         ) : (
                             <View style={styles.headerActions}>
                                 <TouchableOpacity
