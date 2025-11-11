@@ -151,5 +151,61 @@ describe('ConnectionFormatUtils', () => {
                 implementation: 'cln-rest'
             });
         });
+
+        it('handles new format clnrest+https:// properly', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://cln.local:3010?rune=8hJ6ZKFvRune&certs=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0t'
+                )
+            ).toEqual({
+                host: 'https://cln.local',
+                rune: '8hJ6ZKFvRune',
+                port: '3010',
+                enableTor: false,
+                implementation: 'cln-rest'
+            });
+        });
+
+        it('handles new format clnrest+http:// properly', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+http://192.168.1.100:3010?rune=testRune123&certs=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0t'
+                )
+            ).toEqual({
+                host: 'http://192.168.1.100',
+                rune: 'testRune123',
+                port: '3010',
+                enableTor: false,
+                implementation: 'cln-rest'
+            });
+        });
+
+        it('handles new format with IPv6', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://[2604:2000::]:3010?rune=8hJ6ZKFvRune&certs=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0t'
+                )
+            ).toEqual({
+                host: 'https://[2604:2000::]',
+                rune: '8hJ6ZKFvRune',
+                port: '3010',
+                enableTor: false,
+                implementation: 'cln-rest'
+            });
+        });
+
+        it('handles new format with Tor address', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://y7enfk2mdfawf.onion:3010?rune=8hJ6ZKFvRune&certs=LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0t'
+                )
+            ).toEqual({
+                host: 'https://y7enfk2mdfawf.onion',
+                rune: '8hJ6ZKFvRune',
+                port: '3010',
+                enableTor: true,
+                implementation: 'cln-rest'
+            });
+        });
     });
 });
