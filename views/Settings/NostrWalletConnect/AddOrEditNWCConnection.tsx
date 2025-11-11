@@ -748,7 +748,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                         }
                     }}
                     rightComponent={
-                        loading ? <LoadingIndicator size={20} /> : undefined
+                        loading ? (
+                            <View style={{ marginRight: 10 }}>
+                                <LoadingIndicator size={30} />
+                            </View>
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
