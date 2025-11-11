@@ -256,7 +256,10 @@ export default class WalletConfiguration extends React.Component<
                     existingAccount
                 });
             }
-        } else if (suggestImport.includes('clnrest://')) {
+        } else if (
+            suggestImport.includes('clnrest://') ||
+            suggestImport.includes('clnrest+')
+        ) {
             const {
                 host,
                 rune,
@@ -301,7 +304,8 @@ export default class WalletConfiguration extends React.Component<
                 clipboard.includes('lndconnect://') ||
                 clipboard.includes('lndhub://') ||
                 clipboard.includes('bluewallet:') ||
-                clipboard.includes('clnrest://')
+                clipboard.includes('clnrest://') ||
+                clipboard.includes('clnrest+')
             ) {
                 this.setState({
                     suggestImport: clipboard
