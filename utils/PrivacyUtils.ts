@@ -10,19 +10,35 @@ class PrivacyUtils {
     // Stores generated masked values to prevent regeneration on each render
     private memoizedValues: Map<string, string> = new Map();
 
-    sensitiveValue = (
-        input: string | number | Date | undefined,
-        fixedLength?: number | null,
-        numberSet?: boolean
-    ) => {
+    sensitiveValue = ({
+        input,
+        fixedLength,
+        numberSet,
+        condenseAtLength
+    }: {
+        input: string | number | Date | undefined;
+        fixedLength?: number | null;
+        numberSet?: boolean;
+        condenseAtLength?: number;
+    }) => {
         const { settings } = settingsStore;
         const { privacy } = settings;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
-        if (!lurkerMode) return input;
 
         // Create unique key for memoization based on input parameters
-        const length = fixedLength || (input && input.toString().length) || 1;
-        const key = `${input}-${length}-${numberSet}`;
+        const inputString = input?.toString() || '';
+        const length = fixedLength || inputString.length;
+
+        let condensedString = input;
+        if (condenseAtLength && inputString.length > condenseAtLength) {
+            condensedString = `${inputString.slice(
+                0,
+                condenseAtLength - 3
+            )}...`;
+        }
+
+        if (!lurkerMode) return condensedString;
+        const key = `${condensedString}-${length}-${numberSet}`;
 
         // Generate and store new masked value only if not already memoized
         if (!this.memoizedValues.has(key)) {

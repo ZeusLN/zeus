@@ -99,6 +99,12 @@ const ExpandedHop = (props: any) => {
     const { pathIndex, hop, path, aliasMap, loading } = props;
     const isOrigin = hop.sent != null;
     const isDestination = pathIndex === path.length;
+
+    const nodeValue = PrivacyUtils.sensitiveValue({ input: hop.node });
+    const pubkeyValue = PrivacyUtils.sensitiveValue({
+        input: aliasMap.get(hop.pubKey)
+    });
+
     return (
         <View
             key={pathIndex}
@@ -158,36 +164,23 @@ const ExpandedHop = (props: any) => {
                                 isOrigin
                                     ? localeString('views.Channel.yourNode')
                                     : aliasMap.get(hop.pubKey)
-                                    ? PrivacyUtils.sensitiveValue(
-                                          aliasMap.get(hop.pubKey)
-                                      )
+                                    ? pubkeyValue
                                     : typeof hop.node === 'string' &&
                                       hop.node.length >= 66
                                     ? `${
-                                          typeof PrivacyUtils.sensitiveValue(
-                                              hop.node
-                                          ) === 'string'
-                                              ? (
-                                                    PrivacyUtils.sensitiveValue(
-                                                        hop.node
-                                                    ) as string
-                                                ).slice(0, 14)
+                                          typeof nodeValue === 'string'
+                                              ? (nodeValue as string).slice(
+                                                    0,
+                                                    14
+                                                )
                                               : ''
                                       }...${
-                                          typeof PrivacyUtils.sensitiveValue(
-                                              hop.node
-                                          ) === 'string'
-                                              ? (
-                                                    PrivacyUtils.sensitiveValue(
-                                                        hop.node
-                                                    ) as string
-                                                ).slice(-14)
+                                          typeof nodeValue === 'string'
+                                              ? (nodeValue as string).slice(-14)
                                               : ''
                                       }`
-                                    : typeof PrivacyUtils.sensitiveValue(
-                                          hop.node
-                                      ) === 'string'
-                                    ? PrivacyUtils.sensitiveValue(hop.node)
+                                    : typeof nodeValue === 'string'
+                                    ? nodeValue
                                     : ''
                             }`}
                         </Text>
@@ -285,8 +278,9 @@ export default class PaymentPath extends React.Component<
             path.forEach((hop) => {
                 const displayName = aliasMap.get(hop.pubKey) || hop.node;
                 title += ', ';
-                const sensitiveDisplayName =
-                    PrivacyUtils.sensitiveValue(displayName);
+                const sensitiveDisplayName = PrivacyUtils.sensitiveValue({
+                    input: displayName
+                });
                 title +=
                     typeof sensitiveDisplayName === 'string' &&
                     sensitiveDisplayName.length >= 66
