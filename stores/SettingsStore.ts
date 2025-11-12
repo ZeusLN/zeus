@@ -178,6 +178,8 @@ export interface Settings {
     expressGraphSync: boolean;
     resetExpressGraphSyncOnStartup: boolean;
     bimodalPathfinding: boolean;
+    graphSyncPromptNeverAsk: boolean;
+    graphSyncPromptIgnoreOnce: boolean;
     dontAllowOtherPeers: boolean;
     neutrinoPeersMainnet: Array<string>;
     neutrinoPeersTestnet: Array<string>;
@@ -1375,6 +1377,8 @@ export default class SettingsStore {
         expressGraphSync: true,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
+        graphSyncPromptNeverAsk: false,
+        graphSyncPromptIgnoreOnce: false,
         dontAllowOtherPeers: false,
         neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
         neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,

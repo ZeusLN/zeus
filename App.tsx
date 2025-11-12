@@ -50,6 +50,7 @@ import AndroidNfcModal from './components/Modals/AndroidNfcModal';
 import InfoModal from './components/Modals/InfoModal';
 import ShareModal from './components/Modals/ShareModal';
 import NewChannelModal from './components/Modals/NewChannelModal';
+import GraphSyncPromptModal from './components/Modals/GraphSyncPromptModal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -1282,6 +1283,8 @@ export default class App extends React.PureComponent {
                             <ShareModal />
                             {/* @ts-ignore:next-line */}
                             <NewChannelModal />
+                            {/* @ts-ignore:next-line */}
+                            <GraphSyncPromptModal />
                         </GestureHandlerRootView>
                     </PushNotificationManager>
                 </AppContainer>
