@@ -86,7 +86,7 @@ export default class SendEcash extends React.Component<
         }
 
         this.state = {
-            loading: true,
+            loading: false,
             memo: '',
             value: value || '',
             satAmount: satAmount || '',
