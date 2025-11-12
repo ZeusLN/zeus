@@ -21,7 +21,7 @@ import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
-import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
+import NWCLogo from '../../assets/images/SVG/nwc-logo.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -492,7 +492,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             }
                         >
                             <View style={styles.icon}>
-                                <NostrichIcon
+                                <NWCLogo
                                     fill={themeColor('text')}
                                     width={23}
                                     height={23}
