@@ -6,7 +6,6 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -30,6 +29,7 @@ import SettingsStore from '../stores/SettingsStore';
 
 import LnurlPayHistorical from './LnurlPay/Historical';
 
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
 
@@ -282,40 +282,43 @@ export default class PaymentView extends React.Component<
                         )}
 
                         {enhancedPath.length > 0 && enhancedPath[0][0] && (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent',
-                                    marginLeft: -16,
-                                    marginRight: -16
-                                }}
+                            <TouchableOpacity
                                 onPress={() =>
                                     navigation.navigate('PaymentPaths', {
                                         enhancedPath
                                     })
                                 }
                             >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {enhancedPath.length > 1
-                                            ? `${localeString(
-                                                  'views.Payment.paths'
-                                              )} (${enhancedPath.length})`
-                                            : localeString(
-                                                  'views.Payment.path'
-                                              )}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                                <Icon
-                                    name="keyboard-arrow-right"
-                                    color={themeColor('secondaryText')}
-                                />
-                            </ListItem>
+                                <View
+                                    style={{
+                                        marginTop: 10,
+                                        marginBottom: 10
+                                    }}
+                                >
+                                    <Row justify="space-between">
+                                        <View style={{ width: '95%' }}>
+                                            <KeyValue
+                                                keyValue={
+                                                    enhancedPath.length > 1
+                                                        ? `${localeString(
+                                                              'views.Payment.paths'
+                                                          )} (${
+                                                              enhancedPath.length
+                                                          })`
+                                                        : localeString(
+                                                              'views.Payment.path'
+                                                          )
+                                                }
+                                            />
+                                        </View>
+                                        <CaretRight
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    </Row>
+                                </View>
+                            </TouchableOpacity>
                         )}
                         {storedNote && (
                             <KeyValue
