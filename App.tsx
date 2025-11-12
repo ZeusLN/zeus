@@ -612,6 +612,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             PaymentRequest
                                                         }
+                                                        options={{
+                                                            gestureEnabled:
+                                                                false // disables swipe back
+                                                        }}
                                                     />
                                                     <Stack.Screen
                                                         name="OpenChannel" // @ts-ignore:next-line
