@@ -1,10 +1,18 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
-import { inject } from 'mobx-react';
+import {
+    StyleSheet,
+    ScrollView,
+    View,
+    TouchableOpacity,
+    Text
+} from 'react-native';
+import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore from '../stores/SettingsStore';
+import InvoicesStore from '../stores/InvoicesStore';
+import ChannelsStore from '../stores/ChannelsStore';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -13,11 +21,14 @@ import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { Row } from '../components/layout/Row';
 import AttestationButton from '../components/AttestationButton';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 import Invoice from '../models/Invoice';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
@@ -25,34 +36,151 @@ import QR from '../assets/images/SVG/QR.svg';
 interface InvoiceProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
+    InvoicesStore?: InvoicesStore;
+    ChannelsStore?: ChannelsStore;
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
 interface InvoiceState {
     storedNote: string;
+    enhancedPath: any[];
+    loading: boolean;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'InvoicesStore', 'ChannelsStore')
+@observer
 export default class InvoiceView extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
-    state = {
-        storedNote: ''
+    state: InvoiceState = {
+        storedNote: '',
+        enhancedPath: [],
+        loading: false
+    };
+
+    renderIncomingChannel = () => {
+        const { navigation, ChannelsStore } = this.props;
+        const { enhancedPath: path } = this.state;
+
+        if (!BackendUtils.isLNDBased() || !path.length || !path[0][0])
+            return null;
+
+        const channels = path
+            .map((route) => {
+                const hop = route[0];
+                if (!hop) return null;
+
+                const pubkey = hop.pubKey;
+                const chanId = hop.chan_id ? String(hop.chan_id) : undefined;
+
+                const channelByPub = ChannelsStore?.channels.find(
+                    (c) => c.remotePubkey === pubkey
+                );
+
+                const channelById =
+                    !channelByPub && chanId
+                        ? ChannelsStore?.channels.find(
+                              (c) =>
+                                  String(c.chan_id) === chanId ||
+                                  (c.channel_point &&
+                                      c.channel_point.split(':')[0] === chanId)
+                          )
+                        : null;
+
+                const finalChannel = channelByPub || channelById;
+
+                const alias =
+                    ChannelsStore?.nodes?.[pubkey]?.alias ||
+                    (chanId && ChannelsStore?.aliasesById?.[chanId]) ||
+                    ChannelsStore?.aliasMap.get(pubkey);
+
+                const nodeName = alias || hop.node || pubkey;
+                const displayName = PrivacyUtils.sensitiveValue(nodeName);
+                const formattedName =
+                    typeof displayName === 'string' && displayName.length >= 66
+                        ? `${displayName.slice(0, 14)}...${displayName.slice(
+                              -14
+                          )}`
+                        : displayName || localeString('general.unknown');
+
+                const isOpen =
+                    finalChannel?.active ||
+                    ChannelsStore?.peers?.some(
+                        (p) => p.pubkey === pubkey && p.connected
+                    );
+
+                return {
+                    channel: finalChannel,
+                    name: formattedName,
+                    isOpen
+                };
+            })
+            .filter(
+                (
+                    item
+                ): item is { channel: any; name: string; isOpen: boolean } =>
+                    item !== null
+            );
+
+        if (!channels.length) return null;
+
+        return (
+            <KeyValue
+                keyValue={`${
+                    channels.length === 1
+                        ? localeString('views.Channel.title')
+                        : localeString('views.Wallet.Wallet.channels')
+                }${channels.length > 1 ? ` (${channels.length})` : ''}`}
+                value={
+                    <Text style={{ flexWrap: 'wrap' }}>
+                        {channels.map((c, i) => (
+                            <Text key={i}>
+                                <Text
+                                    style={{
+                                        color: c.isOpen
+                                            ? themeColor('highlight')
+                                            : themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                    onPress={() =>
+                                        c.channel &&
+                                        navigation.navigate('Channel', {
+                                            channel: c.channel
+                                        })
+                                    }
+                                >
+                                    {c.name}
+                                </Text>
+                                {i < channels.length - 1 ? ', ' : ''}
+                            </Text>
+                        ))}
+                    </Text>
+                }
+                sensitive
+            />
+        );
     };
 
     async componentDidMount() {
-        const { navigation, route } = this.props;
+        const { navigation, route, InvoicesStore } = this.props;
         const invoice = route.params?.invoice;
         navigation.addListener('focus', () => {
             const note = invoice.getNote;
             this.setState({ storedNote: note });
         });
+        if (BackendUtils.isLNDBased()) {
+            this.setState({ loading: true });
+            const enhancedPath = await InvoicesStore?.fetchIncomingChannel(
+                invoice.getRHash
+            );
+            this.setState({ enhancedPath: enhancedPath!, loading: false });
+        }
     }
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { storedNote } = this.state;
+        const { storedNote, loading } = this.state;
         const invoice = route.params?.invoice;
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
@@ -97,9 +225,7 @@ export default class InvoiceView extends React.Component<
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddNotes', {
-                        noteKey: getNoteKey
-                    })
+                    navigation.navigate('AddNotes', { noteKey: getNoteKey })
                 }
                 style={{ marginRight: 15 }}
             >
@@ -125,6 +251,11 @@ export default class InvoiceView extends React.Component<
                     }}
                     rightComponent={
                         <Row>
+                            {loading && (
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={35} />
+                                </View>
+                            )}
                             {invoice.isZeusPay && (
                                 <AttestationButton
                                     hash={invoice.payment_hash || getRHash}
@@ -336,6 +467,8 @@ export default class InvoiceView extends React.Component<
                                 }
                             />
                         )}
+
+                        {this.renderIncomingChannel()}
                     </View>
                 </ScrollView>
                 <View style={{ bottom: 15 }}>
