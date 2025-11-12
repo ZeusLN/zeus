@@ -99,6 +99,7 @@ interface InvoiceState {
     donationPercentage: any;
     donationAmount: any;
     selectedIndex: number | null;
+    swipeButtonKey: number;
 }
 
 @inject(
@@ -118,6 +119,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     listener: any;
+    focusListener: any;
     isComponentMounted: boolean = false;
     state = {
         customAmount: '',
@@ -140,7 +142,8 @@ export default class PaymentRequest extends React.Component<
         donationsToggle: false,
         donationPercentage: 0,
         donationAmount: 0,
-        selectedIndex: null
+        selectedIndex: null,
+        swipeButtonKey: 0
     };
 
     async componentDidMount() {
@@ -193,6 +196,14 @@ export default class PaymentRequest extends React.Component<
                 lightningReadyToSend: true
             });
         }
+
+        // Reset slide to pay slider position when screen comes into focus
+        const { navigation } = this.props;
+        this.focusListener = navigation.addListener('focus', () => {
+            this.setState({
+                swipeButtonKey: this.state.swipeButtonKey + 1
+            });
+        });
     }
 
     isAmountValidToSwap(): boolean {
@@ -259,6 +270,9 @@ export default class PaymentRequest extends React.Component<
 
     componentWillUnmount(): void {
         this.isComponentMounted = false;
+        if (this.focusListener) {
+            this.focusListener();
+        }
     }
 
     checkIfLndReady = async () => {
@@ -1550,6 +1564,7 @@ export default class PaymentRequest extends React.Component<
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
+                                    key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
                                     instructionText={localeString(
                                         'views.PaymentRequest.slideToPay'
