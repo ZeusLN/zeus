@@ -3,7 +3,6 @@ import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
-import BigNumber from 'bignumber.js';
 
 import { AdditionalOutput } from '../models/TransactionRequest';
 
@@ -13,15 +12,14 @@ import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import SwipeButton from '../components/SwipeButton';
 import Button from '../components/Button';
+import Text from '../components/Text';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
-import FiatStore from '../stores/FiatStore';
 
 import QR from '../assets/images/SVG/QR.svg';
 
@@ -41,18 +39,17 @@ interface VerifyOnChainProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
-    FiatStore: FiatStore;
 }
 
 interface VerifyOnChainState {
     bitcoinUnits: 'sats' | 'BTC';
     slideToPayThreshold: number;
 }
-@inject('TransactionsStore', 'SettingsStore', 'UnitsStore', 'FiatStore')
+@inject('TransactionsStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
     state: VerifyOnChainState = {
-        bitcoinUnits: 'sats' as 'sats' | 'BTC',
+        bitcoinUnits: 'sats',
         slideToPayThreshold: 10000
     };
 
@@ -73,7 +70,8 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
             bitcoinUnits: prevState.bitcoinUnits === 'sats' ? 'BTC' : 'sats'
         }));
     };
-    renderTotal = () => {
+
+    getTotalAmount = () => {
         const { route } = this.props;
         const { satAmount, amount, additionalOutputs } = route?.params || {};
 
@@ -84,52 +82,63 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                 total += Number(o?.satAmount || o?.amount || 0);
             });
         }
-        const { SettingsStore, FiatStore } = this.props;
-        const fiatEnabled = SettingsStore.settings?.fiatEnabled;
-        const fiat = SettingsStore.settings?.fiat;
-        const rates = FiatStore.fiatRates;
-        let numericRate = 0;
-        if (fiat && rates) {
-            const entry = rates.find((entry) => entry.code === fiat);
-            numericRate = entry?.rate ? Number(entry.rate) : 0;
-        }
-        let totalFiatDisplay = '';
-        if (!numericRate || isNaN(numericRate)) {
-            totalFiatDisplay = localeString('general.notAvailable');
-        } else {
-            const totalFiat = new BigNumber(total)
-                .multipliedBy(numericRate)
-                .dividedBy(SATS_PER_BTC)
-                .toFixed(2);
-            totalFiatDisplay = FiatStore.formatAmountForDisplay(totalFiat);
-        }
+        return total;
+    };
+
+    renderProminentAmount = () => {
+        const total = this.getTotalAmount();
 
         return (
-            <View>
-                <TouchableOpacity onPress={this.toggleBitcoinUnits}>
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.totalBitcoin')}
-                        value={
-                            this.state.bitcoinUnits === 'sats' ? (
-                                <Amount
-                                    fixedUnits="sats"
-                                    sats={total.toString()}
-                                />
-                            ) : (
-                                <Amount
-                                    fixedUnits="BTC"
-                                    sats={total.toString()}
-                                />
-                            )
-                        }
-                        disableCopy
-                    />
-                </TouchableOpacity>
-                {fiatEnabled && (
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={totalFiatDisplay}
-                    />
+            <View style={styles.center}>
+                <Amount
+                    sats={total.toString()}
+                    sensitive
+                    jumboText
+                    toggleable
+                />
+            </View>
+        );
+    };
+
+    renderTransactionSummary = () => {
+        const { route } = this.props;
+        const { additionalOutputs, utxos } = route?.params || {};
+        const addresses = this.getDestinationAddresses();
+        const utxoCount = Array.isArray(utxos) ? utxos.length : 0;
+        const hasMultipleOutputs =
+            Array.isArray(additionalOutputs) && additionalOutputs.length > 0;
+
+        return (
+            <View style={styles.summary}>
+                <Text
+                    style={{
+                        fontSize: 14,
+                        color: themeColor('secondaryText'),
+                        textAlign: 'center'
+                    }}
+                >
+                    {`${addresses.length} ${localeString(
+                        hasMultipleOutputs
+                            ? 'general.destinations'
+                            : 'general.destination'
+                    )}`}
+                </Text>
+
+                {utxoCount > 0 && (
+                    <Text
+                        style={{
+                            fontSize: 14,
+                            color: themeColor('secondaryText'),
+                            textAlign: 'center',
+                            marginTop: 5
+                        }}
+                    >
+                        {`${utxoCount} ${
+                            utxoCount === 1
+                                ? localeString('general.utxo')
+                                : localeString('general.utxos')
+                        }`}
+                    </Text>
                 )}
             </View>
         );
@@ -322,25 +331,13 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
 
     render() {
         const { navigation, route } = this.props;
-        const {
-            destination,
-            fee,
-            satAmount,
-            amount,
-            account,
-            fundMax,
-            additionalOutputs
-        } = route?.params;
+        const { destination, fee, satAmount, amount, account, fundMax } =
+            route?.params;
         const { slideToPayThreshold } = this.state;
 
-        const primary = satAmount || amount;
-        let totalAmount = Number(primary);
-        if (additionalOutputs && Array.isArray(additionalOutputs)) {
-            additionalOutputs.forEach((o) => {
-                totalAmount += Number(o?.satAmount || o?.amount || 0);
-            });
-        }
+        const totalAmount = this.getTotalAmount();
         const shouldUseSwipeButton = totalAmount >= slideToPayThreshold;
+
         return (
             <Screen>
                 <Header
@@ -355,13 +352,15 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                     rightComponent={this.renderQRButton()}
                     navigation={navigation}
                 />
+
+                {this.renderProminentAmount()}
+                {this.renderTransactionSummary()}
+
                 <ScrollView contentContainerStyle={styles.content}>
                     {this.renderOutputs(
                         destination,
                         fundMax ? '0' : satAmount || amount || '0'
                     )}
-
-                    {this.renderTotal()}
 
                     <KeyValue
                         keyValue={localeString('views.Send.feeSatsVbyte')}
@@ -411,9 +410,18 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
 
 const styles = StyleSheet.create({
     content: {
-        padding: 15
+        paddingHorizontal: 15
     },
     button: {
         paddingHorizontal: 20
+    },
+    center: {
+        alignItems: 'center',
+        paddingVertical: 15
+    },
+    summary: {
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingBottom: 15
     }
 });

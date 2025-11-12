@@ -420,6 +420,37 @@ export default class Send extends React.Component<SendProps, SendState> {
         }));
     };
 
+    hasInvalidAdditionalOutputs = () => {
+        const { additionalOutputs } = this.state;
+        if (!additionalOutputs || additionalOutputs.length === 0) {
+            return false;
+        }
+        return additionalOutputs.some((output) => {
+            const hasAddress = output?.address && output.address.trim() !== '';
+            const satAmountNum = Number(output?.satAmount);
+            const hasAmount =
+                output?.satAmount && !isNaN(satAmountNum) && satAmountNum > 0;
+            if (hasAddress || hasAmount) {
+                return !hasAddress || !hasAmount;
+            }
+            return false;
+        });
+    };
+
+    getValidAdditionalOutputs = () => {
+        const { additionalOutputs } = this.state;
+        if (!additionalOutputs || additionalOutputs.length === 0) {
+            return [];
+        }
+        return additionalOutputs.filter((output) => {
+            const hasAddress = output?.address && output.address.trim() !== '';
+            const satAmountNum = Number(output?.satAmount);
+            const hasAmount =
+                output?.satAmount && !isNaN(satAmountNum) && satAmountNum > 0;
+            return hasAddress && hasAmount;
+        });
+    };
+
     validateAddress = (text: string) => {
         const { navigation } = this.props;
         this.setState({
@@ -1311,10 +1342,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     0 ||
                                                 fee === '0' ||
                                                 !fee ||
+                                                this.hasInvalidAdditionalOutputs() ||
+                                                (fundMax &&
+                                                    (!satAmount ||
+                                                        Number(satAmount) <=
+                                                            0)) ||
                                                 (!fundMax &&
                                                     (!satAmount ||
-                                                        satAmount === '0' ||
-                                                        satAmount === 0 ||
+                                                        Number(satAmount) <=
+                                                            0 ||
                                                         !amount ||
                                                         amount === '0'))
                                                     ? themeColor(
@@ -1332,7 +1368,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     amount,
                                                     utxos,
                                                     account,
-                                                    additionalOutputs,
+                                                    additionalOutputs:
+                                                        this.getValidAdditionalOutputs(),
                                                     fundMax
                                                 }
                                             )
@@ -1342,10 +1379,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 0 ||
                                             fee === '0' ||
                                             !fee ||
+                                            this.hasInvalidAdditionalOutputs() ||
+                                            (fundMax &&
+                                                (!satAmount ||
+                                                    Number(satAmount) <= 0)) ||
                                             (!fundMax &&
                                                 (!satAmount ||
-                                                    satAmount === '0' ||
-                                                    satAmount === 0 ||
+                                                    Number(satAmount) <= 0 ||
                                                     !amount ||
                                                     amount === '0'))
                                         }
