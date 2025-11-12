@@ -494,6 +494,70 @@ export default class InvoicesStore {
     };
 
     @action
+    public fetchIncomingChannel = async (hash: string) => {
+        try {
+            const response = await BackendUtils.lookupInvoice({ r_hash: hash });
+            const enhancedPath: any[] = [];
+
+            if (response?.htlcs?.length) {
+                response.htlcs.forEach((htlc: any) => {
+                    if (htlc.state === 'SETTLED') {
+                        const amount = htlc.amt_msat
+                            ? Math.round(Number(htlc.amt_msat) / 1000)
+                            : 0;
+
+                        const route: any[] = [];
+
+                        if (htlc.chan_id) {
+                            const chanId = String(htlc.chan_id);
+
+                            const channel = this.channelsStore?.channels.find(
+                                (c) =>
+                                    String(c.chan_id) === chanId ||
+                                    String(c.channelId) === chanId ||
+                                    (c.channel_point &&
+                                        c.channel_point.split(':')[0] ===
+                                            chanId)
+                            );
+
+                            const pubKey =
+                                channel?.remotePubkey ||
+                                htlc.custom_records?.['34349334']?.toString(
+                                    'hex'
+                                ) ||
+                                localeString('general.unknown');
+
+                            const alias =
+                                (pubKey !== localeString('general.unknown') &&
+                                    this.channelsStore?.nodes?.[pubKey]
+                                        ?.alias) ||
+                                this.channelsStore?.aliasesById?.[chanId] ||
+                                (pubKey !== localeString('general.unknown') &&
+                                    this.channelsStore?.aliasMap?.get(pubKey));
+
+                            route.push({
+                                pubKey,
+                                chan_id: chanId,
+                                node: alias || pubKey,
+                                alias,
+                                forwarded: amount,
+                                fee: 0
+                            });
+                        }
+
+                        enhancedPath.push(route);
+                    }
+                });
+            }
+
+            return enhancedPath;
+        } catch (error) {
+            console.error(error);
+            return [];
+        }
+    };
+
+    @action
     public setWatchedInvoicePaid = (amount?: string | number) => {
         this.watchedInvoicePaid = true;
         if (amount) this.watchedInvoicePaidAmt = amount;
