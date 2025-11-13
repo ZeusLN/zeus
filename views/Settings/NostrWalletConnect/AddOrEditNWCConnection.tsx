@@ -106,18 +106,31 @@ export default class AddOrEditNWCConnection extends React.Component<
         };
     }
 
+    private unsubscribeFocus?: () => void;
+
     componentDidMount() {
-        const { route } = this.props;
+        const { route, navigation } = this.props;
         const connectionId = route.params?.connectionId;
         if (connectionId) {
             this.loadConnectionForEdit(connectionId);
         }
+        this.unsubscribeFocus = navigation.addListener('focus', () => {
+            const currentConnectionId = route.params?.connectionId;
+            if (currentConnectionId) {
+                this.loadConnectionForEdit(currentConnectionId);
+            }
+        });
     }
 
-    loadConnectionForEdit = (connectionId: string) => {
+    componentWillUnmount() {
+        if (this.unsubscribeFocus) {
+            this.unsubscribeFocus();
+        }
+    }
+    loadConnectionForEdit = async (connectionId: string) => {
         const { NostrWalletConnectStore } = this.props;
+        await NostrWalletConnectStore.loadConnections();
         const connection = NostrWalletConnectStore.getConnection(connectionId);
-
         if (connection) {
             const budgetRenewalIndex = NostrConnectUtils.getBudgetRenewalIndex(
                 connection.budgetRenewal
@@ -239,8 +252,15 @@ export default class AddOrEditNWCConnection extends React.Component<
 
         if (!basicValidation) return false;
 
-        if (showCustomExpiryInput && !customExpiryValue) {
-            return false;
+        if (showCustomExpiryInput) {
+            if (
+                !customExpiryValue ||
+                typeof customExpiryValue !== 'number' ||
+                customExpiryValue < 1 ||
+                customExpiryValue > 999
+            ) {
+                return false;
+            }
         }
 
         return true;
@@ -398,6 +418,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             ].key;
 
         const params: any = {
+            ...(connectionId && { id: connectionId }),
             name: connectionName.trim(),
             relayUrl: selectedRelayUrl,
             permissions: selectedPermissions,
@@ -412,7 +433,6 @@ export default class AddOrEditNWCConnection extends React.Component<
                 )
             );
         }
-
         if (budgetValidation.budget !== undefined) {
             if (isEdit && connectionId) {
                 params.maxAmountSats = budgetValidation.budget;
@@ -444,14 +464,14 @@ export default class AddOrEditNWCConnection extends React.Component<
         if (!connectionId) {
             this.setState({
                 error: localeString(
-                    'stores.NostrWalletConnectStore.connectionNotFound'
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
                 )
             });
             return;
         }
         this.setState({ loading: true, error: '' });
         try {
-            const params = this.buildConnectionParams(false);
+            const params = this.buildConnectionParams(false, connectionId);
             await NostrWalletConnectStore.deleteConnection(connectionId);
             const nostrUrl = await NostrWalletConnectStore.createConnection(
                 params
