@@ -75,6 +75,7 @@ interface CashuPaymentRequestState {
     donationPercentage: any;
     donationAmount: any;
     selectedIndex: number | null;
+    swipeButtonKey: number;
 }
 
 @inject(
@@ -102,7 +103,8 @@ export default class CashuPaymentRequest extends React.Component<
         donationsToggle: false,
         donationPercentage: 0,
         donationAmount: 0,
-        selectedIndex: null
+        selectedIndex: null,
+        swipeButtonKey: 0
     };
 
     async componentDidMount() {
@@ -141,8 +143,12 @@ export default class CashuPaymentRequest extends React.Component<
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
 
+        // Reset slide to pay slider position when screen comes into focus
         this.focusListener = this.props.navigation.addListener('focus', () => {
             getPayReq(paymentRequest!!);
+            this.setState({
+                swipeButtonKey: this.state.swipeButtonKey + 1
+            });
         });
     }
 
@@ -865,6 +871,7 @@ export default class CashuPaymentRequest extends React.Component<
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
+                                    key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
                                     instructionText={localeString(
                                         'views.PaymentRequest.slideToPay'
