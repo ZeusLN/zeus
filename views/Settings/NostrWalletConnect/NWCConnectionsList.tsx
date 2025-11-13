@@ -16,6 +16,7 @@ import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import { Tag } from '../../../components/Channels/Tag';
 
 import SettingsStore from '../../../stores/SettingsStore';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
@@ -30,7 +31,6 @@ import { Status, ExpirationStatus } from '../../../models/Status';
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
-import { Tag } from '../../../components/Channels/Tag';
 
 interface NWCConnectionsListProps {
     navigation: StackNavigationProp<any, any>;
@@ -88,7 +88,7 @@ export default class NWCConnectionsList extends React.Component<
         } catch (error: any) {
             this.setState({
                 error: localeString(
-                    'stores.NostrWalletConnectStore.failedToLoadConnections'
+                    'stores.NostrWalletConnectStore.error.failedToLoadConnections'
                 ),
                 connectionsLoading: false
             });
@@ -243,7 +243,7 @@ export default class NWCConnectionsList extends React.Component<
                                                 connection.budgetUsagePercentage
                                             )}%`,
                                             backgroundColor:
-                                                connection.budgetUsagePercentage >
+                                                connection.budgetUsagePercentage >=
                                                 80
                                                     ? themeColor('delete')
                                                     : themeColor('success')
