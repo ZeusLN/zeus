@@ -50,7 +50,7 @@ export default class NWCConnectionQR extends React.Component<
         ) {
             this.setState({ isConnected: true });
             setTimeout(() => {
-                navigation.navigate('NostrWalletConnect');
+                navigation.popTo('NostrWalletConnect');
             }, 2000);
         }
     }
@@ -67,9 +67,6 @@ export default class NWCConnectionQR extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        navigation.pop();
-                    }}
                     centerComponent={{
                         text: localeString(
                             'views.Settings.NostrWalletConnect.connectionSecret'
