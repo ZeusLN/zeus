@@ -19,7 +19,6 @@ import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
-import Invoice from '../models/Invoice';
 import CashuToken from '../models/CashuToken';
 
 // Nostr
@@ -34,33 +33,23 @@ const isClipboardValue = (data: string) =>
 const checkAutoPayAndRedirect = async (paymentRequest: string) => {
     if (AutoPayUtils.shouldTryAutoPay(paymentRequest)) {
         try {
-            const decodedInvoice = await BackendUtils.decodePaymentRequest([
-                paymentRequest
-            ]);
-            console.log('[AutoPayUtils] : decoded invoice', decodedInvoice);
-            if (decodedInvoice) {
-                const invoiceModel = new Invoice(decodedInvoice);
-                const amount = invoiceModel.getAmount;
+            const { shouldAutoPay, enableDonations } =
+                await AutoPayUtils.checkShouldAutoPay(
+                    paymentRequest,
+                    settingsStore
+                );
 
-                const { payments } = settingsStore.settings;
-                const autoPayThreshold = payments?.autoPayThreshold || 0;
+            if (shouldAutoPay) {
+                transactionsStore.sendPayment({
+                    payment_request: paymentRequest
+                });
 
-                if (
-                    payments?.autoPayEnabled &&
-                    amount > 0 &&
-                    amount <= autoPayThreshold
-                ) {
-                    transactionsStore.sendPayment({
-                        payment_request: paymentRequest
-                    });
-
-                    return [
-                        'SendingLightning',
-                        {
-                            enableDonations: payments?.enableDonations || false
-                        }
-                    ];
-                }
+                return [
+                    'SendingLightning',
+                    {
+                        enableDonations
+                    }
+                ];
             }
         } catch (error) {
             console.error('Auto-pay check failed:', error);
