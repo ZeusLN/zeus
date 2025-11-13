@@ -1824,7 +1824,55 @@ export default class CashuStore {
         let success = false;
 
         const maxAttempts = 100;
+        const requestedProofSecrets = (this.proofsToUse ?? []).map(
+            (p) => p.secret
+        );
+
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const walletId = this.cashuWallets[mintUrl].walletId;
+            const [storedProofs, storedCounter] = await Promise.all([
+                Storage.getItem(`${walletId}-proofs`),
+                Storage.getItem(`${walletId}-counter`)
+            ]);
+
+            runInAction(() => {
+                if (storedProofs) {
+                    this.cashuWallets[mintUrl].proofs =
+                        JSON.parse(storedProofs);
+                }
+                if (storedCounter !== null) {
+                    this.cashuWallets[mintUrl].counter =
+                        JSON.parse(storedCounter);
+                    currentCount = JSON.parse(storedCounter);
+                }
+            });
+
+            let mintProofs = this.cashuWallets[mintUrl].proofs.filter((p) =>
+                requestedProofSecrets.includes(p.secret)
+            );
+
+            if (mintProofs.length > 0) {
+                try {
+                    const proofStates = await wallet!!.checkProofsStates(
+                        mintProofs
+                    );
+                    mintProofs = mintProofs.filter(
+                        (_, idx) => proofStates[idx]?.state === 'UNSPENT'
+                    );
+                } catch (checkError) {
+                    console.warn(
+                        `Failed to check proof states for ${mintUrl}:`,
+                        checkError
+                    );
+                }
+            }
+
+            if (mintProofs.length === 0) {
+                throw new Error(
+                    `No valid proofs found for mint ${mintUrl}. Proofs may have been spent or removed.`
+                );
+            }
+
             const attemptCounter = currentCount + attempt;
             console.log(
                 `payLnInvoiceFromEcash: Attempt ${
@@ -1836,7 +1884,7 @@ export default class CashuStore {
                 const result = await this.getSpendingProofsWithPreciseCounter(
                     wallet!!,
                     amountToPay,
-                    this.proofsToUse!!,
+                    mintProofs,
                     attemptCounter
                 );
 
@@ -1984,11 +2032,9 @@ export default class CashuStore {
                 async ({ mintUrl, meltQuote }, index) => {
                     const maxAttempts = 100;
                     let lastError: any;
+                    let lastSuccessfulCounter: number | undefined;
 
                     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                        const attemptCounter =
-                            (this.cashuWallets[mintUrl].counter ?? 0) + attempt;
-
                         try {
                             mintProgressInfo[index].status =
                                 MintPaymentStatus.REQUESTING;
@@ -2013,7 +2059,79 @@ export default class CashuStore {
                                 );
                             }
 
-                            const mintProofs = proofsByMint[mintUrl] ?? [];
+                            const walletId =
+                                this.cashuWallets[mintUrl].walletId;
+                            const [storedProofs, storedCounter] =
+                                await Promise.all([
+                                    Storage.getItem(`${walletId}-proofs`),
+                                    Storage.getItem(`${walletId}-counter`)
+                                ]);
+
+                            runInAction(() => {
+                                if (storedProofs) {
+                                    this.cashuWallets[mintUrl].proofs =
+                                        JSON.parse(storedProofs);
+                                }
+                                if (storedCounter !== null) {
+                                    this.cashuWallets[mintUrl].counter =
+                                        JSON.parse(storedCounter);
+                                }
+                            });
+
+                            const baseCounter =
+                                lastSuccessfulCounter ??
+                                this.cashuWallets[mintUrl].counter ??
+                                0;
+                            const attemptCounter = baseCounter + attempt;
+
+                            const requestedProofSecrets = (
+                                proofsByMint[mintUrl] ?? []
+                            ).map((p) => p.secret);
+                            let availableMintProofs =
+                                requestedProofSecrets.length > 0
+                                    ? this.cashuWallets[mintUrl].proofs.filter(
+                                          (p) =>
+                                              requestedProofSecrets.includes(
+                                                  p.secret
+                                              )
+                                      )
+                                    : [...this.cashuWallets[mintUrl].proofs];
+
+                            if (availableMintProofs.length > 0) {
+                                try {
+                                    const proofStates =
+                                        await wallet.checkProofsStates(
+                                            availableMintProofs
+                                        );
+                                    availableMintProofs =
+                                        availableMintProofs.filter(
+                                            (_, idx) =>
+                                                proofStates[idx]?.state ===
+                                                'UNSPENT'
+                                        );
+                                } catch (checkError) {
+                                    console.warn(
+                                        `Failed to check proof states for ${mintUrl}:`,
+                                        checkError
+                                    );
+                                }
+                            }
+
+                            const { proofsToUse: mintProofs } =
+                                this.getProofsToUse(
+                                    [...availableMintProofs],
+                                    meltQuote.amount
+                                );
+
+                            if (
+                                !mintProofs ||
+                                CashuUtils.sumProofsValue(mintProofs) <
+                                    meltQuote.amount
+                            ) {
+                                throw new Error(
+                                    `Insufficient proofs available for mint ${mintUrl}.`
+                                );
+                            }
 
                             console.log(
                                 `[payLnInvoiceMultiMint] Mint ${mintUrl} attempt ${
@@ -2022,6 +2140,12 @@ export default class CashuStore {
                                     mintProofs.length
                                 }`
                             );
+
+                            if (mintProofs.length === 0) {
+                                throw new Error(
+                                    `No valid proofs found for mint ${mintUrl}. Proofs may have been spent or removed.`
+                                );
+                            }
 
                             const {
                                 proofsToSend = [],
@@ -2033,6 +2157,10 @@ export default class CashuStore {
                                 mintProofs,
                                 attemptCounter
                             );
+
+                            if (newCounterValue !== undefined) {
+                                lastSuccessfulCounter = newCounterValue;
+                            }
 
                             mintProgressInfo[index].status =
                                 MintPaymentStatus.PAYING;
