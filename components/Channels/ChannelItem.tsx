@@ -4,9 +4,9 @@ import { View } from 'react-native';
 import { Body } from '../../components/text/Body';
 import { BalanceBar } from '../../components/Channels/BalanceBar';
 import { Row } from '../../components/layout/Row';
-import { Status, ExpirationStatus } from '../../views/Channels/ChannelsPane';
 import Amount from '../Amount';
 import { Tag } from './Tag';
+import { Status, ExpirationStatus } from '../../models/Status';
 
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { themeColor } from './../../utils/ThemeUtils';
