@@ -612,6 +612,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             PaymentRequest
                                                         }
+                                                        options={{
+                                                            gestureEnabled:
+                                                                false // disables swipe back
+                                                        }}
                                                     />
                                                     <Stack.Screen
                                                         name="OpenChannel" // @ts-ignore:next-line
@@ -1152,6 +1156,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             CashuPaymentRequest
                                                         }
+                                                        options={{
+                                                            gestureEnabled:
+                                                                false // disables swipe back
+                                                        }}
                                                     />
                                                     <Stack.Screen
                                                         name="CashuSendingLightning" // @ts-ignore:next-line
