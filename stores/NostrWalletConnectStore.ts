@@ -40,7 +40,12 @@ import {
 import * as nip04 from '@nostr/tools/nip04';
 
 import bolt11 from 'bolt11';
-import { Platform, NativeModules } from 'react-native';
+import {
+    Platform,
+    NativeModules,
+    DeviceEventEmitter,
+    AppState
+} from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -79,8 +84,6 @@ export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
     'https://nwc-ios-handoff.zeusln.com/api/v1';
 
 const RATE_LIMIT_MS = 500;
-const HEALTH_CHECK_INTERVAL_MS = 10 * 60 * 1000;
-const CONNECTION_RETRY_INTERVAL_MS = 60000;
 const MAX_RELAY_ATTEMPTS = 5;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
@@ -99,7 +102,6 @@ export const DEFAULT_NOSTR_RELAYS = [
 enum ErrorCodes {
     INTERNAL_ERROR = 'INTERNAL_ERROR',
     RATE_LIMITED = 'RATE_LIMITED',
-    QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
     INVALID_INVOICE = 'INVALID_INVOICE',
     FAILED_TO_PAY_INVOICE = 'FAILED_TO_PAY_INVOICE',
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
@@ -165,14 +167,15 @@ export default class NostrWalletConnectStore {
     @observable private walletServiceKeys: WalletServiceKeys | null = null;
     @observable public cashuEnabled: boolean = false;
     @observable public persistentNWCServiceEnabled: boolean = false;
-    @observable private healthCheckInterval: any = null;
-    @observable private connectionRetryInterval: any = null;
     @observable private lastConnectionAttempt: number = 0;
     @observable private lastCallTimes: Map<string, number> = new Map();
     @observable private iosBackgroundTaskActive: boolean = false;
     @observable public iosBackgroundTimeRemaining: number = 0;
     @observable public iosHandoffInProgress: boolean = false;
     private iosBackgroundTimerInterval: any = null;
+    private androidReconnectionListener: any = null;
+    private appStateListener: any = null;
+    private androidLogListener: any = null;
 
     settingsStore: SettingsStore;
     balanceStore: BalanceStore;
@@ -225,8 +228,12 @@ export default class NostrWalletConnectStore {
                     this.loadCashuSetting(),
                     this.loadConnections()
                 ]);
-
                 await this.startService();
+                if (Platform.OS === 'android') {
+                    this.setupAndroidReconnectionListener();
+                    this.setupAppStateMonitoring();
+                    this.setupAndroidLogListener();
+                }
 
                 if (Platform.OS === 'ios') {
                     await this.fetchAndProcessPendingEvents();
@@ -298,29 +305,6 @@ export default class NostrWalletConnectStore {
             );
         }
     };
-
-    private async initializePlatformService(): Promise<void> {
-        if (Platform.OS === 'android') {
-            try {
-                const { NostrConnectModule } = NativeModules;
-
-                if (!NostrConnectModule) {
-                    throw new Error(
-                        'NostrConnectModule not found in NativeModules'
-                    );
-                }
-
-                await NostrConnectModule.initialize();
-                this.updateAndroidTranslationCache();
-            } catch (serviceError) {
-                console.warn(
-                    'NWC: Failed to initialize Android service:',
-                    serviceError
-                );
-            }
-        }
-    }
-
     @action
     public startService = async () => {
         try {
@@ -333,7 +317,7 @@ export default class NostrWalletConnectStore {
             }
             const hasActiveConnections = this.activeConnections.length > 0;
             if (hasActiveConnections && this.persistentNWCServiceEnabled) {
-                await this.initializePlatformService();
+                await this.initializeAndroidPersistentService();
             }
             await this.verifyServiceHealth();
             const successfulPublishes = await this.publishToAllRelays();
@@ -346,9 +330,6 @@ export default class NostrWalletConnectStore {
             }
             setTimeout(async () => {
                 await this.subscribeToAllConnections();
-                if (hasActiveConnections) {
-                    this.setupPlatformSpecificMonitoring();
-                }
             }, SERVICE_START_DELAY_MS);
         } catch (error: any) {
             console.error('Failed to start NWC service:', error);
@@ -372,14 +353,6 @@ export default class NostrWalletConnectStore {
                 this.error = false;
             });
 
-            if (this.healthCheckInterval) {
-                clearInterval(this.healthCheckInterval);
-                this.healthCheckInterval = null;
-            }
-            if (this.connectionRetryInterval) {
-                clearInterval(this.connectionRetryInterval);
-                this.connectionRetryInterval = null;
-            }
             if (Platform.OS === 'android') {
                 try {
                     const { NostrConnectModule } =
@@ -420,17 +393,21 @@ export default class NostrWalletConnectStore {
             (Platform.OS === 'ios' && !this.isInNWCConnectionQRView) ||
             (Platform.OS === 'android' && !this.persistentNWCServiceEnabled)
         ) {
-            if (this.healthCheckInterval) {
-                clearInterval(this.healthCheckInterval);
-                this.healthCheckInterval = null;
-            }
-            if (this.connectionRetryInterval) {
-                clearInterval(this.connectionRetryInterval);
-                this.connectionRetryInterval = null;
-            }
             if (this.iosBackgroundTimerInterval) {
                 clearInterval(this.iosBackgroundTimerInterval);
                 this.iosBackgroundTimerInterval = null;
+            }
+            if (this.androidReconnectionListener) {
+                this.androidReconnectionListener.remove();
+                this.androidReconnectionListener = null;
+            }
+            if (this.appStateListener) {
+                this.appStateListener.remove();
+                this.appStateListener = null;
+            }
+            if (this.androidLogListener) {
+                this.androidLogListener.remove();
+                this.androidLogListener = null;
             }
             this.error = false;
             this.walletServiceKeys = null;
@@ -1226,7 +1203,6 @@ export default class NostrWalletConnectStore {
                         created_at: Math.floor(Date.now() / 1000),
                         expires_at: expiryTime
                     };
-                    console.log('result', result);
                     return {
                         result,
                         error: undefined
@@ -1271,13 +1247,6 @@ export default class NostrWalletConnectStore {
                 const errorMessage = localeString(
                     'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
                 );
-                console.error('handleMakeInvoice: Invalid payment request', {
-                    invoiceResult,
-                    payment_request: paymentRequest,
-                    creatingInvoiceError:
-                        this.invoicesStore.creatingInvoiceError,
-                    error_msg: this.invoicesStore.error_msg
-                });
                 throw new Error(errorMessage);
             }
 
@@ -1316,7 +1285,7 @@ export default class NostrWalletConnectStore {
                 if (!paymentHash) {
                     console.warn(
                         'handleMakeInvoice: Payment hash not found in invoice',
-                        { decoded, invoiceResult, rHash }
+                        { decoded }
                     );
                 }
             } catch (decodeError) {
@@ -2528,6 +2497,27 @@ export default class NostrWalletConnectStore {
     // PLATFORM SPECIFIC SETUP
 
     // Android
+    private async initializeAndroidPersistentService(): Promise<void> {
+        if (Platform.OS === 'android') {
+            try {
+                const { NostrConnectModule } = NativeModules;
+
+                if (!NostrConnectModule) {
+                    throw new Error(
+                        'NostrConnectModule not found in NativeModules'
+                    );
+                }
+
+                await NostrConnectModule.initialize();
+                this.updateAndroidTranslationCache();
+            } catch (serviceError) {
+                console.warn(
+                    'NWC: Failed to initialize Android service:',
+                    serviceError
+                );
+            }
+        }
+    }
     private updateAndroidTranslationCache(): void {
         if (Platform.OS === 'android') {
             try {
@@ -2549,72 +2539,197 @@ export default class NostrWalletConnectStore {
             }
         }
     }
-    // Android
-    private setupAndroidConnectionMonitoring(): void {
-        if (this.connectionRetryInterval) {
-            clearInterval(this.connectionRetryInterval);
+    // Android: Set up listener for background reconnection events from native service
+    private setupAndroidReconnectionListener(): void {
+        if (this.androidReconnectionListener) {
+            this.androidReconnectionListener.remove();
+        }
+        this.androidReconnectionListener = DeviceEventEmitter.addListener(
+            'NostrConnectReconnectionCheck',
+            async () => {
+                await this.handleAndroidReconnectionCheck();
+            }
+        );
+    }
+    private setupAndroidLogListener(): void {
+        if (this.androidLogListener) {
+            this.androidLogListener.remove();
+        }
+        this.androidLogListener = DeviceEventEmitter.addListener(
+            'NostrConnectLog',
+            (event: { level: string; message: string }) => {
+                const { level, message } = event;
+                switch (level) {
+                    case 'error':
+                        console.error(`[NWC Native] ${message}`);
+                        break;
+                    case 'warn':
+                        console.warn(`[NWC Native] ${message}`);
+                        break;
+                    case 'info':
+                    default:
+                        console.log(`[NWC Native] ${message}`);
+                        break;
+                }
+            }
+        );
+    }
+    private setupAppStateMonitoring(): void {
+        if (this.appStateListener) {
+            this.appStateListener.remove();
         }
 
-        this.connectionRetryInterval = setInterval(async () => {
-            try {
-                const { NostrConnectModule } = NativeModules;
-                const isServiceRunning =
-                    await NostrConnectModule.isNostrConnectServiceRunning();
-
-                if (!isServiceRunning) {
-                    console.warn(
-                        'Android: Background service stopped, attempting restart'
-                    );
-                    await this.initializePlatformService();
+        this.appStateListener = AppState.addEventListener(
+            'change',
+            async (nextAppState: string) => {
+                if (!this.persistentNWCServiceEnabled) {
+                    return;
                 }
 
-                const now = Date.now();
-                const timeSinceLastAttempt = now - this.lastConnectionAttempt;
+                try {
+                    const { NostrConnectModule } = NativeModules;
+                    if (nextAppState === 'background') {
+                        await NostrConnectModule.startBackgroundMonitoring();
+                    } else if (nextAppState === 'active') {
+                        await NostrConnectModule.stopBackgroundMonitoring();
+                    }
+                } catch (error) {
+                    console.warn('Android: App state monitoring error:', error);
+                }
+            }
+        );
+    }
+    private async handleAndroidReconnectionCheck(): Promise<void> {
+        if (!this.persistentNWCServiceEnabled) {
+            console.log(
+                'Android: Background service not enabled, skipping reconnection check'
+            );
+            return;
+        }
+        try {
+            const { NostrConnectModule } = NativeModules;
+            const isServiceRunning =
+                await NostrConnectModule.isNostrConnectServiceRunning();
 
-                if (
-                    timeSinceLastAttempt > 30000 &&
-                    this.activeConnections.length > 0
-                ) {
-                    const subscriptionCount = this.activeSubscriptions.size;
-                    const expectedSubscriptions = this.activeConnections.length;
+            if (!isServiceRunning) {
+                console.warn(
+                    'Android: Background service stopped, attempting restart'
+                );
+                await this.initializeAndroidPersistentService();
+                return;
+            }
 
-                    if (subscriptionCount < expectedSubscriptions) {
-                        console.log(
-                            `Android: Reconnecting ${
-                                expectedSubscriptions - subscriptionCount
-                            } lost connections`
+            const now = Date.now();
+            const timeSinceLastAttempt = now - this.lastConnectionAttempt;
+
+            if (
+                timeSinceLastAttempt > 30000 &&
+                this.activeConnections.length > 0
+            ) {
+                const relayUrlsUsed = new Set(
+                    this.activeConnections.map((c) => c.relayUrl)
+                );
+                const reconnectResults = await Promise.allSettled(
+                    Array.from(this.nwcWalletServices.entries())
+                        .filter(([relayUrl]) => relayUrlsUsed.has(relayUrl))
+                        .map(async ([relayUrl, nwcWalletService]) => {
+                            if (!nwcWalletService.connected) {
+                                if (this.walletServiceKeys) {
+                                    try {
+                                        await this.retryWithBackoff(
+                                            async () => {
+                                                await nwcWalletService.publishWalletServiceInfoEvent(
+                                                    this.walletServiceKeys!
+                                                        .privateKey,
+                                                    NostrConnectUtils.getFullAccessPermissions(),
+                                                    NostrConnectUtils.getNotifications()
+                                                );
+                                                runInAction(() => {
+                                                    this.publishedRelays.add(
+                                                        relayUrl
+                                                    );
+                                                });
+                                            },
+                                            3
+                                        );
+                                        // Verify connection after reconnection attempt
+                                        if (nwcWalletService.connected) {
+                                            return {
+                                                relayUrl,
+                                                reconnected: true
+                                            };
+                                        }
+                                    } catch (error) {
+                                        console.warn(
+                                            `Android: Failed to reconnect relay ${relayUrl}:`,
+                                            error
+                                        );
+                                    }
+                                }
+                                return { relayUrl, reconnected: false };
+                            }
+                            return { relayUrl, reconnected: false };
+                        })
+                );
+
+                const reconnectedRelays = reconnectResults
+                    .filter(
+                        (r) =>
+                            r.status === 'fulfilled' &&
+                            r.value.reconnected === true
+                    )
+                    .map((r) =>
+                        r.status === 'fulfilled' ? r.value.relayUrl : ''
+                    )
+                    .filter((url) => url !== '');
+
+                if (reconnectedRelays.length > 0) {
+                    console.log(
+                        `Android: Successfully reconnected ${reconnectedRelays.length} relays:`,
+                        reconnectedRelays
+                    );
+
+                    const connectionsToResubscribe =
+                        this.activeConnections.filter((c) =>
+                            reconnectedRelays.includes(c.relayUrl)
                         );
-                        this.lastConnectionAttempt = now;
-                        await this.subscribeToAllConnections();
+
+                    if (connectionsToResubscribe.length > 0) {
+                        console.log(
+                            `Android: Re-subscribing ${connectionsToResubscribe.length} connections for reconnected relays`
+                        );
+                        const resubscribePromises =
+                            connectionsToResubscribe.map(async (connection) => {
+                                try {
+                                    await this.subscribeToConnection(
+                                        connection
+                                    );
+                                } catch (error) {
+                                    console.warn(
+                                        `Android: Failed to re-subscribe connection ${connection.name}:`,
+                                        error
+                                    );
+                                }
+                            });
+                        await Promise.allSettled(resubscribePromises);
                     }
                 }
-            } catch (error) {
-                console.warn('Android: Connection monitoring error:', error);
+                const subscriptionCount = this.activeSubscriptions.size;
+                const expectedSubscriptions = this.activeConnections.length;
+
+                if (subscriptionCount < expectedSubscriptions) {
+                    console.log(
+                        `Android: Reconnecting ${
+                            expectedSubscriptions - subscriptionCount
+                        } lost connections`
+                    );
+                    this.lastConnectionAttempt = now;
+                    await this.subscribeToAllConnections();
+                }
             }
-        }, CONNECTION_RETRY_INTERVAL_MS); // Check every minute on Android
-    }
-    private setupPlatformSpecificMonitoring(): void {
-        this.setupHealthChecks();
-
-        if (Platform.OS === 'android' && this.persistentNWCServiceEnabled) {
-            this.setupAndroidConnectionMonitoring();
+        } catch (error) {
+            console.warn('Android: Reconnection check error:', error);
         }
-    }
-
-    private setupHealthChecks(): void {
-        if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
-        }
-        this.healthCheckInterval = setInterval(async () => {
-            const activeConnections = this.connections.filter(
-                (c) => !c.isExpired
-            );
-            const subscriptionCount = this.activeSubscriptions.size;
-
-            if (activeConnections.length > 0 && subscriptionCount === 0) {
-                await this.subscribeToAllConnections();
-            }
-        }, HEALTH_CHECK_INTERVAL_MS); // 10 minutes - less frequent
     }
 
     @action
@@ -2660,7 +2775,6 @@ export default class NostrWalletConnectStore {
             this.endIOSBackgroundTask();
         }
     }
-
     @action
     public async endIOSBackgroundTask(): Promise<void> {
         if (Platform.OS !== 'ios' || !this.iosBackgroundTaskActive) {
@@ -2686,7 +2800,6 @@ export default class NostrWalletConnectStore {
             console.error('iOS NWC: Failed to end background task:', error);
         }
     }
-
     // for IOS fetch and process pending events
     @action
     public async fetchAndProcessPendingEvents(
@@ -2842,7 +2955,6 @@ export default class NostrWalletConnectStore {
             }
         }
     }
-
     private async handleEventRequest(
         connection: NWCConnection,
         request: NWCRequest,
@@ -3106,7 +3218,7 @@ export default class NostrWalletConnectStore {
                     'convertPaymentHashToHex: Invalid payment hash input:',
                     paymentHash
                 );
-                return '';
+                return undefined;
             }
             if (paymentHash.startsWith('{')) {
                 let hashObj;
@@ -3129,7 +3241,7 @@ export default class NostrWalletConnectStore {
                     console.warn(
                         'convertPaymentHashToHex: Empty hash array after filtering'
                     );
-                    return '';
+                    return undefined;
                 }
 
                 return Base64Utils.bytesToHex(hashArray);

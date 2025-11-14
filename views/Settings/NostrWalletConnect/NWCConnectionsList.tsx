@@ -44,7 +44,6 @@ interface NWCConnectionsListState {
     searchQuery: string;
     connectionsLoading: boolean;
     error: string;
-    refreshing: boolean;
     filter: ConnectionFilter;
 }
 
@@ -60,7 +59,6 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            refreshing: false,
             filter: 'all'
         };
     }
