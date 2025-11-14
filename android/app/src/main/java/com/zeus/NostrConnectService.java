@@ -11,7 +11,9 @@ import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 import static android.app.Notification.FOREGROUND_SERVICE_IMMEDIATE;
 
@@ -21,9 +23,12 @@ import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 public class NostrConnectService extends Service {
     private static final String TAG = "NostrConnectService";
     private final int ONGOING_NOTIFICATION_ID = 1002;
+    private static final long CONNECTION_MONITOR_INTERVAL_MS = 5000; // 5 seconds
     
     private static boolean isServiceRunning = false;
     private NotificationManager notificationManager;
+    private Handler connectionMonitorHandler;
+    private Runnable connectionMonitorRunnable;
     
     private final IBinder binder = new NostrConnectBinder();
     public class NostrConnectBinder extends android.os.Binder {
@@ -51,12 +56,15 @@ public class NostrConnectService extends Service {
                 }
                 notificationManager.notify(ONGOING_NOTIFICATION_ID, buildNotification());
                 return START_NOT_STICKY;
+            } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.START_MONITORING")) {
+                startConnectionMonitoring();
+                return START_NOT_STICKY;
+            } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP_MONITORING")) {
+                stopConnectionMonitoring();
+                return START_NOT_STICKY;
             }
         }
-        
         boolean persistentServicesEnabled = getPersistentNWCServicesEnabled(this);
-        
-        // persistent services on, start service as foreground-svc
         if (persistentServicesEnabled) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "Nostr Wallet Connect", NotificationManager.IMPORTANCE_NONE);
@@ -73,10 +81,10 @@ public class NostrConnectService extends Service {
             } else {
                 startForeground(ONGOING_NOTIFICATION_ID, notification);
             }
+            return START_STICKY;
         }
 
-        // else noop, instead of calling startService, start will be handled by binding
-        return startid;
+        return START_NOT_STICKY;
     }
 
     @Override
@@ -102,10 +110,51 @@ public class NostrConnectService extends Service {
     @Override
     public void onDestroy() {
         isServiceRunning = false;
+        stopConnectionMonitoring();
         if (notificationManager != null) {
             notificationManager.cancelAll();
         }
         super.onDestroy();
+    }
+
+    private void startConnectionMonitoring() {
+        if (connectionMonitorHandler != null && connectionMonitorRunnable != null) {
+            NostrConnectModule.emitLogEvent("info", "NWC: Connection monitoring already active");
+            return; // Already monitoring
+        }
+        
+        NostrConnectModule.emitLogEvent("info", "NWC: Starting connection monitoring");
+        if (connectionMonitorHandler == null) {
+            connectionMonitorHandler = new Handler(Looper.getMainLooper());
+        }
+        connectionMonitorRunnable = new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (getPersistentNWCServicesEnabled(NostrConnectService.this)) {
+                        NostrConnectModule.emitReconnectionCheckEvent();
+                    }
+                } catch (Exception e) {
+                    NostrConnectModule.emitLogEvent("error", "NWC Monitoring error: " + e.getMessage());
+                }
+                
+                if (connectionMonitorHandler != null && connectionMonitorRunnable != null) {
+                    connectionMonitorHandler.postDelayed(connectionMonitorRunnable, CONNECTION_MONITOR_INTERVAL_MS);
+                }
+            }
+        };
+        connectionMonitorHandler.postDelayed(connectionMonitorRunnable, CONNECTION_MONITOR_INTERVAL_MS);
+        NostrConnectModule.emitLogEvent("info", "NWC: Connection monitoring started");
+    }
+    private void stopConnectionMonitoring() {
+        if (connectionMonitorHandler != null && connectionMonitorRunnable != null) {
+            NostrConnectModule.emitLogEvent("info", "NWC: Stopping connection monitoring");
+            connectionMonitorHandler.removeCallbacks(connectionMonitorRunnable);
+            connectionMonitorRunnable = null;
+            NostrConnectModule.emitLogEvent("info", "NWC: Connection monitoring stopped");
+        } else {
+            NostrConnectModule.emitLogEvent("info", "NWC: No active monitoring to stop");
+        }
     }
 
 
@@ -146,6 +195,18 @@ public class NostrConnectService extends Service {
     public static void stopService(Context context) {
         Intent intent = new Intent(context, NostrConnectService.class);
         intent.setAction("app.zeusln.zeus.android.intent.action.STOP_NOSTR_SERVICE");
+        context.startService(intent);
+    }
+
+    public static void startMonitoring(Context context) {
+        Intent intent = new Intent(context, NostrConnectService.class);
+        intent.setAction("app.zeusln.zeus.android.intent.action.START_MONITORING");
+        context.startService(intent);
+    }
+
+    public static void stopMonitoring(Context context) {
+        Intent intent = new Intent(context, NostrConnectService.class);
+        intent.setAction("app.zeusln.zeus.android.intent.action.STOP_MONITORING");
         context.startService(intent);
     }
 

@@ -16,6 +16,7 @@ import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.Arguments;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
@@ -27,13 +28,17 @@ import java.util.Random;
 public class NostrConnectModule extends ReactContextBaseJavaModule {
     private static final String TAG = "NostrConnectModule";
     private static final String MODULE_NAME = "NostrConnectModule";
+    private static final String RECONNECTION_CHECK_EVENT = "NostrConnectReconnectionCheck";
+    private static final String LOG_EVENT = "NostrConnectLog";
     
+    private static ReactApplicationContext reactContext;
     private boolean nostrConnectServiceBound = false;
     private NostrConnectServiceConnection nostrConnectServiceConnection;
     private Map<Integer, Promise> requests = new HashMap<>();
 
     public NostrConnectModule(ReactApplicationContext reactContext) {
         super(reactContext);
+        NostrConnectModule.reactContext = reactContext;
     }
 
     @Override
@@ -50,7 +55,8 @@ public class NostrConnectModule extends ReactContextBaseJavaModule {
                 return persistentNWCServicesEnabled.equals("true");
             }
         } catch (Exception e) {
-            Log.w(TAG, "Could not find persistentNWCServicesEnabled in asyncStorage: " + e.getMessage());
+            e.printStackTrace();
+            emitLogEvent("error", "Could not find persistentNWCServicesEnabled in asyncStorage: " + e.getMessage());
         }
         return false;
     }
@@ -132,6 +138,66 @@ public class NostrConnectModule extends ReactContextBaseJavaModule {
         Intent intent = new Intent(getReactApplicationContext(), NostrConnectService.class);
         intent.setAction("app.zeusln.zeus.android.intent.action.UPDATE_NOTIFICATION");
         getReactApplicationContext().startService(intent);
+    }
+
+    @ReactMethod
+    public void triggerReconnectionCheck(Promise promise) {
+        try {
+            emitReconnectionCheckEvent();
+            promise.resolve(true);
+        } catch (Exception e) {
+            promise.reject("ERROR", "Failed to trigger reconnection check: " + e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void startBackgroundMonitoring(Promise promise) {
+        try {
+            NostrConnectService.startMonitoring(getReactApplicationContext());
+            emitLogEvent("info", "NWC: Background monitoring started");
+            promise.resolve(true);
+        } catch (Exception e) {
+            promise.reject("ERROR", "Failed to start background monitoring: " + e.getMessage());
+        }   
+    }
+
+    @ReactMethod
+    public void stopBackgroundMonitoring(Promise promise) {
+        try {
+            NostrConnectService.stopMonitoring(getReactApplicationContext());
+            promise.resolve(true);
+        } catch (Exception e) {
+            promise.reject("ERROR", "Failed to stop background monitoring: " + e.getMessage());
+        }
+    }
+
+    public static void emitReconnectionCheckEvent() {
+        if (reactContext != null) {
+            try {
+                WritableMap params = Arguments.createMap();
+                params.putBoolean("needsReconnection", true);
+                reactContext
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit(RECONNECTION_CHECK_EVENT, params);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to emit reconnection check event: " + e.getMessage());
+            }
+        }
+    }
+
+    public static void emitLogEvent(String level, String message) {
+        if (reactContext != null) {
+            try {
+                WritableMap params = Arguments.createMap();
+                params.putString("level", level);
+                params.putString("message", message);
+                reactContext
+                    .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class)
+                    .emit(LOG_EVENT, params);
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to emit log event: " + e.getMessage());
+            }
+        }
     }
     
     class NostrConnectServiceConnection implements ServiceConnection {

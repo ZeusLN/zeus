@@ -45,7 +45,7 @@ export default class NWCSettings extends React.Component<
         };
     }
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { NostrWalletConnectStore } = this.props;
 
         this.setState({
