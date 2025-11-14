@@ -6,6 +6,8 @@ import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
+import Swap from '../../models/Swap';
+import { LSPActivity } from '../../models/LSP';
 
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
@@ -20,8 +22,10 @@ import {
     CSV_KEYS
 } from '../../utils/ActivityCsvUtils';
 
+type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
+
 interface ActivityProps {
-    filteredActivity: Array<Invoice | Payment | Transaction>;
+    filteredActivity: Array<ActivityItem>;
     isVisible: boolean;
     closeModal: () => void;
 }

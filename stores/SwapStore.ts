@@ -136,7 +136,8 @@ export default class SwapStore {
 
     @action
     public formatStatus = (status: string): string => {
-        if (!status || typeof status !== 'string') return 'No updates found!';
+        if (!status || typeof status !== 'string')
+            return localeString('views.Swaps.noUpdates');
 
         return status
             .replace(/\./g, ' ') // Replace dots with spaces
