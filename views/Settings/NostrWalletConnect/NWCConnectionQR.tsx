@@ -177,7 +177,7 @@ export default class NWCConnectionQR extends React.Component<
                         <Button
                             title={localeString('general.close')}
                             onPress={() => {
-                                navigation.navigate('NostrWalletConnect');
+                                navigation.popTo('NostrWalletConnect');
                             }}
                             secondary
                             noUppercase
