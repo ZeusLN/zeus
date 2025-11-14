@@ -1653,6 +1653,8 @@ export default class SettingsStore {
         try {
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
 
+            await MigrationsUtils.keychainCloudSyncMigration();
+
             if (modernSettings) {
                 console.log('attempting to load modern settings');
                 this.settings = JSON.parse(modernSettings);
