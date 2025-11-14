@@ -23,8 +23,6 @@ import NostrConnectUtils, {
     IndividualPermissionOption
 } from '../../../utils/NostrConnectUtils';
 
-import SettingsStore from '../../../stores/SettingsStore';
-
 import NostrWalletConnectStore, {
     DEFAULT_NOSTR_RELAYS
 } from '../../../stores/NostrWalletConnectStore';
@@ -50,7 +48,6 @@ interface AddOrEditNWCConnectionProps {
         'AddOrEditNWCConnection',
         { connectionId?: string; isEdit?: boolean }
     >;
-    SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
     ModalStore: ModalStore;
 }
@@ -62,21 +59,19 @@ interface AddOrEditNWCConnectionState {
     maxAmountSats: string;
     selectedBudgetRenewalIndex: number;
     expiresAt: Date;
-    description: string;
     error: string;
     loading: boolean;
     originalConnection: NWCConnection | null;
     hasChanges: boolean;
     selectedPermissionType: PermissionsType | null;
     selectedBudgetPresetIndex: number;
-    showCustomBudgetInput: boolean;
     selectedExpiryPresetIndex: number;
     showCustomExpiryInput: boolean;
     customExpiryValue: number | null;
     customExpiryUnit: TimeUnit;
 }
 
-@inject('SettingsStore', 'NostrWalletConnectStore', 'ModalStore')
+@inject('NostrWalletConnectStore', 'ModalStore')
 @observer
 export default class AddOrEditNWCConnection extends React.Component<
     AddOrEditNWCConnectionProps,
@@ -91,14 +86,12 @@ export default class AddOrEditNWCConnection extends React.Component<
             maxAmountSats: '10000',
             selectedBudgetRenewalIndex: 0,
             expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
-            description: '',
             error: '',
             loading: false,
             originalConnection: null,
             hasChanges: false,
             selectedPermissionType: 'full_access',
             selectedBudgetPresetIndex: 0,
-            showCustomBudgetInput: false,
             selectedExpiryPresetIndex: 0,
             showCustomExpiryInput: false,
             customExpiryValue: null,
@@ -106,18 +99,31 @@ export default class AddOrEditNWCConnection extends React.Component<
         };
     }
 
+    private unsubscribeFocus?: () => void;
+
     componentDidMount() {
-        const { route } = this.props;
+        const { route, navigation } = this.props;
         const connectionId = route.params?.connectionId;
         if (connectionId) {
             this.loadConnectionForEdit(connectionId);
         }
+        this.unsubscribeFocus = navigation.addListener('focus', () => {
+            const currentConnectionId = route.params?.connectionId;
+            if (currentConnectionId) {
+                this.loadConnectionForEdit(currentConnectionId);
+            }
+        });
     }
 
-    loadConnectionForEdit = (connectionId: string) => {
+    componentWillUnmount() {
+        if (this.unsubscribeFocus) {
+            this.unsubscribeFocus();
+        }
+    }
+    loadConnectionForEdit = async (connectionId: string) => {
         const { NostrWalletConnectStore } = this.props;
+        await NostrWalletConnectStore.loadConnections();
         const connection = NostrWalletConnectStore.getConnection(connectionId);
-
         if (connection) {
             const budgetRenewalIndex = NostrConnectUtils.getBudgetRenewalIndex(
                 connection.budgetRenewal
@@ -129,8 +135,6 @@ export default class AddOrEditNWCConnection extends React.Component<
                 NostrConnectUtils.getBudgetPresetIndex(
                     connection.maxAmountSats
                 );
-
-            const showCustomBudgetInput = selectedBudgetPresetIndex === 4; // Custom option
 
             const selectedExpiryPresetIndex =
                 NostrConnectUtils.getExpiryPresetIndex(connection.expiresAt);
@@ -148,12 +152,10 @@ export default class AddOrEditNWCConnection extends React.Component<
                 maxAmountSats: connection.maxAmountSats?.toString() || '',
                 selectedBudgetRenewalIndex: budgetRenewalIndex,
                 expiresAt: connection.expiresAt!,
-                description: connection.description || '',
                 originalConnection: connection,
                 hasChanges: false,
                 selectedPermissionType: permissionType,
                 selectedBudgetPresetIndex,
-                showCustomBudgetInput,
                 selectedExpiryPresetIndex,
                 showCustomExpiryInput,
                 customExpiryValue,
@@ -239,8 +241,15 @@ export default class AddOrEditNWCConnection extends React.Component<
 
         if (!basicValidation) return false;
 
-        if (showCustomExpiryInput && !customExpiryValue) {
-            return false;
+        if (showCustomExpiryInput) {
+            if (
+                !customExpiryValue ||
+                typeof customExpiryValue !== 'number' ||
+                customExpiryValue < 1 ||
+                customExpiryValue > 999
+            ) {
+                return false;
+            }
         }
 
         return true;
@@ -280,12 +289,10 @@ export default class AddOrEditNWCConnection extends React.Component<
     selectBudgetPreset = (presetIndex: number) => {
         const budgetPresets = ['10000', '100000', '1000000', '-1', ''];
         const maxAmountSats = budgetPresets[presetIndex] || '';
-        const showCustomBudgetInput = presetIndex === 4;
 
         this.updateStateWithChangeTracking({
             selectedBudgetPresetIndex: presetIndex,
-            maxAmountSats,
-            showCustomBudgetInput
+            maxAmountSats
         });
     };
 
@@ -398,6 +405,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             ].key;
 
         const params: any = {
+            ...(connectionId && { id: connectionId }),
             name: connectionName.trim(),
             relayUrl: selectedRelayUrl,
             permissions: selectedPermissions,
@@ -412,7 +420,6 @@ export default class AddOrEditNWCConnection extends React.Component<
                 )
             );
         }
-
         if (budgetValidation.budget !== undefined) {
             if (isEdit && connectionId) {
                 params.maxAmountSats = budgetValidation.budget;
@@ -444,14 +451,14 @@ export default class AddOrEditNWCConnection extends React.Component<
         if (!connectionId) {
             this.setState({
                 error: localeString(
-                    'stores.NostrWalletConnectStore.connectionNotFound'
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
                 )
             });
             return;
         }
         this.setState({ loading: true, error: '' });
         try {
-            const params = this.buildConnectionParams(false);
+            const params = this.buildConnectionParams(false, connectionId);
             await NostrWalletConnectStore.deleteConnection(connectionId);
             const nostrUrl = await NostrWalletConnectStore.createConnection(
                 params
@@ -667,7 +674,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, NostrWalletConnectStore } = this.props;
         const {
             connectionName,
             maxAmountSats,
@@ -677,6 +684,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             error,
             loading
         } = this.state;
+        const { persistentNWCServiceEnabled } = NostrWalletConnectStore;
         const budgetRenewalButtons: any =
             NostrConnectUtils.getBudgetRenewalOptions().map(
                 (option, index) => ({
@@ -795,57 +803,66 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </View>
                         )}
 
-                        {/* Background Connection Info - Hidden on iOS */}
-                        {!route.params?.isEdit && Platform.OS !== 'ios' && (
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    marginHorizontal: 10,
-                                    marginTop: 10,
-                                    gap: 5,
-                                    marginBottom: 15,
-                                    padding: 16,
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 12
-                                }}
-                            >
-                                <View style={{ flex: 1 }}>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 16,
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontWeight: '400'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.backgroundConnectionTitle'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontSize: 14,
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            marginTop: 4
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.backgroundConnectionDescription'
-                                        )}
-                                    </Text>
+                        {/* Background Connection Info */}
+                        {!route.params?.isEdit &&
+                            Platform.OS !== 'ios' &&
+                            persistentNWCServiceEnabled && (
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        marginHorizontal: 10,
+                                        marginTop: 10,
+                                        gap: 5,
+                                        marginBottom: 15,
+                                        padding: 16,
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        borderRadius: 12
+                                    }}
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 16,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontWeight: '400'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.backgroundConnectionTitle'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 14,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                marginTop: 4
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.NostrWalletConnect.backgroundConnectionDescription'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <Icon
+                                        name="info"
+                                        onPress={
+                                            this.showBackgroundConnectionInfo
+                                        }
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={24}
+                                    />
                                 </View>
-                                <Icon
-                                    name="info"
-                                    onPress={this.showBackgroundConnectionInfo}
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={24}
-                                />
-                            </View>
-                        )}
+                            )}
 
                         {/* Connection Name */}
                         <View style={styles.section}>

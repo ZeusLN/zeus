@@ -300,7 +300,6 @@ export default class NostrConnectUtils {
         return [
             'get_info',
             'get_balance',
-            'make_invoice',
             'lookup_invoice',
             'list_transactions'
         ];

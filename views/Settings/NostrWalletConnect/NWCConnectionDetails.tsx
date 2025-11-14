@@ -37,6 +37,7 @@ interface NWCConnectionDetailsProps {
 
 interface NWCConnectionDetailsState {
     loading: boolean;
+    connection: NWCConnection | null;
     confirmDelete: boolean;
     error: string | null;
 }
@@ -52,22 +53,52 @@ export default class NWCConnectionDetails extends React.Component<
         super(props);
         this.state = {
             loading: false,
+            connection: null,
             confirmDelete: false,
             error: null
         };
     }
 
     componentDidMount() {
-        const { route, navigation } = this.props;
-        const connectionId = route.params?.connectionId;
+        const { navigation } = this.props;
+        this.unsubscribeFocus = navigation.addListener(
+            'focus',
+            this.loadConnection
+        );
+    }
+
+    loadConnection = async () => {
+        const { NostrWalletConnectStore } = this.props;
+        const { connectionId } = this.props.route.params;
         if (!connectionId) {
-            navigation.goBack();
+            this.setState({
+                loading: false,
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            });
             return;
         }
-        this.unsubscribeFocus = navigation.addListener('focus', () => {
-            this.forceUpdate();
-        });
-    }
+        this.setState({ loading: true });
+        try {
+            await NostrWalletConnectStore.loadConnections();
+            const connection =
+                NostrWalletConnectStore.getConnection(connectionId);
+            if (connection) {
+                this.setState({ connection, loading: false });
+            } else {
+                this.setState({
+                    loading: false,
+                    error: localeString(
+                        'stores.NostrWalletConnectStore.error.connectionNotFound'
+                    )
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load connection:', error);
+            this.setState({ loading: false });
+        }
+    };
 
     componentWillUnmount() {
         if (this.unsubscribeFocus) {
@@ -75,16 +106,9 @@ export default class NWCConnectionDetails extends React.Component<
         }
     }
 
-    getConnection = (): NWCConnection | undefined => {
-        const { route, NostrWalletConnectStore } = this.props;
-        const connectionId = route.params?.connectionId;
-        if (!connectionId) return undefined;
-        return NostrWalletConnectStore.getConnection(connectionId);
-    };
-
-    editConnection = (connection: NWCConnection) => {
+    editConnection = (connectionId: string) => {
         this.props.navigation.navigate('AddOrEditNWCConnection', {
-            connectionId: connection.id,
+            connectionId,
             isEdit: true
         });
     };
@@ -115,62 +139,24 @@ export default class NWCConnectionDetails extends React.Component<
 
     render() {
         const { navigation, NostrWalletConnectStore } = this.props;
-        const { loading, error } = this.state;
+        const { loading, error, connection } = this.state;
         const { loading: storeLoading } = NostrWalletConnectStore;
-        const connection = this.getConnection();
-
-        if (!connection) {
-            return (
-                <Screen>
-                    <Header
-                        leftComponent="Back"
-                        centerComponent={{
-                            text: localeString(
-                                'views.Settings.NostrWalletConnect.connectionDetails'
-                            ),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }
-                        }}
-                        navigation={navigation}
-                    />
-                </Screen>
-            );
-        }
-
-        if (loading) {
-            return (
-                <Screen>
-                    <Header
-                        leftComponent="Back"
-                        centerComponent={{
-                            text: connection.name,
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }
-                        }}
-                        navigation={navigation}
-                    />
-                    <View style={styles.loadingContainer}>
-                        <LoadingIndicator />
-                    </View>
-                </Screen>
-            );
-        }
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
-                    centerComponent={{
-                        text: connection.name,
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }
-                    }}
+                    centerComponent={
+                        connection
+                            ? {
+                                  text: connection?.name,
+                                  style: {
+                                      color: themeColor('text'),
+                                      fontFamily: 'PPNeueMontreal-Book'
+                                  }
+                              }
+                            : undefined
+                    }
                     rightComponent={
                         loading || storeLoading ? (
                             <View style={{ marginRight: 10 }}>
@@ -180,7 +166,9 @@ export default class NWCConnectionDetails extends React.Component<
                             <View style={styles.headerActions}>
                                 <TouchableOpacity
                                     onPress={() =>
-                                        this.editConnection(connection)
+                                        this.editConnection(
+                                            connection?.id ?? ''
+                                        )
                                     }
                                     style={styles.headerActionButton}
                                 >
@@ -197,8 +185,16 @@ export default class NWCConnectionDetails extends React.Component<
                 />
 
                 {error ? (
-                    <ErrorMessage message={error} dismissable />
-                ) : (
+                    <ErrorMessage
+                        message={
+                            error ||
+                            localeString(
+                                'stores.NostrWalletConnectStore.error.connectionNotFound'
+                            )
+                        }
+                        dismissable
+                    />
+                ) : connection ? (
                     <View style={{ flex: 1 }}>
                         <ScrollView
                             style={styles.container}
@@ -465,7 +461,7 @@ export default class NWCConnectionDetails extends React.Component<
                             />
                         </View>
                     </View>
-                )}
+                ) : null}
             </Screen>
         );
     }

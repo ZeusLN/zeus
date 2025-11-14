@@ -16,6 +16,7 @@ import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import { Tag } from '../../../components/Channels/Tag';
 
 import SettingsStore from '../../../stores/SettingsStore';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
@@ -29,8 +30,7 @@ import { Status, ExpirationStatus } from '../../../models/Status';
 
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
-import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
-import { Tag } from '../../../components/Channels/Tag';
+import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
 
 interface NWCConnectionsListProps {
     navigation: StackNavigationProp<any, any>;
@@ -44,7 +44,6 @@ interface NWCConnectionsListState {
     searchQuery: string;
     connectionsLoading: boolean;
     error: string;
-    refreshing: boolean;
     filter: ConnectionFilter;
 }
 
@@ -60,7 +59,6 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            refreshing: false,
             filter: 'all'
         };
     }
@@ -81,15 +79,14 @@ export default class NWCConnectionsList extends React.Component<
                 connectionsLoading: true,
                 error: ''
             });
-
-            await this.props.NostrWalletConnectStore.refreshConnections();
+            await this.props.NostrWalletConnectStore.loadConnections();
             this.setState({
                 connectionsLoading: false
             });
         } catch (error: any) {
             this.setState({
                 error: localeString(
-                    'stores.NostrWalletConnectStore.failedToLoadConnections'
+                    'stores.NostrWalletConnectStore.error.failedToLoadConnections'
                 ),
                 connectionsLoading: false
             });
@@ -98,15 +95,6 @@ export default class NWCConnectionsList extends React.Component<
 
     handleFocus = async () => {
         await this.loadSettings();
-    };
-
-    onRefresh = async () => {
-        this.setState({ refreshing: true });
-        try {
-            await this.loadSettings();
-        } finally {
-            this.setState({ refreshing: false });
-        }
     };
 
     getFilterOptions = () => {
@@ -253,7 +241,7 @@ export default class NWCConnectionsList extends React.Component<
                                                 connection.budgetUsagePercentage
                                             )}%`,
                                             backgroundColor:
-                                                connection.budgetUsagePercentage >
+                                                connection.budgetUsagePercentage >=
                                                 80
                                                     ? themeColor('delete')
                                                     : themeColor('success')
@@ -319,7 +307,7 @@ export default class NWCConnectionsList extends React.Component<
 
     renderEmptyState = () => (
         <View style={styles.emptyState}>
-            <Nostrich
+            <NWCLogo
                 fill={themeColor('text')}
                 width={60}
                 height={60}
@@ -352,15 +340,12 @@ export default class NWCConnectionsList extends React.Component<
         const { NostrWalletConnectStore, navigation, SettingsStore } =
             this.props;
         const { connections, loading } = NostrWalletConnectStore;
-        const { connectionsLoading } = this.state;
+        const { connectionsLoading, error } = this.state;
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        navigation.popTo('Settings');
-                    }}
                     centerComponent={{
                         text: localeString(
                             'views.Settings.NostrWalletConnect.title'
@@ -429,9 +414,7 @@ export default class NWCConnectionsList extends React.Component<
                     navigation={navigation}
                 />
 
-                {this.state.error && (
-                    <ErrorMessage message={this.state.error} dismissable />
-                )}
+                {error && <ErrorMessage message={error} dismissable />}
 
                 <View style={{ marginTop: 20 }}>
                     {connectionsLoading ? (
@@ -579,8 +562,8 @@ export default class NWCConnectionsList extends React.Component<
                                     }
                                     refreshControl={
                                         <RefreshControl
-                                            refreshing={this.state.refreshing}
-                                            onRefresh={this.onRefresh}
+                                            refreshing={connectionsLoading}
+                                            onRefresh={this.loadSettings}
                                             tintColor={themeColor('text')}
                                             colors={[themeColor('highlight')]}
                                         />
