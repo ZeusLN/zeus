@@ -805,7 +805,10 @@ export default class SwapDetails extends React.Component<
                     }
                     navigation={navigation}
                 />
-                <ScrollView style={{ marginHorizontal: 20 }}>
+                <ScrollView
+                    style={{ marginHorizontal: 20 }}
+                    showsVerticalScrollIndicator={false}
+                >
                     <View style={{ marginBottom: 15 }}>
                         <Text
                             style={{
@@ -891,7 +894,7 @@ export default class SwapDetails extends React.Component<
                         value={swapData.id}
                     />
 
-                    {swapData.isSubmarineSwap && swapData?.expectedAmount && (
+                    {swapData.isSubmarineSwap && (
                         <>
                             <KeyValue
                                 keyValue={localeString(
@@ -899,7 +902,7 @@ export default class SwapDetails extends React.Component<
                                 )}
                                 value={
                                     <Amount
-                                        sats={swapData?.expectedAmount}
+                                        sats={swapData?.getAmount}
                                         sensitive
                                         toggleable
                                     />

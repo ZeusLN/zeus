@@ -6,12 +6,16 @@ import Transaction from '../models/Transaction';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
+import Swap from '../models/Swap';
+import { LSPActivity, LSPOrderState } from '../models/LSP';
+
+type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<Invoice | Payment | Transaction>,
+        activities: Array<ActivityItem>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction> {
+    ): Array<ActivityItem> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
@@ -38,6 +42,90 @@ class ActivityFilterUtils {
                         activity instanceof CashuToken
                     )
             );
+        }
+
+        if (filter.swaps == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => !(activity instanceof Swap)
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (!(activity instanceof Swap)) {
+                    return true;
+                }
+
+                const isSubmarine = activity.isSubmarineSwap;
+                const isReverse = activity.isReverseSwap;
+
+                if (isSubmarine && filter.submarine) {
+                    return (
+                        filter.swapFilter.submarine[activity.status] === true
+                    );
+                }
+                if (isReverse && filter.reverse) {
+                    return filter.swapFilter.reverse[activity.status] === true;
+                }
+
+                return false;
+            });
+        }
+
+        if (filter.lsps1 == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS1Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS1Order') return true;
+
+                const state = (activity as LSPActivity).state;
+                if (
+                    filter.lsps1State[LSPOrderState.CREATED] &&
+                    state === LSPOrderState.CREATED
+                )
+                    return true;
+                if (
+                    filter.lsps1State[LSPOrderState.COMPLETED] &&
+                    state === LSPOrderState.COMPLETED
+                )
+                    return true;
+                if (
+                    filter.lsps1State[LSPOrderState.FAILED] &&
+                    state === LSPOrderState.FAILED
+                )
+                    return true;
+
+                return false;
+            });
+        }
+
+        if (filter.lsps7 === false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) => activity.model !== 'LSPS7Order'
+            );
+        } else {
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity.model !== 'LSPS7Order') return true;
+
+                const state = (activity as LSPActivity).state;
+                if (
+                    filter.lsps7State[LSPOrderState.CREATED] &&
+                    state === LSPOrderState.CREATED
+                )
+                    return true;
+                if (
+                    filter.lsps7State[LSPOrderState.COMPLETED] &&
+                    state === LSPOrderState.COMPLETED
+                )
+                    return true;
+                if (
+                    filter.lsps7State[LSPOrderState.FAILED] &&
+                    state === LSPOrderState.FAILED
+                )
+                    return true;
+
+                return false;
+            });
         }
 
         if (filter.sent == false) {
@@ -171,15 +259,16 @@ class ActivityFilterUtils {
             const memoFilter = filter.memo.toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
-                let note = activity.getNote
-                    ? activity.getNote.toLowerCase()
-                    : '';
+                const note =
+                    'getNote' in activity && activity.getNote
+                        ? activity.getNote.toLowerCase()
+                        : '';
                 let memo = '';
                 if (activity instanceof Invoice) {
                     memo = activity.memo ? activity.memo.toLowerCase() : '';
                 } else if (activity instanceof Payment) {
                     memo = activity.getMemo
-                        ? activity.getMemo.toLowerCase()
+                        ? (activity.getMemo as string).toLowerCase()
                         : '';
                 }
                 return note.includes(memoFilter) || memo.includes(memoFilter);

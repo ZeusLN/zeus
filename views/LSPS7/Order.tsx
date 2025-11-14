@@ -21,6 +21,7 @@ import LSPS7OrderResponse from './OrderResponse';
 import { Payment } from '../../views/LSPS1/OrdersPane';
 
 import Storage from '../../storage';
+import { LSPOrderState } from '../../models/LSP';
 
 interface Order {
     announce_channel: boolean;
@@ -127,8 +128,10 @@ export default class LSPS7Order extends React.Component<
                                     getExtensionOrderData?.result ||
                                     getExtensionOrderData;
                                 if (
-                                    (result?.order_state === 'COMPLETED' ||
-                                        result?.order_state === 'FAILED') &&
+                                    (result?.order_state ===
+                                        LSPOrderState.COMPLETED ||
+                                        result?.order_state ===
+                                            LSPOrderState.FAILED) &&
                                     !orderShouldUpdate
                                 ) {
                                     this.updateOrderInStorage(

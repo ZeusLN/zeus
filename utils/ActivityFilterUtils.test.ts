@@ -336,7 +336,9 @@ describe('ActivityFilterUtils', () => {
         );
 
         expect(filteredActivities.length).toBe(1);
-        expect(filteredActivities[0].getNote).toBe('Payment for invoice');
+        expect(
+            'getNote' in filteredActivities[0] && filteredActivities[0].getNote
+        ).toBe('Payment for invoice');
     });
 
     // Test case for Keysend Filter

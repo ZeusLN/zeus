@@ -21,6 +21,7 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
+import ActivityToCsv from './ActivityToCsv';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -37,13 +38,18 @@ import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NotesStore from '../../stores/NotesStore';
+import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
+
 import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
 import CashuToken from '../../models/CashuToken';
-import ActivityToCsv from './ActivityToCsv';
+
+import { SwapType } from '../../models/Swap';
+
+import { LSPOrderState } from '../../models/LSP';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -52,6 +58,7 @@ interface ActivityProps {
     PosStore: PosStore;
     SettingsStore: SettingsStore;
     NotesStore: NotesStore;
+    SwapStore: SwapStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -86,6 +93,7 @@ interface ActivityListItemProps {
         | 'warning'
         | 'warningReserve';
     order?: Order;
+    swapStore: SwapStore;
 }
 
 const ActivityListItem = React.memo(
@@ -94,7 +102,8 @@ const ActivityListItem = React.memo(
         selectedPaymentForOrder,
         onItemPress,
         getRightTitleTheme,
-        order
+        order,
+        swapStore
     }: ActivityListItemProps) => {
         const note = item.getNote;
         let displayName = item.model;
@@ -236,6 +245,43 @@ const ActivityListItem = React.memo(
                           'general.unconfirmed'
                       )}`
                     : localeString('general.onchain');
+        } else if (item.model === localeString('views.Swaps.title')) {
+            displayName =
+                item.type === SwapType.Submarine
+                    ? localeString('views.Swaps.submarine')
+                    : localeString('views.Swaps.reverse');
+            subTitle = (
+                <Text>
+                    {item?.imported
+                        ? `${localeString('views.Swaps.SwapsPane.imported')}: `
+                        : ''}
+                    {item.type === SwapType.Submarine
+                        ? `${localeString('general.onchain')} → ${localeString(
+                              'general.lightning'
+                          )}  🔗 → ⚡`
+                        : `${localeString(
+                              'general.lightning'
+                          )} → ${localeString('general.onchain')}  ⚡ → 🔗`}
+                    {item?.status && (
+                        <>
+                            {'\n'}
+                            {`${localeString(
+                                'views.Channel.status'
+                            )}: ${swapStore.formatStatus(item.status)}`}
+                        </>
+                    )}
+                </Text>
+            );
+        } else if (item.model === 'LSPS1Order') {
+            displayName = localeString('views.LSPS1.type');
+            subTitle = `${localeString('general.state')}: ${item.state
+                .toLowerCase()
+                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
+        } else if (item.model === 'LSPS7Order') {
+            displayName = localeString('views.LSPS7.type');
+            subTitle = `${localeString('general.state')}: ${item.state
+                .toLowerCase()
+                .replace(/^\w/, (c: string) => c.toUpperCase())}`;
         }
 
         return (
@@ -404,7 +450,8 @@ const ActivityListItem = React.memo(
     'PosStore',
     'SettingsStore',
     'NotesStore',
-    'InvoicesStore'
+    'InvoicesStore',
+    'SwapStore'
 )
 @observer
 export default class Activity extends React.PureComponent<
@@ -507,6 +554,23 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.Cashu.CashuPayment.title'))
             return 'warning';
 
+        if (item.model === localeString('views.Swaps.title')) {
+            return 'text';
+        }
+
+        if (item.model === 'LSPS1Order' || item.model === 'LSPS7Order') {
+            switch (item.state) {
+                case LSPOrderState.CREATED:
+                    return 'highlight';
+                case LSPOrderState.COMPLETED:
+                    return 'success';
+                case LSPOrderState.FAILED:
+                    return 'warning';
+                default:
+                    return 'text';
+            }
+        }
+
         if (item.model === localeString('cashu.token')) {
             return item.sent
                 ? item.spent
@@ -548,6 +612,36 @@ export default class Activity extends React.PureComponent<
             }
             return;
         }
+        if (item.model === localeString('views.Swaps.title')) {
+            navigation.navigate('SwapDetails', {
+                swapData: item,
+                keys: item.keys,
+                endpoint: item.endpoint,
+                invoice: item.invoice
+            });
+        }
+
+        if (item.model === 'LSPS1Order') {
+            const orderShouldUpdate =
+                item.state === LSPOrderState.FAILED ||
+                item.state === LSPOrderState.COMPLETED;
+            navigation.navigate('LSPS1Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
+
+        if (item.model === 'LSPS7Order') {
+            const orderShouldUpdate =
+                item.state === LSPOrderState.FAILED ||
+                item.state === LSPOrderState.COMPLETED;
+            navigation.navigate('LSPS7Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
 
         if (item.model === localeString('views.Invoice.title')) {
             navigation.navigate('Invoice', { invoice: item });
@@ -576,6 +670,7 @@ export default class Activity extends React.PureComponent<
             FiatStore,
             PosStore,
             SettingsStore,
+            SwapStore,
             route
         } = this.props;
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
@@ -757,6 +852,7 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 getRightTitleTheme={this.getRightTitleTheme}
                                 order={route.params?.order}
+                                swapStore={SwapStore}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}
