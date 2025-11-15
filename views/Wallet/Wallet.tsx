@@ -32,6 +32,7 @@ import KeypadPane from './KeypadPane';
 import SquarePosPane from './SquarePosPane';
 import StandalonePosPane from './StandalonePosPane';
 import StandalonePosKeypadPane from './StandalonePosKeypadPane';
+import CloverPosPane from './CloverPosPane';
 
 import Button from '../../components/Button';
 import LayerBalances from '../../components/LayerBalances';
@@ -975,6 +976,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 <Screen>
                     {posEnabled === PosEnabled.Square && (
                         <SquarePosPane navigation={navigation} />
+                    )}
+                    {posEnabled === PosEnabled.Clover && (
+                        <CloverPosPane navigation={navigation} />
                     )}
                     {posEnabled === PosEnabled.Standalone && (
                         <StandalonePosPane navigation={navigation} />
