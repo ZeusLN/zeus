@@ -65,6 +65,7 @@ import HandleAnythingQRScanner from './views/HandleAnythingQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
+import VerifyOnChain from './views/VerifyOnChain';
 import SendingLightning from './views/SendingLightning';
 import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
@@ -78,7 +79,7 @@ import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
 import NostrContacts from './views/NostrContacts';
-import ContactQR from './views/ContactQR';
+import MultiQR from './views/MultiQR';
 
 // Settings views
 import Settings from './views/Settings/Settings';
@@ -622,6 +623,12 @@ export default class App extends React.PureComponent {
                                                         component={OpenChannel}
                                                     />
                                                     <Stack.Screen
+                                                        name="VerifyOnChain" // @ts-ignore:next-line
+                                                        component={
+                                                            VerifyOnChain
+                                                        }
+                                                    />
+                                                    <Stack.Screen
                                                         name="SendingOnChain" // @ts-ignore:next-line
                                                         component={
                                                             SendingOnChain
@@ -984,8 +991,8 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ContactQR" // @ts-ignore:next-line
-                                                        component={ContactQR}
+                                                        name="MultiQR" // @ts-ignore:next-line
+                                                        component={MultiQR}
                                                     />
                                                     <Stack.Screen
                                                         name="CurrencyConverter" // @ts-ignore:next-line
