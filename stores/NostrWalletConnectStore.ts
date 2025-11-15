@@ -647,9 +647,8 @@ export default class NostrWalletConnectStore {
             });
 
             await this.saveConnections();
-
+            await this.subscribeToConnection(connection);
             if (relayUrlChanged) {
-                await this.subscribeToConnection(connection);
                 return {
                     nostrUrl:
                         this.generateConnectionSecret(newRelayUrl)
