@@ -423,6 +423,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             isValid: true,
             error_msg: ''
         });
+
         handleAnything(text, this.state.satAmount.toString())
             .then((response) => {
                 try {

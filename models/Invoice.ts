@@ -239,9 +239,16 @@ export default class Invoice extends BaseModel {
         if (this.amount) {
             return Number(this.amount);
         }
+        if (this.amount_msat) {
+            const msatoshi = this.amount_msat.toString();
+            return Number(msatoshi.replace('msat', '')) / 1000;
+        }
         return this.settled
             ? Number(this.amt_paid_sat)
-            : Number(this.value) || Number(this.amt) || 0;
+            : Number(this.value) ||
+                  Number(this.amt) ||
+                  Number(this.num_satoshis) ||
+                  0;
     }
 
     // return amount in satoshis

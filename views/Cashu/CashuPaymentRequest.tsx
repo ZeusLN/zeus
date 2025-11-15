@@ -108,7 +108,6 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     async componentDidMount() {
-        this.isComponentMounted = true;
         const { SettingsStore, CashuStore } = this.props;
         const settings = await SettingsStore.getSettings();
         const { defaultDonationPercentage } = settings.payments;
@@ -158,7 +157,6 @@ export default class CashuPaymentRequest extends React.Component<
         if (this.payReqDisposer) {
             this.payReqDisposer();
         }
-
         if (this.focusListener) {
             this.focusListener();
         }
