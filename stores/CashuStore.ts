@@ -29,7 +29,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import { activityStore, lightningAddressStore } from './Stores';
+import { activityStore, lightningAddressStore, settingsStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -37,7 +37,12 @@ import ModalStore from './ModalStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
-import CashuUtils from '../utils/CashuUtils';
+import CashuUtils, {
+    MintPaymentStatus,
+    MintProgressInfo,
+    MultimintProgressCallback,
+    MultinutPaymentStep
+} from '../utils/CashuUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
@@ -83,6 +88,8 @@ interface ClaimTokenResponse {
 export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
+    @observable public selectedMintUrls: string[] =
+        settingsStore.settings.lightningAddress.mintUrls;
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
@@ -94,6 +101,7 @@ export default class CashuStore {
     @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
+    @observable public fromCashuSend = false;
 
     @observable public loading = false;
     @observable public initializing = false;
@@ -118,6 +126,10 @@ export default class CashuStore {
     @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
     @observable public proofsToUse?: Proof[];
+    @observable public meltQuotes: {
+        mintUrl: string;
+        meltQuote: MeltQuoteResponse;
+    }[];
     @observable public meltQuote?: MeltQuoteResponse;
     @observable public noteKey?: string;
     @observable public paymentStartTime?: number;
@@ -145,6 +157,11 @@ export default class CashuStore {
         this.channelsStore = channelsStore;
         this.modalStore = modalStore;
     }
+
+    @action
+    public setFromCashuSend = (value: boolean) => {
+        this.fromCashuSend = value;
+    };
 
     @action
     public reset = () => {
@@ -188,7 +205,7 @@ export default class CashuStore {
         this.getPayReqError = undefined;
         this.feeEstimate = undefined;
         this.proofsToUse = undefined;
-        this.meltQuote = undefined;
+        this.meltQuotes = [];
         this.noteKey = undefined;
         this.error = false;
         this.paymentError = false;
@@ -269,11 +286,43 @@ export default class CashuStore {
             mintUrl
         );
 
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            JSON.stringify([mintUrl])
+        );
+
         runInAction(() => {
             this.selectedMintUrl = mintUrl;
+            this.selectedMintUrls = [mintUrl];
         });
 
         return mintUrl;
+    };
+
+    @action
+    public toggleMintSelection = async (mintUrl: string): Promise<void> => {
+        const currentSelection = Array.isArray(this.selectedMintUrls)
+            ? [...this.selectedMintUrls]
+            : [];
+        const isSelected = currentSelection.includes(mintUrl);
+        if (isSelected && currentSelection.length === 1) {
+            return;
+        }
+
+        const nextSelected = isSelected
+            ? currentSelection.filter((url) => url !== mintUrl)
+            : [...currentSelection, mintUrl];
+        runInAction(() => {
+            this.selectedMintUrls = nextSelected;
+        });
+
+        if (this.settingsStore?.settings.ecash.enableMultiMint) {
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    mintUrls: nextSelected
+                }
+            });
+        }
     };
 
     @action
@@ -1326,6 +1375,30 @@ export default class CashuStore {
         }
     };
 
+    private groupProofsByMint = (proofs?: Proof[]): Record<string, Proof[]> => {
+        const grouped: Record<string, Proof[]> = {};
+
+        if (!proofs || proofs.length === 0) return grouped;
+
+        for (const proof of proofs) {
+            const mintUrl = Object.keys(this.cashuWallets).find((url) =>
+                this.cashuWallets[url].proofs?.some(
+                    (p) => p.secret === proof.secret
+                )
+            );
+
+            if (!mintUrl) continue;
+
+            if (!grouped[mintUrl]) {
+                grouped[mintUrl] = [];
+            }
+
+            grouped[mintUrl].push(proof);
+        }
+
+        return grouped;
+    };
+
     getProofsToUse = (
         proofsAvailable: Proof[],
         amount: number,
@@ -1351,6 +1424,60 @@ export default class CashuStore {
         return { proofsToUse: proofsToSend };
     };
 
+    private prepareMultiMintMeltQuotes = async ({
+        invoice,
+        amountToPay,
+        proofs
+    }: {
+        invoice: string;
+        amountToPay: number;
+        proofs: Proof[];
+    }) => {
+        this.meltQuotes = [];
+        const mintProofsMap = this.groupProofsByMint(proofs);
+        console.log('mint to proofs map: ', mintProofsMap);
+        let remaining = amountToPay;
+
+        const sortedMintProofs = Object.entries(mintProofsMap).sort(
+            ([, proofsA], [, proofsB]) =>
+                CashuUtils.sumProofsValue(proofsA) -
+                CashuUtils.sumProofsValue(proofsB)
+        );
+
+        for (const [mintUrl, proofs] of sortedMintProofs) {
+            if (remaining <= 0) break;
+
+            const mintBalance = CashuUtils.sumProofsValue(proofs);
+            const allocation = Math.min(remaining, mintBalance);
+            const allocationMillisats = allocation * 1000;
+
+            remaining -= allocation;
+
+            if (!this.cashuWallets[mintUrl]?.wallet) {
+                await this.initializeWallet(mintUrl, true);
+            }
+
+            const wallet = this.cashuWallets[mintUrl].wallet;
+            const meltQuote = await wallet!.createMultiPathMeltQuote(
+                invoice,
+                allocationMillisats
+            );
+
+            this.meltQuotes.push({
+                mintUrl,
+                meltQuote
+            });
+        }
+
+        if (remaining > 0) {
+            throw new Error(
+                'Could not allocate enough funds for multi-mint payment'
+            );
+        }
+
+        console.log('MPP melt quotes:', JSON.stringify(this.meltQuotes));
+    };
+
     @action
     public getPayReq = async (
         bolt11Invoice: string,
@@ -1362,6 +1489,7 @@ export default class CashuStore {
         this.payReq = undefined;
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
+        let isMultiMint = this.settingsStore.settings.ecash.enableMultiMint;
 
         try {
             const data = await new Promise((resolve) => {
@@ -1386,32 +1514,98 @@ export default class CashuStore {
                 resolve(decoded);
             });
 
-            if (!this.cashuWallets[this.selectedMintUrl].wallet) {
-                await this.initializeWallet(this.selectedMintUrl, true);
-            }
-            const cashuWallet = this.cashuWallets[this.selectedMintUrl];
+            const mintsToUse = isMultiMint
+                ? this.selectedMintUrls
+                : [this.selectedMintUrl];
 
-            const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
-                bolt11Invoice
-            );
-            const { proofsToUse }: { proofsToUse: Proof[] } =
-                this.getProofsToUse(
-                    cashuWallet.proofs,
-                    meltQuote.amount + meltQuote.fee_reserve,
-                    'desc'
+            console.log(mintsToUse);
+
+            let allProofsToUse: Proof[] = [];
+            let allMeltQuotes: {
+                mintUrl: string;
+                meltQuote: MeltQuoteResponse;
+            }[] = [];
+            let totalFeeEstimate = 0;
+            let aggregateError: any;
+
+            const payReq = new Invoice(data);
+            const paymentAmt = payReq.getRequestAmount
+                ? payReq.getRequestAmount
+                : 0;
+
+            const amountToPay = this.feeEstimate
+                ? this.feeEstimate + paymentAmt
+                : paymentAmt;
+
+            if (isMultiMint) {
+                const allProofsAvailable: Proof[] = [];
+
+                for (const mintUrl of mintsToUse) {
+                    console.log(mintUrl);
+                    if (!this.cashuWallets[mintUrl].wallet) {
+                        await this.initializeWallet(mintUrl, true);
+                    }
+                    const cashuWallet = this.cashuWallets[mintUrl];
+                    console.log(cashuWallet.proofs);
+
+                    allProofsAvailable.push(...cashuWallet.proofs);
+                }
+
+                console.log(allProofsAvailable);
+
+                await this.prepareMultiMintMeltQuotes({
+                    invoice: bolt11Invoice,
+                    amountToPay,
+                    proofs: allProofsAvailable
+                });
+
+                allProofsToUse = allProofsAvailable;
+                allMeltQuotes = this.meltQuotes ?? [];
+                totalFeeEstimate = allMeltQuotes.reduce(
+                    (sum, q) => sum + (q.meltQuote.fee_reserve || 0),
+                    0
                 );
+            } else {
+                for (const mintUrl of mintsToUse) {
+                    try {
+                        if (!this.cashuWallets[mintUrl].wallet) {
+                            await this.initializeWallet(mintUrl, true);
+                        }
+                        const cashuWallet = this.cashuWallets[mintUrl];
+                        const meltQuote =
+                            await cashuWallet.wallet!!.createMeltQuote(
+                                bolt11Invoice
+                            );
+
+                        const { proofsToUse }: { proofsToUse: Proof[] } =
+                            this.getProofsToUse(
+                                cashuWallet.proofs,
+                                meltQuote.amount + meltQuote.fee_reserve,
+                                'desc'
+                            );
+
+                        allProofsToUse = allProofsToUse.concat(proofsToUse);
+                        allMeltQuotes.push({ mintUrl, meltQuote });
+                        totalFeeEstimate += meltQuote.fee_reserve || 0;
+                    } catch (err) {
+                        if (!aggregateError) aggregateError = [];
+                        aggregateError.push({ mintUrl, err });
+                    }
+                }
+            }
 
             runInAction(() => {
-                this.payReq = new Invoice(data);
-                this.getPayReqError = undefined;
+                this.payReq = payReq;
+                this.getPayReqError = aggregateError;
+                this.loading = false;
                 if (!isDonationPayment) {
                     this.loading = false;
                 }
             });
 
-            this.proofsToUse = proofsToUse;
-            this.meltQuote = meltQuote;
-            this.feeEstimate = this.meltQuote.fee_reserve || 0;
+            this.proofsToUse = allProofsToUse;
+            this.meltQuotes = allMeltQuotes;
+            this.feeEstimate = totalFeeEstimate;
 
             return;
         } catch (e: any) {
@@ -1475,10 +1669,12 @@ export default class CashuStore {
     @action
     public payLnInvoiceFromEcash = async ({
         amount,
-        isDonationPayment = false
+        isDonationPayment = false,
+        onProgress
     }: {
         amount?: string;
         isDonationPayment?: boolean;
+        onProgress?: MultimintProgressCallback;
     }) => {
         if (isDonationPayment) {
             console.log('STARTING DONATION PAYMENT PROCESS');
@@ -1487,25 +1683,23 @@ export default class CashuStore {
             this.paymentStartTime = Date.now();
         }
 
-        const mintUrl = this.selectedMintUrl;
-
-        if (!this.cashuWallets[mintUrl].wallet) {
-            await this.initializeWallet(mintUrl, true);
-        }
-
-        const wallet = this.cashuWallets[mintUrl].wallet;
-        let proofs = this.proofsToUse;
-
         const paymentAmt = this.payReq?.getRequestAmount
             ? this.payReq?.getRequestAmount
             : Number(amount);
+
         const amountToPay = this.feeEstimate
             ? this.feeEstimate + paymentAmt
             : paymentAmt;
-        const totalProofsValue = CashuUtils.sumProofsValue(proofs);
+
+        const totalProofsValue = CashuUtils.sumProofsValue(this.proofsToUse);
+
+        const multimintEnabled =
+            this.settingsStore.settings.ecash.enableMultiMint;
+
+        const emptyMints: MintProgressInfo[] = [];
 
         console.log('ecash quote fee reserve:', this.feeEstimate);
-        console.log('Proofs before send', proofs);
+        console.log('Proofs before send', this.proofsToUse);
         console.log(totalProofsValue, amountToPay);
 
         try {
@@ -1515,180 +1709,645 @@ export default class CashuStore {
                     'stores.CashuStore.notEnoughFunds'
                 );
                 this.loading = false;
+                onProgress?.({
+                    step: MultinutPaymentStep.FAILED,
+                    mints: emptyMints,
+                    totalSelectedBalance: 0,
+                    isProcessing: false
+                });
                 return;
             }
 
-            console.log('[payLnInvoce] use send ', {
-                amountToPay,
-                amount,
-                fee: this.feeEstimate,
-                totalProofsValue
+            const isMultiMint = multimintEnabled && this.meltQuotes.length > 1;
+
+            if (!isMultiMint) {
+                return await this.payLnInvoiceSingleMint({
+                    amount,
+                    amountToPay,
+                    isDonationPayment
+                });
+            }
+
+            return await this.payLnInvoiceMultiMint({ onProgress });
+        } catch (err: any) {
+            console.log('paying ln invoice from ecash error', err);
+            if (!multimintEnabled || this.meltQuotes.length === 1) {
+                const mintUrl = this.selectedMintUrl;
+                const wallet = this.cashuWallets[mintUrl]?.wallet;
+                if (wallet) {
+                    try {
+                        const mintQuote = await wallet.checkMeltQuote(
+                            this.meltQuotes[0]?.meltQuote?.quote
+                        );
+
+                        if (mintQuote.state == MeltQuoteState.PAID) {
+                            this.paymentError = true;
+                            this.paymentErrorMsg = localeString(
+                                'stores.CashuStore.alreadyPaid'
+                            );
+                            this.loading = false;
+                            onProgress?.({
+                                step: MultinutPaymentStep.FAILED,
+                                mints: emptyMints,
+                                totalSelectedBalance: 0,
+                                isProcessing: false
+                            });
+                            return;
+                        } else if (mintQuote.state == MeltQuoteState.PENDING) {
+                            this.paymentError = true;
+                            this.paymentErrorMsg = localeString(
+                                'stores.CashuStore.pending'
+                            );
+                            this.loading = false;
+                            onProgress?.({
+                                step: MultinutPaymentStep.FAILED,
+                                mints: emptyMints,
+                                totalSelectedBalance: 0,
+                                isProcessing: false
+                            });
+                            return;
+                        }
+
+                        await this.removeMintProofs(
+                            mintUrl,
+                            this.proofsToUse!!
+                        );
+                        await this.addMintProofs(mintUrl, this.proofsToUse!!);
+                    } catch (quoteErr) {
+                        console.warn('Failed to check melt quote:', quoteErr);
+                    }
+                }
+            }
+
+            this.paymentError = true;
+            this.paymentErrorMsg = String(err.message);
+            this.loading = false;
+            onProgress?.({
+                step: MultinutPaymentStep.FAILED,
+                mints: emptyMints,
+                totalSelectedBalance: 0,
+                isProcessing: false
+            });
+            return;
+        }
+    };
+
+    private payLnInvoiceSingleMint = async ({
+        amount,
+        amountToPay,
+        isDonationPayment
+    }: {
+        amount?: string;
+        amountToPay: number;
+        isDonationPayment: boolean;
+    }) => {
+        const mintUrl = this.selectedMintUrl;
+
+        if (!this.cashuWallets[mintUrl].wallet) {
+            await this.initializeWallet(mintUrl, true);
+        }
+
+        const wallet = this.cashuWallets[mintUrl].wallet;
+        let proofs = this.proofsToUse;
+
+        console.log('[payLnInvoce] use send ', {
+            amountToPay,
+            amount,
+            fee: this.feeEstimate,
+            totalProofsValue: CashuUtils.sumProofsValue(proofs)
+        });
+
+        let currentCount = this.cashuWallets[mintUrl].counter;
+        let proofsToSend: Proof[] | undefined;
+        let proofsToKeep: Proof[] | undefined;
+        let newCounterValue: number | undefined;
+        let success = false;
+
+        const maxAttempts = 100;
+        const requestedProofSecrets = (this.proofsToUse ?? []).map(
+            (p) => p.secret
+        );
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            const walletId = this.cashuWallets[mintUrl].walletId;
+            const [storedProofs, storedCounter] = await Promise.all([
+                Storage.getItem(`${walletId}-proofs`),
+                Storage.getItem(`${walletId}-counter`)
+            ]);
+
+            runInAction(() => {
+                if (storedProofs) {
+                    this.cashuWallets[mintUrl].proofs =
+                        JSON.parse(storedProofs);
+                }
+                if (storedCounter !== null) {
+                    this.cashuWallets[mintUrl].counter =
+                        JSON.parse(storedCounter);
+                    currentCount = JSON.parse(storedCounter);
+                }
             });
 
-            let currentCount = this.cashuWallets[mintUrl].counter;
-            let proofsToSend: Proof[] | undefined;
-            let proofsToKeep: Proof[] | undefined;
-            let newCounterValue: number | undefined;
-            let success = false;
-            const maxAttempts = 100;
+            let mintProofs = this.cashuWallets[mintUrl].proofs.filter((p) =>
+                requestedProofSecrets.includes(p.secret)
+            );
 
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const attemptCounter = currentCount + attempt;
+            if (mintProofs.length > 0) {
+                try {
+                    const proofStates = await wallet!!.checkProofsStates(
+                        mintProofs
+                    );
+                    mintProofs = mintProofs.filter(
+                        (_, idx) => proofStates[idx]?.state === 'UNSPENT'
+                    );
+                } catch (checkError) {
+                    console.warn(
+                        `Failed to check proof states for ${mintUrl}:`,
+                        checkError
+                    );
+                }
+            }
+
+            if (mintProofs.length === 0) {
+                throw new Error(
+                    `No valid proofs found for mint ${mintUrl}. Proofs may have been spent or removed.`
+                );
+            }
+
+            const attemptCounter = currentCount + attempt;
+            console.log(
+                `payLnInvoiceFromEcash: Attempt ${
+                    attempt + 1
+                }/${maxAttempts} with counter ${attemptCounter}`
+            );
+
+            try {
+                const result = await this.getSpendingProofsWithPreciseCounter(
+                    wallet!!,
+                    amountToPay,
+                    mintProofs,
+                    attemptCounter
+                );
+
+                proofsToSend = result.proofsToSend;
+                proofsToKeep = result.proofsToKeep;
+                newCounterValue = result.newCounterValue;
+                success = true;
                 console.log(
                     `payLnInvoiceFromEcash: Attempt ${
                         attempt + 1
                     }/${maxAttempts} with counter ${attemptCounter}`
                 );
-                try {
-                    const result =
-                        await this.getSpendingProofsWithPreciseCounter(
-                            wallet!!,
-                            amountToPay,
-                            this.proofsToUse!!,
-                            attemptCounter
-                        );
-                    proofsToSend = result.proofsToSend;
-                    proofsToKeep = result.proofsToKeep;
-                    newCounterValue = result.newCounterValue;
-                    if (!isDonationPayment) {
-                        success = true;
-                    }
-                    console.log(
-                        `payLnInvoiceFromEcash: Attempt ${
-                            attempt + 1
-                        } successful with counter ${attemptCounter}`
-                    );
-                    break;
-                } catch (e: any) {
-                    console.warn(
-                        `payLnInvoiceFromEcash: Attempt ${
-                            attempt + 1
-                        } failed with counter ${attemptCounter}: ${e.message}`
-                    );
-                    if (attempt === maxAttempts - 1) {
-                        throw e; // Re-throw error after last attempt
-                    }
+                break;
+            } catch (e: any) {
+                console.warn(
+                    `payLnInvoiceFromEcash: Attempt ${
+                        attempt + 1
+                    } failed with counter ${attemptCounter}: ${e.message}`
+                );
+                if (attempt === maxAttempts - 1) {
+                    throw e;
                 }
             }
+        }
 
-            if (
-                (!isDonationPayment && !success) ||
-                proofsToSend === undefined ||
-                proofsToKeep === undefined ||
-                newCounterValue === undefined
-            ) {
-                // This case should ideally be caught by the re-throw in the loop
-                throw new Error(
-                    localeString('stores.CashuStore.errorPayingInvoice') +
-                        ' (failed all attempts to get spending proofs)'
-                );
-            }
+        if (
+            (!isDonationPayment && !success) ||
+            proofsToSend === undefined ||
+            proofsToKeep === undefined ||
+            newCounterValue === undefined
+        ) {
+            throw new Error(
+                localeString('stores.CashuStore.errorPayingInvoice') +
+                    ' (failed all attempts to get spending proofs)'
+            );
+        }
 
-            console.log('PROOFS TO SEND:', proofsToSend);
-            console.log('PROOFS TO KEEP:', proofsToKeep);
+        console.log('PROOFS TO SEND:', proofsToSend);
+        console.log('PROOFS TO KEEP:', proofsToKeep);
 
-            proofs = proofsToSend;
+        proofs = proofsToSend;
 
-            if (proofsToKeep.length)
-                await this.addMintProofs(mintUrl, proofsToKeep);
+        if (proofsToKeep.length)
+            await this.addMintProofs(mintUrl, proofsToKeep);
 
-            let meltResponse = await wallet!!.meltProofs(
-                this.meltQuote!!,
-                proofsToSend,
-                {
-                    counter: newCounterValue + 1
+        let meltResponse = await wallet!!.meltProofs(
+            this.meltQuotes![0]?.meltQuote,
+            proofsToSend,
+            { counter: newCounterValue + 1 }
+        );
+
+        console.log('melt response', meltResponse);
+
+        if (meltResponse?.change?.length) {
+            await this.setMintCounter(
+                mintUrl,
+                newCounterValue + meltResponse.change.length + 1
+            );
+            await this.addMintProofs(mintUrl, meltResponse.change);
+        } else {
+            await this.setMintCounter(mintUrl, newCounterValue + 1);
+        }
+
+        const realFee = Math.max(
+            0,
+            meltResponse.quote?.fee_reserve -
+                CashuUtils.sumProofsValue(meltResponse?.change)
+        );
+
+        this.paymentPreimage = meltResponse.quote.payment_preimage!!;
+
+        const payment = new CashuPayment({
+            ...this.payReq,
+            proofs: proofsToSend,
+            bolt11: this.paymentRequest,
+            meltResponse,
+            amount: meltResponse.quote.amount,
+            fee: realFee,
+            payment_preimage: this.paymentPreimage,
+            mintUrl
+        });
+
+        if (!isDonationPayment) {
+            this.noteKey = payment.getNoteKey;
+        }
+
+        await this.removeMintProofs(mintUrl, this.proofsToUse!!);
+        // store Ecash payment
+        this.payments?.push(payment);
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-payments`,
+            this.payments
+        );
+
+        // update balances
+        await this.setTotalBalance(this.totalBalanceSats - amountToPay);
+        await this.setMintBalance(
+            mintUrl,
+            this.cashuWallets[mintUrl].balanceSats - amountToPay
+        );
+
+        this.loading = false;
+        return payment;
+    };
+
+    private payLnInvoiceMultiMint = async ({
+        onProgress
+    }: {
+        onProgress?: MultimintProgressCallback;
+    } = {}): Promise<CashuPayment | CashuPayment[]> => {
+        if (!this.meltQuotes || !this.proofsToUse) {
+            throw new Error('No melt quotes or proofs available');
+        }
+
+        const proofsByMint = this.groupProofsByMint(this.proofsToUse);
+
+        let mintProgressInfo: MintProgressInfo[] = this.meltQuotes.map(
+            ({ mintUrl }) => ({
+                mintUrl,
+                mintName:
+                    this.cashuWallets[mintUrl]?.mintInfo?.name ||
+                    this.getMintName(mintUrl),
+                balance: this.cashuWallets[mintUrl]?.balanceSats || 0,
+                selected: false,
+                status: MintPaymentStatus.IDLE,
+                allocatedAmount: 0,
+                error: undefined
+            })
+        );
+
+        const totalSelectedBalance = mintProgressInfo.reduce(
+            (sum, mint) => sum + mint.balance,
+            0
+        );
+
+        onProgress?.({
+            step: MultinutPaymentStep.PROCESSING,
+            mints: mintProgressInfo,
+            totalSelectedBalance,
+            isProcessing: true
+        });
+
+        try {
+            const paymentTasks = this.meltQuotes.map(
+                async ({ mintUrl, meltQuote }, index) => {
+                    const maxAttempts = 100;
+                    let lastError: any;
+                    let lastSuccessfulCounter: number | undefined;
+
+                    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                        try {
+                            mintProgressInfo[index].status =
+                                MintPaymentStatus.REQUESTING;
+                            mintProgressInfo[index].error = undefined;
+                            onProgress?.({
+                                step: MultinutPaymentStep.PROCESSING,
+                                mints: [...mintProgressInfo],
+                                totalSelectedBalance: mintProgressInfo.reduce(
+                                    (sum, mint) => sum + mint.balance,
+                                    0
+                                ),
+                                isProcessing: true
+                            });
+
+                            if (!this.cashuWallets[mintUrl]?.wallet) {
+                                await this.initializeWallet(mintUrl, true);
+                            }
+                            const wallet = this.cashuWallets[mintUrl]?.wallet;
+                            if (!wallet) {
+                                throw new Error(
+                                    `Wallet not initialized for mint ${mintUrl}`
+                                );
+                            }
+
+                            const walletId =
+                                this.cashuWallets[mintUrl].walletId;
+                            const [storedProofs, storedCounter] =
+                                await Promise.all([
+                                    Storage.getItem(`${walletId}-proofs`),
+                                    Storage.getItem(`${walletId}-counter`)
+                                ]);
+
+                            runInAction(() => {
+                                if (storedProofs) {
+                                    this.cashuWallets[mintUrl].proofs =
+                                        JSON.parse(storedProofs);
+                                }
+                                if (storedCounter !== null) {
+                                    this.cashuWallets[mintUrl].counter =
+                                        JSON.parse(storedCounter);
+                                }
+                            });
+
+                            const baseCounter =
+                                lastSuccessfulCounter ??
+                                this.cashuWallets[mintUrl].counter ??
+                                0;
+                            const attemptCounter = baseCounter + attempt;
+
+                            const requestedProofSecrets = (
+                                proofsByMint[mintUrl] ?? []
+                            ).map((p) => p.secret);
+                            let availableMintProofs =
+                                requestedProofSecrets.length > 0
+                                    ? this.cashuWallets[mintUrl].proofs.filter(
+                                          (p) =>
+                                              requestedProofSecrets.includes(
+                                                  p.secret
+                                              )
+                                      )
+                                    : [...this.cashuWallets[mintUrl].proofs];
+
+                            if (availableMintProofs.length > 0) {
+                                try {
+                                    const proofStates =
+                                        await wallet.checkProofsStates(
+                                            availableMintProofs
+                                        );
+                                    availableMintProofs =
+                                        availableMintProofs.filter(
+                                            (_, idx) =>
+                                                proofStates[idx]?.state ===
+                                                'UNSPENT'
+                                        );
+                                } catch (checkError) {
+                                    console.warn(
+                                        `Failed to check proof states for ${mintUrl}:`,
+                                        checkError
+                                    );
+                                }
+                            }
+
+                            const { proofsToUse: mintProofs } =
+                                this.getProofsToUse(
+                                    [...availableMintProofs],
+                                    meltQuote.amount
+                                );
+
+                            if (
+                                !mintProofs ||
+                                CashuUtils.sumProofsValue(mintProofs) <
+                                    meltQuote.amount
+                            ) {
+                                throw new Error(
+                                    `Insufficient proofs available for mint ${mintUrl}.`
+                                );
+                            }
+
+                            console.log(
+                                `[payLnInvoiceMultiMint] Mint ${mintUrl} attempt ${
+                                    attempt + 1
+                                } with counter ${attemptCounter}, proofs count: ${
+                                    mintProofs.length
+                                }`
+                            );
+
+                            if (mintProofs.length === 0) {
+                                throw new Error(
+                                    `No valid proofs found for mint ${mintUrl}. Proofs may have been spent or removed.`
+                                );
+                            }
+
+                            const {
+                                proofsToSend = [],
+                                proofsToKeep = [],
+                                newCounterValue
+                            } = await this.getSpendingProofsWithPreciseCounter(
+                                wallet,
+                                meltQuote.amount,
+                                mintProofs,
+                                attemptCounter
+                            );
+
+                            if (newCounterValue !== undefined) {
+                                lastSuccessfulCounter = newCounterValue;
+                            }
+
+                            mintProgressInfo[index].status =
+                                MintPaymentStatus.PAYING;
+                            onProgress?.({
+                                step: MultinutPaymentStep.PROCESSING,
+                                mints: [...mintProgressInfo],
+                                totalSelectedBalance: mintProgressInfo.reduce(
+                                    (sum, mint) => sum + mint.balance,
+                                    0
+                                ),
+                                isProcessing: true
+                            });
+
+                            if (proofsToKeep.length) {
+                                await this.addMintProofs(mintUrl, proofsToKeep);
+                            }
+
+                            const meltResponse = await wallet.meltProofs(
+                                meltQuote,
+                                proofsToSend,
+                                { counter: (newCounterValue ?? 0) + 1 }
+                            );
+
+                            if (meltResponse?.change?.length) {
+                                await this.setMintCounter(
+                                    mintUrl,
+                                    (newCounterValue ?? 0) +
+                                        meltResponse.change.length +
+                                        1
+                                );
+                                await this.addMintProofs(
+                                    mintUrl,
+                                    meltResponse.change
+                                );
+                            } else {
+                                await this.setMintCounter(
+                                    mintUrl,
+                                    (newCounterValue ?? 0) + 1
+                                );
+                            }
+
+                            const realFee = Math.max(
+                                0,
+                                (meltResponse.quote?.fee_reserve ?? 0) -
+                                    CashuUtils.sumProofsValue(
+                                        meltResponse?.change ?? []
+                                    )
+                            );
+
+                            if (!this.paymentPreimage) {
+                                this.paymentPreimage =
+                                    meltResponse.quote?.payment_preimage ??
+                                    undefined;
+                            }
+
+                            const payment = new CashuPayment({
+                                ...this.payReq,
+                                proofs: proofsToSend,
+                                bolt11: this.paymentRequest,
+                                meltResponse,
+                                amount: meltResponse.quote?.amount ?? 0,
+                                fee: realFee,
+                                payment_preimage: this.paymentPreimage,
+                                mintUrl
+                            });
+
+                            await this.removeMintProofs(mintUrl, proofsToSend);
+
+                            mintProgressInfo[index].status =
+                                MintPaymentStatus.SUCCESS;
+                            mintProgressInfo[index].error = undefined;
+
+                            onProgress?.({
+                                step: MultinutPaymentStep.PROCESSING,
+                                mints: [...mintProgressInfo],
+                                totalSelectedBalance: mintProgressInfo.reduce(
+                                    (sum, mint) => sum + mint.balance,
+                                    0
+                                ),
+                                isProcessing: true
+                            });
+
+                            return payment;
+                        } catch (error: any) {
+                            lastError = error;
+                            mintProgressInfo[index].status =
+                                MintPaymentStatus.FAILED;
+                            mintProgressInfo[index].error =
+                                error.message || String(error);
+
+                            onProgress?.({
+                                step: MultinutPaymentStep.PROCESSING,
+                                mints: [...mintProgressInfo],
+                                totalSelectedBalance: mintProgressInfo.reduce(
+                                    (sum, mint) => sum + mint.balance,
+                                    0
+                                ),
+                                isProcessing: true
+                            });
+
+                            if (attempt === maxAttempts - 1) {
+                                throw error;
+                            }
+                        }
+                    }
+
+                    throw lastError;
                 }
             );
-            console.log('melt response', meltResponse);
 
-            if (meltResponse?.change?.length) {
-                await this.setMintCounter(
-                    mintUrl,
-                    newCounterValue + meltResponse.change.length + 1
-                );
-                await this.addMintProofs(mintUrl, meltResponse.change);
-            } else {
-                await this.setMintCounter(mintUrl, newCounterValue + 1);
-            }
+            const results = await Promise.allSettled(paymentTasks);
 
-            const realFee = Math.max(
-                0,
-                meltResponse.quote?.fee_reserve -
-                    CashuUtils.sumProofsValue(meltResponse?.change)
-            );
+            const successfulPayments: CashuPayment[] = [];
+            const failedMints: { mintUrl: string; reason: any }[] = [];
 
-            const paymentPreimage = meltResponse.quote.payment_preimage!!;
-
-            if (!isDonationPayment) {
-                this.paymentPreimage = paymentPreimage;
-            }
-
-            if (this.paymentStartTime) {
-                this.paymentDuration =
-                    (Date.now() - this.paymentStartTime) / 1000;
-            }
-
-            const payment = new CashuPayment({
-                ...this.payReq,
-                proofs: proofsToSend,
-                bolt11: this.paymentRequest,
-                meltResponse,
-                amount: meltResponse.quote.amount,
-                fee: realFee,
-                payment_preimage: paymentPreimage,
-                mintUrl
+            results.forEach((result, i) => {
+                const mintUrl = this.meltQuotes[i].mintUrl;
+                if (result.status === 'fulfilled') {
+                    successfulPayments.push(result.value);
+                } else {
+                    failedMints.push({ mintUrl, reason: result.reason });
+                    mintProgressInfo[i].status = MintPaymentStatus.FAILED;
+                    mintProgressInfo[i].error =
+                        result.reason instanceof Error
+                            ? result.reason.message
+                            : String(result.reason);
+                }
             });
 
-            if (!isDonationPayment) {
-                this.noteKey = payment.getNoteKey;
-            }
+            onProgress?.({
+                step:
+                    failedMints.length > 0
+                        ? MultinutPaymentStep.FAILED
+                        : MultinutPaymentStep.COMPLETE,
+                mints: [...mintProgressInfo],
+                totalSelectedBalance: mintProgressInfo.reduce(
+                    (sum, mint) => sum + mint.balance,
+                    0
+                ),
+                isProcessing: false
+            });
 
-            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
-            // store Ecash payment
-            this.payments?.push(payment);
+            this.payments?.push(...successfulPayments);
             await Storage.setItem(
                 `${this.getLndDir()}-cashu-payments`,
                 this.payments
             );
 
-            // update balances
-            await this.setTotalBalance(this.totalBalanceSats - amountToPay);
-            await this.setMintBalance(
-                mintUrl,
-                this.cashuWallets[mintUrl].balanceSats - amountToPay
+            const totalPaid = successfulPayments.reduce(
+                (sum, p) => sum + (p.amount ?? 0) + (p.fee ?? 0),
+                0
             );
 
-            if (!isDonationPayment) {
-                this.loading = false;
-            }
-
-            return payment;
-        } catch (err: any) {
-            console.log('paying ln invoice from ecash error', err);
-            const mintQuote = await wallet!!.checkMeltQuote(
-                this.meltQuote!!.quote
+            await this.setTotalBalance(
+                (this.totalBalanceSats ?? 0) - totalPaid
             );
-            if (mintQuote.state == MeltQuoteState.PAID) {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.alreadyPaid'
-                );
-                this.loading = false;
-                return;
-            } else if (mintQuote.state == MeltQuoteState.PENDING) {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.pending'
-                );
-                this.loading = false;
-                return;
-            }
-            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
-            await this.addMintProofs(mintUrl, proofs!!);
-            this.paymentError = true;
-            this.paymentErrorMsg = String(err.message);
+
+            return successfulPayments.length === 1
+                ? successfulPayments[0]
+                : successfulPayments;
+        } finally {
             this.loading = false;
-            return;
+        }
+    };
+
+    @action
+    public getMultimintInfo = (): MintProgressInfo[] => {
+        if (!this.meltQuotes) return [];
+
+        return this.meltQuotes.map(({ mintUrl }) => ({
+            mintUrl,
+            mintName:
+                this.cashuWallets[mintUrl]?.mintInfo?.name ||
+                this.getMintName(mintUrl),
+            balance: this.cashuWallets[mintUrl]?.balanceSats || 0,
+            selected: false,
+            status: MintPaymentStatus.IDLE,
+            allocatedAmount: 0
+        }));
+    };
+
+    private getMintName = (mintUrl: string): string => {
+        try {
+            const urlObj = new URL(mintUrl);
+            return urlObj.hostname.replace('www.', '');
+        } catch {
+            return mintUrl;
         }
     };
 
@@ -1697,6 +2356,7 @@ export default class CashuStore {
         const { mint } = decoded;
 
         if (this.cashuWallets[mint].errorConnecting) return;
+
         if (!this.cashuWallets[mint].wallet) {
             await this.initializeWallet(mint, true);
         }
