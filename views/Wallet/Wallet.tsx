@@ -54,6 +54,7 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
+import { processSharedQRImageFast } from '../../utils/ShareIntentProcessor';
 
 import Storage from '../../storage';
 
@@ -301,6 +302,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             const { SettingsStore, navigation } = this.props;
             const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
+            const shareIntentResult = await processSharedQRImageFast();
+            const shareIntentData = shareIntentResult?.params;
+
             // This awaits on settings, so should await on Tor being bootstrapped before making requests
             const settings = await SettingsStore.getSettings();
             if (Platform.OS === 'android') {
@@ -323,16 +327,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (!loginRequired) SettingsStore.setLoginStatus(true);
 
             if (posEnabled && posStatus === 'inactive' && loginRequired) {
-                navigation.navigate('Lockscreen');
+                navigation.navigate('Lockscreen', { shareIntentData });
             } else if (posEnabled && posStatus === 'unselected') {
                 setPosStatus('active');
                 if (!this.state.unlocked) {
                     this.startListeners();
                     this.setState({ unlocked: true });
                 }
-                await this.fetchData();
+                if (shareIntentData) {
+                    this.setState({ pendingShareIntent: shareIntentData });
+                }
+                await this.fetchData(true);
             } else if (loginRequired) {
-                navigation.navigate('Lockscreen');
+                navigation.navigate('Lockscreen', { shareIntentData });
             } else if (
                 settings &&
                 settings.nodes &&
@@ -346,7 +353,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         this.setState({ unlocked: true });
                     }
                     // Skip wallet activation by navigating directly to Wallets screen
-                    navigation.replace('Wallets', { fromStartup: true });
+                    navigation.replace('Wallets', {
+                        fromStartup: true,
+                        shareIntentData
+                    });
                     return;
                 }
 
@@ -354,7 +364,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     this.startListeners();
                     this.setState({ unlocked: true });
                 }
-                await this.fetchData();
+
+                if (shareIntentData) {
+                    this.setState({ pendingShareIntent: shareIntentData });
+                }
+                await this.fetchData(true);
             } else {
                 navigation.navigate('IntroSplash');
             }
@@ -367,7 +381,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }, 100);
     }
 
-    async fetchData() {
+    async fetchData(skipHandleInitialUrl: boolean = false) {
         const {
             AlertStore,
             NodeInfoStore,
@@ -773,6 +787,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         // only navigate to initial url after connection and main calls are made
+        LinkingUtils.handleInitialUrl(this.props.navigation);
+
+        if (!skipHandleInitialUrl) {
+            LinkingUtils.handleInitialUrl(this.props.navigation);
+        }
+
         if (
             this.state.initialLoad &&
             !(
@@ -784,7 +804,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 initialLoad: false
             });
             SettingsStore.fetchLock = false;
-            LinkingUtils.handleInitialUrl(this.props.navigation);
         }
 
         SettingsStore.fetchLock = false;
