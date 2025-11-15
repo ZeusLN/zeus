@@ -68,6 +68,8 @@ import {
 const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
+const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
+
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
@@ -780,6 +782,32 @@ class MigrationsUtils {
                     error
                 );
             }
+        }
+    }
+
+    public async keychainCloudSyncMigration() {
+        try {
+            const hasMigrated = await EncryptedStorage.getItem(
+                KEYCHAIN_MIGRATION_KEY
+            );
+            if (hasMigrated) {
+                return;
+            }
+
+            console.log('Attempting keychain cloud sync migration...');
+
+            const dataToMigrateKey = STORAGE_KEY;
+
+            const existingData = await Storage.getItem(dataToMigrateKey);
+
+            if (existingData) {
+                await Storage.setItem(dataToMigrateKey, existingData);
+                console.log('Keychain data rewritten to disable cloud sync.');
+            }
+
+            await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
+        } catch (error) {
+            console.error('Error during keychain cloud sync migration:', error);
         }
     }
 }
