@@ -420,20 +420,34 @@ export default class Send extends React.Component<SendProps, SendState> {
         }));
     };
 
+    validateAdditionalOutputFields = (
+        output: AdditionalOutput
+    ): { hasAddress: boolean; hasAmount: boolean } => {
+        const hasAddress = Boolean(
+            output?.address && output.address.trim() !== ''
+        );
+        const satAmountNum = Number(output?.satAmount);
+        const hasAmount = Boolean(
+            output?.satAmount && !isNaN(satAmountNum) && satAmountNum > 0
+        );
+        return { hasAddress, hasAmount };
+    };
+
+    isValidAdditionalOutput = (output: AdditionalOutput): boolean => {
+        const { hasAddress, hasAmount } =
+            this.validateAdditionalOutputFields(output);
+        return hasAddress && hasAmount;
+    };
+
     hasInvalidAdditionalOutputs = () => {
         const { additionalOutputs } = this.state;
         if (!additionalOutputs || additionalOutputs.length === 0) {
             return false;
         }
         return additionalOutputs.some((output) => {
-            const hasAddress = output?.address && output.address.trim() !== '';
-            const satAmountNum = Number(output?.satAmount);
-            const hasAmount =
-                output?.satAmount && !isNaN(satAmountNum) && satAmountNum > 0;
-            if (hasAddress || hasAmount) {
-                return !hasAddress || !hasAmount;
-            }
-            return false;
+            const { hasAddress, hasAmount } =
+                this.validateAdditionalOutputFields(output);
+            return (hasAddress || hasAmount) && !(hasAddress && hasAmount);
         });
     };
 
@@ -442,13 +456,9 @@ export default class Send extends React.Component<SendProps, SendState> {
         if (!additionalOutputs || additionalOutputs.length === 0) {
             return [];
         }
-        return additionalOutputs.filter((output) => {
-            const hasAddress = output?.address && output.address.trim() !== '';
-            const satAmountNum = Number(output?.satAmount);
-            const hasAmount =
-                output?.satAmount && !isNaN(satAmountNum) && satAmountNum > 0;
-            return hasAddress && hasAmount;
-        });
+        return additionalOutputs.filter((output) =>
+            this.isValidAdditionalOutput(output)
+        );
     };
 
     validateAddress = (text: string) => {
