@@ -160,9 +160,6 @@ import Routing from './views/Routing/Routing';
 import RoutingEvent from './views/Routing/RoutingEvent';
 import SetFees from './views/Routing/SetFees';
 
-// Rebalance
-import Rebalance from './views/Rebalance';
-
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
@@ -253,6 +250,7 @@ import ActivityExport from './views/Tools/ActivityExport';
 import BumpFee from './views/Tools/BumpFee';
 import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
+import Rebalance from './views/Tools/Rebalance';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
 import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
