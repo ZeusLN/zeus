@@ -220,13 +220,15 @@ class BackendUtils {
     // NWC
     initNWC = (...args: any[]) => this.call('initNWC', args);
 
-    //CLN
+    // CLN - Routes used for CLN circular rebalancing
     askReneCreateLayer = (...args: any[]) =>
         this.call('askReneCreateLayer', args);
     askReneUpdateChannel = (...args: any[]) =>
         this.call('askReneUpdateChannel', args);
     askReneRemoveLayer = (...args: any[]) =>
         this.call('askReneRemoveLayer', args);
+    sendPay = (...args: any[]) => this.call('sendPay', args);
+    waitSendPay = (...args: any[]) => this.call('waitSendPay', args);
 
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
