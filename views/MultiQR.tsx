@@ -16,21 +16,21 @@ import Header from '../components/Header';
 import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
-interface ContactQRProps {
+interface MultiQRProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<
-        'ContactQR',
+        'MultiQR',
         {
             contactData: string;
             addressData: string[];
+            fromContactDetailsView?: boolean;
         }
     >;
 }
 
-const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
+const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
     const [addressData, setAddressData] = useState(['']);
     const { navigation, route } = props;
-
     useEffect(() => {
         const { contactData, addressData } = route.params ?? {};
         let parsedContact: any = null;
@@ -75,13 +75,12 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     const progressValue = useSharedValue<number>(0);
 
     screenWidth = Dimensions.get('window').width;
-
     const renderItem = ({ item, index }: { item: any; index: number }) => (
         <CollapsedQR
             showShare={true}
             value={item}
             expanded
-            hideText={index === 0}
+            hideText={route.params?.fromContactDetailsView && index === 0}
             iconOnly={true}
         />
     );
@@ -208,4 +207,4 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     );
 };
 
-export default ContactQR;
+export default MultiQR;
