@@ -298,7 +298,8 @@ export default class ContactDetails extends React.Component<
                         const zeusContactData = `zeuscontact:${JSON.stringify(
                             contactDataWithoutPhoto
                         )}`;
-                        navigation.navigate('ContactQR', {
+                        navigation.navigate('MultiQR', {
+                            fromContactDetailsView: true,
                             contactData: zeusContactData,
                             addressData: [
                                 ...addPrefixToAddresses(

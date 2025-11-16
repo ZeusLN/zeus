@@ -64,9 +64,7 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import SwapIcon from '../assets/images/SVG/Swap.svg';
 
 import Contact from '../models/Contact';
-import TransactionRequest, {
-    AdditionalOutput
-} from '../models/TransactionRequest';
+import { AdditionalOutput } from '../models/TransactionRequest';
 import BigNumber from 'bignumber.js';
 
 interface SendProps {
@@ -137,6 +135,8 @@ interface SendState {
 export default class Send extends React.Component<SendProps, SendState> {
     listener: any;
     private backPressSubscription: NativeEventSubscription;
+    private previousAmount: string = '';
+    private previousSatAmount: string | number = '0';
 
     constructor(props: SendProps) {
         super(props);
@@ -416,6 +416,47 @@ export default class Send extends React.Component<SendProps, SendState> {
         }));
     };
 
+    validateAdditionalOutputFields = (
+        output: AdditionalOutput
+    ): { hasAddress: boolean; hasAmount: boolean } => {
+        const hasAddress = Boolean(
+            output?.address && output.address.trim() !== ''
+        );
+        const satAmountNum = Number(output?.satAmount);
+        const hasAmount = Boolean(
+            output?.satAmount && !isNaN(satAmountNum) && satAmountNum > 0
+        );
+        return { hasAddress, hasAmount };
+    };
+
+    isValidAdditionalOutput = (output: AdditionalOutput): boolean => {
+        const { hasAddress, hasAmount } =
+            this.validateAdditionalOutputFields(output);
+        return hasAddress && hasAmount;
+    };
+
+    hasInvalidAdditionalOutputs = () => {
+        const { additionalOutputs } = this.state;
+        if (!additionalOutputs || additionalOutputs.length === 0) {
+            return false;
+        }
+        return additionalOutputs.some((output) => {
+            const { hasAddress, hasAmount } =
+                this.validateAdditionalOutputFields(output);
+            return (hasAddress || hasAmount) && !(hasAddress && hasAmount);
+        });
+    };
+
+    getValidAdditionalOutputs = () => {
+        const { additionalOutputs } = this.state;
+        if (!additionalOutputs || additionalOutputs.length === 0) {
+            return [];
+        }
+        return additionalOutputs.filter((output) =>
+            this.isValidAdditionalOutput(output)
+        );
+    };
+
     validateAddress = (text: string) => {
         const { navigation } = this.props;
         this.setState({
@@ -503,46 +544,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
             return;
         }
-    };
-
-    sendCoins = (satAmount: string | number) => {
-        const { TransactionsStore, SettingsStore, navigation } = this.props;
-        const { implementation } = SettingsStore;
-        const { destination, fee, utxos, account, additionalOutputs, fundMax } =
-            this.state;
-
-        let request: TransactionRequest;
-        if (utxos && utxos.length > 0) {
-            request = {
-                addr: destination,
-                sat_per_vbyte: fee,
-                amount: satAmount.toString(),
-                utxos,
-                spend_unconfirmed: true,
-                additional_outputs: additionalOutputs,
-                account
-            };
-        } else {
-            request = {
-                addr: destination,
-                sat_per_vbyte: fee,
-                amount: satAmount.toString(),
-                spend_unconfirmed: true,
-                additional_outputs: additionalOutputs,
-                account
-            };
-        }
-
-        if (fundMax) {
-            if (implementation === 'cln-rest') {
-                request.amount = 'all';
-            } else {
-                if (request.amount) delete request.amount;
-                request.send_all = true;
-            }
-        }
-        TransactionsStore.sendCoins(request);
-        navigation.navigate('SendingOnChain');
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
@@ -755,7 +756,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             additionalOutputs,
             fundMax,
             account,
-            validAmountToSwap
+            validAmountToSwap,
+            utxos
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -1120,15 +1122,44 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 onValueChange={() => {
                                                     const newValue: boolean =
                                                         !fundMax;
-                                                    this.setState({
-                                                        fundMax: newValue,
-                                                        amount:
-                                                            newValue &&
-                                                            implementation ===
+                                                    if (newValue) {
+                                                        // Save current values if they exist
+                                                        if (amount) {
+                                                            this.previousAmount =
+                                                                amount;
+                                                        }
+                                                        if (
+                                                            satAmount &&
+                                                            satAmount !== '0'
+                                                        ) {
+                                                            this.previousSatAmount =
+                                                                satAmount;
+                                                        }
+                                                        this.setState({
+                                                            fundMax: newValue,
+                                                            amount:
+                                                                implementation ===
                                                                 'cln-rest'
-                                                                ? 'all'
-                                                                : ''
-                                                    });
+                                                                    ? 'all'
+                                                                    : '',
+                                                            satAmount:
+                                                                utxoBalance > 0
+                                                                    ? utxoBalance
+                                                                    : confirmedBlockchainBalance
+                                                        });
+                                                    } else {
+                                                        this.setState({
+                                                            fundMax: newValue,
+                                                            amount:
+                                                                this
+                                                                    .previousAmount ||
+                                                                '',
+                                                            satAmount:
+                                                                this
+                                                                    .previousSatAmount ||
+                                                                '0'
+                                                        });
+                                                    }
                                                 }}
                                             />
                                         </View>
@@ -1308,9 +1339,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 >
                                     <Button
-                                        title={localeString(
-                                            'views.Send.sendCoins'
-                                        )}
+                                        title={localeString('general.proceed')}
                                         icon={{
                                             name: 'send',
                                             size: 25,
@@ -1318,20 +1347,53 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 totalBlockchainBalanceAccounts ===
                                                     0 ||
                                                 fee === '0' ||
-                                                !fee
+                                                !fee ||
+                                                this.hasInvalidAdditionalOutputs() ||
+                                                (fundMax &&
+                                                    (!satAmount ||
+                                                        Number(satAmount) <=
+                                                            0)) ||
+                                                (!fundMax &&
+                                                    (!satAmount ||
+                                                        Number(satAmount) <=
+                                                            0 ||
+                                                        !amount ||
+                                                        amount === '0'))
                                                     ? themeColor(
                                                           'secondaryText'
                                                       )
                                                     : themeColor('background')
                                         }}
                                         onPress={() =>
-                                            this.sendCoins(satAmount || amount)
+                                            navigation.navigate(
+                                                'VerifyOnChain',
+                                                {
+                                                    destination,
+                                                    fee,
+                                                    satAmount,
+                                                    amount,
+                                                    utxos,
+                                                    account,
+                                                    additionalOutputs:
+                                                        this.getValidAdditionalOutputs(),
+                                                    fundMax
+                                                }
+                                            )
                                         }
                                         disabled={
                                             totalBlockchainBalanceAccounts ===
                                                 0 ||
                                             fee === '0' ||
-                                            !fee
+                                            !fee ||
+                                            this.hasInvalidAdditionalOutputs() ||
+                                            (fundMax &&
+                                                (!satAmount ||
+                                                    Number(satAmount) <= 0)) ||
+                                            (!fundMax &&
+                                                (!satAmount ||
+                                                    Number(satAmount) <= 0 ||
+                                                    !amount ||
+                                                    amount === '0'))
                                         }
                                     />
                                 </View>
