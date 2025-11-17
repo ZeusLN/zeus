@@ -56,6 +56,8 @@ import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
+import dateTimeUtils from '../utils/DateTimeUtils';
+import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 
 import NWCConnection, {
     BudgetRenewalType,
@@ -81,13 +83,12 @@ export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 export const NWC_CASHU_ENABLED = 'zeus-nwc-cashu-enabled';
 export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
-    'https://nwc-ios-handoff.zeusln.com/api/v1';
+    'http://localhost:8080/api/v1';
 
 const RATE_LIMIT_MS = 500;
 const MAX_RELAY_ATTEMPTS = 5;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
-const MILLISATS_PER_SAT = 1000;
 const DEFAULT_INVOICE_EXPIRY_SECONDS = 3600;
 const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
@@ -824,42 +825,61 @@ export default class NostrWalletConnectStore {
             const handler: NWCWalletServiceRequestHandler = {};
 
             if (connection.hasPermission('get_info')) {
-                handler.getInfo = () => this.handleGetInfo(connection);
+                handler.getInfo = () =>
+                    this.withRateLimit(connection.id, 'get_info', () =>
+                        this.handleGetInfo(connection)
+                    );
             }
 
             if (connection.hasPermission('get_balance')) {
-                handler.getBalance = () => this.handleGetBalance(connection);
+                handler.getBalance = () =>
+                    this.withRateLimit(connection.id, 'get_balance', () =>
+                        this.handleGetBalance()
+                    );
             }
 
             if (connection.hasPermission('pay_invoice')) {
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.handlePayInvoice(connection, request);
+                    this.withRateLimit(connection.id, 'pay_invoice', () =>
+                        this.handlePayInvoice(connection, request)
+                    );
             }
 
             if (connection.hasPermission('make_invoice')) {
                 handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
-                    this.handleMakeInvoice(connection, request);
+                    this.withRateLimit(connection.id, 'make_invoice', () =>
+                        this.handleMakeInvoice(connection, request)
+                    );
             }
 
             if (connection.hasPermission('lookup_invoice')) {
                 handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
-                    this.handleLookupInvoice(connection, request);
+                    this.withRateLimit(connection.id, 'lookup_invoice', () =>
+                        this.handleLookupInvoice(request)
+                    );
             }
 
             if (connection.hasPermission('list_transactions')) {
                 handler.listTransactions = (
                     request: Nip47ListTransactionsRequest
-                ) => this.handleListTransactions(connection, request);
+                ) =>
+                    this.withRateLimit(connection.id, 'list_transactions', () =>
+                        this.handleListTransactions(request)
+                    );
             }
 
             if (connection.hasPermission('pay_keysend')) {
                 handler.payKeysend = (request: Nip47PayKeysendRequest) =>
-                    this.handlePayKeysend(connection, request);
+                    this.withRateLimit(connection.id, 'pay_keysend', () =>
+                        this.handlePayKeysend(connection, request)
+                    );
             }
 
             if (connection.hasPermission('sign_message')) {
                 handler.signMessage = (request: Nip47SignMessageRequest) =>
-                    this.handleSignMessage(connection, request);
+                    this.withRateLimit(connection.id, 'sign_message', () =>
+                        this.handleSignMessage(request)
+                    );
             }
 
             const nwcWalletService = this.nwcWalletServices.get(
@@ -1006,21 +1026,30 @@ export default class NostrWalletConnectStore {
         await Promise.allSettled(publishPromises);
         return successfulPublishes;
     }
-
-    // NWC REQUEST HANDLERS
-
-    private async handleGetInfo(
-        connection: NWCConnection
-    ): NWCWalletServiceResponsePromise<Nip47GetInfoResponse> {
-        if (this.isRateLimited(connection.id, 'get_info')) {
+    private async withRateLimit<T>(
+        connectionId: string,
+        method: Nip47Method,
+        handler: () => Promise<T>
+    ): Promise<T> {
+        if (this.isRateLimited(connectionId, method)) {
+            console.error(
+                `NWC: Rate limited for connection ${connectionId} and method ${method}`
+            );
             return this.handleError(
                 localeString(
                     'stores.NostrWalletConnectStore.error.rateLimited'
                 ),
                 ErrorCodes.RATE_LIMITED
-            );
+            ) as T;
         }
-        await this.markConnectionUsed(connection.id);
+        await this.markConnectionUsed(connectionId);
+        return await handler();
+    }
+    // NWC REQUEST HANDLERS
+
+    private async handleGetInfo(
+        connection: NWCConnection
+    ): NWCWalletServiceResponsePromise<Nip47GetInfoResponse> {
         try {
             if (!this.nodeInfoStore.nodeInfo?.identity_pubkey) {
                 await this.nodeInfoStore.getNodeInfo();
@@ -1062,18 +1091,7 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private async handleGetBalance(
-        connection: NWCConnection
-    ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
-        if (this.isRateLimited(connection.id, 'get_balance')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
-        await this.markConnectionUsed(connection.id);
+    private async handleGetBalance(): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
         try {
             const balance = this.isCashuProperlyConfigured
                 ? this.cashuStore.totalBalanceSats
@@ -1081,7 +1099,7 @@ export default class NostrWalletConnectStore {
                       ?.lightningBalance;
             return {
                 result: {
-                    balance: Number(balance) * MILLISATS_PER_SAT
+                    balance: satsToMillisats(Number(balance))
                 },
                 error: undefined
             };
@@ -1096,15 +1114,6 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47PayInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
-        if (this.isRateLimited(connection.id, 'pay_invoice')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
-        await this.markConnectionUsed(connection.id);
         try {
             if (this.isCashuProperlyConfigured) {
                 return this.handleCashuPayInvoice(connection, request);
@@ -1126,22 +1135,11 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        await this.markConnectionUsed(connection.id);
-        if (this.isRateLimited(connection.id, 'make_invoice')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
         try {
             if (this.isCashuProperlyConfigured) {
                 try {
                     const cashuInvoice = await this.cashuStore.createInvoice({
-                        value: Math.floor(
-                            request.amount / MILLISATS_PER_SAT
-                        ).toString(),
+                        value: millisatsToSats(request.amount).toString(),
                         memo: request.description || ''
                     });
 
@@ -1155,27 +1153,16 @@ export default class NostrWalletConnectStore {
 
                     let paymentHash = '';
                     let descriptionHash = '';
-                    let expiryTime =
-                        Math.floor(Date.now() / 1000) +
-                        (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
+                    let expiryTime = 0;
 
                     try {
-                        const decoded = bolt11.decode(
-                            cashuInvoice.paymentRequest
+                        const decoded = NostrConnectUtils.decodeInvoiceTags(
+                            cashuInvoice.paymentRequest,
+                            request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
                         );
-                        for (const tag of decoded.tags) {
-                            if (tag.tagName === 'payment_hash') {
-                                paymentHash = String(tag.data);
-                            } else if (tag.tagName === 'purpose_commit_hash') {
-                                descriptionHash = String(tag.data);
-                            } else if (tag.tagName === 'expire_time') {
-                                const invoiceExpiry = Number(tag.data);
-                                if (invoiceExpiry > 0 && decoded.timestamp) {
-                                    expiryTime =
-                                        decoded.timestamp + invoiceExpiry;
-                                }
-                            }
-                        }
+                        paymentHash = decoded.paymentHash;
+                        descriptionHash = decoded.descriptionHash;
+                        expiryTime = decoded.expiryTime;
                     } catch (decodeError) {
                         return this.handleError(
                             (decodeError as Error).message,
@@ -1184,24 +1171,20 @@ export default class NostrWalletConnectStore {
                     }
 
                     this.showInvoiceCreatedNotification(
-                        Math.floor(request.amount / MILLISATS_PER_SAT),
+                        millisatsToSats(request.amount),
                         connection.name,
                         request.description
                     );
-                    const result = {
-                        type: 'incoming' as const,
-                        state: 'pending' as const,
+                    const result = NostrConnectUtils.createNip47Transaction({
+                        type: 'incoming',
+                        state: 'pending',
                         invoice: cashuInvoice.paymentRequest,
-                        description: request.description || '',
-                        description_hash: descriptionHash,
-                        preimage: '',
                         payment_hash: paymentHash,
                         amount: request.amount,
-                        fees_paid: 0,
-                        settled_at: 0,
-                        created_at: Math.floor(Date.now() / 1000),
+                        description: request.description,
+                        description_hash: descriptionHash,
                         expires_at: expiryTime
-                    };
+                    });
                     return {
                         result,
                         error: undefined
@@ -1218,9 +1201,7 @@ export default class NostrWalletConnectStore {
 
             const invoiceResult = await this.invoicesStore.createUnifiedInvoice(
                 {
-                    value: Math.floor(
-                        request.amount / MILLISATS_PER_SAT
-                    ).toString(),
+                    value: millisatsToSats(request.amount).toString(),
                     memo: request.description || '',
                     expirySeconds: String(
                         request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
@@ -1250,41 +1231,26 @@ export default class NostrWalletConnectStore {
             }
 
             this.showInvoiceCreatedNotification(
-                Math.floor(request.amount / MILLISATS_PER_SAT),
+                millisatsToSats(request.amount),
                 connection.name,
                 request.description
             );
             const rHash = invoiceResult.rHash || '';
             let paymentHash = rHash;
             let descriptionHash = '';
-            let expiryTime =
-                Math.floor(Date.now() / 1000) +
-                (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
+            let expiryTime = 0;
 
             try {
-                const decoded = bolt11.decode(paymentRequest);
-                if (!decoded || !decoded.tags) {
-                    throw new Error('Invalid payment request structure');
-                }
-                for (const tag of decoded.tags) {
-                    if (tag.tagName === 'payment_hash') {
-                        paymentHash = String(tag.data || '');
-                    } else if (tag.tagName === 'purpose_commit_hash') {
-                        descriptionHash = String(tag.data || '');
-                    } else if (tag.tagName === 'expire_time') {
-                        const invoiceExpiry = Number(tag.data);
-                        if (invoiceExpiry > 0 && decoded.timestamp) {
-                            expiryTime = decoded.timestamp + invoiceExpiry;
-                        }
-                    }
-                }
-                if (!paymentHash && rHash) {
-                    paymentHash = rHash;
-                }
+                const decoded = NostrConnectUtils.decodeInvoiceTags(
+                    paymentRequest,
+                    request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
+                );
+                paymentHash = decoded.paymentHash || rHash;
+                descriptionHash = decoded.descriptionHash;
+                expiryTime = decoded.expiryTime;
                 if (!paymentHash) {
                     console.warn(
-                        'handleMakeInvoice: Payment hash not found in invoice',
-                        { decoded }
+                        'handleMakeInvoice: Payment hash not found in invoice'
                     );
                 }
             } catch (decodeError) {
@@ -1302,22 +1268,23 @@ export default class NostrWalletConnectStore {
                         )
                     );
                 }
+                // Use fallback expiry if decode failed
+                expiryTime =
+                    dateTimeUtils.getCurrentTimestamp() +
+                    (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
             }
 
-            const result = {
-                type: 'incoming' as const,
-                state: 'pending' as const,
+            const result = NostrConnectUtils.createNip47Transaction({
+                type: 'incoming',
+                state: 'pending',
                 invoice: paymentRequest,
-                description: request.description || '',
-                description_hash: descriptionHash,
-                preimage: '',
                 payment_hash: paymentHash,
                 amount: request.amount,
-                fees_paid: 0,
-                settled_at: 0,
-                created_at: Math.floor(Date.now() / 1000),
+                description: request.description,
+                description_hash: descriptionHash,
                 expires_at: expiryTime
-            };
+            });
+            console.log('handleMakeInvoice result', result);
             return {
                 result,
                 error: undefined
@@ -1340,18 +1307,8 @@ export default class NostrWalletConnectStore {
     }
 
     private async handleLookupInvoice(
-        connection: NWCConnection,
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        if (this.isRateLimited(connection.id, 'lookup_invoice')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
-        await this.markConnectionUsed(connection.id);
         try {
             let paymentHash = this.convertPaymentHashToHex(
                 request.payment_hash!
@@ -1401,27 +1358,24 @@ export default class NostrWalletConnectStore {
 
                     const timestamp =
                         Number(matchingInvoice.getTimestamp) ||
-                        Math.floor(Date.now() / 1000);
+                        dateTimeUtils.getCurrentTimestamp();
                     const expiresAt =
                         Number(matchingInvoice.expires_at) ||
                         timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS;
 
-                    const result = {
-                        type: 'incoming' as const,
-                        state: isPaid
-                            ? ('settled' as const)
-                            : ('pending' as const),
+                    const result = NostrConnectUtils.createNip47Transaction({
+                        type: 'incoming',
+                        state: isPaid ? 'settled' : 'pending',
                         invoice: matchingInvoice.getPaymentRequest,
-                        description: matchingInvoice.getMemo || '',
-                        description_hash: '',
-                        preimage: '',
                         payment_hash: request.payment_hash!,
-                        amount: Math.floor((amtSat || 0) * MILLISATS_PER_SAT),
-                        fees_paid: 0,
-                        settled_at: isPaid ? Math.floor(Date.now() / 1000) : 0,
+                        amount: satsToMillisats(amtSat || 0),
+                        description: matchingInvoice.getMemo,
+                        settled_at: isPaid
+                            ? dateTimeUtils.getCurrentTimestamp()
+                            : 0,
                         created_at: timestamp,
                         expires_at: expiresAt
-                    };
+                    });
                     return {
                         result,
                         error: undefined
@@ -1439,20 +1393,20 @@ export default class NostrWalletConnectStore {
                     r_hash: paymentHash
                 });
                 const invoice = new Invoice(rawInvoice);
-                const result = {
-                    type: 'incoming' as const,
-                    state: invoice.isPaid
-                        ? ('settled' as const)
-                        : invoice.isExpired
-                        ? ('failed' as const)
-                        : ('pending' as const),
+                const state = invoice.isPaid
+                    ? 'settled'
+                    : invoice.isExpired
+                    ? 'failed'
+                    : 'pending';
+                const result = NostrConnectUtils.createNip47Transaction({
+                    type: 'incoming',
+                    state,
                     invoice: invoice.getPaymentRequest,
-                    description: invoice.getMemo || '',
+                    payment_hash: invoice.getRHash || request.payment_hash!,
+                    amount: satsToMillisats(invoice.getAmount), // Convert to msats
+                    description: invoice.getMemo,
                     description_hash: invoice.getDescriptionHash,
                     preimage: invoice.getRPreimage,
-                    payment_hash: invoice.getRHash || request.payment_hash!,
-                    amount: Math.floor(invoice.getAmount * MILLISATS_PER_SAT), // Convert to msats
-                    fees_paid: 0,
                     settled_at: invoice.isPaid
                         ? Math.floor(invoice.settleDate.getTime() / 1000)
                         : 0,
@@ -1460,12 +1414,12 @@ export default class NostrWalletConnectStore {
                         invoice.getCreationDate.getTime() / 1000
                     ),
                     expires_at: invoice.isExpired
-                        ? Math.floor(Date.now() / 1000) +
+                        ? dateTimeUtils.getCurrentTimestamp() +
                           DEFAULT_INVOICE_EXPIRY_SECONDS
                         : Math.floor(invoice.getCreationDate.getTime() / 1000) +
                           (Number(invoice.expiry) ||
                               DEFAULT_INVOICE_EXPIRY_SECONDS)
-                };
+                });
                 return {
                     result,
                     error: undefined
@@ -1480,18 +1434,8 @@ export default class NostrWalletConnectStore {
     }
 
     private async handleListTransactions(
-        connection: NWCConnection,
         request: Nip47ListTransactionsRequest
     ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
-        if (this.isRateLimited(connection.id, 'list_transactions')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
-        await this.markConnectionUsed(connection.id);
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
@@ -1506,28 +1450,25 @@ export default class NostrWalletConnectStore {
                     cashuPayments.map((payment) => {
                         const timestamp =
                             Number(payment.getTimestamp) || Date.now() / 1000;
-                        return {
-                            type: 'outgoing' as const,
-                            state: 'settled' as const,
+                        return NostrConnectUtils.createNip47Transaction({
+                            type: 'outgoing',
+                            state: 'settled',
                             invoice: payment.getPaymentRequest || '',
-                            description: payment.getMemo || '',
-                            description_hash: '',
-                            preimage: payment.getPreimage || '',
                             payment_hash: payment.paymentHash || '',
-                            amount: Math.floor(
-                                (Number(payment.getAmount) || 0) *
-                                    MILLISATS_PER_SAT
-                            ), // Convert to msats
-                            fees_paid: Math.floor(
-                                (Number(payment.getFee) || 0) *
-                                    MILLISATS_PER_SAT
-                            ), // Convert to msats
+                            amount: satsToMillisats(
+                                Number(payment.getAmount) || 0
+                            ),
+                            description: payment.getMemo,
+                            preimage: payment.getPreimage,
+                            fees_paid: satsToMillisats(
+                                Number(payment.getFee) || 0
+                            ),
                             settled_at: Math.floor(timestamp),
                             created_at: Math.floor(timestamp),
                             expires_at: Math.floor(
                                 timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS
                             )
-                        };
+                        });
                     });
 
                 // Convert Cashu invoices to NIP-47 transactions
@@ -1538,20 +1479,13 @@ export default class NostrWalletConnectStore {
                         const expiresAt =
                             Number(invoice.expires_at) ||
                             timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS;
-                        return {
-                            type: 'incoming' as const,
-                            state: invoice.isPaid
-                                ? ('settled' as const)
-                                : ('pending' as const),
+                        return NostrConnectUtils.createNip47Transaction({
+                            type: 'incoming',
+                            state: invoice.isPaid ? 'settled' : 'pending',
                             invoice: invoice.getPaymentRequest || '',
-                            description: invoice.getMemo || '',
-                            description_hash: '',
-                            preimage: '',
                             payment_hash: invoice.quote || '',
-                            amount: Math.floor(
-                                (invoice.getAmount || 0) * MILLISATS_PER_SAT
-                            ), // Convert to msats
-                            fees_paid: 0,
+                            amount: satsToMillisats(invoice.getAmount || 0),
+                            description: invoice.getMemo,
                             settled_at: invoice.isPaid
                                 ? Math.floor(
                                       invoice.settleDate?.getTime()
@@ -1562,7 +1496,7 @@ export default class NostrWalletConnectStore {
                                 : 0,
                             created_at: Math.floor(timestamp),
                             expires_at: Math.floor(expiresAt)
-                        };
+                        });
                     });
 
                 // Convert received tokens to NIP-47 transactions
@@ -1572,28 +1506,23 @@ export default class NostrWalletConnectStore {
                             Number(token.received_at) || Date.now() / 1000;
                         const createdAt =
                             Number(token.created_at) || receivedAt;
-                        return {
-                            type: 'incoming' as const,
-                            state: 'settled' as const,
+                        return NostrConnectUtils.createNip47Transaction({
+                            type: 'incoming',
+                            state: 'settled',
                             invoice: '',
+                            payment_hash: token.encodedToken || '',
+                            amount: satsToMillisats(token.getAmount || 0),
                             description:
                                 token.memo ||
                                 localeString(
                                     'stores.NostrWalletConnectStore.receivedCashuToken'
                                 ),
-                            description_hash: '',
-                            preimage: '',
-                            payment_hash: token.encodedToken || '',
-                            amount: Math.floor(
-                                (token.getAmount || 0) * MILLISATS_PER_SAT
-                            ),
-                            fees_paid: 0,
                             settled_at: Math.floor(receivedAt),
                             created_at: Math.floor(createdAt),
                             expires_at: Math.floor(
                                 createdAt + DEFAULT_INVOICE_EXPIRY_SECONDS
                             )
-                        };
+                        });
                     });
 
                 // Convert sent tokens to NIP-47 transactions
@@ -1601,24 +1530,17 @@ export default class NostrWalletConnectStore {
                     sentTokens.map((token) => {
                         const createdAt =
                             Number(token.created_at) || Date.now() / 1000;
-                        return {
-                            type: 'outgoing' as const,
-                            state: token.spent
-                                ? ('settled' as const)
-                                : ('pending' as const),
+                        return NostrConnectUtils.createNip47Transaction({
+                            type: 'outgoing',
+                            state: token.spent ? 'settled' : 'pending',
                             invoice: '',
+                            payment_hash: token.encodedToken || '',
+                            amount: satsToMillisats(token.getAmount || 0),
                             description:
                                 token.memo ||
                                 localeString(
                                     'stores.NostrWalletConnectStore.sentCashuToken'
                                 ),
-                            description_hash: '',
-                            preimage: '',
-                            payment_hash: token.encodedToken || '',
-                            amount: Math.floor(
-                                (token.getAmount || 0) * MILLISATS_PER_SAT
-                            ), // Convert to msats
-                            fees_paid: 0,
                             settled_at: token.spent
                                 ? Math.floor(
                                       Number(token.received_at) ||
@@ -1630,7 +1552,7 @@ export default class NostrWalletConnectStore {
                             expires_at: Math.floor(
                                 createdAt + DEFAULT_INVOICE_EXPIRY_SECONDS
                             )
-                        };
+                        });
                     });
 
                 nip47Transactions = [
@@ -1661,23 +1583,20 @@ export default class NostrWalletConnectStore {
                         } else if (tx.num_confirmations > 0) {
                             state = 'settled';
                         }
-                        const amountMsats =
-                            Math.abs(amount) * MILLISATS_PER_SAT;
-                        const feesMsats = Math.floor(
-                            (Number(tx.total_fees) || 0) * MILLISATS_PER_SAT
+                        const amountMsats = satsToMillisats(Math.abs(amount));
+                        const feesMsats = satsToMillisats(
+                            Number(tx.total_fees) || 0
                         );
                         const timestamp = Number(tx.time_stamp) || 0;
                         const txHash = tx.tx_hash || tx.txid || '';
 
-                        return {
+                        return NostrConnectUtils.createNip47Transaction({
                             type,
                             state,
                             invoice: '',
-                            description: tx.note || '',
-                            description_hash: '',
-                            preimage: '',
                             payment_hash: txHash,
                             amount: amountMsats,
+                            description: tx.note || undefined,
                             fees_paid: feesMsats,
                             settled_at: state === 'settled' ? timestamp : 0,
                             created_at: timestamp,
@@ -1689,7 +1608,7 @@ export default class NostrWalletConnectStore {
                                 dest_addresses: tx.dest_addresses,
                                 raw_tx_hex: tx.raw_tx_hex
                             }
-                        };
+                        });
                     }
                 );
             }
@@ -1749,18 +1668,8 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47PayKeysendRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        if (this.isRateLimited(connection.id, 'pay_keysend')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
-        await this.markConnectionUsed(connection.id);
-
         try {
-            const amountSats = Math.floor(request.amount / MILLISATS_PER_SAT);
+            const amountSats = millisatsToSats(request.amount);
 
             if (this.isCashuProperlyConfigured) {
                 return this.handleError(
@@ -1770,46 +1679,26 @@ export default class NostrWalletConnectStore {
                     ErrorCodes.NOT_IMPLEMENTED
                 );
             }
-            const budgetValidation =
-                connection.validateBudgetBeforePayment(amountSats);
-            if (!budgetValidation.success) {
-                return this.handleError(
-                    budgetValidation.errorMessage ||
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.keysendFailed'
-                        ),
-                    ErrorCodes.SEND_KEYSEND_FAILED
-                );
+            const budgetCheck = this.validateBudgetBeforePayment(
+                connection,
+                amountSats,
+                ErrorCodes.SEND_KEYSEND_FAILED,
+                localeString(
+                    'stores.NostrWalletConnectStore.error.keysendFailed'
+                )
+            );
+            if (!budgetCheck.success) {
+                return { result: undefined, error: budgetCheck.error };
             }
-            this.transactionsStore.payment_error = null;
-            this.transactionsStore.payment_preimage = null;
-            this.transactionsStore.error = false;
-
+            this.transactionsStore.reset();
             this.transactionsStore.sendPayment({
                 pubkey: request.pubkey,
                 amount: request.amount.toString()
             });
-            // Wait for payment to complete (either success or failure)
-            const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
-            const pollInterval = 200;
-            const startTime = Date.now();
 
-            while (
-                this.transactionsStore.loading &&
-                Date.now() - startTime < maxWaitTime
-            ) {
-                await new Promise((resolve) =>
-                    setTimeout(resolve, pollInterval)
-                );
-            }
+            await this.waitForPaymentCompletion();
 
-            // If still loading after max wait, consider it timed out
-            if (this.transactionsStore.loading) {
-                await new Promise((resolve) =>
-                    setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
-                );
-            }
-
+            // Check for payment errors (but allow missing preimage/hash to be checked separately)
             if (this.transactionsStore.payment_error) {
                 return this.handleError(
                     this.transactionsStore.payment_error,
@@ -1846,35 +1735,26 @@ export default class NostrWalletConnectStore {
                 );
             }
 
-            runInAction(() => {
-                connection.trackSpending(amountSats);
-                this.findAndUpdateConnection(connection);
-            });
-
-            await this.saveConnections();
-            this.showPaymentSentNotification(amountSats, connection.name);
+            await this.finalizePayment(connection, amountSats);
 
             return {
-                result: {
-                    type: 'outgoing' as const,
-                    state: 'settled' as const,
+                result: NostrConnectUtils.createNip47Transaction({
+                    type: 'outgoing',
+                    state: 'settled',
                     invoice: '',
+                    payment_hash,
+                    amount: request.amount,
                     description: localeString(
                         'stores.NostrWalletConnectStore.keysendPayment'
                     ),
-                    description_hash: '',
                     preimage,
-                    payment_hash,
-                    amount: request.amount,
-                    fees_paid: Math.floor(
-                        (Number(fee) || 0) * MILLISATS_PER_SAT
-                    ),
-                    settled_at: Math.floor(Date.now() / 1000),
-                    created_at: Math.floor(Date.now() / 1000),
+                    fees_paid: satsToMillisats(Number(fee) || 0),
+                    settled_at: dateTimeUtils.getCurrentTimestamp(),
+                    created_at: dateTimeUtils.getCurrentTimestamp(),
                     expires_at:
-                        Math.floor(Date.now() / 1000) +
+                        dateTimeUtils.getCurrentTimestamp() +
                         DEFAULT_INVOICE_EXPIRY_SECONDS
-                },
+                }),
                 error: undefined
             };
         } catch (error: any) {
@@ -1889,19 +1769,8 @@ export default class NostrWalletConnectStore {
     }
 
     private async handleSignMessage(
-        connection: NWCConnection,
         request: Nip47SignMessageRequest
     ): NWCWalletServiceResponsePromise<Nip47SignMessageResponse> {
-        if (this.isRateLimited(connection.id, 'sign_message')) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            );
-        }
-        await this.markConnectionUsed(connection.id);
-
         try {
             if (this.isCashuProperlyConfigured) {
                 const selectedMintUrl = this.cashuStore.selectedMintUrl;
@@ -1933,7 +1802,7 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    // PAYMENT PROCESSING
+    // PAYMENT PROCESSING METHODS
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,
@@ -1964,20 +1833,13 @@ export default class NostrWalletConnectStore {
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
-        const budgetValidation =
-            connection.validateBudgetBeforePayment(amountSats);
-        if (!budgetValidation.success) {
-            return this.handleError(
-                budgetValidation.errorMessage ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.connectionInsufficientBalance',
-                        {
-                            amount: amountSats.toString(),
-                            balance: connection.remainingBudget.toString()
-                        }
-                    ),
-                ErrorCodes.INSUFFICIENT_BALANCE
-            );
+        const budgetCheck = this.validateBudgetBeforePayment(
+            connection,
+            amountSats,
+            ErrorCodes.INSUFFICIENT_BALANCE
+        );
+        if (!budgetCheck.success) {
+            return { result: undefined, error: budgetCheck.error };
         }
         const currentLightningBalance = lightningBalance?.lightningBalance || 0;
         if (currentLightningBalance < amountSats) {
@@ -1992,53 +1854,29 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INSUFFICIENT_BALANCE
             );
         }
-        this.transactionsStore.payment_error = null;
-        this.transactionsStore.payment_preimage = null;
-        this.transactionsStore.error = false;
+        this.transactionsStore.reset();
         this.transactionsStore.sendPayment({
             payment_request: request.invoice,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString()
         });
-        const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
-        const pollInterval = 200;
-        const startTime = Date.now();
 
-        while (
-            this.transactionsStore.loading &&
-            Date.now() - startTime < maxWaitTime
-        ) {
-            await new Promise((resolve) => setTimeout(resolve, pollInterval));
-        }
+        await this.waitForPaymentCompletion();
 
-        // If still loading after max wait, consider it timed out
-        if (this.transactionsStore.loading) {
-            await new Promise((resolve) =>
-                setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
-            );
-        }
-        if (this.transactionsStore.payment_error) {
-            return this.handleError(
-                this.transactionsStore.payment_error,
-                ErrorCodes.FAILED_TO_PAY_INVOICE
-            );
+        const paymentError = this.checkPaymentErrors(
+            ErrorCodes.FAILED_TO_PAY_INVOICE,
+            localeString('views.SendingLightning.paymentTimedOut') ||
+                'Payment timed out',
+            localeString(
+                'stores.NostrWalletConnectStore.error.noPreimageReceived'
+            )
+        );
+        if (paymentError) {
+            return paymentError;
         }
 
-        if (this.transactionsStore.error && this.transactionsStore.error_msg) {
-            return this.handleError(
-                this.transactionsStore.error_msg,
-                ErrorCodes.FAILED_TO_PAY_INVOICE
-            );
-        }
         const preimage = this.transactionsStore.payment_preimage;
         if (!preimage) {
-            if (this.transactionsStore.loading) {
-                return this.handleError(
-                    localeString('views.SendingLightning.paymentTimedOut') ||
-                        'Payment timed out',
-                    ErrorCodes.FAILED_TO_PAY_INVOICE
-                );
-            }
             return this.handleError(
                 localeString(
                     'stores.NostrWalletConnectStore.error.noPreimageReceived'
@@ -2049,20 +1887,12 @@ export default class NostrWalletConnectStore {
 
         const fees_paid = this.transactionsStore.payment_fee;
 
-        runInAction(() => {
-            connection.trackSpending(amountSats);
-            this.findAndUpdateConnection(connection);
-        });
-
-        await this.saveConnections();
-        this.showPaymentSentNotification(amountSats, connection.name);
+        await this.finalizePayment(connection, amountSats);
 
         return {
             result: {
                 preimage,
-                fees_paid: Math.floor(
-                    (Number(fees_paid) || 0) * MILLISATS_PER_SAT
-                )
+                fees_paid: satsToMillisats(Number(fees_paid) || 0)
             },
             error: undefined
         };
@@ -2131,9 +1961,7 @@ export default class NostrWalletConnectStore {
         } else if ((invoice as any).satoshis) {
             amount = Math.floor((invoice as any).satoshis);
         } else if ((invoice as any).millisatoshis) {
-            amount = Math.floor(
-                Number((invoice as any).millisatoshis) / MILLISATS_PER_SAT
-            );
+            amount = millisatsToSats(Number((invoice as any).millisatoshis));
         }
         if (!amount || amount <= 0) {
             return this.handleError(
@@ -2144,19 +1972,13 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        const budgetValidation = connection.validateBudgetBeforePayment(amount);
-        if (!budgetValidation.success) {
-            return this.handleError(
-                budgetValidation.errorMessage ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.connectionInsufficientBalance',
-                        {
-                            amount: amount.toString(),
-                            balance: connection.remainingBudget.toString()
-                        }
-                    ),
-                ErrorCodes.INSUFFICIENT_BALANCE
-            );
+        const budgetCheck = this.validateBudgetBeforePayment(
+            connection,
+            amount,
+            ErrorCodes.INSUFFICIENT_BALANCE
+        );
+        if (!budgetCheck.success) {
+            return { result: undefined, error: budgetCheck.error };
         }
 
         const currentBalance = this.cashuStore.totalBalanceSats || 0;
@@ -2197,18 +2019,12 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        runInAction(() => {
-            connection.trackSpending(amount);
-            this.findAndUpdateConnection(connection);
-        });
-
-        await this.saveConnections();
-        this.showPaymentSentNotification(amount, connection.name);
+        await this.finalizePayment(connection, amount);
 
         return {
             result: {
                 preimage,
-                fees_paid: (cashuInvoice.fee || 0) * MILLISATS_PER_SAT
+                fees_paid: satsToMillisats(cashuInvoice.fee || 0)
             },
             error: undefined
         };
@@ -2229,6 +2045,109 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
         }
     };
+
+    // HELPER METHODS
+
+    private validateBudgetBeforePayment(
+        connection: NWCConnection,
+        amountSats: number,
+        errorCode: ErrorCodes = ErrorCodes.INSUFFICIENT_BALANCE,
+        fallbackErrorMessage?: string
+    ):
+        | { success: true }
+        | { success: false; error: { code: string; message: string } } {
+        const budgetValidation =
+            connection.validateBudgetBeforePayment(amountSats);
+        if (!budgetValidation.success) {
+            return {
+                success: false,
+                error: this.handleError(
+                    budgetValidation.errorMessage ||
+                        fallbackErrorMessage ||
+                        localeString(
+                            'stores.NostrWalletConnectStore.error.connectionInsufficientBalance',
+                            {
+                                amount: amountSats.toString(),
+                                balance: connection.remainingBudget.toString()
+                            }
+                        ),
+                    errorCode
+                ).error
+            };
+        }
+        return { success: true };
+    }
+
+    /**
+     * Checks for payment errors and returns error response if found
+     */
+    private checkPaymentErrors(
+        errorCode: ErrorCodes,
+        timeoutMessage?: string,
+        noPreimageMessage?: string
+    ): void | { result: undefined; error: { code: string; message: string } } {
+        if (this.transactionsStore.payment_error) {
+            return this.handleError(
+                this.transactionsStore.payment_error,
+                errorCode
+            );
+        }
+
+        if (this.transactionsStore.error && this.transactionsStore.error_msg) {
+            return this.handleError(
+                this.transactionsStore.error_msg,
+                errorCode
+            );
+        }
+
+        const preimage = this.transactionsStore.payment_preimage;
+        if (!preimage) {
+            if (this.transactionsStore.loading && timeoutMessage) {
+                return this.handleError(timeoutMessage, errorCode);
+            }
+            if (noPreimageMessage) {
+                return this.handleError(noPreimageMessage, errorCode);
+            }
+        }
+    }
+
+    /**
+     * Waits for payment completion with timeout handling
+     */
+    private async waitForPaymentCompletion(): Promise<void> {
+        const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
+        const pollInterval = 200;
+        const startTime = Date.now();
+
+        while (
+            this.transactionsStore.loading &&
+            Date.now() - startTime < maxWaitTime
+        ) {
+            await new Promise((resolve) => setTimeout(resolve, pollInterval));
+        }
+
+        // If still loading after max wait, consider it timed out
+        if (this.transactionsStore.loading) {
+            await new Promise((resolve) =>
+                setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
+            );
+        }
+    }
+
+    /**
+     * Processes payment completion: tracks spending, saves, and shows notification
+     */
+    private async finalizePayment(
+        connection: NWCConnection,
+        amountSats: number
+    ): Promise<void> {
+        runInAction(() => {
+            connection.trackSpending(amountSats);
+            this.findAndUpdateConnection(connection);
+        });
+        await this.saveConnections();
+        this.showPaymentSentNotification(amountSats, connection.name);
+    }
 
     private isRateLimited(connectionId: string, method: Nip47Method): boolean {
         const key = `${connectionId}-${method.toLowerCase()}`;
@@ -2730,7 +2649,6 @@ export default class NostrWalletConnectStore {
             console.warn('Android: Reconnection check error:', error);
         }
     }
-
     @action
     public async startIOSBackgroundTask(
         duration: number = 30000
@@ -3029,7 +2947,7 @@ export default class NostrWalletConnectStore {
             kind: 23195,
             tags,
             content,
-            created_at: Math.floor(Date.now() / 1000),
+            created_at: dateTimeUtils.getCurrentTimestamp(),
             pubkey: servicePublicKey
         };
         const signedEvent = {
