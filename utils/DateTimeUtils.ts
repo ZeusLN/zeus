@@ -64,6 +64,14 @@ class DateTimeUtils {
 
         return { months, days };
     };
+
+    /**
+     * Gets current Unix timestamp in seconds
+     * @returns Current Unix timestamp (seconds since epoch)
+     */
+    getCurrentTimestamp = (): number => {
+        return Math.floor(Date.now() / 1000);
+    };
 }
 
 const dateTimeUtils = new DateTimeUtils();

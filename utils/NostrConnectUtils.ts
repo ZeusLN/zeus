@@ -1,6 +1,7 @@
 import type {
     Nip47NotificationType,
-    Nip47SingleMethod
+    Nip47SingleMethod,
+    Nip47Transaction
 } from '@getalby/sdk/dist/nwc/types';
 
 import {
@@ -10,6 +11,8 @@ import {
 } from '../models/NWCConnection';
 
 import { localeString } from './LocaleUtils';
+import dateTimeUtils from './DateTimeUtils';
+import bolt11 from 'bolt11';
 
 export interface PermissionOption {
     key: PermissionsType;
@@ -388,5 +391,107 @@ export default class NostrConnectUtils {
             (option) => option.key === budgetRenewal
         );
         return index >= 0 ? index : 0;
+    }
+
+    /**
+     * Decodes invoice and extracts payment hash, description hash, and expiry time
+     * Used for NIP-47 transaction creation
+     * @param paymentRequest - Bolt11 payment request string
+     * @param fallbackExpirySeconds - Fallback expiry time in seconds (default: 3600)
+     * @returns Object containing payment hash, description hash, and expiry time
+     * @throws Error if invoice decoding fails
+     */
+    static decodeInvoiceTags(
+        paymentRequest: string,
+        fallbackExpirySeconds: number = 3600
+    ): {
+        paymentHash: string;
+        descriptionHash: string;
+        expiryTime: number;
+    } {
+        let paymentHash = '';
+        let descriptionHash = '';
+        let expiryTime =
+            dateTimeUtils.getCurrentTimestamp() + fallbackExpirySeconds;
+
+        try {
+            const decoded = bolt11.decode(paymentRequest);
+            if (!decoded || !decoded.tags) {
+                throw new Error('Invalid payment request structure');
+            }
+
+            for (const tag of decoded.tags) {
+                if (tag.tagName === 'payment_hash') {
+                    paymentHash = String(tag.data || '');
+                } else if (tag.tagName === 'purpose_commit_hash') {
+                    descriptionHash = String(tag.data || '');
+                } else if (tag.tagName === 'expire_time') {
+                    const invoiceExpiry = Number(tag.data);
+                    if (invoiceExpiry > 0 && decoded.timestamp) {
+                        expiryTime = decoded.timestamp + invoiceExpiry;
+                    }
+                }
+            }
+        } catch (decodeError) {
+            console.error('Failed to decode invoice:', decodeError);
+            throw decodeError;
+        }
+
+        return { paymentHash, descriptionHash, expiryTime };
+    }
+
+    /**
+     * Creates a NIP-47 transaction object with sensible defaults
+     * @param params - Transaction parameters
+     * @param params.type - Transaction type: 'incoming' or 'outgoing'
+     * @param params.state - Transaction state: 'pending', 'settled', or 'failed'
+     * @param params.invoice - Payment request/invoice string
+     * @param params.payment_hash - Payment hash
+     * @param params.amount - Amount in millisatoshis
+     * @param params.description - Optional description
+     * @param params.description_hash - Optional description hash
+     * @param params.preimage - Optional preimage
+     * @param params.fees_paid - Optional fees paid in millisatoshis (default: 0)
+     * @param params.settled_at - Optional settlement timestamp (default: 0)
+     * @param params.created_at - Optional creation timestamp (default: current time)
+     * @param params.expires_at - Optional expiry timestamp (default: created_at + 3600)
+     * @param params.metadata - Optional metadata object
+     * @returns NIP-47 transaction object
+     */
+    static createNip47Transaction(params: {
+        type: 'incoming' | 'outgoing';
+        state: 'pending' | 'settled' | 'failed';
+        invoice: string;
+        payment_hash: string;
+        amount: number;
+        description?: string;
+        description_hash?: string;
+        preimage?: string;
+        fees_paid?: number;
+        settled_at?: number;
+        created_at?: number;
+        expires_at?: number;
+        metadata?: any;
+    }): Nip47Transaction {
+        const now = dateTimeUtils.getCurrentTimestamp();
+        const DEFAULT_EXPIRY_SECONDS = 3600;
+
+        return {
+            type: params.type,
+            state: params.state,
+            invoice: params.invoice || '',
+            description: params.description || '',
+            description_hash: params.description_hash || '',
+            preimage: params.preimage || '',
+            payment_hash: params.payment_hash,
+            amount: params.amount,
+            fees_paid: params.fees_paid ?? 0,
+            settled_at: params.settled_at ?? 0,
+            created_at: params.created_at ?? now,
+            expires_at:
+                params.expires_at ??
+                (params.created_at ?? now) + DEFAULT_EXPIRY_SECONDS,
+            ...(params.metadata && { metadata: params.metadata })
+        };
     }
 }
