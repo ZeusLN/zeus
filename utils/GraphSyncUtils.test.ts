@@ -1,13 +1,23 @@
+jest.mock('react-native-keychain', () => ({
+    setInternetCredentials: jest.fn(() => Promise.resolve(true)),
+    getInternetCredentials: jest.fn(() => Promise.resolve({ password: false })),
+    resetInternetCredentials: jest.fn(() => Promise.resolve(true))
+}));
+
 import {
     handleEnableGraphSync,
     handleIgnoreOnce,
     handleNeverAskAgain,
-    checkGraphSyncBeforePayment
+    checkGraphSyncBeforePayment,
+    savePendingPaymentData,
+    loadPendingPaymentData,
+    clearPendingPaymentData
 } from './GraphSyncUtils';
 
 import { settingsStore, transactionsStore } from '../stores/Stores';
 
 import { restartNeeded } from './RestartUtils';
+import * as Keychain from 'react-native-keychain';
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
@@ -31,6 +41,7 @@ const mockTransactionsStore = transactionsStore as jest.Mocked<
 const mockRestartNeeded = restartNeeded as jest.MockedFunction<
     typeof restartNeeded
 >;
+const mockKeychain = Keychain as jest.Mocked<typeof Keychain>;
 
 describe('GraphSyncUtils', () => {
     beforeEach(() => {
@@ -38,9 +49,30 @@ describe('GraphSyncUtils', () => {
     });
 
     describe('handleEnableGraphSync', () => {
-        it('should enable graph sync and trigger restart', async () => {
+        it('should enable graph sync and trigger restart without pending data', async () => {
+            mockTransactionsStore.pendingPaymentData = null;
+
             await handleEnableGraphSync();
 
+            expect(mockKeychain.setInternetCredentials).not.toHaveBeenCalled();
+            expect(mockSettingsStore.updateSettings).toHaveBeenCalledWith({
+                expressGraphSync: true,
+                graphSyncPromptIgnoreOnce: false
+            });
+            expect(mockRestartNeeded).toHaveBeenCalledWith(true);
+        });
+
+        it('should save pending payment data before restart', async () => {
+            const paymentData = { payment_request: 'lnbc123...' };
+            mockTransactionsStore.pendingPaymentData = paymentData;
+
+            await handleEnableGraphSync();
+
+            expect(mockKeychain.setInternetCredentials).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync',
+                'zeus-pending-payment-after-graph-sync',
+                JSON.stringify(paymentData)
+            );
             expect(mockSettingsStore.updateSettings).toHaveBeenCalledWith({
                 expressGraphSync: true,
                 graphSyncPromptIgnoreOnce: false
@@ -157,6 +189,118 @@ describe('GraphSyncUtils', () => {
             });
             expect(mockTransactionsStore.showGraphSyncPrompt).toBe(true);
             expect(result).toBe(false);
+        });
+    });
+
+    describe('savePendingPaymentData', () => {
+        it('should save payment data to storage', async () => {
+            const paymentData = {
+                payment_request: 'lnbc123...',
+                amount: '1000'
+            };
+
+            await savePendingPaymentData(paymentData);
+
+            expect(mockKeychain.setInternetCredentials).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync',
+                'zeus-pending-payment-after-graph-sync',
+                JSON.stringify(paymentData)
+            );
+        });
+
+        it('should handle storage errors gracefully', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation();
+            mockKeychain.setInternetCredentials.mockRejectedValueOnce(
+                new Error('Storage full')
+            );
+
+            const paymentData = { payment_request: 'lnbc123...' };
+            await savePendingPaymentData(paymentData);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error saving pending payment data:',
+                expect.any(Error)
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('loadPendingPaymentData', () => {
+        it('should load and parse payment data from storage', async () => {
+            const paymentData = {
+                payment_request: 'lnbc123...',
+                amount: '1000'
+            };
+            mockKeychain.getInternetCredentials.mockResolvedValueOnce({
+                password: JSON.stringify(paymentData)
+            } as any);
+
+            const result = await loadPendingPaymentData();
+
+            expect(mockKeychain.getInternetCredentials).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync'
+            );
+            expect(result).toEqual(paymentData);
+        });
+
+        it('should return null when no data is stored', async () => {
+            mockKeychain.getInternetCredentials.mockResolvedValueOnce({
+                password: false
+            } as any);
+
+            const result = await loadPendingPaymentData();
+
+            expect(result).toBeNull();
+        });
+
+        it('should handle storage errors gracefully', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation();
+            mockKeychain.getInternetCredentials.mockRejectedValueOnce(
+                new Error('Storage error')
+            );
+
+            const result = await loadPendingPaymentData();
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error loading pending payment data:',
+                expect.any(Error)
+            );
+            expect(result).toBeNull();
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('clearPendingPaymentData', () => {
+        it('should remove payment data from storage', async () => {
+            await clearPendingPaymentData();
+
+            expect(mockKeychain.resetInternetCredentials).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync'
+            );
+        });
+
+        it('should handle removal errors gracefully', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation();
+            mockKeychain.resetInternetCredentials.mockRejectedValueOnce(
+                new Error('Removal failed')
+            );
+
+            await clearPendingPaymentData();
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error clearing pending payment data:',
+                expect.any(Error)
+            );
+
+            consoleErrorSpy.mockRestore();
         });
     });
 });
