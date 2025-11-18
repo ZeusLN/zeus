@@ -57,6 +57,7 @@ import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { getUnformattedAmount, getAmountFromSats } from '../utils/AmountUtils';
+import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
@@ -89,6 +90,7 @@ interface SendProps {
             isValid: boolean;
             contactName: string;
             clearOnBackPress: boolean;
+            fromGraphSync: boolean;
         }
     >;
 }
@@ -295,9 +297,18 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     async componentDidMount() {
-        const { SettingsStore } = this.props;
+        const { SettingsStore, route } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
+
+        if (route.params?.fromGraphSync) {
+            clearPendingPaymentData().catch((error) => {
+                console.error(
+                    'Failed to clear pending payment data on Send:',
+                    error
+                );
+            });
+        }
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();

@@ -57,6 +57,10 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
+import {
+    loadPendingPaymentData,
+    clearPendingPaymentData
+} from '../../utils/GraphSyncUtils';
 
 import Storage from '../../storage';
 
@@ -67,6 +71,7 @@ import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
+import InvoicesStore from '../../stores/InvoicesStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import LSPStore from '../../stores/LSPStore';
@@ -106,6 +111,7 @@ interface WalletProps {
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
+    InvoicesStore: InvoicesStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
@@ -137,6 +143,7 @@ interface WalletState {
     'CashuStore',
     'ChannelsStore',
     'TransactionsStore',
+    'InvoicesStore',
     'NodeInfoStore',
     'SettingsStore',
     'UnitsStore',
@@ -827,6 +834,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Process pending share intent after wallet is fully loaded and synced
         this.processPendingShareIntent();
+
+        // Process pending graph sync payment after wallet is fully loaded and synced
+        this.processPendingGraphSyncPayment();
     }
 
     processPendingShareIntent = () => {
@@ -845,6 +855,43 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             title: localeString('views.Wallet.batterySaverWarningTitle'),
             text: localeString('views.Wallet.batterySaverWarningText')
         });
+    };
+
+    processPendingGraphSyncPayment = async () => {
+        try {
+            const pendingPaymentData = await loadPendingPaymentData();
+            if (pendingPaymentData) {
+                const { InvoicesStore, navigation } = this.props;
+
+                if (pendingPaymentData.payment_request) {
+                    await InvoicesStore.getPayReq(
+                        pendingPaymentData.payment_request
+                    );
+                    navigation.navigate('PaymentRequest', {
+                        fromGraphSync: true
+                    });
+                } else if (pendingPaymentData.pubkey) {
+                    navigation.navigate('Send', {
+                        destination: pendingPaymentData.pubkey,
+                        satAmount: pendingPaymentData.amount,
+                        transactionType: 'Keysend',
+                        fromGraphSync: true
+                    });
+                } else {
+                    clearPendingPaymentData().catch((error) => {
+                        console.error(
+                            'Failed to clear invalid pending payment data:',
+                            error
+                        );
+                    });
+                }
+            }
+        } catch (error) {
+            console.error(
+                'Error processing pending graph sync payment:',
+                error
+            );
+        }
     };
 
     handleOpenURL = (event: any) => {
