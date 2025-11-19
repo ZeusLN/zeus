@@ -165,45 +165,6 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsChannelManagement() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Rebalance')}
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <RebalanceIcon
-                                            fill={themeColor('text')}
-                                            width={23}
-                                            height={23}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Rebalance.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
                     {selectedNode && BackendUtils.isLNDBased() && (
                         <View
                             style={{
@@ -317,6 +278,45 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    {selectedNode && BackendUtils.supportsChannelManagement() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Rebalance')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <RebalanceIcon
+                                            fill={themeColor('text')}
+                                            width={23}
+                                            height={23}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Rebalance.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {BackendUtils.supportsSweep() && (
                         <View
