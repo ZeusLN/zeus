@@ -6,7 +6,8 @@ import {
     View,
     StyleSheet,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import { ButtonGroup, Icon } from 'react-native-elements';
 import Slider from '@react-native-community/slider';
@@ -427,7 +428,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     <ErrorMessage message={LSPStore.error_msg} />
                 ) : (
                     <>
-                        <ScrollView style={{ flex: 1 }}>
+                        <ScrollView
+                            style={{ flex: 1 }}
+                            showsVerticalScrollIndicator={false}
+                        >
                             {createOrderResponse &&
                                 Object.keys(createOrderResponse).length > 0 &&
                                 result &&
@@ -446,6 +450,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         marginTop: 10,
                                         paddingHorizontal: 22
                                     }}
+                                    showsVerticalScrollIndicator={false}
                                 >
                                     <>
                                         {Object.keys(getInfoData).length >
@@ -1171,19 +1176,32 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         'views.OpenChannel.announceChannel'
                                                     )}
                                                 </Text>
-                                                <Switch
-                                                    value={
-                                                        this.state
-                                                            .announceChannel
-                                                    }
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            announceChannel:
-                                                                !this.state
-                                                                    .announceChannel
-                                                        });
+                                                <View
+                                                    style={{
+                                                        ...(Platform.OS ===
+                                                        'android'
+                                                            ? {
+                                                                  marginLeft: 5
+                                                              }
+                                                            : {
+                                                                  marginHorizontal: 10
+                                                              })
                                                     }}
-                                                />
+                                                >
+                                                    <Switch
+                                                        value={
+                                                            this.state
+                                                                .announceChannel
+                                                        }
+                                                        onValueChange={async () => {
+                                                            this.setState({
+                                                                announceChannel:
+                                                                    !this.state
+                                                                        .announceChannel
+                                                            });
+                                                        }}
+                                                    />
+                                                </View>
                                             </View>
                                         </>
                                     )}

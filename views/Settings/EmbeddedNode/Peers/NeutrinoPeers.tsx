@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
+import {
+    FlatList,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 // @ts-ignore:next-line
@@ -201,7 +207,14 @@ export default class NeutrinoPeers extends React.Component<
                                         style={{
                                             flex: 1,
                                             flexDirection: 'row',
-                                            justifyContent: 'flex-end'
+                                            justifyContent: 'flex-end',
+                                            ...(Platform.OS === 'android'
+                                                ? {
+                                                      marginLeft: 5
+                                                  }
+                                                : {
+                                                      marginHorizontal: 10
+                                                  })
                                         }}
                                     >
                                         <Switch

@@ -101,7 +101,8 @@ export default class Currency extends React.Component<
                             style={{
                                 flex: 1,
                                 flexDirection: 'row',
-                                justifyContent: 'flex-end'
+                                justifyContent: 'flex-end',
+                                marginHorizontal: 10
                             }}
                         >
                             <Switch

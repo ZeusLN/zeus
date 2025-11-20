@@ -206,7 +206,14 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                         style={{
                                             flex: 1,
                                             flexDirection: 'row',
-                                            justifyContent: 'flex-end'
+                                            justifyContent: 'flex-end',
+                                            ...(Platform.OS === 'android'
+                                                ? {
+                                                      marginLeft: 5
+                                                  }
+                                                : {
+                                                      marginHorizontal: 10
+                                                  })
                                         }}
                                     >
                                         <Switch
@@ -268,7 +275,14 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                         style={{
                                             flex: 1,
                                             flexDirection: 'row',
-                                            justifyContent: 'flex-end'
+                                            justifyContent: 'flex-end',
+                                            ...(Platform.OS === 'android'
+                                                ? {
+                                                      marginLeft: 5
+                                                  }
+                                                : {
+                                                      marginHorizontal: 10
+                                                  })
                                         }}
                                     >
                                         <Switch
@@ -335,7 +349,14 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                     style={{
                                         flex: 1,
                                         flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        justifyContent: 'flex-end',
+                                        ...(Platform.OS === 'android'
+                                            ? {
+                                                  marginLeft: 5
+                                              }
+                                            : {
+                                                  marginHorizontal: 10
+                                              })
                                     }}
                                 >
                                     <Switch
@@ -424,7 +445,14 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                     style={{
                                         flex: 1,
                                         flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        justifyContent: 'flex-end',
+                                        ...(Platform.OS === 'android'
+                                            ? {
+                                                  marginLeft: 5
+                                              }
+                                            : {
+                                                  marginHorizontal: 10
+                                              })
                                     }}
                                 >
                                     <Switch

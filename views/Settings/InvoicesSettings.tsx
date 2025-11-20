@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
+import {
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView,
+    View,
+    Platform
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
@@ -349,7 +355,8 @@ export default class InvoicesSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                marginTop: 20
+                                marginTop: 20,
+                                alignItems: 'center'
                             }}
                         >
                             <View style={{ flex: 1 }}>
@@ -371,7 +378,16 @@ export default class InvoicesSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={routeHints}
@@ -399,7 +415,8 @@ export default class InvoicesSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                marginTop: 20
+                                marginTop: 20,
+                                alignItems: 'center'
                             }}
                         >
                             <View style={{ flex: 1 }}>
@@ -422,7 +439,16 @@ export default class InvoicesSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={ampInvoice}
@@ -450,7 +476,8 @@ export default class InvoicesSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                marginTop: 20
+                                marginTop: 20,
+                                alignItems: 'center'
                             }}
                         >
                             <View style={{ flex: 1 }}>
@@ -472,7 +499,16 @@ export default class InvoicesSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={blindedPaths}
@@ -504,7 +540,8 @@ export default class InvoicesSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                marginTop: 20
+                                marginTop: 20,
+                                alignItems: 'center'
                             }}
                         >
                             <View style={{ flex: 1 }}>
@@ -521,7 +558,16 @@ export default class InvoicesSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={showCustomPreimageField}

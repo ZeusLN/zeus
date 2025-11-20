@@ -11,7 +11,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Divider, ListItem } from 'react-native-elements';
+import { ListItem } from 'react-native-elements';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -470,10 +470,7 @@ export default class ProductDetails extends React.Component<
                                         </ListItem>
                                     </View>
                                 )}
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 6 }}
-                                />
+
                                 <View
                                     style={{
                                         paddingHorizontal: 20,

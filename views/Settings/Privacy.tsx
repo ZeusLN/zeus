@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -157,7 +157,8 @@ export default class Privacy extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            marginTop: 20
+                            marginTop: 20,
+                            alignItems: 'center'
                         }}
                     >
                         <View style={{ flex: 1 }}>
@@ -176,7 +177,18 @@ export default class Privacy extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={clipboard}
                                 disabled={
@@ -199,7 +211,8 @@ export default class Privacy extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            marginTop: 20
+                            marginTop: 20,
+                            alignItems: 'center'
                         }}
                     >
                         <View style={{ flex: 1 }}>
@@ -226,7 +239,18 @@ export default class Privacy extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={lurkerMode}
                                 disabled={
@@ -249,7 +273,8 @@ export default class Privacy extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            marginTop: 20
+                            marginTop: 20,
+                            alignItems: 'center'
                         }}
                     >
                         <View style={{ flex: 1 }}>
@@ -265,7 +290,18 @@ export default class Privacy extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={enableMempoolRates}
                                 disabled={

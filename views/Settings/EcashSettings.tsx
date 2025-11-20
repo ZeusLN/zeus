@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View, ScrollView } from 'react-native';
+import { Text, View, ScrollView, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -161,7 +161,9 @@ export default class EcashSettings extends React.Component<
                         <View
                             style={{
                                 alignSelf: 'center',
-                                marginLeft: 5
+                                ...(Platform.OS === 'android'
+                                    ? { marginLeft: 5 }
+                                    : { marginHorizontal: 10 })
                             }}
                         >
                             <Switch
@@ -299,7 +301,9 @@ export default class EcashSettings extends React.Component<
                                 <View
                                     style={{
                                         alignSelf: 'center',
-                                        marginLeft: 5
+                                        ...(Platform.OS === 'android'
+                                            ? { marginLeft: 5 }
+                                            : { marginHorizontal: 10 })
                                     }}
                                 >
                                     <Switch

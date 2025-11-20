@@ -5,7 +5,8 @@ import {
     ScrollView,
     StyleSheet,
     View,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Slider from '@react-native-community/slider';
@@ -688,7 +689,10 @@ export default class PaymentRequest extends React.Component<
                 )}
 
                 <View style={{ flex: 1 }}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
                         {!!getPayReqError && (
                             <View style={styles.content}>
                                 <Text
@@ -1125,9 +1129,11 @@ export default class PaymentRequest extends React.Component<
                                             !enableTor && (
                                                 <View
                                                     style={{
-                                                        flex: 1,
                                                         flexDirection: 'row',
-                                                        marginTop: 25
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems: 'center',
+                                                        marginTop: 20
                                                     }}
                                                 >
                                                     <Text
@@ -1152,9 +1158,14 @@ export default class PaymentRequest extends React.Component<
                                                     </Text>
                                                     <View
                                                         style={{
-                                                            flex: 1,
-                                                            justifyContent:
-                                                                'flex-end'
+                                                            ...(Platform.OS ===
+                                                            'android'
+                                                                ? {
+                                                                      marginLeft: 5
+                                                                  }
+                                                                : {
+                                                                      marginHorizontal: 10
+                                                                  })
                                                         }}
                                                     >
                                                         <Switch
@@ -1182,9 +1193,11 @@ export default class PaymentRequest extends React.Component<
                                             BackendUtils.supportsAMP() && (
                                                 <View
                                                     style={{
-                                                        flex: 1,
                                                         flexDirection: 'row',
-                                                        marginTop: 25,
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems: 'center',
+                                                        marginTop: 20,
                                                         marginBottom: 15
                                                     }}
                                                 >
@@ -1211,9 +1224,14 @@ export default class PaymentRequest extends React.Component<
                                                     </Text>
                                                     <View
                                                         style={{
-                                                            flex: 1,
-                                                            justifyContent:
-                                                                'flex-end'
+                                                            ...(Platform.OS ===
+                                                            'android'
+                                                                ? {
+                                                                      marginLeft: 5
+                                                                  }
+                                                                : {
+                                                                      marginHorizontal: 10
+                                                                  })
                                                         }}
                                                     >
                                                         <Switch
