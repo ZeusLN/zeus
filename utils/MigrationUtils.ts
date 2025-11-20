@@ -75,6 +75,20 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
 class MigrationsUtils {
+    private async migrateKey(key: string) {
+        try {
+            const credentials = await Keychain.getInternetCredentials(key);
+
+            if (credentials && credentials.password) {
+                await Storage.setItem(key, credentials.password);
+                return credentials.password;
+            }
+        } catch (e) {
+            console.warn(`Failed to migrate key: ${key}`, e);
+        }
+        return null;
+    }
+
     public async legacySettingsMigrations(settings: string) {
         const newSettings = JSON.parse(settings) as Settings;
         if (!newSettings.fiatRatesSource) {
@@ -797,13 +811,58 @@ class MigrationsUtils {
 
             console.log('Attempting keychain cloud sync migration...');
 
-            const existingSettings = await Keychain.getInternetCredentials(
-                STORAGE_KEY
-            );
+            const settingsData = await this.migrateKey(STORAGE_KEY);
 
-            if (existingSettings && existingSettings.password) {
-                await Storage.setItem(STORAGE_KEY, existingSettings.password);
-                console.log('Settings migrated from cloud to local storage.');
+            const migrationKeys = [
+                CONTACTS_KEY,
+                LAST_CHANNEL_BACKUP_STATUS,
+                LAST_CHANNEL_BACKUP_TIME,
+                ADDRESS_ACTIVATED_STRING,
+                HASHES_STORAGE_STRING,
+                POS_HIDDEN_KEY,
+                POS_STANDALONE_KEY,
+                CATEGORY_KEY,
+                PRODUCT_KEY,
+                UNIT_KEY,
+                HIDDEN_ACCOUNTS_KEY,
+                CURRENCY_CODES_KEY,
+                ACTIVITY_FILTERS_KEY,
+                IS_BACKED_UP_KEY,
+                LSPS_ORDERS_KEY
+            ];
+
+            for (const key of migrationKeys) {
+                await this.migrateKey(key);
+            }
+
+            const notesListJson = await this.migrateKey(NOTES_KEY);
+            if (notesListJson) {
+                const noteKeys = JSON.parse(notesListJson);
+                if (Array.isArray(noteKeys)) {
+                    for (const noteKey of noteKeys) {
+                        await this.migrateKey(noteKey);
+                    }
+                }
+            }
+
+            if (settingsData) {
+                const settings = JSON.parse(settingsData);
+                if (settings.nodes && Array.isArray(settings.nodes)) {
+                    for (const node of settings.nodes) {
+                        if (
+                            node.implementation === 'lightning-node-connect' &&
+                            node.pairingPhrase
+                        ) {
+                            const baseKey = `${LNC_STORAGE_KEY}:${hash(
+                                node.pairingPhrase
+                            )}`;
+                            const hostKey = `${baseKey}:host`;
+
+                            await this.migrateKey(baseKey);
+                            await this.migrateKey(hostKey);
+                        }
+                    }
+                }
             }
 
             const lndDir = settingsStore.lndDir || 'lnd';
@@ -822,11 +881,7 @@ class MigrationsUtils {
             ];
 
             for (const key of cashuKeys) {
-                const data = await Keychain.getInternetCredentials(key);
-                if (data && data.password) {
-                    await Storage.setItem(key, data.password);
-                    console.log(`Migrated ${key}`);
-                }
+                await this.migrateKey(key);
             }
 
             const mintUrlsCreds = await Keychain.getInternetCredentials(
@@ -846,15 +901,8 @@ class MigrationsUtils {
                             `${walletId}-balance`,
                             `${walletId}-pubkey`
                         ];
-
                         for (const wKey of walletKeys) {
-                            const wData = await Keychain.getInternetCredentials(
-                                wKey
-                            );
-                            if (wData && wData.password) {
-                                await Storage.setItem(wKey, wData.password);
-                                console.log(`Migrated wallet key: ${wKey}`);
-                            }
+                            await this.migrateKey(wKey);
                         }
                     }
                 }
