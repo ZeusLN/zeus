@@ -1,3 +1,4 @@
+import * as Keychain from 'react-native-keychain'; // Import Keychain directly
 import { settingsStore } from '../stores/Stores';
 import {
     Settings,
@@ -796,16 +797,71 @@ class MigrationsUtils {
 
             console.log('Attempting keychain cloud sync migration...');
 
-            const dataToMigrateKey = STORAGE_KEY;
+            const existingSettings = await Keychain.getInternetCredentials(
+                STORAGE_KEY
+            );
 
-            const existingData = await Storage.getItem(dataToMigrateKey);
+            if (existingSettings && existingSettings.password) {
+                await Storage.setItem(STORAGE_KEY, existingSettings.password);
+                console.log('Settings migrated from cloud to local storage.');
+            }
 
-            if (existingData) {
-                await Storage.setItem(dataToMigrateKey, existingData);
-                console.log('Keychain data rewritten to disable cloud sync.');
+            const lndDir = settingsStore.lndDir || 'lnd';
+
+            const cashuKeys = [
+                `${lndDir}-cashu-mintUrls`,
+                `${lndDir}-cashu-selectedMintUrl`,
+                `${lndDir}-cashu-totalBalanceSats`,
+                `${lndDir}-cashu-invoices`,
+                `${lndDir}-cashu-payments`,
+                `${lndDir}-cashu-received-tokens`,
+                `${lndDir}-cashu-sent-tokens`,
+                `${lndDir}-cashu-seed-version`,
+                `${lndDir}-cashu-seed-phrase`,
+                `${lndDir}-cashu-seed`
+            ];
+
+            for (const key of cashuKeys) {
+                const data = await Keychain.getInternetCredentials(key);
+                if (data && data.password) {
+                    await Storage.setItem(key, data.password);
+                    console.log(`Migrated ${key}`);
+                }
+            }
+
+            const mintUrlsCreds = await Keychain.getInternetCredentials(
+                `${lndDir}-cashu-mintUrls`
+            );
+
+            if (mintUrlsCreds && mintUrlsCreds.password) {
+                const mintUrls = JSON.parse(mintUrlsCreds.password);
+
+                if (Array.isArray(mintUrls)) {
+                    for (const mintUrl of mintUrls) {
+                        const walletId = `${lndDir}==${mintUrl}`;
+                        const walletKeys = [
+                            `${walletId}-mintInfo`,
+                            `${walletId}-counter`,
+                            `${walletId}-proofs`,
+                            `${walletId}-balance`,
+                            `${walletId}-pubkey`
+                        ];
+
+                        for (const wKey of walletKeys) {
+                            const wData = await Keychain.getInternetCredentials(
+                                wKey
+                            );
+                            if (wData && wData.password) {
+                                await Storage.setItem(wKey, wData.password);
+                                console.log(`Migrated wallet key: ${wKey}`);
+                            }
+                        }
+                    }
+                }
             }
 
             await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
+            console.log('Keychain cloud sync migration completed.');
         } catch (error) {
             console.error('Error during keychain cloud sync migration:', error);
         }
