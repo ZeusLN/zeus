@@ -556,7 +556,7 @@ export default class Receive extends React.Component<
                     : expirySeconds || '3600',
                 ampInvoice: lspIsActive ? false : ampInvoice || false,
                 blindedPaths: lspIsActive ? false : blindedPaths || false,
-                routeHints: lspIsActive ? false : routeHints || false,
+                routeHints,
                 addressType: BackendUtils.supportsAddressTypeSelection()
                     ? addressType || '1'
                     : undefined,
