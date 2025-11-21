@@ -24,6 +24,7 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
+import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 
 import NWCConnection from '../../../models/NWCConnection';
 import { Status, ExpirationStatus } from '../../../models/Status';
@@ -38,7 +39,11 @@ interface NWCConnectionsListProps {
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
-type ConnectionFilter = 'active' | 'expired' | 'all';
+enum ConnectionFilter {
+    Active = 'active',
+    Expired = 'expired',
+    All = 'all'
+}
 
 interface NWCConnectionsListState {
     searchQuery: string;
@@ -59,7 +64,7 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: 'all'
+            filter: ConnectionFilter.All
         };
     }
 
@@ -101,17 +106,17 @@ export default class NWCConnectionsList extends React.Component<
         const { connections } = this.props.NostrWalletConnectStore;
         return [
             {
-                key: 'all' as ConnectionFilter,
+                key: ConnectionFilter.All,
                 label: localeString('general.all'),
                 count: connections.length
             },
             {
-                key: 'active' as ConnectionFilter,
+                key: ConnectionFilter.Active,
                 label: localeString('general.active'),
                 count: connections.filter((c) => c.isActive).length
             },
             {
-                key: 'expired' as ConnectionFilter,
+                key: ConnectionFilter.Expired,
                 label: localeString('channel.expirationStatus.expired'),
                 count: connections.filter((c) => c.isExpired).length
             }
@@ -164,13 +169,18 @@ export default class NWCConnectionsList extends React.Component<
         return filteredConnections;
     };
 
-    getStatus = (connection: NWCConnection) => {
-        return connection.isExpired ? ExpirationStatus.Expired : Status.Active;
-    };
-
-    renderConnection = ({ item: connection }: { item: NWCConnection }) => {
+    renderConnection = ({
+        item: connection,
+        index
+    }: {
+        item: NWCConnection;
+        index: number;
+    }) => {
+        const hasPaymentPermissions = NostrConnectUtils.hasPaymentPermissions(
+            connection.permissions
+        );
         return (
-            <View>
+            <View style={{ paddingTop: index === 0 ? 10 : 0 }}>
                 <TouchableOpacity
                     style={[
                         styles.connectionCard,
@@ -179,7 +189,16 @@ export default class NWCConnectionsList extends React.Component<
                     onPress={() => this.navigateToConnectionDetails(connection)}
                 >
                     <View style={styles.connectionHeader}>
-                        <View style={styles.connectionInfo}>
+                        <View
+                            style={[
+                                styles.connectionInfo,
+                                {
+                                    paddingBottom: !hasPaymentPermissions
+                                        ? 15
+                                        : 0
+                                }
+                            ]}
+                        >
                             <Text
                                 style={[
                                     styles.connectionName,
@@ -190,16 +209,20 @@ export default class NWCConnectionsList extends React.Component<
                             >
                                 {connection.name}
                             </Text>
-                            <Tag
-                                status={
-                                    connection.isExpired
-                                        ? ExpirationStatus.Expired
-                                        : Status.Active
-                                }
-                            />
+                            <View style={{ flexDirection: 'row', gap: 1 }}>
+                                {!hasPaymentPermissions && (
+                                    <Tag status={Status.ReadOnly} />
+                                )}
+                                <Tag
+                                    status={
+                                        connection.isExpired
+                                            ? ExpirationStatus.Expired
+                                            : Status.Active
+                                    }
+                                />
+                            </View>
                         </View>
                     </View>
-
                     {connection.maxAmountSats && (
                         <View style={styles.budgetSection}>
                             <Text
@@ -259,8 +282,9 @@ export default class NWCConnectionsList extends React.Component<
                                     {connection.lastUsed
                                         ? `${localeString(
                                               'views.Settings.NostrWalletConnect.lastUsed'
-                                          )} ${DateTimeUtils.listFormattedDateOrder(
-                                              connection.lastUsed
+                                          )} ${DateTimeUtils.listFormattedDateShort(
+                                              connection.lastUsed.getTime() /
+                                                  1000
                                           )}`
                                         : localeString(
                                               'views.Settings.NostrWalletConnect.neverUsed'
@@ -282,23 +306,23 @@ export default class NWCConnectionsList extends React.Component<
                             </View>
                         </View>
                     )}
-
-                    {!connection.maxAmountSats && connection.lastUsed && (
-                        <View style={styles.lastUsedSection}>
-                            <Text
-                                style={[
-                                    styles.lastUsedText,
-                                    { color: themeColor('secondaryText') }
-                                ]}
-                            >
-                                {localeString(
-                                    'views.Settings.NostrWalletConnect.lastUsed'
-                                )}{' '}
-                                {DateTimeUtils.listFormattedDateOrder(
-                                    connection.lastUsed
-                                )}
-                            </Text>
-                        </View>
+                    {!hasPaymentPermissions && (
+                        <Text
+                            style={[
+                                styles.budgetDetailText,
+                                { color: themeColor('secondaryText') }
+                            ]}
+                        >
+                            {connection.lastUsed
+                                ? `${localeString(
+                                      'views.Settings.NostrWalletConnect.lastUsed'
+                                  )} ${DateTimeUtils.listFormattedDateShort(
+                                      connection.lastUsed.getTime() / 1000
+                                  )}`
+                                : localeString(
+                                      'views.Settings.NostrWalletConnect.neverUsed'
+                                  )}
+                        </Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -680,13 +704,6 @@ const styles = StyleSheet.create({
     },
     budgetDetailText: {
         fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    lastUsedSection: {
-        marginTop: 8
-    },
-    lastUsedText: {
-        fontSize: 13,
         fontFamily: 'PPNeueMontreal-Book'
     },
     emptyState: {
