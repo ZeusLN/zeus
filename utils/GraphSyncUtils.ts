@@ -1,7 +1,16 @@
 import { settingsStore, transactionsStore } from '../stores/Stores';
 import { restartNeeded } from './RestartUtils';
+import storage from '../storage';
+import { SendPaymentReq } from '../stores/TransactionsStore';
+
+const PENDING_PAYMENT_STORAGE_KEY = 'zeus-pending-payment-after-graph-sync';
 
 export const handleEnableGraphSync = async (): Promise<void> => {
+    // Save pending payment data before restart so it can be restored
+    if (transactionsStore.pendingPaymentData) {
+        await savePendingPaymentData(transactionsStore.pendingPaymentData);
+    }
+
     await settingsStore.updateSettings({
         expressGraphSync: true,
         graphSyncPromptIgnoreOnce: false
@@ -23,6 +32,40 @@ export const handleNeverAskAgain = async (): Promise<void> => {
         graphSyncPromptNeverAsk: true,
         graphSyncPromptIgnoreOnce: false
     });
+};
+
+export const savePendingPaymentData = async (
+    paymentData: SendPaymentReq
+): Promise<void> => {
+    try {
+        await storage.setItem(
+            PENDING_PAYMENT_STORAGE_KEY,
+            JSON.stringify(paymentData)
+        );
+    } catch (error) {
+        console.error('Error saving pending payment data:', error);
+    }
+};
+
+export const loadPendingPaymentData =
+    async (): Promise<SendPaymentReq | null> => {
+        try {
+            const data = await storage.getItem(PENDING_PAYMENT_STORAGE_KEY);
+            if (data) {
+                return JSON.parse(data);
+            }
+        } catch (error) {
+            console.error('Error loading pending payment data:', error);
+        }
+        return null;
+    };
+
+export const clearPendingPaymentData = async (): Promise<void> => {
+    try {
+        await storage.removeItem(PENDING_PAYMENT_STORAGE_KEY);
+    } catch (error) {
+        console.error('Error clearing pending payment data:', error);
+    }
 };
 
 export const checkGraphSyncBeforePayment = (
