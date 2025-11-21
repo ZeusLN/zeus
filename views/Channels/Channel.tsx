@@ -6,7 +6,8 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
-    Image
+    Image,
+    Platform
 } from 'react-native';
 
 import {
@@ -430,6 +431,7 @@ export default class ChannelView extends React.Component<
                 <ScrollView
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.center}>
                         <Text
@@ -1158,7 +1160,14 @@ export default class ChannelView extends React.Component<
                             )}
                             {BackendUtils.isLNDBased() && (
                                 <>
-                                    <View style={{ marginBottom: 10 }}>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginVertical: 10
+                                        }}
+                                    >
                                         <Text
                                             infoModalText={[
                                                 localeString(
@@ -1170,23 +1179,34 @@ export default class ChannelView extends React.Component<
                                             ]}
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor('text'),
-                                                top: 20
+                                                color: themeColor('text')
                                             }}
                                         >
                                             {localeString(
                                                 'views.Channel.forceClose'
                                             )}
                                         </Text>
-                                        <Switch
-                                            value={forceCloseChannel}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    forceCloseChannel:
-                                                        !forceCloseChannel
-                                                })
-                                            }
-                                        />
+                                        <View
+                                            style={{
+                                                ...(Platform.OS === 'android'
+                                                    ? {
+                                                          marginLeft: 5
+                                                      }
+                                                    : {
+                                                          marginHorizontal: 12
+                                                      })
+                                            }}
+                                        >
+                                            <Switch
+                                                value={forceCloseChannel}
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        forceCloseChannel:
+                                                            !forceCloseChannel
+                                                    })
+                                                }
+                                            />
+                                        </View>
                                     </View>
                                     {!forceCloseChannel && (
                                         <>
@@ -1280,8 +1300,7 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     content: {
-        marginLeft: 20,
-        marginRight: 20
+        marginHorizontal: 20
     },
     center: {
         alignItems: 'center'

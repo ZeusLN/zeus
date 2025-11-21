@@ -687,7 +687,7 @@ export default class ActivityFilter extends React.Component<
                     style={{ flex: 1, backgroundColor: 'transparent' }}
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
-                    <ScrollView>
+                    <ScrollView showsVerticalScrollIndicator={false}>
                         {FILTERS.map((item, index) => {
                             if (!item.condition) return null;
                             if (item.type === 'Services') {
@@ -742,26 +742,40 @@ export default class ActivityFilter extends React.Component<
                                                         {item.label}
                                                     </ListItem.Title>
                                                 </ListItem.Content>
-                                                <Switch
-                                                    value={
-                                                        servicesState !== 'off'
-                                                    }
-                                                    trackEnabledColor={
-                                                        servicesState ===
-                                                        'partial'
-                                                            ? themeColor(
-                                                                  'secondaryText'
-                                                              )
-                                                            : themeColor(
-                                                                  'highlight'
-                                                              )
-                                                    }
-                                                    onValueChange={() =>
-                                                        this.handleToggle(
-                                                            'services'
-                                                        )
-                                                    }
-                                                />
+                                                <View
+                                                    style={{
+                                                        ...(Platform.OS ===
+                                                        'android'
+                                                            ? {
+                                                                  marginLeft: 5
+                                                              }
+                                                            : {
+                                                                  marginHorizontal: 10
+                                                              })
+                                                    }}
+                                                >
+                                                    <Switch
+                                                        value={
+                                                            servicesState !==
+                                                            'off'
+                                                        }
+                                                        trackEnabledColor={
+                                                            servicesState ===
+                                                            'partial'
+                                                                ? themeColor(
+                                                                      'secondaryText'
+                                                                  )
+                                                                : themeColor(
+                                                                      'highlight'
+                                                                  )
+                                                        }
+                                                        onValueChange={() =>
+                                                            this.handleToggle(
+                                                                'services'
+                                                            )
+                                                        }
+                                                    />
+                                                </View>
                                             </ListItem>
                                         </TouchableOpacity>
 
@@ -854,27 +868,40 @@ export default class ActivityFilter extends React.Component<
                                                                                     }
                                                                                 </ListItem.Title>
                                                                             </ListItem.Content>
-                                                                            <Switch
-                                                                                value={
-                                                                                    childSwitchState !==
-                                                                                    'off'
-                                                                                }
-                                                                                trackEnabledColor={
-                                                                                    childSwitchState ===
-                                                                                    'partial'
-                                                                                        ? themeColor(
-                                                                                              'secondaryText'
-                                                                                          )
-                                                                                        : themeColor(
-                                                                                              'highlight'
-                                                                                          )
-                                                                                }
-                                                                                onValueChange={() =>
-                                                                                    this.handleToggle(
-                                                                                        'swaps'
-                                                                                    )
-                                                                                }
-                                                                            />
+                                                                            <View
+                                                                                style={{
+                                                                                    ...(Platform.OS ===
+                                                                                    'android'
+                                                                                        ? {
+                                                                                              marginLeft: 5
+                                                                                          }
+                                                                                        : {
+                                                                                              marginHorizontal: 10
+                                                                                          })
+                                                                                }}
+                                                                            >
+                                                                                <Switch
+                                                                                    value={
+                                                                                        childSwitchState !==
+                                                                                        'off'
+                                                                                    }
+                                                                                    trackEnabledColor={
+                                                                                        childSwitchState ===
+                                                                                        'partial'
+                                                                                            ? themeColor(
+                                                                                                  'secondaryText'
+                                                                                              )
+                                                                                            : themeColor(
+                                                                                                  'highlight'
+                                                                                              )
+                                                                                    }
+                                                                                    onValueChange={() =>
+                                                                                        this.handleToggle(
+                                                                                            'swaps'
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            </View>
                                                                         </ListItem>
                                                                     </TouchableOpacity>
                                                                     {isChildExpanded && (
@@ -975,27 +1002,40 @@ export default class ActivityFilter extends React.Component<
                                                                                                             }
                                                                                                         </ListItem.Title>
                                                                                                     </ListItem.Content>
-                                                                                                    <Switch
-                                                                                                        value={
-                                                                                                            subItemSwitchState !==
-                                                                                                            'off'
-                                                                                                        }
-                                                                                                        trackEnabledColor={
-                                                                                                            subItemSwitchState ===
-                                                                                                            'partial'
-                                                                                                                ? themeColor(
-                                                                                                                      'secondaryText'
-                                                                                                                  )
-                                                                                                                : themeColor(
-                                                                                                                      'highlight'
-                                                                                                                  )
-                                                                                                        }
-                                                                                                        onValueChange={() =>
-                                                                                                            this.handleToggle(
-                                                                                                                subItem.section
-                                                                                                            )
-                                                                                                        }
-                                                                                                    />
+                                                                                                    <View
+                                                                                                        style={{
+                                                                                                            ...(Platform.OS ===
+                                                                                                            'android'
+                                                                                                                ? {
+                                                                                                                      marginLeft: 5
+                                                                                                                  }
+                                                                                                                : {
+                                                                                                                      marginHorizontal: 10
+                                                                                                                  })
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        <Switch
+                                                                                                            value={
+                                                                                                                subItemSwitchState !==
+                                                                                                                'off'
+                                                                                                            }
+                                                                                                            trackEnabledColor={
+                                                                                                                subItemSwitchState ===
+                                                                                                                'partial'
+                                                                                                                    ? themeColor(
+                                                                                                                          'secondaryText'
+                                                                                                                      )
+                                                                                                                    : themeColor(
+                                                                                                                          'highlight'
+                                                                                                                      )
+                                                                                                            }
+                                                                                                            onValueChange={() =>
+                                                                                                                this.handleToggle(
+                                                                                                                    subItem.section
+                                                                                                                )
+                                                                                                            }
+                                                                                                        />
+                                                                                                    </View>
                                                                                                 </ListItem>
                                                                                             </TouchableOpacity>
                                                                                             {isSubItemExpanded && (
@@ -1034,27 +1074,40 @@ export default class ActivityFilter extends React.Component<
                                                                                                                             )}
                                                                                                                         </ListItem.Title>
                                                                                                                     </ListItem.Content>
-                                                                                                                    <Switch
-                                                                                                                        value={
-                                                                                                                            filters
-                                                                                                                                .swapFilter[
-                                                                                                                                subItem.section as
-                                                                                                                                    | 'submarine'
-                                                                                                                                    | 'reverse'
-                                                                                                                            ][
-                                                                                                                                stateEnum
-                                                                                                                            ] ||
-                                                                                                                            false
-                                                                                                                        }
-                                                                                                                        onValueChange={() =>
-                                                                                                                            this.handleToggle(
-                                                                                                                                [
-                                                                                                                                    subItem.section,
+                                                                                                                    <View
+                                                                                                                        style={{
+                                                                                                                            ...(Platform.OS ===
+                                                                                                                            'android'
+                                                                                                                                ? {
+                                                                                                                                      marginLeft: 5
+                                                                                                                                  }
+                                                                                                                                : {
+                                                                                                                                      marginHorizontal: 10
+                                                                                                                                  })
+                                                                                                                        }}
+                                                                                                                    >
+                                                                                                                        <Switch
+                                                                                                                            value={
+                                                                                                                                filters
+                                                                                                                                    .swapFilter[
+                                                                                                                                    subItem.section as
+                                                                                                                                        | 'submarine'
+                                                                                                                                        | 'reverse'
+                                                                                                                                ][
                                                                                                                                     stateEnum
-                                                                                                                                ]
-                                                                                                                            )
-                                                                                                                        }
-                                                                                                                    />
+                                                                                                                                ] ||
+                                                                                                                                false
+                                                                                                                            }
+                                                                                                                            onValueChange={() =>
+                                                                                                                                this.handleToggle(
+                                                                                                                                    [
+                                                                                                                                        subItem.section,
+                                                                                                                                        stateEnum
+                                                                                                                                    ]
+                                                                                                                                )
+                                                                                                                            }
+                                                                                                                        />
+                                                                                                                    </View>
                                                                                                                 </ListItem>
                                                                                                                 {stateIndex <
                                                                                                                     subItem
@@ -1155,28 +1208,40 @@ export default class ActivityFilter extends React.Component<
                                                                                 }
                                                                             </ListItem.Title>
                                                                         </ListItem.Content>
-
-                                                                        <Switch
-                                                                            value={
-                                                                                childSwitchState !==
-                                                                                'off'
-                                                                            }
-                                                                            trackEnabledColor={
-                                                                                childSwitchState ===
-                                                                                'partial'
-                                                                                    ? themeColor(
-                                                                                          'secondaryText'
-                                                                                      )
-                                                                                    : themeColor(
-                                                                                          'highlight'
-                                                                                      )
-                                                                            }
-                                                                            onValueChange={() =>
-                                                                                this.handleToggle(
-                                                                                    child.var as string
-                                                                                )
-                                                                            }
-                                                                        />
+                                                                        <View
+                                                                            style={{
+                                                                                ...(Platform.OS ===
+                                                                                'android'
+                                                                                    ? {
+                                                                                          marginLeft: 5
+                                                                                      }
+                                                                                    : {
+                                                                                          marginHorizontal: 10
+                                                                                      })
+                                                                            }}
+                                                                        >
+                                                                            <Switch
+                                                                                value={
+                                                                                    childSwitchState !==
+                                                                                    'off'
+                                                                                }
+                                                                                trackEnabledColor={
+                                                                                    childSwitchState ===
+                                                                                    'partial'
+                                                                                        ? themeColor(
+                                                                                              'secondaryText'
+                                                                                          )
+                                                                                        : themeColor(
+                                                                                              'highlight'
+                                                                                          )
+                                                                                }
+                                                                                onValueChange={() =>
+                                                                                    this.handleToggle(
+                                                                                        child.var as string
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                        </View>
                                                                     </ListItem>
                                                                 </TouchableOpacity>
                                                                 {isChildExpanded && (
@@ -1222,31 +1287,43 @@ export default class ActivityFilter extends React.Component<
                                                                                                 }
                                                                                             </ListItem.Title>
                                                                                         </ListItem.Content>
-
-                                                                                        <Switch
-                                                                                            value={
-                                                                                                filters[
-                                                                                                    (
-                                                                                                        grandchild as any
+                                                                                        <View
+                                                                                            style={{
+                                                                                                ...(Platform.OS ===
+                                                                                                'android'
+                                                                                                    ? {
+                                                                                                          marginLeft: 5
+                                                                                                      }
+                                                                                                    : {
+                                                                                                          marginHorizontal: 10
+                                                                                                      })
+                                                                                            }}
+                                                                                        >
+                                                                                            <Switch
+                                                                                                value={
+                                                                                                    filters[
+                                                                                                        (
+                                                                                                            grandchild as any
+                                                                                                        )
+                                                                                                            .var[0]
+                                                                                                    ]?.[
+                                                                                                        (
+                                                                                                            grandchild as any
+                                                                                                        )
+                                                                                                            .var[1]
+                                                                                                    ] ||
+                                                                                                    false
+                                                                                                }
+                                                                                                onValueChange={() =>
+                                                                                                    this.handleToggle(
+                                                                                                        (
+                                                                                                            grandchild as any
+                                                                                                        )
+                                                                                                            .var
                                                                                                     )
-                                                                                                        .var[0]
-                                                                                                ]?.[
-                                                                                                    (
-                                                                                                        grandchild as any
-                                                                                                    )
-                                                                                                        .var[1]
-                                                                                                ] ||
-                                                                                                false
-                                                                                            }
-                                                                                            onValueChange={() =>
-                                                                                                this.handleToggle(
-                                                                                                    (
-                                                                                                        grandchild as any
-                                                                                                    )
-                                                                                                        .var
-                                                                                                )
-                                                                                            }
-                                                                                        />
+                                                                                                }
+                                                                                            />
+                                                                                        </View>
                                                                                     </ListItem>
                                                                                     {grandchildIndex <
                                                                                         child
@@ -1298,7 +1375,15 @@ export default class ActivityFilter extends React.Component<
                                                 style={{
                                                     flex: 1,
                                                     flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
+                                                    justifyContent: 'flex-end',
+                                                    ...(Platform.OS ===
+                                                    'android'
+                                                        ? {
+                                                              marginLeft: 5
+                                                          }
+                                                        : {
+                                                              marginHorizontal: 10
+                                                          })
                                                 }}
                                             >
                                                 <Switch

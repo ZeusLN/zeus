@@ -384,6 +384,7 @@ export default class OpenChannel extends React.Component<
                     }}
                     keyboardShouldPersistTaps="handled"
                     ref={this.scrollViewRef}
+                    showsVerticalScrollIndicator={false}
                 >
                     <View style={{ paddingTop: 15 }}>
                         <ToggleButton
@@ -631,11 +632,15 @@ export default class OpenChannel extends React.Component<
 
                                 {BackendUtils.supportsChannelFundMax() &&
                                     additionalChannels.length === 0 && (
-                                        <>
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center'
+                                            }}
+                                        >
                                             <Text
                                                 style={{
-                                                    marginTop: -20,
-                                                    top: 20,
                                                     color: themeColor(
                                                         'secondaryText'
                                                     )
@@ -645,23 +650,34 @@ export default class OpenChannel extends React.Component<
                                                     'views.OpenChannel.fundMax'
                                                 )}
                                             </Text>
-                                            <Switch
-                                                value={fundMax}
-                                                onValueChange={() => {
-                                                    const newValue: boolean =
-                                                        !fundMax;
-                                                    this.setState({
-                                                        fundMax: newValue,
-                                                        local_funding_amount:
-                                                            newValue &&
-                                                            implementation ===
-                                                                'cln-rest'
-                                                                ? 'all'
-                                                                : ''
-                                                    });
+                                            <View
+                                                style={{
+                                                    ...(Platform.OS ===
+                                                    'android'
+                                                        ? { marginLeft: 5 }
+                                                        : {
+                                                              marginHorizontal: 10
+                                                          })
                                                 }}
-                                            />
-                                        </>
+                                            >
+                                                <Switch
+                                                    value={fundMax}
+                                                    onValueChange={() => {
+                                                        const newValue: boolean =
+                                                            !fundMax;
+                                                        this.setState({
+                                                            fundMax: newValue,
+                                                            local_funding_amount:
+                                                                newValue &&
+                                                                implementation ===
+                                                                    'cln-rest'
+                                                                    ? 'all'
+                                                                    : ''
+                                                        });
+                                                    }}
+                                                />
+                                            </View>
+                                        </View>
                                     )}
 
                                 {additionalChannels.map((channel, index) => {
@@ -989,10 +1005,16 @@ export default class OpenChannel extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                        <>
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginTop: 20
+                                            }}
+                                        >
                                             <Text
                                                 style={{
-                                                    top: 20,
                                                     color: themeColor(
                                                         'secondaryText'
                                                     )
@@ -1002,23 +1024,43 @@ export default class OpenChannel extends React.Component<
                                                     'views.OpenChannel.announceChannel'
                                                 )}
                                             </Text>
-                                            <Switch
-                                                value={!privateChannel}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        privateChannel:
-                                                            !privateChannel
-                                                    })
-                                                }
-                                                disabled={simpleTaprootChannel}
-                                            />
-                                        </>
+                                            <View
+                                                style={{
+                                                    ...(Platform.OS ===
+                                                    'android'
+                                                        ? { marginLeft: 5 }
+                                                        : {
+                                                              marginHorizontal: 10
+                                                          })
+                                                }}
+                                            >
+                                                <Switch
+                                                    value={!privateChannel}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            privateChannel:
+                                                                !privateChannel
+                                                        })
+                                                    }
+                                                    disabled={
+                                                        simpleTaprootChannel
+                                                    }
+                                                />
+                                            </View>
+                                        </View>
 
                                         {BackendUtils.isLNDBased() && (
-                                            <>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent:
+                                                        'space-between',
+                                                    alignItems: 'center',
+                                                    marginTop: 16
+                                                }}
+                                            >
                                                 <Text
                                                     style={{
-                                                        top: 20,
                                                         color: themeColor(
                                                             'secondaryText'
                                                         )
@@ -1028,23 +1070,41 @@ export default class OpenChannel extends React.Component<
                                                         'views.OpenChannel.scidAlias'
                                                     )}
                                                 </Text>
-                                                <Switch
-                                                    value={scidAlias}
-                                                    onValueChange={() =>
-                                                        this.setState({
-                                                            scidAlias:
-                                                                !scidAlias
-                                                        })
-                                                    }
-                                                />
-                                            </>
+                                                <View
+                                                    style={{
+                                                        ...(Platform.OS ===
+                                                        'android'
+                                                            ? { marginLeft: 5 }
+                                                            : {
+                                                                  marginHorizontal: 10
+                                                              })
+                                                    }}
+                                                >
+                                                    <Switch
+                                                        value={scidAlias}
+                                                        onValueChange={() =>
+                                                            this.setState({
+                                                                scidAlias:
+                                                                    !scidAlias
+                                                            })
+                                                        }
+                                                    />
+                                                </View>
+                                            </View>
                                         )}
 
                                         {BackendUtils.supportsSimpleTaprootChannels() && (
-                                            <>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent:
+                                                        'space-between',
+                                                    alignItems: 'center',
+                                                    marginTop: 16
+                                                }}
+                                            >
                                                 <Text
                                                     style={{
-                                                        top: 20,
                                                         color: themeColor(
                                                             'secondaryText'
                                                         )
@@ -1054,32 +1114,45 @@ export default class OpenChannel extends React.Component<
                                                         'views.OpenChannel.simpleTaprootChannel'
                                                     )}
                                                 </Text>
-                                                <Switch
-                                                    value={simpleTaprootChannel}
-                                                    onValueChange={() => {
-                                                        this.setState({
-                                                            simpleTaprootChannel:
-                                                                !simpleTaprootChannel
-                                                        });
-
-                                                        if (
-                                                            !simpleTaprootChannel
-                                                        ) {
-                                                            this.setState({
-                                                                privateChannel:
-                                                                    true
-                                                            });
-                                                        }
+                                                <View
+                                                    style={{
+                                                        ...(Platform.OS ===
+                                                        'android'
+                                                            ? { marginLeft: 5 }
+                                                            : {
+                                                                  marginHorizontal: 10
+                                                              })
                                                     }}
-                                                />
-                                            </>
+                                                >
+                                                    <Switch
+                                                        value={
+                                                            simpleTaprootChannel
+                                                        }
+                                                        onValueChange={() => {
+                                                            this.setState({
+                                                                simpleTaprootChannel:
+                                                                    !simpleTaprootChannel
+                                                            });
+
+                                                            if (
+                                                                !simpleTaprootChannel
+                                                            ) {
+                                                                this.setState({
+                                                                    privateChannel:
+                                                                        true
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                </View>
+                                            </View>
                                         )}
                                     </>
                                 )}
                             </>
                         )}
 
-                        <View style={{ ...styles.button, paddingTop: 20 }}>
+                        <View style={{ ...styles.button, paddingTop: 26 }}>
                             <Button
                                 title={
                                     connectPeerOnly

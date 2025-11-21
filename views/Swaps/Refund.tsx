@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
@@ -189,7 +189,10 @@ export default class RefundSwap extends React.Component<
                     }
                     navigation={this.props.navigation}
                 />
-                <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
+                <ScrollView
+                    style={{ flex: 1, paddingHorizontal: 20 }}
+                    showsVerticalScrollIndicator={false}
+                >
                     {error && (
                         <View style={{ marginBottom: 10 }}>
                             <ErrorMessage message={error} />
@@ -315,7 +318,14 @@ export default class RefundSwap extends React.Component<
                                 flex: 1,
                                 flexDirection: 'row',
                                 justifyContent: 'flex-end',
-                                marginTop: 4
+                                marginTop: 4,
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
                             }}
                         >
                             <Switch

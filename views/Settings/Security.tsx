@@ -1,6 +1,6 @@
 import { inject, observer } from 'mobx-react';
 import * as React from 'react';
-import { FlatList, ScrollView, View } from 'react-native';
+import { FlatList, Platform, ScrollView, View } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
 import { Icon, ListItem } from 'react-native-elements';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -327,13 +327,24 @@ export default class Security extends React.Component<
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>
-
-                            <Switch
-                                value={isBiometryEnabled}
-                                onValueChange={(value: boolean) =>
-                                    this.handleBiometricsSwitchChange(value)
-                                }
-                            />
+                            <View
+                                style={{
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
+                            >
+                                <Switch
+                                    value={isBiometryEnabled}
+                                    onValueChange={(value: boolean) =>
+                                        this.handleBiometricsSwitchChange(value)
+                                    }
+                                />
+                            </View>
                         </ListItem>
                     )}
                     {pinExists && (
@@ -354,17 +365,29 @@ export default class Security extends React.Component<
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>
-                            <Switch
-                                value={scramblePin}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        scramblePin: !scramblePin
-                                    });
-                                    updateSettings({
-                                        scramblePin: !scramblePin
-                                    });
+                            <View
+                                style={{
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
                                 }}
-                            />
+                            >
+                                <Switch
+                                    value={scramblePin}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            scramblePin: !scramblePin
+                                        });
+                                        updateSettings({
+                                            scramblePin: !scramblePin
+                                        });
+                                    }}
+                                />
+                            </View>
                         </ListItem>
                     )}
                     {(pinExists || passphraseExists || isBiometryEnabled) && (
@@ -385,17 +408,29 @@ export default class Security extends React.Component<
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>
-                            <Switch
-                                value={loginBackground}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        loginBackground: !loginBackground
-                                    });
-                                    updateSettings({
-                                        loginBackground: !loginBackground
-                                    });
+                            <View
+                                style={{
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
                                 }}
-                            />
+                            >
+                                <Switch
+                                    value={loginBackground}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            loginBackground: !loginBackground
+                                        });
+                                        updateSettings({
+                                            loginBackground: !loginBackground
+                                        });
+                                    }}
+                                />
+                            </View>
                         </ListItem>
                     )}
                 </ScrollView>

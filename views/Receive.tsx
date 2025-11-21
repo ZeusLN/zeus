@@ -2311,7 +2311,9 @@ export default class Receive extends React.Component<
                                                         style={{
                                                             flexDirection:
                                                                 'row',
-                                                            marginBottom: 15
+                                                            marginBottom: 15,
+
+                                                            alignItems: 'center'
                                                         }}
                                                     >
                                                         <View
@@ -2358,7 +2360,14 @@ export default class Receive extends React.Component<
                                                             style={{
                                                                 alignSelf:
                                                                     'center',
-                                                                marginLeft: 5
+                                                                ...(Platform.OS ===
+                                                                'android'
+                                                                    ? {
+                                                                          marginLeft: 5
+                                                                      }
+                                                                    : {
+                                                                          marginHorizontal: 10
+                                                                      })
                                                             }}
                                                         >
                                                             <Switch
@@ -3036,7 +3045,9 @@ export default class Receive extends React.Component<
                                                                             : Platform.OS ===
                                                                               'ios'
                                                                             ? 10
-                                                                            : 6
+                                                                            : 6,
+                                                                    alignItems:
+                                                                        'center'
                                                                 }}
                                                             >
                                                                 <View
@@ -3074,7 +3085,14 @@ export default class Receive extends React.Component<
                                                                     style={{
                                                                         alignSelf:
                                                                             'center',
-                                                                        marginLeft: 5
+                                                                        ...(Platform.OS ===
+                                                                        'android'
+                                                                            ? {
+                                                                                  marginLeft: 5
+                                                                              }
+                                                                            : {
+                                                                                  marginHorizontal: 10
+                                                                              })
                                                                     }}
                                                                 >
                                                                     <Switch
@@ -3210,6 +3228,8 @@ export default class Receive extends React.Component<
                                                                 style={{
                                                                     flexDirection:
                                                                         'row',
+                                                                    alignItems:
+                                                                        'center',
                                                                     marginTop: 20
                                                                 }}
                                                             >
@@ -3246,7 +3266,14 @@ export default class Receive extends React.Component<
                                                                     style={{
                                                                         alignSelf:
                                                                             'center',
-                                                                        marginLeft: 5
+                                                                        ...(Platform.OS ===
+                                                                        'android'
+                                                                            ? {
+                                                                                  marginLeft: 5
+                                                                              }
+                                                                            : {
+                                                                                  marginHorizontal: 10
+                                                                              })
                                                                     }}
                                                                 >
                                                                     <Switch
@@ -3275,7 +3302,9 @@ export default class Receive extends React.Component<
                                                                 style={{
                                                                     flexDirection:
                                                                         'row',
-                                                                    marginTop: 20
+                                                                    marginTop: 20,
+                                                                    alignItems:
+                                                                        'center'
                                                                 }}
                                                             >
                                                                 <View
@@ -3311,7 +3340,14 @@ export default class Receive extends React.Component<
                                                                     style={{
                                                                         alignSelf:
                                                                             'center',
-                                                                        marginLeft: 5
+                                                                        ...(Platform.OS ===
+                                                                        'android'
+                                                                            ? {
+                                                                                  marginLeft: 5
+                                                                              }
+                                                                            : {
+                                                                                  marginHorizontal: 10
+                                                                              })
                                                                     }}
                                                                 >
                                                                     <Switch

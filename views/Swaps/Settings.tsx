@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
@@ -151,8 +151,7 @@ export default class SwapSettings extends React.Component<
                         <ListItem
                             containerStyle={{
                                 backgroundColor: 'transparent',
-                                paddingHorizontal: 0,
-                                paddingTop: 30
+                                paddingHorizontal: 0
                             }}
                         >
                             <ListItem.Title
@@ -168,7 +167,14 @@ export default class SwapSettings extends React.Component<
                                 style={{
                                     flex: 1,
                                     flexDirection: 'row',
-                                    justifyContent: 'flex-end'
+                                    justifyContent: 'flex-end',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
                                 }}
                             >
                                 <Switch

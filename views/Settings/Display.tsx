@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
@@ -177,7 +177,18 @@ export default class Display extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={displayNickname}
                                 disabled={
@@ -212,7 +223,18 @@ export default class Display extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={bigKeypadButtons}
                                 disabled={
@@ -247,7 +269,18 @@ export default class Display extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={showAllDecimalPlaces}
                                 disabled={
@@ -284,7 +317,18 @@ export default class Display extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={removeDecimalSpaces}
                                 disabled={
@@ -321,7 +365,18 @@ export default class Display extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={showMillisatoshiAmounts}
                                 disabled={
@@ -358,7 +413,18 @@ export default class Display extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={selectNodeOnStartup}
                                 disabled={

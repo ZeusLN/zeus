@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { ListItem, Divider } from 'react-native-elements';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -187,7 +187,14 @@ export default class DisasterRecovery extends React.Component<
                                     style={{
                                         flex: 1,
                                         flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        justifyContent: 'flex-end',
+                                        ...(Platform.OS === 'android'
+                                            ? {
+                                                  marginLeft: 5
+                                              }
+                                            : {
+                                                  marginHorizontal: 10
+                                              })
                                     }}
                                 >
                                     <Switch

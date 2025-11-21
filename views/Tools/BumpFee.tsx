@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -360,7 +360,15 @@ export default class BumpFee extends React.PureComponent<
                                 flex: 1,
                                 flexDirection: 'row',
                                 justifyContent: 'flex-end',
-                                top: 5
+                                top: 5,
+
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
                             }}
                         >
                             <Switch

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -181,7 +181,14 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     style={{
                                         flex: 1,
                                         flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        justifyContent: 'flex-end',
+                                        ...(Platform.OS === 'android'
+                                            ? {
+                                                  marginLeft: 5
+                                              }
+                                            : {
+                                                  marginHorizontal: 10
+                                              })
                                     }}
                                 >
                                     <Switch
@@ -291,7 +298,14 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     style={{
                                         flex: 1,
                                         flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        justifyContent: 'flex-end',
+                                        ...(Platform.OS === 'android'
+                                            ? {
+                                                  marginLeft: 5
+                                              }
+                                            : {
+                                                  marginHorizontal: 10
+                                              })
                                     }}
                                 >
                                     <Switch

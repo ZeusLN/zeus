@@ -1404,10 +1404,16 @@ export default class WalletConfiguration extends React.Component<
                                     locked={loading}
                                 />
 
-                                <>
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        marginTop: 14
+                                    }}
+                                >
                                     <Text
                                         style={{
-                                            top: 20,
                                             color: themeColor('secondaryText')
                                         }}
                                     >
@@ -1415,16 +1421,25 @@ export default class WalletConfiguration extends React.Component<
                                             'views.Settings.AddEditNode.existingAccount'
                                         )}
                                     </Text>
-                                    <Switch
-                                        value={existingAccount}
-                                        onValueChange={() =>
-                                            this.setState({
-                                                existingAccount:
-                                                    !existingAccount
-                                            })
-                                        }
-                                    />
-                                </>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center',
+                                            ...(Platform.OS === 'android'
+                                                ? { marginLeft: 5 }
+                                                : { marginHorizontal: 10 })
+                                        }}
+                                    >
+                                        <Switch
+                                            value={existingAccount}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    existingAccount:
+                                                        !existingAccount
+                                                })
+                                            }
+                                        />
+                                    </View>
+                                </View>
 
                                 {existingAccount && (
                                     <>
@@ -2173,10 +2188,16 @@ export default class WalletConfiguration extends React.Component<
                         )}
 
                         {supportsTor && (
-                            <>
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginTop: 14
+                                }}
+                            >
                                 <Text
                                     style={{
-                                        top: 20,
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -2184,23 +2205,38 @@ export default class WalletConfiguration extends React.Component<
                                         'views.Settings.AddEditNode.useTor'
                                     )}
                                 </Text>
-                                <Switch
-                                    value={enableTor}
-                                    onValueChange={() =>
-                                        this.setState({
-                                            enableTor: !enableTor,
-                                            saved: false
-                                        })
-                                    }
-                                />
-                            </>
+                                <View
+                                    style={{
+                                        alignSelf: 'center',
+                                        ...(Platform.OS === 'android'
+                                            ? { marginLeft: 5 }
+                                            : { marginHorizontal: 10 })
+                                    }}
+                                >
+                                    <Switch
+                                        value={enableTor}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                enableTor: !enableTor,
+                                                saved: false
+                                            })
+                                        }
+                                    />
+                                </View>
+                            </View>
                         )}
 
                         {supportsCertVerification && !enableTor && (
-                            <>
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    marginVertical: 16
+                                }}
+                            >
                                 <Text
                                     style={{
-                                        top: 20,
                                         color: themeColor('secondaryText')
                                     }}
                                 >
@@ -2208,16 +2244,26 @@ export default class WalletConfiguration extends React.Component<
                                         'views.Settings.AddEditNode.certificateVerification'
                                     )}
                                 </Text>
-                                <Switch
-                                    value={certVerification}
-                                    onValueChange={() =>
-                                        this.setState({
-                                            certVerification: !certVerification,
-                                            saved: false
-                                        })
-                                    }
-                                />
-                            </>
+                                <View
+                                    style={{
+                                        alignSelf: 'center',
+                                        ...(Platform.OS === 'android'
+                                            ? { marginLeft: 5 }
+                                            : { marginHorizontal: 10 })
+                                    }}
+                                >
+                                    <Switch
+                                        value={certVerification}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                certVerification:
+                                                    !certVerification,
+                                                saved: false
+                                            })
+                                        }
+                                    />
+                                </View>
+                            </View>
                         )}
                     </View>
 

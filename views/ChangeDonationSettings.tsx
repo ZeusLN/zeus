@@ -1,6 +1,6 @@
 import React from 'react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { inject, observer } from 'mobx-react';
 
@@ -85,15 +85,14 @@ export default class ChangeDonationSettings extends React.Component<
                             style={{
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
-                                marginTop: 16,
+                                alignItems: 'center',
                                 marginBottom: 16
                             }}
                         >
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('secondaryText'),
-                                    flex: 1
+                                    color: themeColor('secondaryText')
                                 }}
                                 infoModalText={localeString(
                                     'views.PaymentRequest.donationInfo'
@@ -103,7 +102,14 @@ export default class ChangeDonationSettings extends React.Component<
                                     'views.PaymentRequest.enableDonations'
                                 )}
                             </Text>
-                            <View>
+                            <View
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? { marginLeft: 5 }
+                                        : { marginHorizontal: 10 })
+                                }}
+                            >
                                 <Switch
                                     value={enableDonations}
                                     onValueChange={async () => {

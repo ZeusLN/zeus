@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Slider from '@react-native-community/slider';
@@ -371,7 +371,18 @@ export default class PaymentsSettings extends React.Component<
                                 'views.Settings.Privacy.enableMempoolRates'
                             )}
                         </Text>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={enableMempoolRates}
                                 onValueChange={async () => {
@@ -410,13 +421,13 @@ export default class PaymentsSettings extends React.Component<
                             disabled={!enableMempoolRates}
                         />
                     </View>
-                    {isMainNet && (
+                    {true && (
                         <View
                             style={{
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
-                                marginTop: 16,
-                                marginBottom: 16
+                                alignItems: 'center',
+                                marginVertical: 16
                             }}
                         >
                             <Text
@@ -433,7 +444,17 @@ export default class PaymentsSettings extends React.Component<
                                     'views.PaymentRequest.enableDonations'
                                 )}
                             </Text>
-                            <View>
+                            <View
+                                style={{
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
+                            >
                                 <Switch
                                     value={enableDonations}
                                     onValueChange={async () => {

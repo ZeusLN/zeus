@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -122,7 +122,13 @@ export default class ChannelsSettings extends React.Component<
                         }}
                     />
 
-                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20,
+                            alignItems: 'center'
+                        }}
+                    >
                         <View style={{ flex: 1 }}>
                             <Text
                                 style={{
@@ -135,7 +141,18 @@ export default class ChannelsSettings extends React.Component<
                                 )}
                             </Text>
                         </View>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                        <View
+                            style={{
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'android'
+                                    ? {
+                                          marginLeft: 5
+                                      }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
+                            }}
+                        >
                             <Switch
                                 value={!privateChannel}
                                 onValueChange={async () => {
@@ -158,7 +175,13 @@ export default class ChannelsSettings extends React.Component<
                     </View>
 
                     {BackendUtils.isLNDBased() && (
-                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20,
+                                alignItems: 'center'
+                            }}
+                        >
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
@@ -172,7 +195,16 @@ export default class ChannelsSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={scidAlias}
@@ -196,7 +228,13 @@ export default class ChannelsSettings extends React.Component<
                     )}
 
                     {BackendUtils.supportsSimpleTaprootChannels() && (
-                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20,
+                                alignItems: 'center'
+                            }}
+                        >
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
@@ -210,7 +248,16 @@ export default class ChannelsSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={simpleTaprootChannel}

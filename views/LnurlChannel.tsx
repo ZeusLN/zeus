@@ -1,7 +1,7 @@
 import url from 'url';
 import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Platform, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
 import { Route } from '@react-navigation/native';
@@ -250,21 +250,31 @@ export default class LnurlChannel extends React.Component<
                                     'views.Wallet.Channels.announced'
                                 )}
                             </Text>
-                            <Switch
-                                value={!privateChannel}
-                                onValueChange={() =>
-                                    this.setState({
-                                        privateChannel: !privateChannel
-                                    })
-                                }
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
+                            <View
                                 style={{
-                                    alignSelf: 'flex-end'
+                                    ...(Platform.OS === 'android'
+                                        ? { marginLeft: 5 }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
                                 }}
-                            />
+                            >
+                                <Switch
+                                    value={!privateChannel}
+                                    onValueChange={() =>
+                                        this.setState({
+                                            privateChannel: !privateChannel
+                                        })
+                                    }
+                                    trackColor={{
+                                        false: '#767577',
+                                        true: themeColor('highlight')
+                                    }}
+                                    style={{
+                                        alignSelf: 'flex-end'
+                                    }}
+                                />
+                            </View>
                         </>
                     </View>
                     <View style={styles.button}>

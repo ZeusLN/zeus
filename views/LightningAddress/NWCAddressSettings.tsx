@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, View, Alert } from 'react-native';
+import { ScrollView, View, Alert, Platform } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -138,7 +138,16 @@ export default class NWCAddressSettings extends React.Component<
                                 </Text>
                             </View>
                             <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                                style={{
+                                    alignSelf: 'center',
+                                    ...(Platform.OS === 'android'
+                                        ? {
+                                              marginLeft: 5
+                                          }
+                                        : {
+                                              marginHorizontal: 10
+                                          })
+                                }}
                             >
                                 <Switch
                                     value={allowComments ?? true}

@@ -1117,51 +1117,68 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     'views.OpenChannel.fundMax'
                                                 )}
                                             </Text>
-                                            <Switch
-                                                value={fundMax}
-                                                onValueChange={() => {
-                                                    const newValue: boolean =
-                                                        !fundMax;
-                                                    if (newValue) {
-                                                        // Save current values if they exist
-                                                        if (amount) {
-                                                            this.previousAmount =
-                                                                amount;
-                                                        }
-                                                        if (
-                                                            satAmount &&
-                                                            satAmount !== '0'
-                                                        ) {
-                                                            this.previousSatAmount =
-                                                                satAmount;
-                                                        }
-                                                        this.setState({
-                                                            fundMax: newValue,
-                                                            amount:
-                                                                implementation ===
-                                                                'cln-rest'
-                                                                    ? 'all'
-                                                                    : '',
-                                                            satAmount:
-                                                                utxoBalance > 0
-                                                                    ? utxoBalance
-                                                                    : confirmedBlockchainBalance
-                                                        });
-                                                    } else {
-                                                        this.setState({
-                                                            fundMax: newValue,
-                                                            amount:
-                                                                this
-                                                                    .previousAmount ||
-                                                                '',
-                                                            satAmount:
-                                                                this
-                                                                    .previousSatAmount ||
-                                                                '0'
-                                                        });
-                                                    }
+                                            <View
+                                                style={{
+                                                    ...(Platform.OS ===
+                                                    'android'
+                                                        ? {
+                                                              marginLeft: 5
+                                                          }
+                                                        : {
+                                                              marginHorizontal: 10
+                                                          })
                                                 }}
-                                            />
+                                            >
+                                                <Switch
+                                                    value={fundMax}
+                                                    onValueChange={() => {
+                                                        const newValue: boolean =
+                                                            !fundMax;
+                                                        if (newValue) {
+                                                            // Save current values if they exist
+                                                            if (amount) {
+                                                                this.previousAmount =
+                                                                    amount;
+                                                            }
+                                                            if (
+                                                                satAmount &&
+                                                                satAmount !==
+                                                                    '0'
+                                                            ) {
+                                                                this.previousSatAmount =
+                                                                    satAmount;
+                                                            }
+                                                            this.setState({
+                                                                fundMax:
+                                                                    newValue,
+                                                                amount:
+                                                                    implementation ===
+                                                                    'cln-rest'
+                                                                        ? 'all'
+                                                                        : '',
+                                                                satAmount:
+                                                                    utxoBalance >
+                                                                    0
+                                                                        ? utxoBalance
+                                                                        : confirmedBlockchainBalance
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                fundMax:
+                                                                    newValue,
+                                                                amount:
+                                                                    this
+                                                                        .previousAmount ||
+                                                                    '',
+                                                                satAmount:
+                                                                    this
+                                                                        .previousSatAmount ||
+                                                                    '0'
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+                                            </View>
                                         </View>
                                     )}
 
@@ -1505,6 +1522,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 'views.PaymentRequest.amp'
                                             )}
                                         </Text>
+
                                         <View
                                             style={{
                                                 flex: 1,
@@ -1512,25 +1530,17 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 justifyContent: 'flex-end'
                                             }}
                                         >
-                                            <View
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
-                                                }}
-                                            >
-                                                <Switch
-                                                    value={
-                                                        enableAtomicMultiPathPayment
-                                                    }
-                                                    onValueChange={() =>
-                                                        this.setState({
-                                                            enableAtomicMultiPathPayment:
-                                                                !enableAtomicMultiPathPayment
-                                                        })
-                                                    }
-                                                />
-                                            </View>
+                                            <Switch
+                                                value={
+                                                    enableAtomicMultiPathPayment
+                                                }
+                                                onValueChange={() =>
+                                                    this.setState({
+                                                        enableAtomicMultiPathPayment:
+                                                            !enableAtomicMultiPathPayment
+                                                    })
+                                                }
+                                            />
                                         </View>
                                     </React.Fragment>
                                 )}

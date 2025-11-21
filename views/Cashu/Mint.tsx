@@ -6,7 +6,8 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
-    View
+    View,
+    Platform
 } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -453,7 +454,9 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     <View
                                         style={{
                                             alignSelf: 'center',
-                                            marginLeft: 5
+                                            ...(Platform.OS === 'android'
+                                                ? { marginLeft: 5 }
+                                                : { marginHorizontal: 10 })
                                         }}
                                     >
                                         <Switch

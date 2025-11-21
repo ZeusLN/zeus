@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import { StyleSheet, ScrollView, View, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -113,14 +113,24 @@ export default class PayCodeCreateView extends React.Component<
                         >
                             {localeString('views.PayCode.singleUse')}
                         </Text>
-                        <Switch
-                            value={singleUse}
-                            onValueChange={() => {
-                                this.setState({
-                                    singleUse: !singleUse
-                                });
+                        <View
+                            style={{
+                                ...(Platform.OS === 'android'
+                                    ? { marginLeft: 5 }
+                                    : {
+                                          marginHorizontal: 10
+                                      })
                             }}
-                        />
+                        >
+                            <Switch
+                                value={singleUse}
+                                onValueChange={() => {
+                                    this.setState({
+                                        singleUse: !singleUse
+                                    });
+                                }}
+                            />
+                        </View>
                     </>
                 </ScrollView>
                 <View style={{ bottom: 15 }}>
