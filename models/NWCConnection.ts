@@ -4,13 +4,21 @@ import { localeString } from '../utils/LocaleUtils';
 
 import BaseModel from './BaseModel';
 
-export type PermissionsType = 'full_access' | 'read_only' | 'custom';
-export type BudgetRenewalType =
-    | 'never'
-    | 'daily'
-    | 'weekly'
-    | 'monthly'
-    | 'yearly';
+import { Implementations } from '../stores/SettingsStore';
+
+export enum PermissionType {
+    FullAccess = 'full_access',
+    ReadOnly = 'read_only',
+    Custom = 'custom'
+}
+
+export enum BudgetRenewalType {
+    Never = 'never',
+    Daily = 'daily',
+    Weekly = 'weekly',
+    Monthly = 'monthly',
+    Yearly = 'yearly'
+}
 
 export type TimeUnit = 'Hours' | 'Days' | 'Weeks' | 'Months' | 'Years';
 export interface NWCConnectionData {
@@ -30,6 +38,8 @@ export interface NWCConnectionData {
     lastBudgetReset?: Date;
     customExpiryValue?: number;
     customExpiryUnit?: TimeUnit;
+    nodePubkey: string;
+    implementation: string;
     metadata?: any;
 }
 
@@ -59,6 +69,8 @@ export default class NWCConnection extends BaseModel {
     @observable lastBudgetReset?: Date;
     @observable customExpiryValue?: number;
     @observable customExpiryUnit?: TimeUnit;
+    @observable nodePubkey: string;
+    @observable implementation: Implementations;
     @observable metadata?: any;
 
     constructor(data?: NWCConnectionData) {
@@ -165,12 +177,17 @@ export default class NWCConnection extends BaseModel {
     }
 
     @action
-    public checkAndResetBudgetIfNeeded(): boolean {
-        if (this.needsBudgetReset) {
-            this.resetBudget();
-            return true;
+    public checkAndResetBudgetIfNeeded(availableBalance?: number): boolean {
+        if (!this.needsBudgetReset) {
+            return false;
         }
-        return false;
+        if (availableBalance !== undefined && this.maxAmountSats) {
+            if (this.maxAmountSats > availableBalance) {
+                return false;
+            }
+        }
+        this.resetBudget();
+        return true;
     }
 
     private validateAmount(amountSats: number): void {
