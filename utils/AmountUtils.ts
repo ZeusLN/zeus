@@ -308,3 +308,21 @@ export function getFormattedAmount(
         }
     }
 }
+
+/**
+ * Converts satoshis to millisatoshis
+ * @param sats - Amount in satoshis
+ * @returns Amount in millisatoshis
+ */
+export function satsToMillisats(sats: number): number {
+    return Math.floor(sats * 1000);
+}
+
+/**
+ * Converts millisatoshis to satoshis
+ * @param millisats - Amount in millisatoshis
+ * @returns Amount in satoshis
+ */
+export function millisatsToSats(millisats: number): number {
+    return Math.floor(millisats / 1000);
+}

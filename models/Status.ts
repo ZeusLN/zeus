@@ -7,7 +7,8 @@ export enum Status {
     Unstable = localeString('channel.status.unstable'),
     Offline = localeString('channel.status.offline'),
     Opening = localeString('channel.status.opening'),
-    Closing = localeString('channel.status.closing')
+    Closing = localeString('channel.status.closing'),
+    ReadOnly = localeString('views.Settings.NostrWalletConnect.readOnly')
 }
 
 export enum ExpirationStatus {

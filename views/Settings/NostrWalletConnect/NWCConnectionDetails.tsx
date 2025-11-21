@@ -37,6 +37,8 @@ interface NWCConnectionDetailsProps {
 
 interface NWCConnectionDetailsState {
     loading: boolean;
+    regenerating: boolean;
+    deleting: boolean;
     connection: NWCConnection | null;
     confirmDelete: boolean;
     error: string | null;
@@ -53,6 +55,8 @@ export default class NWCConnectionDetails extends React.Component<
         super(props);
         this.state = {
             loading: false,
+            regenerating: false,
+            deleting: false,
             connection: null,
             confirmDelete: false,
             error: null
@@ -65,6 +69,7 @@ export default class NWCConnectionDetails extends React.Component<
             'focus',
             this.loadConnection
         );
+        this.loadConnection();
     }
 
     loadConnection = async () => {
@@ -96,7 +101,14 @@ export default class NWCConnectionDetails extends React.Component<
             }
         } catch (error) {
             console.error('Failed to load connection:', error);
-            this.setState({ loading: false });
+            this.setState({
+                loading: false,
+                error:
+                    (error as Error).message ||
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToLoadConnections'
+                    )
+            });
         }
     };
 
@@ -113,6 +125,70 @@ export default class NWCConnectionDetails extends React.Component<
         });
     };
 
+    buildConnectionParams = (connection: NWCConnection): any => {
+        const params: any = {
+            id: connection.id,
+            name: connection.name,
+            relayUrl: connection.relayUrl,
+            permissions: connection.permissions,
+            budgetRenewal: connection.budgetRenewal || 'never'
+        };
+
+        if (connection.maxAmountSats && connection.maxAmountSats > 0) {
+            params.budgetAmount = connection.maxAmountSats;
+        }
+
+        if (connection.expiresAt) {
+            params.expiresAt = connection.expiresAt;
+        }
+        if (connection.customExpiryValue && connection.customExpiryUnit) {
+            params.customExpiryValue = connection.customExpiryValue;
+            params.customExpiryUnit = connection.customExpiryUnit;
+        }
+
+        return params;
+    };
+
+    regenerateConnection = async () => {
+        const { NostrWalletConnectStore, navigation } = this.props;
+        const { connection } = this.state;
+
+        if (!connection) {
+            this.setState({
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            });
+            return;
+        }
+        this.setState({ regenerating: true, error: null });
+        try {
+            const params = this.buildConnectionParams(connection);
+            await NostrWalletConnectStore.deleteConnection(connection.id);
+            const nostrUrl = await NostrWalletConnectStore.createConnection(
+                params
+            );
+            if (nostrUrl) {
+                const createdConnection =
+                    NostrWalletConnectStore.connections[0];
+                navigation.navigate('NWCConnectionQR', {
+                    connectionId: createdConnection.id,
+                    nostrUrl
+                });
+            }
+        } catch (error) {
+            console.error('Failed to regenerate connection:', error);
+            this.setState({
+                error:
+                    (error as Error).message ||
+                    'Failed to regenerate connection',
+                regenerating: false
+            });
+        } finally {
+            this.setState({ regenerating: false });
+        }
+    };
+
     deleteConnection = (connection: NWCConnection) => {
         const { NostrWalletConnectStore, navigation } = this.props;
         if (!this.state.confirmDelete) {
@@ -121,7 +197,7 @@ export default class NWCConnectionDetails extends React.Component<
                 this.setState({ confirmDelete: false });
             }, 3000);
         } else {
-            this.setState({ loading: true, error: '' });
+            this.setState({ deleting: true, error: null });
             NostrWalletConnectStore.deleteConnection(connection.id)
                 .then(() => {
                     navigation.goBack();
@@ -130,16 +206,16 @@ export default class NWCConnectionDetails extends React.Component<
                     console.error('Failed to delete connection:', error);
                     this.setState({
                         error: 'Failed to delete connection',
-                        loading: false,
+                        deleting: false,
                         confirmDelete: false
                     });
                 });
         }
     };
-
     render() {
         const { navigation, NostrWalletConnectStore } = this.props;
-        const { loading, error, connection } = this.state;
+        const { loading, regenerating, deleting, error, connection } =
+            this.state;
         const { loading: storeLoading } = NostrWalletConnectStore;
 
         return (
@@ -149,7 +225,7 @@ export default class NWCConnectionDetails extends React.Component<
                     centerComponent={
                         connection
                             ? {
-                                  text: connection?.name,
+                                  text: connection.name,
                                   style: {
                                       color: themeColor('text'),
                                       fontFamily: 'PPNeueMontreal-Book'
@@ -158,7 +234,7 @@ export default class NWCConnectionDetails extends React.Component<
                             : undefined
                     }
                     rightComponent={
-                        loading || storeLoading ? (
+                        loading || storeLoading || regenerating || deleting ? (
                             <View style={{ marginRight: 10 }}>
                                 <LoadingIndicator size={30} />
                             </View>
@@ -236,8 +312,9 @@ export default class NWCConnectionDetails extends React.Component<
                                         keyValue={localeString(
                                             'views.Settings.NostrWalletConnect.created'
                                         )}
-                                        value={DateTimeUtils.listFormattedDateOrder(
-                                            connection.createdAt
+                                        value={DateTimeUtils.listFormattedDateShort(
+                                            connection.createdAt.getTime() /
+                                                1000
                                         )}
                                     />
 
@@ -247,30 +324,30 @@ export default class NWCConnectionDetails extends React.Component<
                                         )}
                                         value={
                                             connection.lastUsed
-                                                ? DateTimeUtils.listFormattedDateOrder(
-                                                      connection.lastUsed
+                                                ? DateTimeUtils.listFormattedDateShort(
+                                                      connection.lastUsed.getTime() /
+                                                          1000
                                                   )
                                                 : localeString(
                                                       'models.Invoice.never'
                                                   )
                                         }
                                     />
-
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.Settings.NostrWalletConnect.budget'
-                                        )}
-                                        value={`${
-                                            connection.maxAmountSats?.toLocaleString() ??
-                                            localeString(
-                                                'views.Settings.NostrWalletConnect.unlimited'
-                                            )
-                                        } ${localeString('general.sats')}${
-                                            connection.budgetRenewal !== 'never'
-                                                ? ` (${connection.budgetRenewal})`
-                                                : ''
-                                        }`}
-                                    />
+                                    {connection.maxAmountSats && (
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Settings.NostrWalletConnect.budget'
+                                            )}
+                                            value={`${connection.maxAmountSats.toLocaleString()} ${localeString(
+                                                'general.sats'
+                                            )}${
+                                                connection.budgetRenewal !==
+                                                'never'
+                                                    ? ` (${connection.budgetRenewal})`
+                                                    : ''
+                                            }`}
+                                        />
+                                    )}
 
                                     {connection.maxAmountSats && (
                                         <>
@@ -344,7 +421,7 @@ export default class NWCConnectionDetails extends React.Component<
                                         <Body>
                                             ({connection.permissions.length} of{' '}
                                             {
-                                                NostrConnectUtils.getFullAccessPermissions()
+                                                NostrConnectUtils.getAvailablePermissions()
                                                     .length
                                             }
                                             )
@@ -352,15 +429,15 @@ export default class NWCConnectionDetails extends React.Component<
                                     </View>
 
                                     <View style={styles.permissionsList}>
-                                        {NostrConnectUtils.getFullAccessPermissions()
+                                        {NostrConnectUtils.getAvailablePermissions()
                                             .sort((a, b) => {
                                                 const aActive =
                                                     connection.permissions.includes(
-                                                        a
+                                                        a.key
                                                     );
                                                 const bActive =
                                                     connection.permissions.includes(
-                                                        b
+                                                        b.key
                                                     );
                                                 if (aActive && !bActive)
                                                     return -1;
@@ -368,14 +445,16 @@ export default class NWCConnectionDetails extends React.Component<
                                                     return 1;
                                                 return 0;
                                             })
-                                            .map((permission, index) => {
+                                            .map((permissionOption) => {
                                                 const isActive =
                                                     connection.permissions.includes(
-                                                        permission
+                                                        permissionOption.key
                                                     );
                                                 return (
                                                     <View
-                                                        key={index}
+                                                        key={
+                                                            permissionOption.key
+                                                        }
                                                         style={
                                                             styles.permissionItem
                                                         }
@@ -408,7 +487,6 @@ export default class NWCConnectionDetails extends React.Component<
                                                         <Text
                                                             style={[
                                                                 styles.permissionText,
-
                                                                 {
                                                                     color: isActive
                                                                         ? themeColor(
@@ -421,7 +499,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                             ]}
                                                         >
                                                             {NostrConnectUtils.getPermissionShortDescription(
-                                                                permission
+                                                                permissionOption.key
                                                             )}
                                                         </Text>
                                                     </View>
@@ -439,6 +517,15 @@ export default class NWCConnectionDetails extends React.Component<
                             ]}
                         >
                             <Button
+                                title={localeString(
+                                    'views.Settings.NostrWalletConnect.regenerateConnection'
+                                )}
+                                onPress={this.regenerateConnection}
+                                disabled={regenerating}
+                                secondary={regenerating}
+                                noUppercase
+                            />
+                            <Button
                                 title={
                                     this.state.confirmDelete
                                         ? localeString(
@@ -452,6 +539,8 @@ export default class NWCConnectionDetails extends React.Component<
                                     this.deleteConnection(connection)
                                 }
                                 warning={!this.state.confirmDelete}
+                                disabled={loading || deleting}
+                                secondary={deleting}
                                 containerStyle={{
                                     borderColor: this.state.confirmDelete
                                         ? themeColor('warning')
@@ -472,11 +561,6 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20,
         paddingTop: 10
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
     },
     headerActionButton: {
         padding: 8
@@ -516,6 +600,7 @@ const styles = StyleSheet.create({
     },
     bottomContainer: {
         paddingHorizontal: 20,
-        paddingVertical: 15
+        paddingVertical: 15,
+        gap: 10
     }
 });

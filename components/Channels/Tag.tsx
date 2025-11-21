@@ -7,7 +7,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { ExpirationStatus, Status } from '../../models/Status';
 
 export function Tag({ status }: { status: Status | ExpirationStatus }) {
-    const colors = { background: '', dot: '' };
+    const colors = { background: '', dot: '', text: 'white' };
 
     // TODO: should all these colors be in the theme?
     switch (status) {
@@ -30,6 +30,10 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
         case Status.Offline:
             colors.background = '#A7A9AC';
             colors.dot = '#E5E5E5';
+            break;
+        case Status.ReadOnly:
+            colors.background = themeColor('highlight');
+            colors.text = themeColor('background');
             break;
         case ExpirationStatus.Expiring:
             colors.background = themeColor('warning');
@@ -66,7 +70,7 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
                     />
                 )}
                 {colors.dot && <Spacer width={6} />}
-                <Body colorOverride="white" small>
+                <Body colorOverride={colors.text} small>
                     {status}
                 </Body>
             </Row>
