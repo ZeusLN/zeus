@@ -4,7 +4,8 @@ import {
     View,
     ActivityIndicator,
     FlatList,
-    Text
+    Text,
+    Dimensions
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -14,7 +15,7 @@ import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { MintPaymentStatus, MultinutPaymentStep } from '../../utils/CashuUtils';
@@ -78,18 +79,35 @@ export default class MultimintPayment extends React.Component<
             0
         );
 
+        const hasNoMintsSelected = selectedMintUrls.length === 0;
+
+        const requestAmount = CashuStore?.payReq?.getRequestAmount ?? 0;
+        const feeEstimate = CashuStore?.feeEstimate ?? 0;
+        const totalAmountNeeded = requestAmount + feeEstimate;
+        const hasInsufficientBalance =
+            totalAmountNeeded > totalBalance && totalBalance > 0;
+
         this.state = {
             mints: selectedMints,
             totalSelectedBalance: totalBalance,
             paymentRequest,
             isProcessing: false,
-            step: MultinutPaymentStep.PROCESSING,
-            error: undefined
+            step:
+                hasNoMintsSelected || hasInsufficientBalance
+                    ? MultinutPaymentStep.FAILED
+                    : MultinutPaymentStep.PROCESSING,
+            error: hasNoMintsSelected
+                ? localeString('views.Cashu.MultimintPayment.noMintsSelected')
+                : hasInsufficientBalance
+                ? localeString('stores.CashuStore.notEnoughFunds')
+                : undefined
         };
     }
 
     componentDidMount() {
-        this.executePayment();
+        if (this.state.step !== MultinutPaymentStep.FAILED) {
+            this.executePayment();
+        }
     }
 
     onProgressUpdate = (progressInfo: {
@@ -252,6 +270,9 @@ export default class MultimintPayment extends React.Component<
               CashuStore?.feeEstimate
             : CashuStore?.payReq?.getRequestAmount ?? 0;
         const { mints, totalSelectedBalance, step, error } = this.state;
+        const windowSize = Dimensions.get('window');
+        const hasError = error || CashuStore?.error;
+        const errorMessage = error || CashuStore?.error_msg;
 
         return (
             <Screen>
@@ -264,12 +285,50 @@ export default class MultimintPayment extends React.Component<
                     navigation={navigation}
                 />
 
-                {error ||
-                    (CashuStore?.error && (
-                        <ErrorMessage message={error || CashuStore.error_msg} />
-                    ))}
+                {hasError && (
+                    <View
+                        style={{
+                            ...styles.content,
+                            paddingTop: windowSize.height * 0.05
+                        }}
+                    >
+                        <View style={{ alignItems: 'center' }}>
+                            <ErrorIcon
+                                width={windowSize.height * 0.13}
+                                height={windowSize.height * 0.13}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('warning'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 32,
+                                    marginTop: windowSize.height * 0.07
+                                }}
+                            >
+                                {localeString('general.error')}
+                            </Text>
+                            {errorMessage && (
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize:
+                                            windowSize.width *
+                                            windowSize.scale *
+                                            0.014,
+                                        textAlign: 'center',
+                                        marginTop: windowSize.height * 0.025,
+                                        padding: 5
+                                    }}
+                                >
+                                    {errorMessage}
+                                </Text>
+                            )}
+                        </View>
+                    </View>
+                )}
 
-                {!error && !CashuStore?.error && (
+                {!hasError && (
                     <View style={styles.container}>
                         <View style={styles.headerSection}>
                             <Amount
@@ -320,91 +379,90 @@ export default class MultimintPayment extends React.Component<
                             showsVerticalScrollIndicator={false}
                             ItemSeparatorComponent={this.renderSeparator}
                         />
+                    </View>
+                )}
 
-                        <View style={styles.bottomSection}>
-                            {step === MultinutPaymentStep.PROCESSING && (
-                                <Button
-                                    title={localeString('general.cancel')}
-                                    onPress={() => navigation.goBack()}
-                                    containerStyle={{ marginTop: 15 }}
-                                    noUppercase
-                                />
-                            )}
+                <View style={styles.bottomSection}>
+                    {step === MultinutPaymentStep.PROCESSING && !hasError && (
+                        <Button
+                            title={localeString('general.cancel')}
+                            onPress={() => navigation.goBack()}
+                            containerStyle={{ marginTop: 15 }}
+                            noUppercase
+                        />
+                    )}
 
-                            {step !== MultinutPaymentStep.PROCESSING && (
+                    {step !== MultinutPaymentStep.PROCESSING && (
+                        <>
+                            {(step === MultinutPaymentStep.FAILED ||
+                                hasError) && (
                                 <>
-                                    {step === MultinutPaymentStep.FAILED && (
-                                        <>
-                                            <Button
-                                                title={localeString(
-                                                    'views.SendingLightning.tryAgain'
-                                                )}
-                                                icon={{
-                                                    name: 'return-up-back',
-                                                    type: 'ionicon',
-                                                    size: 25
-                                                }}
-                                                onPress={() =>
-                                                    navigation.goBack()
-                                                }
-                                                buttonStyle={{
-                                                    backgroundColor: 'white',
-                                                    height: 40
-                                                }}
-                                                containerStyle={{
-                                                    width: '100%',
-                                                    margin: 3
-                                                }}
-                                            />
-                                            <Button
-                                                title={localeString(
-                                                    'views.Settings.Ecash.cashuTroubleshooting'
-                                                )}
-                                                icon={{
-                                                    name: 'help-buoy-outline',
-                                                    type: 'ionicon',
-                                                    size: 25
-                                                }}
-                                                onPress={() => {
-                                                    UrlUtils.goToUrl(
-                                                        'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
-                                                    );
-                                                }}
-                                                containerStyle={{
-                                                    width: '100%',
-                                                    margin: 3
-                                                }}
-                                                secondary
-                                            />
-                                        </>
-                                    )}
-
                                     <Button
                                         title={localeString(
-                                            'views.SendingLightning.goToWallet'
+                                            'views.SendingLightning.tryAgain'
                                         )}
                                         icon={{
-                                            name: 'list',
-                                            size: 25,
-                                            color: themeColor('background')
+                                            name: 'return-up-back',
+                                            type: 'ionicon',
+                                            size: 25
                                         }}
-                                        onPress={() => {
-                                            navigation.popTo('Wallet');
-                                        }}
-                                        buttonStyle={{ height: 40 }}
-                                        titleStyle={{
-                                            color: themeColor('background')
+                                        onPress={() => navigation.goBack()}
+                                        buttonStyle={{
+                                            backgroundColor: 'white',
+                                            height: 40
                                         }}
                                         containerStyle={{
                                             width: '100%',
                                             margin: 3
                                         }}
                                     />
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.Ecash.cashuTroubleshooting'
+                                        )}
+                                        icon={{
+                                            name: 'help-buoy-outline',
+                                            type: 'ionicon',
+                                            size: 25
+                                        }}
+                                        onPress={() => {
+                                            UrlUtils.goToUrl(
+                                                'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
+                                            );
+                                        }}
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 3
+                                        }}
+                                        secondary
+                                    />
                                 </>
                             )}
-                        </View>
-                    </View>
-                )}
+
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.goToWallet'
+                                )}
+                                icon={{
+                                    name: 'list',
+                                    size: 25,
+                                    color: themeColor('background')
+                                }}
+                                onPress={() => {
+                                    navigation.popTo('Wallet');
+                                }}
+                                buttonStyle={{ height: 40 }}
+                                titleStyle={{
+                                    color: themeColor('background')
+                                }}
+                                containerStyle={{
+                                    width: '100%',
+                                    margin: 3
+                                }}
+                            />
+                        </>
+                    )}
+                </View>
             </Screen>
         );
     }
@@ -415,6 +473,12 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingLeft: 20,
         paddingRight: 20
+    },
+    content: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'space-evenly',
+        height: '100%'
     },
     headerSection: {
         marginBottom: 24,
@@ -429,7 +493,9 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end'
     },
     bottomSection: {
-        paddingTop: 20,
-        paddingBottom: 10
+        width: '100%',
+        justifyContent: 'space-between',
+        gap: 15,
+        bottom: 15
     }
 });
