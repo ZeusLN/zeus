@@ -8,5 +8,9 @@
 	<array>
 		<string>TAG</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.zeusln.zeus</string>
+	</array>
 </dict>
 </plist>
