@@ -10,6 +10,8 @@ import android.net.Uri;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
+import android.os.PowerManager;
+import android.provider.Settings;
 
 import java.util.Arrays;
 import java.io.UnsupportedEncodingException;
@@ -151,6 +153,43 @@ class MobileTools extends ReactContextBaseJavaModule {
     } catch (Exception e) {
       android.util.Log.e(TAG, "Error clearing shared intent", e);
       promise.reject("CLEAR_ERROR", e.getMessage());
+    }
+  }
+
+  @ReactMethod
+  public void isBatterySaverEnabled(Promise promise) {
+    ReactApplicationContext context = getReactApplicationContext();
+    try {
+      PowerManager pm = (PowerManager) context.getSystemService(
+          android.content.Context.POWER_SERVICE
+      );
+      boolean isPowerSaveMode = pm.isPowerSaveMode();
+      android.util.Log.d(
+          TAG, "PowerManager.isPowerSaveMode(): " + isPowerSaveMode
+      );
+
+      try {
+        int lowPowerSetting = Settings.Global.getInt(
+            context.getContentResolver(), "low_power", 0
+        );
+        boolean settingEnabled = (lowPowerSetting == 1);
+        android.util.Log.d(
+            TAG,
+            "Settings.Global.low_power: " + lowPowerSetting +
+                " (enabled: " + settingEnabled + ")"
+        );
+        promise.resolve(isPowerSaveMode || settingEnabled);
+        return;
+      } catch (Exception settingError) {
+        android.util.Log.w(
+            TAG, "Could not check low_power setting", settingError
+        );
+      }
+
+      promise.resolve(isPowerSaveMode);
+    } catch (Exception e) {
+      android.util.Log.e(TAG, "Battery saver check failed", e);
+      promise.resolve(false);
     }
   }
 }
