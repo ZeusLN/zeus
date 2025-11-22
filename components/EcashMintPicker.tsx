@@ -119,74 +119,124 @@ export default class EcashMintPicker extends React.Component<
             </Row>
         );
 
-        if (showMore && multiMint && selectedMintUrls.length > 0) {
-            const shown = selectedMintUrls.slice(0, 2);
-            const more = selectedMintUrls.length - shown.length;
-            const totalRows = shown.length + (more > 0 ? 1 : 0);
+        if (multiMint) {
+            if (selectedMintUrls.length === 0) {
+                return (
+                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Mints')}
+                            style={{
+                                opacity: disabled ? 0.25 : 1,
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field
+                            }}
+                        >
+                            <Row
+                                style={{
+                                    height: 42,
+                                    alignItems: 'center',
+                                    paddingRight: 34,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('warning'),
+                                        marginRight: 10,
+                                        flex: 1
+                                    }}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {localeString(
+                                        'views.Cashu.MultimintPayment.noMintsSelected'
+                                    )}
+                                </Text>
+                                <CaretRight
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                    width={20}
+                                    height={20}
+                                />
+                            </Row>
+                        </TouchableOpacity>
+                    </View>
+                );
+            }
 
-            return (
-                <View style={{ flex: 1, flexDirection: 'row' }}>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Mints')}
-                        style={{
-                            opacity: disabled ? 0.25 : 1,
-                            backgroundColor: themeColor('secondary'),
-                            ...styles.field,
-                            height: 42 * totalRows,
-                            marginBottom: 12
-                        }}
-                    >
-                        <View style={{ flex: 1, position: 'relative' }}>
-                            {shown.map((mintUrl) => getRow(mintUrl))}
-                            {more > 0 ? (
-                                <Row
-                                    style={{
-                                        height: 42,
-                                        alignItems: 'center',
-                                        paddingRight: 34,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <Text
+            if (showMore && selectedMintUrls.length > 0) {
+                const shown = selectedMintUrls.slice(0, 2);
+                const more = selectedMintUrls.length - shown.length;
+                const totalRows = shown.length + (more > 0 ? 1 : 0);
+
+                return (
+                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Mints')}
+                            style={{
+                                opacity: disabled ? 0.25 : 1,
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field,
+                                height: 42 * totalRows,
+                                marginBottom: 12
+                            }}
+                        >
+                            <View style={{ flex: 1, position: 'relative' }}>
+                                {shown.map((mintUrl) => getRow(mintUrl))}
+                                {more > 0 ? (
+                                    <Row
                                         style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 15,
-                                            flex: 1
+                                            height: 42,
+                                            alignItems: 'center',
+                                            paddingRight: 34,
+                                            backgroundColor: 'transparent'
                                         }}
-                                    >{`+${more} more`}</Text>
-                                    <CaretRight
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('text')}
-                                        width={20}
-                                        height={20}
-                                    />
-                                </Row>
-                            ) : (
-                                <View
-                                    style={{
-                                        position: 'absolute',
-                                        right: 5,
-                                        top: 0,
-                                        bottom: 0,
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        width: 24
-                                    }}
-                                    pointerEvents="none"
-                                >
-                                    <CaretRight
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('text')}
-                                        width={20}
-                                        height={20}
-                                    />
-                                </View>
-                            )}
-                        </View>
-                    </TouchableOpacity>
-                </View>
-            );
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 15,
+                                                flex: 1
+                                            }}
+                                        >{`+${more} more`}</Text>
+                                        <CaretRight
+                                            stroke={themeColor('text')}
+                                            fill={themeColor('text')}
+                                            width={20}
+                                            height={20}
+                                        />
+                                    </Row>
+                                ) : (
+                                    <View
+                                        style={{
+                                            position: 'absolute',
+                                            right: 5,
+                                            top: 0,
+                                            bottom: 0,
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            width: 24
+                                        }}
+                                        pointerEvents="none"
+                                    >
+                                        <CaretRight
+                                            stroke={themeColor('text')}
+                                            fill={themeColor('text')}
+                                            width={20}
+                                            height={20}
+                                        />
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                );
+            }
         }
 
         return (
