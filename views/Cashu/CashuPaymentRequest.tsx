@@ -22,6 +22,7 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 
 import BalanceStore from '../../stores/BalanceStore';
@@ -76,6 +77,7 @@ interface CashuPaymentRequestState {
     donationAmount: any;
     selectedIndex: number | null;
     swipeButtonKey: number;
+    multiMintLoading: boolean;
 }
 
 @inject(
@@ -104,7 +106,8 @@ export default class CashuPaymentRequest extends React.Component<
         donationPercentage: 0,
         donationAmount: 0,
         selectedIndex: null,
-        swipeButtonKey: 0
+        swipeButtonKey: 0,
+        multiMintLoading: false
     };
 
     async componentDidMount() {
@@ -226,7 +229,8 @@ export default class CashuPaymentRequest extends React.Component<
             loadingFeeEstimate,
             feeEstimate,
             clearPayReq,
-            totalBalanceSats
+            totalBalanceSats,
+            selectedMintUrls = []
         } = CashuStore;
 
         // Zaplocker
@@ -852,29 +856,146 @@ export default class CashuPaymentRequest extends React.Component<
                     !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10, top: 6 }}>
-                            <View
-                                style={{
-                                    alignSelf: 'center',
-                                    width: '85%',
-                                    marginBottom: 30
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        ...styles.label,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Cashu.CashuPaymentRequest.sendingFrom'
-                                    )}
-                                </Text>
-                                <View style={{ marginTop: 10 }}>
-                                    <EcashMintPicker navigation={navigation} />
-                                </View>
-                            </View>
+                            {(() => {
+                                const multiMint =
+                                    settings?.ecash?.enableMultiMint;
+                                let totalRows = 1;
+                                if (multiMint && selectedMintUrls.length > 0) {
+                                    if (selectedMintUrls.length === 1) {
+                                        totalRows = 1;
+                                    } else {
+                                        const shown = Math.min(
+                                            selectedMintUrls.length,
+                                            2
+                                        );
+                                        const more =
+                                            selectedMintUrls.length - shown;
+                                        totalRows = shown + (more > 0 ? 1 : 0);
+                                    }
+                                }
+                                const paddingBottom =
+                                    totalRows === 3
+                                        ? 90
+                                        : totalRows === 2
+                                        ? 50
+                                        : 10;
+                                return (
+                                    <View
+                                        style={{
+                                            alignSelf: 'center',
+                                            width: '85%',
+                                            marginBottom: paddingBottom
+                                        }}
+                                    >
+                                        <Row
+                                            justify="space-between"
+                                            style={{ alignItems: 'center' }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Cashu.CashuPaymentRequest.sendingFrom'
+                                                )}
+                                            </Text>
+                                            <Row
+                                                style={{
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 15,
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book',
+                                                        marginRight: 8
+                                                    }}
+                                                >
+                                                    Multi-mint
+                                                </Text>
+                                                <View
+                                                    style={{
+                                                        width: 51,
+                                                        height: 31,
+                                                        justifyContent:
+                                                            'center',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    {this.state
+                                                        .multiMintLoading ? (
+                                                        <LoadingIndicator
+                                                            size={30}
+                                                        />
+                                                    ) : (
+                                                        <Switch
+                                                            value={multiMint}
+                                                            onValueChange={async () => {
+                                                                this.setState({
+                                                                    multiMintLoading:
+                                                                        true
+                                                                });
+                                                                try {
+                                                                    await SettingsStore.updateSettings(
+                                                                        {
+                                                                            ecash: {
+                                                                                ...settings.ecash,
+                                                                                enableMultiMint:
+                                                                                    !multiMint
+                                                                            }
+                                                                        }
+                                                                    );
+                                                                    if (
+                                                                        CashuStore.paymentRequest
+                                                                    ) {
+                                                                        await CashuStore.getPayReq(
+                                                                            CashuStore.paymentRequest
+                                                                        );
+                                                                    }
+                                                                } finally {
+                                                                    this.setState(
+                                                                        {
+                                                                            multiMintLoading:
+                                                                                false
+                                                                        }
+                                                                    );
+                                                                }
+                                                            }}
+                                                            disabled={
+                                                                SettingsStore.settingsUpdateInProgress ||
+                                                                this.state
+                                                                    .multiMintLoading
+                                                            }
+                                                        />
+                                                    )}
+                                                </View>
+                                            </Row>
+                                        </Row>
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 20
+                                            }}
+                                        >
+                                            <EcashMintPicker
+                                                navigation={navigation}
+                                            />
+                                        </View>
+                                    </View>
+                                );
+                            })()}
                             {requestAmount &&
-                            requestAmount >= slideToPayThreshold ? (
+                            requestAmount >= slideToPayThreshold &&
+                            !this.state.multiMintLoading &&
+                            !SettingsStore.settingsUpdateInProgress ? (
                                 <SwipeButton
                                     key={this.state.swipeButtonKey}
                                     onSwipeSuccess={this.triggerPayment}
@@ -890,6 +1011,16 @@ export default class CashuPaymentRequest extends React.Component<
                                         backgroundColor: themeColor('text')
                                     }}
                                 />
+                            ) : requestAmount &&
+                              requestAmount >= slideToPayThreshold ? (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.PaymentRequest.slideToPay'
+                                        )}
+                                        disabled
+                                    />
+                                </View>
                             ) : (
                                 <View style={styles.button}>
                                     <Button
@@ -901,6 +1032,10 @@ export default class CashuPaymentRequest extends React.Component<
                                             size: 25
                                         }}
                                         onPress={this.triggerPayment}
+                                        disabled={
+                                            this.state.multiMintLoading ||
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
                                     />
                                 </View>
                             )}
