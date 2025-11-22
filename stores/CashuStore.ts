@@ -350,6 +350,29 @@ export default class CashuStore {
     };
 
     @action
+    public setSelectedMintUrls = async (mintUrls: string[]) => {
+        this.clearInvoice();
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            JSON.stringify(mintUrls)
+        );
+
+        runInAction(() => {
+            this.selectedMintUrls = mintUrls;
+        });
+
+        if (this.settingsStore?.settings.ecash.enableMultiMint) {
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    mintUrls
+                }
+            });
+        }
+
+        return mintUrls;
+    };
+
+    @action
     public toggleMintSelection = async (mintUrl: string): Promise<void> => {
         const currentSelection = Array.isArray(this.selectedMintUrls)
             ? [...this.selectedMintUrls]
@@ -362,9 +385,8 @@ export default class CashuStore {
         const nextSelected = isSelected
             ? currentSelection.filter((url) => url !== mintUrl)
             : [...currentSelection, mintUrl];
-        runInAction(() => {
-            this.selectedMintUrls = nextSelected;
-        });
+
+        await this.setSelectedMintUrls(nextSelected);
 
         if (this.settingsStore?.settings.ecash.enableMultiMint) {
             await this.settingsStore.updateSettings({
@@ -811,6 +833,7 @@ export default class CashuStore {
         const [
             storedMintUrls,
             storedselectedMintUrl,
+            storedselectedMintUrls,
             storedTotalBalanceSats,
             storedInvoices,
             storedPayments,
@@ -822,6 +845,7 @@ export default class CashuStore {
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
+            Storage.getItem(`${lndDir}-cashu-selectedMintUrls`),
             Storage.getItem(`${lndDir}-cashu-totalBalanceSats`),
             Storage.getItem(`${lndDir}-cashu-invoices`),
             Storage.getItem(`${lndDir}-cashu-payments`),
@@ -834,6 +858,9 @@ export default class CashuStore {
 
         this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
         this.selectedMintUrl = storedselectedMintUrl || '';
+        this.selectedMintUrls = storedselectedMintUrls
+            ? JSON.parse(storedselectedMintUrls)
+            : this.settingsStore?.settings?.lightningAddress?.mintUrls || [];
         this.totalBalanceSats = storedTotalBalanceSats
             ? JSON.parse(storedTotalBalanceSats)
             : 0;
@@ -1565,12 +1592,6 @@ export default class CashuStore {
                 meltQuote
             });
         }
-
-        if (remaining > 0) {
-            throw new Error(
-                'Could not allocate enough funds for multi-mint payment'
-            );
-        }
     };
 
     @action
@@ -1658,7 +1679,7 @@ export default class CashuStore {
                         amountToPay,
                         proofs: allProofsAvailable
                     });
-                } catch (err) {
+                } catch (err: any) {
                     if (!aggregateError) aggregateError = [];
                     aggregateError.push({ mintUrl: 'multimint', err });
                 }
@@ -1714,7 +1735,20 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.payReq = payReq;
-                this.getPayReqError = aggregateError;
+                this.getPayReqError = aggregateError
+                    ? aggregateError
+                          .map((e: any) => {
+                              const errorMsg =
+                                  e.err?.message ||
+                                  (typeof e.err === 'string'
+                                      ? e.err
+                                      : e.err?.toString
+                                      ? e.err.toString()
+                                      : 'Unknown error');
+                              return `${e.mintUrl}: ${errorMsg}`;
+                          })
+                          .join('; ')
+                    : undefined;
                 this.loading = false;
                 if (!isDonationPayment) {
                     this.loading = false;
@@ -1837,7 +1871,10 @@ export default class CashuStore {
                 return;
             }
 
-            const isMultiMint = multimintEnabled && this.meltQuotes.length > 1;
+            const isMultiMint =
+                multimintEnabled &&
+                (this.meltQuotes.length > 1 ||
+                    this.selectedMintUrls.length > 1);
 
             if (!isMultiMint) {
                 return await this.payLnInvoiceSingleMint({

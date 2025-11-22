@@ -1851,6 +1851,7 @@
     "views.Cashu.CashuPaymentRequest.sendingFrom": "Sending from",
     "views.Cashu.CashuPaymentRequest.noBalance": "No ecash balance available. Receive a payment first.",
     "views.Cashu.CashuPaymentRequest.multiMint": "Multi-mint",
+    "views.Cashu.MultimintPayment.noMintsSelected": "No mints selected. Please select at least one mint to proceed.",
     "views.Cashu.CashuPayment.inTransitPayment": "In Transit Cashu Payment",
     "views.Cashu.CashuPayment.failedPayment": "Failed Cashu Payment",
     "views.Cashu.CashuToken.proofCount": "Number of proofs",
