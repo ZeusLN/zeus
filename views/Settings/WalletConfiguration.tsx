@@ -2351,7 +2351,7 @@ export default class WalletConfiguration extends React.Component<
                             implementation === 'embedded-lnd' && !adminMacaroon
                         ) &&
                         !saved && (
-                            <View style={{ ...styles.button }}>
+                            <View style={{ ...styles.button, marginTop: 30 }}>
                                 <Button
                                     title={localeString(
                                         'views.Settings.WalletConfiguration.saveWallet'
