@@ -158,7 +158,6 @@ export default class CashuPaymentRequest extends React.Component<
         if (this.payReqDisposer) {
             this.payReqDisposer();
         }
-
         if (this.focusListener) {
             this.focusListener();
         }
