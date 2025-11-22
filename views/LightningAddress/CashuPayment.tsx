@@ -7,7 +7,11 @@ import Amount from '../../components/Amount';
 import Text from '../../components/Text';
 import { Row } from '../../components/layout/Row';
 
-import { cashuStore, lightningAddressStore } from '../../stores/Stores';
+import {
+    cashuStore,
+    lightningAddressStore,
+    settingsStore
+} from '../../stores/Stores';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -19,6 +23,13 @@ export default function CashuPayment(props: any) {
     const { redeemCashu } = lightningAddressStore;
 
     const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
+
+    const configuredMintUrls =
+        settingsStore.settings?.lightningAddress?.mintUrls || [];
+    const hasMultipleMints = configuredMintUrls.length > 0;
+    const selectedMintUrls = hasMultipleMints
+        ? configuredMintUrls
+        : [item.mint_url];
 
     return (
         <ListItem
@@ -47,17 +58,34 @@ export default function CashuPayment(props: any) {
                     </ListItem.Subtitle>
                 )}
                 <ListItem.Subtitle>
-                    <Text
-                        style={{
-                            color: cashuStore.cashuWallets[item.mint_url]
-                                ?.errorConnecting
-                                ? themeColor('warning')
-                                : themeColor('secondaryText')
-                        }}
-                    >
-                        {cashuStore.cashuWallets[item.mint_url]?.mintInfo
-                            ?.name || item.mint_url}
-                    </Text>
+                    {selectedMintUrls.length > 0 ? (
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {selectedMintUrls
+                                .map((mintUrl: string) => {
+                                    return (
+                                        cashuStore.cashuWallets[mintUrl]
+                                            ?.mintInfo?.name || mintUrl
+                                    );
+                                })
+                                .join(', ')}
+                        </Text>
+                    ) : (
+                        <Text
+                            style={{
+                                color: cashuStore.cashuWallets[item.mint_url]
+                                    ?.errorConnecting
+                                    ? themeColor('warning')
+                                    : themeColor('secondaryText')
+                            }}
+                        >
+                            {cashuStore.cashuWallets[item.mint_url]?.mintInfo
+                                ?.name || item.mint_url}
+                        </Text>
+                    )}
                 </ListItem.Subtitle>
                 <ListItem.Subtitle>
                     <Text
