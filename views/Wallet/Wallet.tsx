@@ -12,7 +12,8 @@ import {
     TouchableOpacity,
     View,
     Alert,
-    AlertButton
+    AlertButton,
+    InteractionManager
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -50,6 +51,7 @@ import {
     expressGraphSync
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
+import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
@@ -511,6 +513,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     isTestnet: embeddedLndNetwork === 'Testnet'
                 });
 
+                try {
+                    const batterySaverEnabled = await isBatterySaverEnabled();
+                    if (batterySaverEnabled) {
+                        if (Platform.OS === 'ios') {
+                            InteractionManager.runAfterInteractions(() => {
+                                setTimeout(() => {
+                                    this.showBatterySaverModal();
+                                }, 500);
+                            });
+                        } else {
+                            this.showBatterySaverModal();
+                        }
+                    }
+                } catch (error) {
+                    console.warn('Failed to check battery saver mode:', error);
+                }
+
                 if (!this.startupTimeoutId) {
                     this.startupTimeoutId = setTimeout(() => {
                         if (
@@ -802,6 +821,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             navigation.navigate('ShareIntentProcessing', shareIntentData);
         }
+    };
+
+    private showBatterySaverModal = () => {
+        this.props.ModalStore.toggleInfoModal({
+            title: localeString('views.Wallet.batterySaverWarningTitle'),
+            text: localeString('views.Wallet.batterySaverWarningText')
+        });
     };
 
     handleOpenURL = (event: any) => {
