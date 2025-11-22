@@ -18,6 +18,8 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import Screen from '../../components/Screen';
 
+import { Divider } from 'react-native-elements';
+
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -53,22 +55,115 @@ export default class RoutingEvent extends React.Component<
             routingEvent
         };
     }
+
+    private renderChannelLink = (displayName: string, onPress: () => void) => (
+        <TouchableOpacity onPress={onPress}>
+            <Text
+                style={[styles.highlight, { color: themeColor('highlight') }]}
+            >
+                {displayName}
+            </Text>
+        </TouchableOpacity>
+    );
+
+    private renderChannelSection = (
+        channel: any,
+        sectionTitle: string,
+        channelId: string,
+        onChannelPress: () => void
+    ) => (
+        <>
+            <Text style={[styles.sectionHeader, { color: themeColor('text') }]}>
+                {sectionTitle}
+            </Text>
+
+            {channel && (
+                <>
+                    <KeyValue
+                        keyValue={localeString('general.node')}
+                        value={this.renderChannelLink(
+                            channel.displayName ||
+                                channel.alias ||
+                                localeString('general.unknown'),
+                            onChannelPress
+                        )}
+                    />
+                    <KeyValue
+                        keyValue={localeString('views.Channel.localBalance')}
+                        value={
+                            <Amount
+                                sats={
+                                    channel.local_balance ||
+                                    channel.localBalance ||
+                                    0
+                                }
+                                toggleable
+                                sensitive
+                            />
+                        }
+                    />
+                    <KeyValue
+                        keyValue={localeString('views.Channel.remoteBalance')}
+                        value={
+                            <Amount
+                                sats={
+                                    channel.remote_balance ||
+                                    channel.remoteBalance ||
+                                    0
+                                }
+                                toggleable
+                                sensitive
+                            />
+                        }
+                    />
+                    <KeyValue
+                        keyValue={localeString('views.Channel.channelId')}
+                        value={
+                            channel.chan_id || channel.channelId || channelId
+                        }
+                        sensitive
+                    />
+                </>
+            )}
+        </>
+    );
+
     render() {
         const { navigation, ChannelsStore } = this.props;
         const { routingEvent } = this.state;
         const { aliasesById, channels } = ChannelsStore;
 
-        const { fee, getTime, inChannelId, outChannelId, inAmt, outAmt } =
-            routingEvent;
+        const {
+            fee,
+            getTime,
+            inChannelId,
+            outChannelId,
+            inAmt,
+            outAmt,
+            isRebalance,
+            rebalanceFees,
+            rebalanceAmount,
+            sourceChannel,
+            destinationChannel
+        } = routingEvent;
 
-        const chanInFilter = channels.filter(
-            (channel) => channel.channelId === inChannelId
-        );
-        const chanIn = chanInFilter[0];
-        const chanOutFilter = channels.filter(
-            (channel) => channel.channelId === outChannelId
-        );
-        const chanOut = chanOutFilter[0];
+        const isRebalanceOperation =
+            isRebalance || (sourceChannel && destinationChannel);
+
+        let chanIn, chanOut;
+        if (isRebalanceOperation && sourceChannel && destinationChannel) {
+            chanIn = sourceChannel;
+            chanOut = destinationChannel;
+        } else {
+            const chanInFilter = channels.filter(
+                (channel) => channel.channelId === inChannelId
+            );
+            chanIn = chanInFilter[0];
+            const chanOutFilter = channels.filter(
+                (channel) => channel.channelId === outChannelId
+            );
+            chanOut = chanOutFilter[0];
+        }
         const chanInLabel = aliasesById[inChannelId] || inChannelId;
         const chanOutLabel = aliasesById[outChannelId] || outChannelId;
         const channelInPoint = chanIn && chanIn.channel_point;
@@ -88,125 +183,176 @@ export default class RoutingEvent extends React.Component<
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <View style={styles.amount}>
-                        <Amount
-                            sats={
-                                fee ||
-                                (parseInt(inAmt) - parseInt(outAmt)) / 1000
-                            }
-                            jumboText
-                            toggleable
-                            credit
-                            sensitive
-                        />
-                    </View>
+                    {isRebalanceOperation ? (
+                        <>
+                            <View style={styles.amount}>
+                                <Amount
+                                    sats={rebalanceAmount || inAmt || 0}
+                                    jumboText
+                                    toggleable
+                                    credit
+                                    sensitive
+                                />
+                            </View>
 
-                    {inChannelId && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.NodeInfo.ForwardingHistory.srcChannelId'
+                            {(fee !== undefined ||
+                                rebalanceFees !== undefined) && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.EditFee.titleDisplayOnly'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={fee ?? rebalanceFees ?? 0}
+                                            toggleable
+                                            sensitive
+                                        />
+                                    }
+                                />
                             )}
-                            value={
-                                chanIn ? (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('Channel', {
-                                                channel: chanIn
-                                            })
-                                        }
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.highlight,
-                                                color: themeColor('highlight')
-                                            }}
-                                        >
-                                            {chanInLabel}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ) : (
-                                    chanInLabel
-                                )
-                            }
-                            sensitive
-                        />
-                    )}
 
-                    {outChannelId && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.NodeInfo.ForwardingHistory.dstChannelId'
+                            {getTime && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.NodeInfo.ForwardingHistory.timestamp'
+                                    )}
+                                    value={getTime}
+                                />
                             )}
-                            value={
-                                chanOut ? (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate('Channel', {
-                                                channel: chanOut
-                                            })
-                                        }
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.highlight,
-                                                color: themeColor('highlight')
-                                            }}
-                                        >
-                                            {chanOutLabel}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ) : (
-                                    chanOutLabel
-                                )
-                            }
-                            sensitive
-                        />
-                    )}
 
-                    {inAmt && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.NodeInfo.ForwardingHistory.amtIn'
+                            {this.renderChannelSection(
+                                chanIn,
+                                localeString(
+                                    'views.Routing.RoutingEvent.sourceChannel'
+                                ),
+                                inChannelId,
+                                () =>
+                                    navigation.navigate('Channel', {
+                                        channel: chanIn
+                                    })
                             )}
-                            value={<Amount sats={inAmt} sensitive />}
-                        />
-                    )}
 
-                    {outAmt && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.NodeInfo.ForwardingHistory.amtOut'
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 8 }}
+                            />
+
+                            {this.renderChannelSection(
+                                chanOut,
+                                localeString(
+                                    'views.Routing.RoutingEvent.destinationChannel'
+                                ),
+                                outChannelId,
+                                () =>
+                                    navigation.navigate('Channel', {
+                                        channel: chanOut
+                                    })
                             )}
-                            value={<Amount sats={outAmt} sensitive />}
-                        />
-                    )}
+                        </>
+                    ) : (
+                        <>
+                            <View style={styles.amount}>
+                                <Amount
+                                    sats={
+                                        fee ||
+                                        (parseInt(inAmt) - parseInt(outAmt)) /
+                                            1000
+                                    }
+                                    jumboText
+                                    toggleable
+                                    credit
+                                    sensitive
+                                />
+                            </View>
 
-                    {getTime && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.NodeInfo.ForwardingHistory.timestamp'
+                            {inChannelId && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.NodeInfo.ForwardingHistory.srcChannelId'
+                                    )}
+                                    value={
+                                        chanIn
+                                            ? this.renderChannelLink(
+                                                  chanInLabel,
+                                                  () =>
+                                                      navigation.navigate(
+                                                          'Channel',
+                                                          { channel: chanIn }
+                                                      )
+                                              )
+                                            : chanInLabel
+                                    }
+                                    sensitive
+                                />
                             )}
-                            value={getTime}
-                        />
+
+                            {outChannelId && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.NodeInfo.ForwardingHistory.dstChannelId'
+                                    )}
+                                    value={
+                                        chanOut
+                                            ? this.renderChannelLink(
+                                                  chanOutLabel,
+                                                  () =>
+                                                      navigation.navigate(
+                                                          'Channel',
+                                                          { channel: chanOut }
+                                                      )
+                                              )
+                                            : chanOutLabel
+                                    }
+                                    sensitive
+                                />
+                            )}
+
+                            {inAmt && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.NodeInfo.ForwardingHistory.amtIn'
+                                    )}
+                                    value={<Amount sats={inAmt} sensitive />}
+                                />
+                            )}
+
+                            {outAmt && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.NodeInfo.ForwardingHistory.amtOut'
+                                    )}
+                                    value={<Amount sats={outAmt} sensitive />}
+                                />
+                            )}
+
+                            {getTime && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.NodeInfo.ForwardingHistory.timestamp'
+                                    )}
+                                    value={getTime}
+                                />
+                            )}
+
+                            <FeeBreakdown
+                                channelId={inChannelId}
+                                peerDisplay={chanInLabel}
+                                channelPoint={channelInPoint}
+                                label={localeString(
+                                    'views.Routing.RoutingEvent.sourceChannel'
+                                )}
+                            />
+
+                            <FeeBreakdown
+                                channelId={outChannelId}
+                                peerDisplay={chanOutLabel}
+                                channelPoint={channelOutPoint}
+                                label={localeString(
+                                    'views.Routing.RoutingEvent.destinationChannel'
+                                )}
+                            />
+                        </>
                     )}
-
-                    <FeeBreakdown
-                        channelId={inChannelId}
-                        peerDisplay={chanInLabel}
-                        channelPoint={channelInPoint}
-                        label={localeString(
-                            'views.Routing.RoutingEvent.sourceChannel'
-                        )}
-                    />
-
-                    <FeeBreakdown
-                        channelId={outChannelId}
-                        peerDisplay={chanOutLabel}
-                        channelPoint={channelOutPoint}
-                        label={localeString(
-                            'views.Routing.RoutingEvent.destinationChannel'
-                        )}
-                    />
                 </ScrollView>
             </Screen>
         );
@@ -224,5 +370,12 @@ const styles = StyleSheet.create({
     amount: {
         alignItems: 'center',
         padding: 10
+    },
+    sectionHeader: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 20,
+        textAlign: 'center',
+        padding: 20,
+        marginTop: 10
     }
 });
