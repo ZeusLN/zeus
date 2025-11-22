@@ -11,7 +11,6 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import cloneDeep from 'lodash/cloneDeep';
-import { runInAction } from 'mobx';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -77,7 +76,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         }
     };
 
-    syncMultiMintSelection = (allMints: any[]) => {
+    syncMultiMintSelection = async (allMints: any[]) => {
         const { CashuStore, SettingsStore } = this.props;
 
         const nut15MintUrls = allMints
@@ -95,15 +94,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             validSelection = nut15MintUrls;
         }
 
-        SettingsStore.updateSettings({
+        await SettingsStore.updateSettings({
             lightningAddress: {
                 mintUrls: validSelection
             }
         });
 
-        runInAction(() => {
-            CashuStore.selectedMintUrls = validSelection;
-        });
+        await CashuStore.setSelectedMintUrls(validSelection);
     };
 
     renderSeparator = () => (
