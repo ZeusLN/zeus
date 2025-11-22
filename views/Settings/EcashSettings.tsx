@@ -173,7 +173,6 @@ export default class EcashSettings extends React.Component<
                                         enableCashu: !enableCashu,
                                         loading: true
                                     });
-
                                     await updateSettings({
                                         ecash: {
                                             ...settings.ecash,
@@ -183,11 +182,9 @@ export default class EcashSettings extends React.Component<
                                                 : false
                                         }
                                     });
-
                                     if (!enableCashu) {
                                         await CashuStore.initializeWallets();
                                     }
-
                                     this.setState({
                                         enableMultiMint: !enableCashu
                                             ? enableMultiMint

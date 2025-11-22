@@ -123,10 +123,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         const { settings } = SettingsStore;
         const multiMint = settings.ecash.enableMultiMint;
 
-        const filteredMints = multiMint
-            ? mints.filter((mint: any) => mint.nuts && mint.nuts[15])
-            : mints;
-
         const AddMintButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('AddMint')}
@@ -147,9 +143,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     leftComponent="Back"
                     centerComponent={{
                         text:
-                            filteredMints.length > 0
+                            mints.length > 0
                                 ? `${localeString('cashu.mints')} (${
-                                      filteredMints.length
+                                      mints.length
                                   })`
                                 : localeString('cashu.mints'),
                         style: {
@@ -162,9 +158,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     onBack={clearInvoice}
                 />
 
-                {!!filteredMints && filteredMints.length > 0 ? (
+                {!!mints && mints.length > 0 ? (
                     <FlatList
-                        data={filteredMints}
+                        data={mints}
                         renderItem={({
                             item,
                             index
@@ -173,6 +169,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             index: number;
                         }) => {
                             const mintInfo = item._mintInfo || item;
+                            const supportsMultinut =
+                                mintInfo?.nuts && mintInfo.nuts[15];
+                            const isDisabled = multiMint && !supportsMultinut;
                             const isSelectedMint = multiMint
                                 ? selectedMintUrls.includes(mintInfo?.mintUrl)
                                 : selectedMintUrl === mintInfo?.mintUrl;
@@ -195,9 +194,14 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
+                                            backgroundColor: 'transparent',
+                                            opacity: isDisabled ? 0.4 : 1
                                         }}
+                                        disabled={isDisabled}
                                         onPress={async () => {
+                                            if (isDisabled) {
+                                                return;
+                                            }
                                             if (multiMint) {
                                                 await toggleMintSelection(
                                                     mintInfo?.mintUrl
@@ -210,7 +214,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             }
                                         }}
                                     >
-                                        {multiMint && (
+                                        {multiMint && supportsMultinut && (
                                             <Icon
                                                 name={
                                                     isSelectedMint
@@ -239,7 +243,10 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                     alignSelf: 'center',
                                                     width: 42,
                                                     height: 42,
-                                                    borderRadius: 68
+                                                    borderRadius: 68,
+                                                    opacity: isDisabled
+                                                        ? 0.4
+                                                        : 1
                                                 }}
                                             />
                                         )}
@@ -252,6 +259,10 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                             color: errorConnecting
                                                                 ? themeColor(
                                                                       'error'
+                                                                  )
+                                                                : isDisabled
+                                                                ? themeColor(
+                                                                      'secondaryText'
                                                                   )
                                                                 : isSelectedMint
                                                                 ? themeColor(
