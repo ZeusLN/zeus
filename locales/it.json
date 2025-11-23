@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "Per maggiori dettagli, consigliamo di visualizzare i registri LND oppure di riavviare l'app manualmente.",
     "views.Wallet.startupSlowMsg.android": "Per maggiori dettagli, consigliamo di visualizzare i registri LND oppure di riavviare l'app direttamente da qui.",
     "views.Wallet.restart": "Riavvia",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Si consiglia di ricevere il tuo primo Lightning sia di 100.000 sat o più; maggiore è, meglio è. Una commissione di configurazione verrà detratta da questo importo.",
     "views.Wallet.KeypadPane.lspExplainer": "Ti verrà addebitata una commissione di configurazione se pagato su Lightning.",
     "view.Wallet.PosPane.orderNumber": "Numero Ordine",
