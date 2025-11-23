@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "建议您查看闪电网络守护进程（LND）日志以了解详细信息，或者手动重启应用程序。",
     "views.Wallet.startupSlowMsg.android": "我们建议您查看闪电网络守护进程（LND）日志以获取更多详细信息，或者直接在此处重启应用程序。",
     "views.Wallet.restart": "重启",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "建议您的首次闪电接收金额为 100,000 聪以上，越多越好。设置费用将从该金额中扣除。",
     "views.Wallet.KeypadPane.lspExplainer": "如果通过闪电支付，您将被收取设置费。",
     "view.Wallet.PosPane.orderNumber": "订单号",
