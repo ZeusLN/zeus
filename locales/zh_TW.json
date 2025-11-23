@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "建議檢查 LND 程式紀錄以了解原因，或是手動重啟應用程式。",
     "views.Wallet.startupSlowMsg.android": "建議檢查 LND 程式紀錄以了解原因，或是直接在這裡重啟應用程式。",
     "views.Wallet.restart": "重新啟動",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "你的第一筆閃電網收款金額建議在 100,000 聰(sat)以上，並且越多越好。管道設定費會從這筆金額中扣除。",
     "views.Wallet.KeypadPane.lspExplainer": "透過閃電網支付時，你會被收取管道設定費。",
     "view.Wallet.PosPane.orderNumber": "訂單號碼",
