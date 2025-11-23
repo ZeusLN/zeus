@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "Vă recomandăm fie să consultați jurnalele LND pentru mai multe detalii, fie să reporniți aplicația manual.",
     "views.Wallet.startupSlowMsg.android": "Vă recomandăm fie să vizualizați jurnalele LND pentru mai multe detalii, fie să reporniți aplicația direct de aici.",
     "views.Wallet.restart": "Repornire",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Este recomandat ca primul tău fulger să fie de 100.000 sats sau mai mult; cu cât este mai mare cu atât mai bine. O taxă de configurare va fi dedusă din această sumă.",
     "views.Wallet.KeypadPane.lspExplainer": "Vi se va percepe o taxă de configurare dacă este plătită prin Lightning",
     "view.Wallet.PosPane.orderNumber": "Număr comandă",
