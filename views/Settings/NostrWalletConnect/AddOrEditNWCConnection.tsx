@@ -73,6 +73,7 @@ interface AddOrEditNWCConnectionState {
     budgetValue: number;
     maxBudgetLimit: number;
     showAdvancedSettings: boolean;
+    showCustomPermissions: boolean;
 }
 
 @inject('NostrWalletConnectStore', 'ModalStore')
@@ -100,7 +101,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryUnit: NostrConnectUtils.TIME_UNITS[1],
             budgetValue: 0,
             maxBudgetLimit: 0,
-            showAdvancedSettings: false
+            showAdvancedSettings: false,
+            showCustomPermissions: false
         };
     }
 
@@ -189,7 +191,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customExpiryValue,
                 customExpiryUnit,
                 budgetValue,
-                showAdvancedSettings: false
+                showAdvancedSettings: false,
+                showCustomPermissions: false
             });
         }
     };
@@ -284,8 +287,13 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
         }
 
-        if (selectedPermissionType === PermissionType.FullAccess) {
-            if (budgetValue === 0 && maxBudgetLimit > 0) {
+        if (
+            NostrConnectUtils.shouldShowBudget(
+                selectedPermissionType,
+                selectedPermissions
+            )
+        ) {
+            if (budgetValue === 0 && maxBudgetLimit >= 0) {
                 return false;
             }
         }
@@ -297,7 +305,9 @@ export default class AddOrEditNWCConnection extends React.Component<
         if (this.state.selectedPermissionType === permissionType) {
             this.updateStateWithChangeTracking({
                 selectedPermissionType: null,
-                selectedPermissions: []
+                selectedPermissions: [],
+                showCustomPermissions: false,
+                budgetValue: 0
             });
             return;
         }
@@ -307,24 +317,53 @@ export default class AddOrEditNWCConnection extends React.Component<
             this.state.selectedPermissions
         );
 
+        const shouldResetBudget =
+            permissionType === PermissionType.ReadOnly ||
+            !NostrConnectUtils.shouldShowBudget(permissionType, permissions);
+
         this.updateStateWithChangeTracking({
             selectedPermissionType: permissionType,
-            selectedPermissions: permissions
+            selectedPermissions: permissions,
+            showCustomPermissions: false,
+            ...(shouldResetBudget && { budgetValue: 0 })
         });
     };
 
     togglePermission = (permission: Nip47SingleMethod) => {
-        const { selectedPermissions } = this.state;
-        const newPermissions = selectedPermissions.includes(permission)
-            ? selectedPermissions.filter((p) => p !== permission)
-            : [...selectedPermissions, permission];
+        const { selectedPermissions, selectedPermissionType } = this.state;
+        const isAdding = !selectedPermissions.includes(permission);
+
+        let newPermissions: Nip47SingleMethod[];
+        if (isAdding) {
+            if (
+                selectedPermissionType === PermissionType.FullAccess ||
+                selectedPermissionType === PermissionType.ReadOnly
+            ) {
+                newPermissions = [permission];
+            } else {
+                newPermissions = [...selectedPermissions, permission];
+            }
+        } else {
+            newPermissions = selectedPermissions.filter(
+                (p) => p !== permission
+            );
+        }
 
         const newPermissionType =
             NostrConnectUtils.determinePermissionType(newPermissions);
 
+        // Reset budget when switching to ReadOnly or any non-budget permission
+        const shouldResetBudget =
+            newPermissionType === PermissionType.ReadOnly ||
+            !NostrConnectUtils.shouldShowBudget(
+                newPermissionType,
+                newPermissions
+            );
+
         this.updateStateWithChangeTracking({
             selectedPermissions: newPermissions,
-            selectedPermissionType: newPermissionType
+            selectedPermissionType: newPermissionType,
+            ...(shouldResetBudget && { budgetValue: 0 })
         });
     };
 
@@ -471,7 +510,13 @@ export default class AddOrEditNWCConnection extends React.Component<
             budgetRenewal
         };
 
-        if (selectedPermissionType === PermissionType.FullAccess) {
+        // Budget is required for FullAccess or when permissions include pay_invoice/pay_keysend
+        if (
+            NostrConnectUtils.shouldShowBudget(
+                selectedPermissionType,
+                selectedPermissions
+            )
+        ) {
             if (budgetValue === 0 && maxBudgetLimit > 0) {
                 throw new Error(
                     localeString(
@@ -602,39 +647,24 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     renderPermissionTypeItem = (permissionType: PermissionOption) => {
-        const { selectedPermissionType } = this.state;
-        const isSelected = selectedPermissionType === permissionType.key;
+        const { selectedPermissionType, showCustomPermissions } = this.state;
         const isCustom = permissionType.key === PermissionType.Custom;
+
+        let isSelected: boolean;
+        if (isCustom) {
+            isSelected = showCustomPermissions;
+        } else {
+            isSelected = selectedPermissionType === permissionType.key;
+        }
 
         if (isCustom) {
             return (
                 <View key={permissionType.key} style={{ marginTop: 20 }}>
                     <TouchableOpacity
                         onPress={() => {
-                            if (isSelected) {
-                                this.updateStateWithChangeTracking({
-                                    selectedPermissionType: null,
-                                    selectedPermissions: []
-                                });
-                            } else {
-                                const currentPermissions =
-                                    this.state.selectedPermissions;
-                                const currentType =
-                                    NostrConnectUtils.determinePermissionType(
-                                        currentPermissions
-                                    );
-
-                                const newPermissions =
-                                    currentType === PermissionType.FullAccess ||
-                                    currentType === PermissionType.ReadOnly
-                                        ? []
-                                        : currentPermissions;
-
-                                this.updateStateWithChangeTracking({
-                                    selectedPermissionType: permissionType.key,
-                                    selectedPermissions: newPermissions
-                                });
-                            }
+                            this.setState({
+                                showCustomPermissions: !showCustomPermissions
+                            });
                         }}
                         style={{
                             flexDirection: 'row',
@@ -710,7 +740,14 @@ export default class AddOrEditNWCConnection extends React.Component<
                         {permissionType.description}
                     </Text>
                 </View>
-                <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                <View
+                    style={{
+                        alignSelf: 'center',
+                        ...(Platform.OS === 'android'
+                            ? { marginLeft: 5 }
+                            : { marginHorizontal: 10 })
+                    }}
+                >
                     <Switch
                         value={isSelected}
                         onValueChange={() =>
@@ -723,11 +760,10 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     renderPermissionItem = (permission: IndividualPermissionOption) => {
-        const { selectedPermissions, selectedPermissionType } = this.state;
+        const { selectedPermissions, showCustomPermissions } = this.state;
         const isSelected = selectedPermissions.includes(permission.key);
-        const isCustomMode = selectedPermissionType === PermissionType.Custom;
 
-        if (!isCustomMode) return null;
+        if (!showCustomPermissions) return null;
 
         return (
             <View
@@ -755,7 +791,14 @@ export default class AddOrEditNWCConnection extends React.Component<
                         {permission.description}
                     </Text>
                 </View>
-                <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                <View
+                    style={{
+                        alignSelf: 'center',
+                        ...(Platform.OS === 'android'
+                            ? { marginLeft: 5 }
+                            : { marginHorizontal: 10 })
+                    }}
+                >
                     <Switch
                         value={isSelected}
                         onValueChange={() =>
@@ -1047,9 +1090,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                             </View>
                         </View>
 
-                        {/* Individual Permissions (only in custom mode) */}
-                        {this.state.selectedPermissionType ===
-                            PermissionType.Custom && (
+                        {/* Individual Permissions (only when custom section is expanded) */}
+                        {this.state.showCustomPermissions && (
                             <View style={styles.section}>
                                 <View style={styles.sectionTitleContainer}>
                                     <Body bold>
