@@ -328,7 +328,7 @@ export default class NostrConnectUtils {
     static getPermissionsForType(
         permissionType: PermissionType,
         currentPermissions: Nip47SingleMethod[] = []
-    ): { permissions: string[] } {
+    ): { permissions: Nip47SingleMethod[] } {
         switch (permissionType) {
             case PermissionType.FullAccess:
                 return {
