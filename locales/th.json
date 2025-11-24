@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "เริ่มการทำงานใหม่",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "ในการรับเงินครั้งแรกนั้น แนะนำว่าควรจะใส่เงินมากกว่า 100,000 sats เพราะค่าธรรมเนียมในการเปิดแชนแนลนั้นค่อนข้างมาก",
     "views.Wallet.KeypadPane.lspExplainer": "คุณจะถูกคิดค่าธรรมเนียมในการเปิดแชนแนลมากขึ้นหากโอนเข้า Lightning",
     "view.Wallet.PosPane.orderNumber": "หมายเลขคำสั่ง",

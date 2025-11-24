@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "Neustart",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Es wird empfohlen, dass dein erster Lightning-Empfang 100.000 Sats oder mehr beträgt; je höher, desto besser. Von diesem Betrag wird eine Einrichtungsgebühr abgezogen.",
     "views.Wallet.KeypadPane.lspExplainer": "Wenn via Lightning gezahlt wird, wird eine Einrichtungsgebühr erhoben.",
     "view.Wallet.PosPane.orderNumber": "Bestellnummer",

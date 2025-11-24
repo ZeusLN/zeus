@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "Käynnistä uudelleen",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "On suositeltavaa, että ensimmäinen salaman vastaanotto on vähintään 100 000 sattia; mitä suurempi, sen parempi. Tästä summasta vähennetään asennusmaksu.",
     "views.Wallet.KeypadPane.lspExplainer": "Sinulta veloitetaan asennusmaksu, jos maksat salaman kautta.",
     "view.Wallet.PosPane.orderNumber": "Järjestysnumero",

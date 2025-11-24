@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "Επανεκκίνηση",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Συνιστάται τα πρώτα sats που λαμβάνετε μέσω lightning που να είναι 100.000 ή περισσότερα- όσο περισσότερα τόσο το καλύτερο. Από αυτό το ποσό θα αφαιρεθεί ένα τέλος εγκατάστασης.",
     "views.Wallet.KeypadPane.lspExplainer": "Θα χρεωθείτε με ένα τέλος εγκατάστασης αν πληρωθείτε μέσω lightning.",
     "view.Wallet.PosPane.orderNumber": "Αριθμός παραγγελίας",

@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "Рестартиране",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Препоръчително е първият ви канал е 100 000 сата или повече; колкото по-голяма, толкова по-добре. От тази сума ще бъде приспадната такса за настройка.",
     "views.Wallet.KeypadPane.lspExplainer": "You will be charged a setup fee if paid over lightning.",
     "view.Wallet.PosPane.orderNumber": "Номер на поръчка",

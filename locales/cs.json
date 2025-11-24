@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "Doporučujeme vám prohlédnout si LND záznamy pro zjištění více informací, nebo aplikaci ručně restartovat.",
     "views.Wallet.startupSlowMsg.android": "Doporučujeme vám prohlédnout si LND záznamy pro zjištění více informací, nebo aplikaci restartovat ručně přímo odsud.",
     "views.Wallet.restart": "Restartovat",
+    "views.Wallet.batterySaverWarningTitle": "Byl zaznamenán režim spořiče baterie",
+    "views.Wallet.batterySaverWarningText": "Režim spořiče baterie je aktuálně povolen. To může ovlivnit Lightningové platby, směrování a výkon celkově. Pro dosažení nejlepšího zážitku zvažte vypnutí režimu spořiče baterie.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Doporučuje se, aby váš první příjem lightningu byl 100,000 satů nebo vyšší; čím více, tím lépe. Z této částky bude odečten zřizovací poplatek.",
     "views.Wallet.KeypadPane.lspExplainer": "V případě platby přes síť Lightning vám bude účtován zřizovací poplatek.",
     "view.Wallet.PosPane.orderNumber": "Číslo objednávky",
