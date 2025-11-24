@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "Anza tena",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Inapendekezwa kwamba malipo yako ya kwanza ya kupokea ya Lightning yawe 100,000 sats au zaidi; kiasi kikubwa zaidi ni bora zaidi. Ada ya usanidi itatozwa kutoka kwa kiasi hiki.",
     "views.Wallet.KeypadPane.lspExplainer": "Utatozwa ada ya usanidi ikiwa italipwa kupitia lightning.",
     "view.Wallet.PosPane.orderNumber": "Nambari ya Oda",

@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "पुनरारंभ करें",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "यह अनुशंसित है कि आपका पहला लाइटनिंग प्राप्ति 100,000 सैट्स या अधिक हो; जितना बड़ा उतना बेहतर। इस राशि में से एक सेटअप शुल्क काटा जाएगा।",
     "views.Wallet.KeypadPane.lspExplainer": "यदि लाइटनिंग के माध्यम से भुगतान किया जाता है तो आपसे सेटअप शुल्क लिया जाएगा।",
     "view.Wallet.PosPane.orderNumber": "ऑर्डर संख्या",

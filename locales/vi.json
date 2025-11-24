@@ -429,6 +429,8 @@
     "views.Wallet.startupSlowMsg.ios": "We recommend either viewing the LND logs for more details, or restarting the app manually.",
     "views.Wallet.startupSlowMsg.android": "We recommend either viewing the LND logs for more details, or restarting the app directly from here.",
     "views.Wallet.restart": "Khởi động lại",
+    "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
+    "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "Lightning đầu tiên bạn nhận được khuyến nghị từ 100.000 SAT trở lên; càng lớn càng tốt. Một khoản phí thiết lập sẽ được khấu trừ từ số tiền này.",
     "views.Wallet.KeypadPane.lspExplainer": "Bạn sẽ bị tính phí thiết lập nếu trả tiền trên Lightning.",
     "view.Wallet.PosPane.orderNumber": "Số đơn",
