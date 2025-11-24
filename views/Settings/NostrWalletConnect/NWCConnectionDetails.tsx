@@ -37,6 +37,8 @@ interface NWCConnectionDetailsProps {
 
 interface NWCConnectionDetailsState {
     loading: boolean;
+    regenerating: boolean;
+    deleting: boolean;
     connection: NWCConnection | null;
     confirmDelete: boolean;
     error: string | null;
@@ -53,6 +55,8 @@ export default class NWCConnectionDetails extends React.Component<
         super(props);
         this.state = {
             loading: false,
+            regenerating: false,
+            deleting: false,
             connection: null,
             confirmDelete: false,
             error: null
@@ -121,6 +125,70 @@ export default class NWCConnectionDetails extends React.Component<
         });
     };
 
+    buildConnectionParams = (connection: NWCConnection): any => {
+        const params: any = {
+            id: connection.id,
+            name: connection.name,
+            relayUrl: connection.relayUrl,
+            permissions: connection.permissions,
+            budgetRenewal: connection.budgetRenewal || 'never'
+        };
+
+        if (connection.maxAmountSats && connection.maxAmountSats > 0) {
+            params.budgetAmount = connection.maxAmountSats;
+        }
+
+        if (connection.expiresAt) {
+            params.expiresAt = connection.expiresAt;
+        }
+        if (connection.customExpiryValue && connection.customExpiryUnit) {
+            params.customExpiryValue = connection.customExpiryValue;
+            params.customExpiryUnit = connection.customExpiryUnit;
+        }
+
+        return params;
+    };
+
+    regenerateConnection = async () => {
+        const { NostrWalletConnectStore, navigation } = this.props;
+        const { connection } = this.state;
+
+        if (!connection) {
+            this.setState({
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            });
+            return;
+        }
+        this.setState({ regenerating: true, error: null });
+        try {
+            const params = this.buildConnectionParams(connection);
+            await NostrWalletConnectStore.deleteConnection(connection.id);
+            const nostrUrl = await NostrWalletConnectStore.createConnection(
+                params
+            );
+            if (nostrUrl) {
+                const createdConnection =
+                    NostrWalletConnectStore.connections[0];
+                navigation.navigate('NWCConnectionQR', {
+                    connectionId: createdConnection.id,
+                    nostrUrl
+                });
+            }
+        } catch (error) {
+            console.error('Failed to regenerate connection:', error);
+            this.setState({
+                error:
+                    (error as Error).message ||
+                    'Failed to regenerate connection',
+                regenerating: false
+            });
+        } finally {
+            this.setState({ regenerating: false });
+        }
+    };
+
     deleteConnection = (connection: NWCConnection) => {
         const { NostrWalletConnectStore, navigation } = this.props;
         if (!this.state.confirmDelete) {
@@ -129,7 +197,7 @@ export default class NWCConnectionDetails extends React.Component<
                 this.setState({ confirmDelete: false });
             }, 3000);
         } else {
-            this.setState({ loading: true, error: null });
+            this.setState({ deleting: true, error: null });
             NostrWalletConnectStore.deleteConnection(connection.id)
                 .then(() => {
                     navigation.goBack();
@@ -138,7 +206,7 @@ export default class NWCConnectionDetails extends React.Component<
                     console.error('Failed to delete connection:', error);
                     this.setState({
                         error: 'Failed to delete connection',
-                        loading: false,
+                        deleting: false,
                         confirmDelete: false
                     });
                 });
@@ -146,7 +214,8 @@ export default class NWCConnectionDetails extends React.Component<
     };
     render() {
         const { navigation, NostrWalletConnectStore } = this.props;
-        const { loading, error, connection } = this.state;
+        const { loading, regenerating, deleting, error, connection } =
+            this.state;
         const { loading: storeLoading } = NostrWalletConnectStore;
 
         return (
@@ -165,7 +234,7 @@ export default class NWCConnectionDetails extends React.Component<
                             : undefined
                     }
                     rightComponent={
-                        loading || storeLoading ? (
+                        loading || storeLoading || regenerating || deleting ? (
                             <View style={{ marginRight: 10 }}>
                                 <LoadingIndicator size={30} />
                             </View>
@@ -448,6 +517,15 @@ export default class NWCConnectionDetails extends React.Component<
                             ]}
                         >
                             <Button
+                                title={localeString(
+                                    'views.Settings.NostrWalletConnect.regenerateConnection'
+                                )}
+                                onPress={this.regenerateConnection}
+                                disabled={regenerating}
+                                secondary={regenerating}
+                                noUppercase
+                            />
+                            <Button
                                 title={
                                     this.state.confirmDelete
                                         ? localeString(
@@ -461,6 +539,8 @@ export default class NWCConnectionDetails extends React.Component<
                                     this.deleteConnection(connection)
                                 }
                                 warning={!this.state.confirmDelete}
+                                disabled={loading || deleting}
+                                secondary={deleting}
                                 containerStyle={{
                                     borderColor: this.state.confirmDelete
                                         ? themeColor('warning')
@@ -520,6 +600,7 @@ const styles = StyleSheet.create({
     },
     bottomContainer: {
         paddingHorizontal: 20,
-        paddingVertical: 15
+        paddingVertical: 15,
+        gap: 10
     }
 });
