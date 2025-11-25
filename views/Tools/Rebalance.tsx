@@ -13,6 +13,7 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
+import BigNumber from 'bignumber.js';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -51,6 +52,14 @@ const REBALANCE_CONSTANTS = {
     MIN_REBALANCE_AMOUNT: 1,
     CIRCULAR_LAYER_NAME: 'circular-rebalance'
 } as const;
+
+export enum PaymentStatus {
+    SUCCEEDED = 'SUCCEEDED',
+    COMPLETE = 'complete',
+    FAILED = 'FAILED',
+    IN_FLIGHT = 'IN_FLIGHT',
+    UNKNOWN = 'UNKNOWN'
+}
 
 type ChannelType = 'source' | 'destination';
 
@@ -268,10 +277,16 @@ export default class Rebalance extends React.Component<
             return;
         }
 
-        const projectedSourceBalance =
-            Number(selectedSourceChannel.localBalance) - rebalanceAmount;
-        const projectedDestinationBalance =
-            Number(selectedDestinationChannel.localBalance) + rebalanceAmount;
+        const projectedSourceBalance = new BigNumber(
+            selectedSourceChannel.localBalance
+        )
+            .minus(rebalanceAmount)
+            .toNumber();
+        const projectedDestinationBalance = new BigNumber(
+            selectedDestinationChannel.localBalance
+        )
+            .plus(rebalanceAmount)
+            .toNumber();
 
         this.updateStateWithCallback({
             projectedSourceBalance,
@@ -388,7 +403,9 @@ export default class Rebalance extends React.Component<
         if (selectedSourceChannel && selectedDestinationChannel) {
             const sourceBalance = Number(selectedSourceChannel.localBalance);
             const destBalance = Number(selectedDestinationChannel.localBalance);
-            const total = sourceBalance + destBalance;
+            const total = new BigNumber(sourceBalance)
+                .plus(destBalance)
+                .toNumber();
 
             this.updateStateWithCallback({
                 originalSourceBalance: sourceBalance,
@@ -409,10 +426,15 @@ export default class Rebalance extends React.Component<
 
         const projectedSourceBalance = Math.max(
             0,
-            originalSourceBalance - rebalanceAmount
+            new BigNumber(originalSourceBalance)
+                .minus(rebalanceAmount)
+                .toNumber()
         );
-        const projectedDestinationBalance =
-            originalDestinationBalance + rebalanceAmount;
+        const projectedDestinationBalance = new BigNumber(
+            originalDestinationBalance
+        )
+            .plus(rebalanceAmount)
+            .toNumber();
 
         this.updateStateWithCallback({
             balanceSliderValue: value,
@@ -651,8 +673,12 @@ export default class Rebalance extends React.Component<
             const routeParams = {
                 source: selectedSourceChannel.remotePubkey,
                 destination: ownNodePubkey,
-                amount_msat: rebalanceAmount * 1000,
-                maxfee_msat: Number(feeLimit) * 1000,
+                amount_msat: new BigNumber(rebalanceAmount)
+                    .multipliedBy(1000)
+                    .toNumber(),
+                maxfee_msat: new BigNumber(feeLimit)
+                    .multipliedBy(1000)
+                    .toNumber(),
                 layers: [REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME],
                 final_cltv: invoiceData.min_final_cltv_expiry || 144
             };
@@ -702,7 +728,6 @@ export default class Rebalance extends React.Component<
                 payment_hash: invoiceData.payment_hash
             });
 
-            console.log('Payment completed successfully:', waitResponse);
             return waitResponse;
         } catch (error: any) {
             this.handleBackendError(error, 'CLN');
@@ -783,13 +808,12 @@ export default class Rebalance extends React.Component<
     };
 
     private handleClnRestPaymentResult = (result: PaymentResult) => {
-        console.log(`CLN Rest payment result: ${JSON.stringify(result)}`);
-        if (result && result.status === 'complete') {
+        if (result && result.status === PaymentStatus.COMPLETE) {
             this.handleSuccessfulPayment(result);
         } else if (result && result.status === 'failed') {
-            const errorMessage = `Payment failed: ${
-                result.failure_reason || 'Unknown error'
-            }`;
+            const errorMessage = `${localeString(
+                'views.Rebalance.error.paymentFailed'
+            )}: ${result.failure_reason || localeString('general.unknown')}`;
             const rebalanceData = this.createRebalanceResult(
                 false,
                 errorMessage,
@@ -799,7 +823,7 @@ export default class Rebalance extends React.Component<
         } else {
             const rebalanceData = this.createRebalanceResult(
                 false,
-                'Payment result unclear - check your transaction history',
+                localeString('views.Rebalance.error.paymentResultUnclear'),
                 result
             );
             this.navigateToSendingRebalance(rebalanceData);
@@ -812,24 +836,24 @@ export default class Rebalance extends React.Component<
             return;
         }
 
-        const status = result.status || result.state || 'UNKNOWN';
+        const status = result.status || result.state || PaymentStatus.UNKNOWN;
 
         switch (status) {
-            case 'SUCCEEDED':
-            case 'complete':
+            case PaymentStatus.SUCCEEDED:
+            case PaymentStatus.COMPLETE:
                 this.handleSuccessfulPayment(result);
                 break;
 
-            case 'FAILED':
+            case PaymentStatus.FAILED:
                 this.handleFailedPayment({
                     failure_reason:
                         result.failure_reason ||
                         result.failure_string ||
-                        'Payment failed'
+                        localeString('views.Rebalance.error.paymentFailed')
                 });
                 break;
 
-            case 'IN_FLIGHT':
+            case PaymentStatus.IN_FLIGHT:
                 this.handleUnclearPaymentStatus(result);
                 break;
 
@@ -857,13 +881,9 @@ export default class Rebalance extends React.Component<
 
     // Direct payment result handler
     private handleDirectPaymentResult = (payment: PaymentResult) => {
-        console.log(
-            `Amount: ${payment.value_sat} sats, Fee: ${payment.fee_sat} sats`
-        );
-
-        if (payment.status === 'SUCCEEDED') {
+        if (payment.status === PaymentStatus.SUCCEEDED) {
             this.handleSuccessfulPayment(payment);
-        } else if (payment.status === 'FAILED') {
+        } else if (payment.status === PaymentStatus.FAILED) {
             this.handleFailedPayment(payment);
         } else {
             this.handleUnclearPaymentStatus(payment);
@@ -903,7 +923,8 @@ export default class Rebalance extends React.Component<
     private handleFailedPayment = (payment: PaymentResult) => {
         this.props.TransactionsStore.loading = false;
         const errorMsg =
-            payment.failure_reason || 'Payment failed for unknown reason';
+            payment.failure_reason ||
+            localeString('views.Rebalance.error.paymentFailedUnknown');
         const rebalanceData = this.createRebalanceResult(
             false,
             errorMsg,
@@ -934,10 +955,6 @@ export default class Rebalance extends React.Component<
         setTimeout(() => {
             TransactionsStore.loading = false;
             if (TransactionsStore.payment_error) {
-                console.log(
-                    'Rebalance failed:',
-                    TransactionsStore.payment_error
-                );
                 const rebalanceData = this.createRebalanceResult(
                     false,
                     TransactionsStore.payment_error
@@ -968,8 +985,6 @@ export default class Rebalance extends React.Component<
     };
 
     private handleRebalanceError = (error: any) => {
-        console.log('Rebalance error:', error.message);
-
         this.props.TransactionsStore.loading = false;
 
         const errorMessage =
@@ -1034,7 +1049,7 @@ export default class Rebalance extends React.Component<
 
         const initialRebalanceData = this.createRebalanceResult(
             false,
-            'Processing...',
+            localeString('general.processing') + '...',
             undefined
         );
 
@@ -1087,22 +1102,28 @@ export default class Rebalance extends React.Component<
         localReserve: number,
         remoteReserve: number
     ) => ({
-        sendingCapacity: Math.max(0, localBalance - localReserve),
-        receivingCapacity: Math.max(0, remoteBalance - remoteReserve)
+        sendingCapacity: Math.max(
+            0,
+            new BigNumber(localBalance).minus(localReserve).toNumber()
+        ),
+        receivingCapacity: Math.max(
+            0,
+            new BigNumber(remoteBalance).minus(remoteReserve).toNumber()
+        )
     });
 
     private calculateProjectedBalances = (
         channel: Channel,
         projectedBalance: number
     ) => {
-        const originalTotal =
-            (Number(channel.localBalance) || 0) +
-            (Number(channel.remoteBalance) || 0);
+        const originalTotal = new BigNumber(channel.localBalance || 0)
+            .plus(Number(channel.remoteBalance) || 0)
+            .toNumber();
 
         const displayLocalBalance = Math.max(0, projectedBalance);
         const displayRemoteBalance = Math.max(
             0,
-            originalTotal - displayLocalBalance
+            new BigNumber(originalTotal).minus(displayLocalBalance).toNumber()
         );
 
         return { displayLocalBalance, displayRemoteBalance };
@@ -1200,10 +1221,18 @@ export default class Rebalance extends React.Component<
         }
 
         return {
-            displayLocalBalance,
-            displayRemoteBalance,
-            displaySendingCapacity,
-            displayReceivingCapacity
+            displayLocalBalance: Number(
+                new BigNumber(displayLocalBalance).toFixed(3)
+            ),
+            displayRemoteBalance: Number(
+                new BigNumber(displayRemoteBalance).toFixed(3)
+            ),
+            displaySendingCapacity: Number(
+                new BigNumber(displaySendingCapacity).toFixed(3)
+            ),
+            displayReceivingCapacity: Number(
+                new BigNumber(displayReceivingCapacity).toFixed(3)
+            )
         };
     };
 
@@ -1267,8 +1296,12 @@ export default class Rebalance extends React.Component<
                         <TouchableOpacity
                             style={styles.unselectButton}
                             onPress={() => this.handleChannelUnselect(type)}
-                            accessibilityLabel={`Unselect ${type} channel`}
-                            accessibilityHint={`Remove the selected ${type} channel`}
+                            accessibilityLabel={localeString(
+                                'general.unselect'
+                            )}
+                            accessibilityHint={localeString(
+                                'general.removeSelected'
+                            )}
                         >
                             <CloseIcon
                                 width={15}
@@ -1389,7 +1422,9 @@ export default class Rebalance extends React.Component<
                     <>
                         {this.renderNumericInput(
                             localeString('views.PaymentRequest.feeLimit') +
-                                ' (sats)',
+                                ' (' +
+                                localeString('general.sats') +
+                                ')',
                             feeLimit,
                             REBALANCE_CONSTANTS.DEFAULT_FEE_LIMIT,
                             (text: string) => this.setState({ feeLimit: text })
@@ -1448,22 +1483,20 @@ export default class Rebalance extends React.Component<
                                     ? JSON.parse(event.result)
                                     : event.result;
 
-                            console.log('Rebalance payment update:', result);
-
                             // Process final payment status
                             if (result && result.status !== 'IN_FLIGHT') {
                                 handlePayment(result);
 
                                 this.cleanupPaymentListener();
 
-                                if (result.status === 'SUCCEEDED') {
+                                if (result.status === PaymentStatus.SUCCEEDED) {
                                     const formattedResult = {
                                         payment_hash: result.payment_hash,
                                         payment_preimage:
                                             result.payment_preimage,
                                         value_sat: result.value_sat,
                                         fee_sat: result.fee_sat,
-                                        status: 'complete',
+                                        status: PaymentStatus.COMPLETE,
                                         creation_date: result.creation_date,
                                         htlcs: result.htlcs
                                     };
@@ -1472,7 +1505,9 @@ export default class Rebalance extends React.Component<
                                     reject(
                                         new Error(
                                             result.failure_reason ||
-                                                'Payment failed'
+                                                localeString(
+                                                    'views.Rebalance.error.paymentFailed'
+                                                )
                                         )
                                     );
                                 }
@@ -1551,13 +1586,28 @@ export default class Rebalance extends React.Component<
             }
         }
 
+        let fee = paymentData?.fee_sat || paymentData?.fee;
+
+        if (
+            !fee &&
+            paymentData &&
+            SettingsStore.implementation === 'cln-rest'
+        ) {
+            const paymentAny = paymentData as any;
+            if (paymentAny.amount_sent_msat && paymentAny.amount_msat) {
+                const amountSentMsat = Number(paymentAny.amount_sent_msat);
+                const amountMsat = Number(paymentAny.amount_msat);
+                fee = Math.floor((amountSentMsat - amountMsat) / 1000);
+            }
+        }
+
         const result = {
             success,
             error,
             sourceChannel: selectedSourceChannel,
             destinationChannel: selectedDestinationChannel,
             rebalanceAmount,
-            fee: paymentData?.fee_sat || paymentData?.fee,
+            fee,
             paymentPreimage:
                 paymentData?.payment_preimage || paymentData?.preimage,
             paymentHash: paymentData?.payment_hash || undefined,
@@ -1591,7 +1641,7 @@ export default class Rebalance extends React.Component<
             balanceSliderValue: this.state.balanceSliderValue
         };
 
-        this.props.navigation.navigate('SendingLightning', {
+        this.props.navigation.navigate('RebalancingChannels', {
             rebalanceData,
             isRebalance: true,
             currentRebalanceState

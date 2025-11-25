@@ -195,14 +195,15 @@ export default class RoutingEvent extends React.Component<
                                 />
                             </View>
 
-                            {(fee || rebalanceFees) && (
+                            {(fee !== undefined ||
+                                rebalanceFees !== undefined) && (
                                 <KeyValue
                                     keyValue={localeString(
                                         'views.EditFee.titleDisplayOnly'
                                     )}
                                     value={
                                         <Amount
-                                            sats={fee || rebalanceFees || 0}
+                                            sats={fee ?? rebalanceFees ?? 0}
                                             toggleable
                                             sensitive
                                         />

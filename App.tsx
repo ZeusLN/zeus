@@ -251,6 +251,7 @@ import BumpFee from './views/Tools/BumpFee';
 import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
 import Rebalance from './views/Tools/Rebalance';
+import RebalancingChannels from './views/Tools/RebalancingChannels';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
 import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
@@ -664,6 +665,13 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="Rebalance" // @ts-ignore:next-line
                                                         component={Rebalance}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RebalancingChannels"
+                                                        // @ts-ignore:next-line
+                                                        component={
+                                                            RebalancingChannels
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Activity" // @ts-ignore:next-line
