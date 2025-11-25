@@ -111,6 +111,10 @@ interface SwapState {
 )
 @observer
 export default class Swap extends React.PureComponent<SwapProps, SwapState> {
+    constructor(props: SwapProps) {
+        super(props);
+        props.SwapStore.clearError();
+    }
     state = {
         reverse: false,
         serviceFeeSats: 0,
