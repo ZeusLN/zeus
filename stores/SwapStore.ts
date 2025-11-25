@@ -56,6 +56,7 @@ export default class SwapStore {
 
     @action
     public clearError = () => {
+        this.loading = true;
         this.apiError = '';
     };
 
