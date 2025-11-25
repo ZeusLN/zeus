@@ -59,7 +59,11 @@ export default class NewChannelModal extends React.Component<
                 backdrop={true}
                 position="bottom"
                 isOpen={showNewChannelModal}
-                onClosed={() => toggleNewChannelModal()}
+                onClosed={() => {
+                    if (showNewChannelModal) {
+                        toggleNewChannelModal();
+                    }
+                }}
             >
                 <View>
                     <Text
@@ -78,8 +82,8 @@ export default class NewChannelModal extends React.Component<
                             <TouchableOpacity
                                 key="jit"
                                 onPress={async () => {
-                                    NavigationService.navigate('Receive');
                                     closeVisibleModalDialog();
+                                    NavigationService.navigate('Receive');
                                 }}
                                 style={{
                                     ...styles.option,
@@ -183,8 +187,8 @@ export default class NewChannelModal extends React.Component<
                             <TouchableOpacity
                                 key="lsps1"
                                 onPress={async () => {
-                                    NavigationService.navigate('LSPS1');
                                     closeVisibleModalDialog();
+                                    NavigationService.navigate('LSPS1');
                                 }}
                                 style={{
                                     ...styles.option,
@@ -287,8 +291,8 @@ export default class NewChannelModal extends React.Component<
                         <TouchableOpacity
                             key="on-chain"
                             onPress={async () => {
-                                NavigationService.navigate('OpenChannel');
                                 closeVisibleModalDialog();
+                                NavigationService.navigate('OpenChannel');
                             }}
                             style={{
                                 ...styles.option,
