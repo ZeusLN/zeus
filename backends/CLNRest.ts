@@ -487,6 +487,102 @@ export default class CLNRest {
             timeout: 60
         });
     };
+    getRoutes = ({
+        source,
+        destination,
+        amount_msat,
+        layers,
+        maxfee_msat,
+        final_cltv
+    }: {
+        source: string;
+        destination: string;
+        amount_msat: number;
+        layers?: string[];
+        maxfee_msat?: number;
+        final_cltv?: number;
+    }) => {
+        return this.postRequest(
+            '/v1/getroutes',
+            {
+                source,
+                destination,
+                amount_msat,
+                layers,
+                maxfee_msat,
+                final_cltv
+            },
+            30000
+        );
+    };
+    askReneCreateLayer = ({ layer }: { layer: string }) => {
+        return this.postRequest('/v1/askrene-create-layer', { layer }, 30000);
+    };
+    askReneUpdateChannel = ({
+        short_channel_id_dir,
+        layer,
+        enabled = false
+    }: {
+        short_channel_id_dir: string;
+        layer: string;
+        enabled?: boolean;
+    }) => {
+        return this.postRequest(
+            '/v1/askrene-update-channel',
+            {
+                short_channel_id_dir,
+                layer,
+                enabled
+            },
+            30000
+        );
+    };
+    askReneRemoveLayer = ({ layer }: { layer: string }) => {
+        return this.postRequest('/v1/askrene-remove-layer', { layer }, 30000);
+    };
+    sendPay = ({
+        route,
+        payment_hash,
+        payment_secret,
+        bolt11
+    }: {
+        route: any[];
+        payment_hash: string;
+        payment_secret?: string;
+        bolt11?: string;
+    }) => {
+        const params: any = {
+            route,
+            payment_hash
+        };
+
+        if (payment_secret) {
+            params.payment_secret = payment_secret;
+        }
+
+        if (bolt11) {
+            params.bolt11 = bolt11;
+        }
+
+        return this.postRequest('/v1/sendpay', params, 30000);
+    };
+    waitSendPay = ({
+        payment_hash,
+        timeout
+    }: {
+        payment_hash: string;
+        timeout?: number;
+    }) => {
+        const params: any = {
+            payment_hash
+        };
+
+        if (timeout) {
+            params.timeout = timeout;
+        }
+
+        return this.postRequest('/v1/waitsendpay', params, 120000);
+    };
 
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
