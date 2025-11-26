@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Switch as RNSwitch } from 'react-native';
+import { Platform, Switch as RNSwitch } from 'react-native';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface SwitchProps {
@@ -23,7 +23,8 @@ function Switch(props: SwitchProps) {
                 value ? themeColor('highlight') : themeColor('disabled')
             }
             style={{
-                alignSelf: 'flex-end'
+                alignSelf: 'flex-end',
+                ...(Platform.OS === 'ios' && { marginRight: 10 })
             }}
             disabled={disabled}
         />
