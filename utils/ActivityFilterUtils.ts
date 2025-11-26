@@ -11,7 +11,13 @@ import { LSPActivity, LSPOrderState } from '../models/LSP';
 
 type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
 
+import { localeString } from './LocaleUtils';
+
 class ActivityFilterUtils {
+    private isCircularRebalance(memo: string): boolean {
+        const rebalanceMemoPrefix = localeString('views.Rebalance.memo');
+        return memo.includes(rebalanceMemoPrefix);
+    }
     public filterActivities(
         activities: Array<ActivityItem>,
         filter: Filter
@@ -212,6 +218,25 @@ class ActivityFilterUtils {
                     !(isPayment && activity.isKeysend) &&
                     !(isInvoice && activity.isKeysend)
                 );
+            });
+        }
+
+        if (filter.circularRebalance == false) {
+            filteredActivity = filteredActivity.filter((activity: any) => {
+                const isPayment = activity instanceof Payment;
+                const isInvoice = activity instanceof Invoice;
+
+                if (isPayment) {
+                    const memo = activity.getMemo ? activity.getMemo : '';
+                    return !this.isCircularRebalance(memo);
+                }
+
+                if (isInvoice) {
+                    const memo = activity.memo ? activity.memo : '';
+                    return !this.isCircularRebalance(memo);
+                }
+
+                return true;
             });
         }
 
