@@ -98,5 +98,6 @@ export const nostrWalletConnectStore = new NostrWalletConnectStore(
     cashuStore,
     invoicesStore,
     messageSignStore,
-    lightningAddressStore
+    lightningAddressStore,
+    modalStore
 );
