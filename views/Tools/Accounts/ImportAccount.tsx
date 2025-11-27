@@ -88,8 +88,6 @@ export default class ImportAccount extends React.Component<
             addresses_to_generate: 50,
             understood: false
         };
-
-        this.handleParams(props);
     }
 
     handleParams = (props: ImportAccountProps) => {
@@ -100,6 +98,7 @@ export default class ImportAccount extends React.Component<
             master_key_fingerprint,
             address_type
         } = props.route.params ?? {};
+
         if (name) {
             this.setState({ name });
         }
@@ -123,11 +122,12 @@ export default class ImportAccount extends React.Component<
         }
     };
 
+    componentDidMount() {
+        this.handleParams(this.props);
+    }
+
     componentDidUpdate(prevProps: ImportAccountProps) {
-        if (
-            this.props.route.params !== prevProps.route.params ||
-            this.props.NodeInfoStore !== prevProps.NodeInfoStore
-        ) {
+        if (this.props.route.params !== prevProps.route.params) {
             this.handleParams(this.props);
         }
     }
