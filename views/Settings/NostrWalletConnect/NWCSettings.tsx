@@ -162,10 +162,7 @@ export default class NWCSettings extends React.Component<
                                     </View>
                                     <View
                                         style={{
-                                            alignSelf: 'center',
-                                            ...(Platform.OS === 'android'
-                                                ? { marginLeft: 5 }
-                                                : { marginHorizontal: 10 })
+                                            alignSelf: 'center'
                                         }}
                                     >
                                         <Switch
@@ -218,10 +215,7 @@ export default class NWCSettings extends React.Component<
                                         </View>
                                         <View
                                             style={{
-                                                alignSelf: 'center',
-                                                ...(Platform.OS === 'android'
-                                                    ? { marginLeft: 5 }
-                                                    : { marginHorizontal: 10 })
+                                                alignSelf: 'center'
                                             }}
                                         >
                                             <Switch

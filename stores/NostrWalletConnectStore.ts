@@ -20,8 +20,7 @@ import type {
     Nip47Transaction,
     Nip47SignMessageResponse,
     Nip47SignMessageRequest,
-    Nip47SingleMethod,
-    Nip47Method
+    Nip47SingleMethod
 } from '@getalby/sdk/dist/nwc/types';
 
 import type {
@@ -77,6 +76,7 @@ import CashuStore from './CashuStore';
 import InvoicesStore from './InvoicesStore';
 import MessageSignStore from './MessageSignStore';
 import LightningAddressStore from './LightningAddressStore';
+import ModalStore from './ModalStore';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
@@ -86,7 +86,6 @@ export const NWC_PERSISTENT_SERVICE_ENABLED = 'persistentNWCServicesEnabled';
 export const NWC_IOS_EVENTS_LISTENER_SERVER_URL =
     'https://nwc-ios-handoff.zeusln.com/api/v1';
 
-const RATE_LIMIT_MS = 500;
 const MAX_RELAY_ATTEMPTS = 5;
 const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
@@ -170,10 +169,13 @@ export default class NostrWalletConnectStore {
     @observable public cashuEnabled: boolean = false;
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
-    @observable private lastCallTimes: Map<string, number> = new Map();
     @observable private iosBackgroundTaskActive: boolean = false;
     @observable public iosBackgroundTimeRemaining: number = 0;
     @observable public iosHandoffInProgress: boolean = false;
+    @observable public isProcessingPendingPayInvoices: boolean = false;
+    @observable public processedPendingPayInvoiceEventIds: string[] = [];
+    @observable public failedPendingPayInvoiceEventIds: string[] = [];
+    @observable public pendingPayInvoiceErrors: Map<string, string> = new Map();
     private iosBackgroundTimerInterval: any = null;
     private androidReconnectionListener: any = null;
     private appStateListener: any = null;
@@ -187,6 +189,7 @@ export default class NostrWalletConnectStore {
     invoicesStore: InvoicesStore;
     messageSignStore: MessageSignStore;
     lightningAddressStore: LightningAddressStore;
+    modalStore: ModalStore;
 
     constructor(
         settingsStore: SettingsStore,
@@ -196,7 +199,8 @@ export default class NostrWalletConnectStore {
         cashuStore: CashuStore,
         invoicesStore: InvoicesStore,
         messageSignStore: MessageSignStore,
-        lightningAddressStore: LightningAddressStore
+        lightningAddressStore: LightningAddressStore,
+        modalStore: ModalStore
     ) {
         this.settingsStore = settingsStore;
         this.balanceStore = balanceStore;
@@ -206,6 +210,7 @@ export default class NostrWalletConnectStore {
         this.invoicesStore = invoicesStore;
         this.messageSignStore = messageSignStore;
         this.lightningAddressStore = lightningAddressStore;
+        this.modalStore = modalStore;
     }
 
     @action
@@ -424,13 +429,18 @@ export default class NostrWalletConnectStore {
             this.persistentNWCServiceEnabled = false;
             this.iosBackgroundTimeRemaining = 0;
             this.iosHandoffInProgress = false;
-            this.activeSubscriptions.clear();
             this.nwcWalletServices.clear();
-            this.lastCallTimes.clear();
             this.publishedRelays.clear();
             await this.unsubscribeFromAllConnections();
         }
     };
+    @action
+    public resetPendingPayInvoiceState(): void {
+        this.isProcessingPendingPayInvoices = false;
+        this.processedPendingPayInvoiceEventIds = [];
+        this.failedPendingPayInvoiceEventIds = [];
+        this.pendingPayInvoiceErrors.clear();
+    }
     public isServiceReady(): boolean {
         return (
             this.walletServiceKeys?.privateKey !== undefined &&
@@ -720,9 +730,33 @@ export default class NostrWalletConnectStore {
     @action
     public saveConnections = async () => {
         try {
+            const existingData = await Storage.getItem(NWC_CONNECTIONS_KEY);
+            const allConnections: any[] = existingData
+                ? JSON.parse(existingData)
+                : [];
+            const { nodeInfo } = this.nodeInfoStore;
+            const { implementation } = this.settingsStore;
+            const currentNodeId = nodeInfo?.nodeId;
+            const filteredExisting = allConnections.filter(
+                (c: any) =>
+                    !(
+                        c.nodePubkey === currentNodeId &&
+                        c.implementation === implementation
+                    )
+            );
+            const mergedConnections = [
+                ...filteredExisting,
+                ...this.connections
+            ];
+            const dedupedById = new Map<string, any>();
+            for (const conn of mergedConnections) {
+                if (conn && conn.id) {
+                    dedupedById.set(conn.id, conn);
+                }
+            }
             await Storage.setItem(
                 NWC_CONNECTIONS_KEY,
-                JSON.stringify(this.connections)
+                JSON.stringify(Array.from(dedupedById.values()))
             );
         } catch (error: any) {
             console.error('Failed to save NWC connections:', error);
@@ -848,35 +882,35 @@ export default class NostrWalletConnectStore {
 
             if (connection.hasPermission('get_info')) {
                 handler.getInfo = () =>
-                    this.withRateLimit(connection.id, 'get_info', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handleGetInfo(connection)
                     );
             }
 
             if (connection.hasPermission('get_balance')) {
                 handler.getBalance = () =>
-                    this.withRateLimit(connection.id, 'get_balance', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handleGetBalance(connection)
                     );
             }
 
             if (connection.hasPermission('pay_invoice')) {
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
-                    this.withRateLimit(connection.id, 'pay_invoice', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handlePayInvoice(connection, request)
                     );
             }
 
             if (connection.hasPermission('make_invoice')) {
                 handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
-                    this.withRateLimit(connection.id, 'make_invoice', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handleMakeInvoice(connection, request)
                     );
             }
 
             if (connection.hasPermission('lookup_invoice')) {
                 handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
-                    this.withRateLimit(connection.id, 'lookup_invoice', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handleLookupInvoice(request)
                     );
             }
@@ -885,21 +919,21 @@ export default class NostrWalletConnectStore {
                 handler.listTransactions = (
                     request: Nip47ListTransactionsRequest
                 ) =>
-                    this.withRateLimit(connection.id, 'list_transactions', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handleListTransactions(request)
                     );
             }
 
             if (connection.hasPermission('pay_keysend')) {
                 handler.payKeysend = (request: Nip47PayKeysendRequest) =>
-                    this.withRateLimit(connection.id, 'pay_keysend', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handlePayKeysend(connection, request)
                     );
             }
 
             if (connection.hasPermission('sign_message')) {
                 handler.signMessage = (request: Nip47SignMessageRequest) =>
-                    this.withRateLimit(connection.id, 'sign_message', () =>
+                    this.withGlobalHandler(connection.id, () =>
                         this.handleSignMessage(request)
                     );
             }
@@ -1014,6 +1048,9 @@ export default class NostrWalletConnectStore {
         for (const connectionId of connectionIds) {
             await this.unsubscribeFromConnection(connectionId);
         }
+        runInAction(() => {
+            this.activeSubscriptions.clear();
+        });
     }
     private async publishToAllRelays(): Promise<number> {
         let successfulPublishes = 0;
@@ -1048,22 +1085,11 @@ export default class NostrWalletConnectStore {
         await Promise.allSettled(publishPromises);
         return successfulPublishes;
     }
-    private async withRateLimit<T>(
+
+    private async withGlobalHandler<T>(
         connectionId: string,
-        method: Nip47Method,
         handler: () => Promise<T>
     ): Promise<T> {
-        if (this.isRateLimited(connectionId, method)) {
-            console.error(
-                `NWC: Rate limited for connection ${connectionId} and method ${method}`
-            );
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.rateLimited'
-                ),
-                ErrorCodes.RATE_LIMITED
-            ) as T;
-        }
         await this.markConnectionUsed(connectionId);
         return await handler();
     }
@@ -2174,32 +2200,6 @@ export default class NostrWalletConnectStore {
         this.showPaymentSentNotification(amountSats, connection.name);
     }
 
-    private isRateLimited(connectionId: string, method: Nip47Method): boolean {
-        const key = `${connectionId}-${method.toLowerCase()}`;
-        const lastCallTime = this.lastCallTimes.get(key);
-        const now = Date.now();
-
-        if (lastCallTime && now - lastCallTime < RATE_LIMIT_MS) {
-            return true;
-        }
-        if (this.lastCallTimes.size > 1000) {
-            const cutoff = now - 10000;
-            for (const [k, timestamp] of this.lastCallTimes.entries()) {
-                if (timestamp < cutoff) {
-                    this.lastCallTimes.delete(k);
-                }
-            }
-            if (this.lastCallTimes.size >= 1000) {
-                const entries = Array.from(this.lastCallTimes.entries())
-                    .sort((a, b) => b[1] - a[1]) // Sort descending (newest first)
-                    .slice(0, 500); // Keep newest 500
-                this.lastCallTimes = new Map(entries);
-            }
-        }
-        this.lastCallTimes.set(key, now);
-        return false;
-    }
-
     // STORAGE OPERATIONS
 
     private generateWalletServiceKeys(): WalletServiceKeys {
@@ -2867,7 +2867,7 @@ export default class NostrWalletConnectStore {
         } catch (error) {
             throw new Error('Failed to parse event');
         }
-        const connection = this.connections.find(
+        const connection = this.activeConnections.find(
             (c) => c.pubkey === event.pubkey
         );
         if (!connection) {
@@ -2907,6 +2907,18 @@ export default class NostrWalletConnectStore {
             console.info('NWC: No pending events to process');
             return;
         }
+        const payInvoiceEvents: Array<{
+            eventStr: string;
+            request: NWCRequest;
+            connection: NWCConnection;
+            eventId: string;
+            amount: number;
+        }> = [];
+        const payKeysendEvents: Array<{
+            request: NWCRequest;
+            connection: NWCConnection;
+            eventId: string;
+        }> = [];
         for (const eventStr of events) {
             try {
                 const { request, connection, eventId } =
@@ -2915,7 +2927,53 @@ export default class NostrWalletConnectStore {
                             await this.validateAndParsePendingEvent(eventStr),
                         3
                     );
-                await this.handleEventRequest(connection, request, eventId);
+                // Only process pay_invoice and pay_keysend methods
+                if (request.method === 'pay_invoice') {
+                    const invoice = (request.params as any).invoice;
+
+                    // Decode invoice amount for display
+                    let amount = 0;
+                    try {
+                        const decoded = bolt11.decode(invoice);
+                        if (decoded.satoshis) {
+                            amount = Number(decoded.satoshis) || 0;
+                        } else if (decoded.millisatoshis) {
+                            amount = millisatsToSats(
+                                Number(decoded.millisatoshis) || 0
+                            );
+                        }
+                    } catch (error) {
+                        console.warn(
+                            'NWC: Failed to decode invoice amount',
+                            error
+                        );
+                    }
+                    let alreadyPaid = false;
+                    try {
+                        alreadyPaid = await this.isInvoiceAlreadyPaid(invoice);
+                    } catch (checkError) {
+                        console.warn(
+                            'NWC: Failed to check if invoice is already paid',
+                            checkError
+                        );
+                    }
+
+                    if (!alreadyPaid) {
+                        payInvoiceEvents.push({
+                            eventStr,
+                            request,
+                            connection,
+                            eventId,
+                            amount
+                        });
+                    }
+                } else if (request.method === 'pay_keysend') {
+                    payKeysendEvents.push({
+                        request,
+                        connection,
+                        eventId
+                    });
+                }
             } catch (error) {
                 console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
                     error,
@@ -2924,12 +2982,151 @@ export default class NostrWalletConnectStore {
                 continue;
             }
         }
+        for (const event of payKeysendEvents) {
+            try {
+                await this.handleEventRequest(
+                    event.connection,
+                    event.request,
+                    event.eventId
+                );
+            } catch (error) {
+                console.warn('NWC: Failed to process pay_keysend event', {
+                    error,
+                    eventId: event.eventId
+                });
+            }
+        }
+        // If there are pay_invoice events, show modal
+        if (payInvoiceEvents.length > 0) {
+            const totalAmount = payInvoiceEvents.reduce(
+                (sum, event) => sum + event.amount,
+                0
+            );
+            const pendingEventsData = payInvoiceEvents.map((event) => ({
+                eventStr: event.eventStr,
+                request: event.request,
+                connection: event.connection,
+                eventId: event.eventId,
+                connectionName: event.connection.name,
+                amount: event.amount
+            }));
+            this.modalStore.toggleNWCPendingPaymentsModal({
+                pendingEvents: pendingEventsData,
+                totalAmount
+            });
+        }
     }
+
+    @action
+    public async processPendingPaymentsEvents(
+        pendingEvents: Array<{
+            eventStr: string;
+            request: NWCRequest;
+            connection: NWCConnection;
+            eventId: string;
+            connectionName: string;
+            amount: number;
+        }>
+    ): Promise<void> {
+        let remainingEvents = [...pendingEvents];
+        let remainingTotal = remainingEvents.reduce(
+            (sum, event) => sum + event.amount,
+            0
+        );
+        runInAction(() => {
+            this.resetPendingPayInvoiceState();
+            this.isProcessingPendingPayInvoices = true;
+        });
+
+        this.modalStore.toggleNWCPendingPaymentsModal({
+            pendingEvents: remainingEvents,
+            totalAmount: remainingTotal
+        });
+
+        for (const event of pendingEvents) {
+            try {
+                const success = await this.handleEventRequest(
+                    event.connection,
+                    event.request,
+                    event.eventId
+                );
+                await new Promise<void>((resolve) => setTimeout(resolve, 1000));
+                runInAction(() => {
+                    if (success) {
+                        this.processedPendingPayInvoiceEventIds.push(
+                            event.eventId
+                        );
+                    } else {
+                        this.failedPendingPayInvoiceEventIds.push(
+                            event.eventId
+                        );
+                    }
+                });
+                // After showing the checkmark, wait a bit and then remove the
+                if (success) {
+                    setTimeout(() => {
+                        const nextRemaining = remainingEvents.filter(
+                            (e) => e.eventId !== event.eventId
+                        );
+                        if (nextRemaining.length === remainingEvents.length) {
+                            return;
+                        }
+                        remainingEvents = nextRemaining;
+                        remainingTotal = remainingEvents.reduce(
+                            (sum, e) => sum + e.amount,
+                            0
+                        );
+                        this.modalStore.toggleNWCPendingPaymentsModal({
+                            pendingEvents: remainingEvents,
+                            totalAmount: remainingTotal
+                        });
+                    }, 1500);
+                }
+            } catch (error) {
+                console.warn('NWC: Failed to process pending pay invoice', {
+                    error,
+                    eventId: event.eventId
+                });
+                runInAction(() => {
+                    this.failedPendingPayInvoiceEventIds.push(event.eventId);
+                    const message =
+                        error instanceof Error ? error.message : String(error);
+                    this.pendingPayInvoiceErrors.set(
+                        event.connectionName,
+                        message
+                    );
+                });
+            }
+        }
+
+        runInAction(() => {
+            this.isProcessingPendingPayInvoices = false;
+        });
+
+        const hasFailures = this.failedPendingPayInvoiceEventIds.length > 0;
+
+        if (hasFailures) {
+            // At this point remainingEvents already only contains failed events,
+            // because successful ones have been removed above.
+            this.modalStore.toggleNWCPendingPaymentsModal({
+                pendingEvents: remainingEvents,
+                totalAmount: remainingTotal
+            });
+        } else {
+            setTimeout(() => {
+                this.modalStore.toggleNWCPendingPaymentsModal({});
+                runInAction(() => {
+                    this.resetPendingPayInvoiceState();
+                });
+            }, 2000);
+        }
+    }
+
     private async handleEventRequest(
         connection: NWCConnection,
         request: NWCRequest,
         eventId: string
-    ): Promise<void> {
+    ): Promise<boolean> {
         let response: any;
         try {
             switch (request.method) {
@@ -2946,7 +3143,7 @@ export default class NostrWalletConnectStore {
                     );
                     break;
                 default:
-                    return;
+                    return true;
             }
         } catch (error) {
             console.warn('NWC: Failed to handle event request', {
@@ -2963,6 +3160,8 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INTERNAL_ERROR
             );
         }
+        const hasError = !!response?.error;
+
         // Only publish if we have a response
         if (response) {
             await this.publishEventToClient(
@@ -2972,6 +3171,8 @@ export default class NostrWalletConnectStore {
                 eventId
             );
         }
+
+        return !hasError;
     }
     // Publishing Events to Nostr client
     private async publishEventToClient(
@@ -3251,5 +3452,55 @@ export default class NostrWalletConnectStore {
                 'stores.NostrWalletConnectStore.error.maxRetriesReached'
             )
         );
+    }
+
+    private async isInvoiceAlreadyPaid(invoice: string): Promise<boolean> {
+        try {
+            if (this.isCashuConfigured) {
+                await this.cashuStore.getPayReq(invoice);
+                const inv = this.cashuStore.payReq;
+                return !!inv?.isPaid;
+            }
+            let paymentHash = '';
+            try {
+                const decoded = NostrConnectUtils.decodeInvoiceTags(
+                    invoice,
+                    DEFAULT_INVOICE_EXPIRY_SECONDS
+                );
+                paymentHash = decoded.paymentHash;
+            } catch (decodeError) {
+                console.warn(
+                    'NWC: Failed to decode invoice when checking paid status',
+                    decodeError
+                );
+                return false;
+            }
+
+            if (!paymentHash) {
+                return false;
+            }
+
+            const rawInvoice = await BackendUtils.lookupInvoice({
+                r_hash: paymentHash
+            });
+            const inv = new Invoice(rawInvoice);
+            return inv.isPaid;
+        } catch (error: any) {
+            const message =
+                typeof error?.message === 'string'
+                    ? error.message
+                    : String(error);
+            const code = (error && (error as any).code) ?? undefined;
+
+            if (
+                code === 5 ||
+                message.toLowerCase().includes('unable to locate invoice')
+            ) {
+                return false;
+            }
+
+            console.warn('NWC: isInvoiceAlreadyPaid check failed:', error);
+            return false;
+        }
     }
 }
