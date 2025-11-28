@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useEffect, useRef } from 'react';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -10,11 +10,21 @@ interface LoadingIndicatorProps {
 
 function LoadingIndicator(props: LoadingIndicatorProps) {
     const { size } = props;
+    const animationRef = useRef<Lottie>(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            animationRef.current?.play();
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, []);
 
     return (
         <Lottie
+            ref={animationRef}
             source={loader}
-            autoPlay
+            autoPlay={false}
             loop
             colorFilters={[
                 {
