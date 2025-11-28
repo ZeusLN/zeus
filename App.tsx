@@ -1342,8 +1342,6 @@ export default class App extends React.PureComponent {
                             {/* @ts-ignore:next-line */}
                             <AndroidNfcModal />
                             {/* @ts-ignore:next-line */}
-                            <InfoModal />
-                            {/* @ts-ignore:next-line */}
                             <ShareModal />
                             {/* @ts-ignore:next-line */}
                             <NewChannelModal />
@@ -1351,6 +1349,8 @@ export default class App extends React.PureComponent {
                             <GraphSyncPromptModal />
                             {/* @ts-ignore:next-line */}
                             <NWCPendingPaymentsModal />
+                            {/* @ts-ignore:next-line */}
+                            <InfoModal />
                         </GestureHandlerRootView>
                     </PushNotificationManager>
                 </AppContainer>

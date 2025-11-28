@@ -239,6 +239,7 @@
     "components.NWCPendingPayInvoiceModal.descriptionMultiple": "Review payment requests from multiple connections.",
     "components.NWCPendingPayInvoiceModal.totalAmount": "Total Amount:",
     "components.NWCPendingPayInvoiceModal.retryFailed": "Retry failed payments",
+    "components.NWCPendingPayInvoiceModal.errorTitle": "Payment Error",
     "utils.shareIntent.noQRFound": "No QR code found in shared image",
     "utils.shareIntent.invalidImage": "Invalid image shared. Please share a valid QR code image.",
     "utils.shareIntent.processingError": "Error processing shared image",
