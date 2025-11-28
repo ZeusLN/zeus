@@ -4,7 +4,8 @@ import {
     StyleSheet,
     Text,
     ScrollView,
-    ActivityIndicator
+    ActivityIndicator,
+    TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -41,13 +42,13 @@ export default class NWCPendingPaymentsModal extends React.Component<
         const {
             isProcessingPendingPayInvoices,
             processedPendingPayInvoiceEventIds,
-            failedPendingPayInvoiceEventIds
+            failedPendingPayInvoiceEventIds,
+            pendingPayInvoiceErrors
         } = NostrWalletConnectStore;
 
         if (!nwcPendingPaymentsData || !showNWCPendingPaymentsModal) {
             return null;
         }
-
         const { pendingEvents, totalAmount } = nwcPendingPaymentsData as {
             pendingEvents: any[];
             totalAmount: number;
@@ -86,13 +87,15 @@ export default class NWCPendingPaymentsModal extends React.Component<
                     failureCount === 0 &&
                     successCount === eventsForConnection.length;
                 const failed = failureCount > 0;
+                const errorMessage = pendingPayInvoiceErrors.get(name);
 
                 return {
                     name,
                     amount: stats.amount,
                     count: stats.count,
                     completed,
-                    failed
+                    failed,
+                    errorMessage
                 };
             }
         );
@@ -195,6 +198,7 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                                 count: number;
                                                 completed: boolean;
                                                 failed: boolean;
+                                                errorMessage?: string;
                                             }) => (
                                                 <View
                                                     key={item.name}
@@ -237,16 +241,62 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                                                 />
                                                             )}
                                                         {item.failed && (
-                                                            <Text
-                                                                style={{
-                                                                    fontSize: 18,
-                                                                    color: themeColor(
-                                                                        'error'
-                                                                    )
+                                                            <TouchableOpacity
+                                                                onPress={() => {
+                                                                    if (
+                                                                        item.errorMessage
+                                                                    ) {
+                                                                        let displayMessage =
+                                                                            item.errorMessage;
+                                                                        try {
+                                                                            const parsed =
+                                                                                JSON.parse(
+                                                                                    item.errorMessage
+                                                                                );
+                                                                            if (
+                                                                                parsed.message
+                                                                            ) {
+                                                                                displayMessage =
+                                                                                    parsed.message;
+                                                                            } else if (
+                                                                                typeof parsed ===
+                                                                                'string'
+                                                                            ) {
+                                                                                displayMessage =
+                                                                                    parsed;
+                                                                            }
+                                                                        } catch {
+                                                                            displayMessage =
+                                                                                item.errorMessage;
+                                                                        }
+                                                                        ModalStore.toggleInfoModal(
+                                                                            {
+                                                                                title: localeString(
+                                                                                    'components.NWCPendingPayInvoiceModal.errorTitle'
+                                                                                ),
+                                                                                text: displayMessage
+                                                                            }
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                hitSlop={{
+                                                                    top: 10,
+                                                                    bottom: 10,
+                                                                    left: 10,
+                                                                    right: 10
                                                                 }}
                                                             >
-                                                                !
-                                                            </Text>
+                                                                <Text
+                                                                    style={{
+                                                                        fontSize: 18,
+                                                                        color: themeColor(
+                                                                            'error'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {'ⓘ'}
+                                                                </Text>
+                                                            </TouchableOpacity>
                                                         )}
                                                         {!item.failed &&
                                                             item.completed && (
@@ -298,15 +348,12 @@ export default class NWCPendingPaymentsModal extends React.Component<
                         <View style={styles.buttons}>
                             <View style={styles.button}>
                                 <Button
+                                    disabled={isProcessingPendingPayInvoices}
                                     title={
                                         isProcessingPendingPayInvoices
-                                            ? localeString(
-                                                  'views.SendingLightning.sending'
-                                              )
+                                            ? localeString('general.processing')
                                             : hasFailures
-                                            ? localeString(
-                                                  'components.NWCPendingPayInvoiceModal.retryFailed'
-                                              )
+                                            ? localeString('general.retry')
                                             : localeString('general.pay')
                                     }
                                     onPress={() => {

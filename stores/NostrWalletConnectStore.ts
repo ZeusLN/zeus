@@ -2984,11 +2984,17 @@ export default class NostrWalletConnectStore {
         }
         for (const event of payKeysendEvents) {
             try {
-                await this.handleEventRequest(
+                const result = await this.handleEventRequest(
                     event.connection,
                     event.request,
                     event.eventId
                 );
+                if (!result.success && result.errorMessage) {
+                    console.warn('NWC: Failed to process pay_keysend event', {
+                        error: result.errorMessage,
+                        eventId: event.eventId
+                    });
+                }
             } catch (error) {
                 console.warn('NWC: Failed to process pay_keysend event', {
                     error,
@@ -3045,14 +3051,14 @@ export default class NostrWalletConnectStore {
 
         for (const event of pendingEvents) {
             try {
-                const success = await this.handleEventRequest(
+                const result = await this.handleEventRequest(
                     event.connection,
                     event.request,
                     event.eventId
                 );
                 await new Promise<void>((resolve) => setTimeout(resolve, 1000));
                 runInAction(() => {
-                    if (success) {
+                    if (result.success) {
                         this.processedPendingPayInvoiceEventIds.push(
                             event.eventId
                         );
@@ -3060,10 +3066,34 @@ export default class NostrWalletConnectStore {
                         this.failedPendingPayInvoiceEventIds.push(
                             event.eventId
                         );
+                        if (result.errorMessage) {
+                            if (
+                                !this.pendingPayInvoiceErrors.has(
+                                    event.connectionName
+                                )
+                            ) {
+                                let formattedError = result.errorMessage;
+                                try {
+                                    const parsed = JSON.parse(
+                                        result.errorMessage
+                                    );
+                                    if (parsed.message) {
+                                        formattedError = parsed.message;
+                                    } else if (typeof parsed === 'string') {
+                                        formattedError = parsed;
+                                    }
+                                } catch {
+                                    formattedError = result.errorMessage;
+                                }
+                                this.pendingPayInvoiceErrors.set(
+                                    event.connectionName,
+                                    formattedError
+                                );
+                            }
+                        }
                     }
                 });
-                // After showing the checkmark, wait a bit and then remove the
-                if (success) {
+                if (result.success) {
                     setTimeout(() => {
                         const nextRemaining = remainingEvents.filter(
                             (e) => e.eventId !== event.eventId
@@ -3091,10 +3121,25 @@ export default class NostrWalletConnectStore {
                     this.failedPendingPayInvoiceEventIds.push(event.eventId);
                     const message =
                         error instanceof Error ? error.message : String(error);
-                    this.pendingPayInvoiceErrors.set(
-                        event.connectionName,
-                        message
-                    );
+                    if (
+                        !this.pendingPayInvoiceErrors.has(event.connectionName)
+                    ) {
+                        let formattedError = message;
+                        try {
+                            const parsed = JSON.parse(message);
+                            if (parsed.message) {
+                                formattedError = parsed.message;
+                            } else if (typeof parsed === 'string') {
+                                formattedError = parsed;
+                            }
+                        } catch {
+                            formattedError = message;
+                        }
+                        this.pendingPayInvoiceErrors.set(
+                            event.connectionName,
+                            formattedError
+                        );
+                    }
                 });
             }
         }
@@ -3126,7 +3171,7 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: NWCRequest,
         eventId: string
-    ): Promise<boolean> {
+    ): Promise<{ success: boolean; errorMessage?: string }> {
         let response: any;
         try {
             switch (request.method) {
@@ -3143,7 +3188,7 @@ export default class NostrWalletConnectStore {
                     );
                     break;
                 default:
-                    return true;
+                    return { success: true };
             }
         } catch (error) {
             console.warn('NWC: Failed to handle event request', {
@@ -3152,15 +3197,18 @@ export default class NostrWalletConnectStore {
                 connection: connection.name,
                 eventId
             });
-            response = this.handleError(
+            const errorMessage =
                 (error instanceof Error ? error.message : String(error)) ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.failedToPayInvoice'
-                    ),
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToPayInvoice'
+                );
+            response = this.handleError(
+                errorMessage,
                 ErrorCodes.INTERNAL_ERROR
             );
         }
         const hasError = !!response?.error;
+        const errorMessage = response?.error?.message;
 
         // Only publish if we have a response
         if (response) {
@@ -3172,7 +3220,10 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        return !hasError;
+        return {
+            success: !hasError,
+            errorMessage: hasError ? errorMessage : undefined
+        };
     }
     // Publishing Events to Nostr client
     private async publishEventToClient(
