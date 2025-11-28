@@ -11,7 +11,10 @@ function SuccessAnimation() {
 
     useEffect(() => {
         // Start the animation only when desired
-        animationRef.current?.play();
+        const timer = setTimeout(() => {
+            animationRef.current?.play();
+        }, 1);
+        return () => clearTimeout(timer);
     }, []); // Empty dependency means it runs only on first mount
 
     return (

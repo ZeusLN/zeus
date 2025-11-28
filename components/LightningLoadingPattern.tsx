@@ -11,10 +11,22 @@ interface LightningLoadingPatternProps {
 
 function LightningLoadingPattern(props: LightningLoadingPatternProps) {
     const { color } = props;
+    const animationRef = React.useRef<Lottie>(null);
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            animationRef.current?.play();
+        }, 1);
+
+        return () => clearTimeout(timer);
+    }, []);
+
     return (
         <Lottie
+            ref={animationRef}
             source={loader}
-            autoPlay
+            autoPlay={false}
+            loop={true}
             colorFilters={[
                 {
                     keypath: 'Layer 36 Outlines 2',
