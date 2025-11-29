@@ -40,7 +40,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import Add from '../assets/images/SVG/Add.svg';
 import Alert from '../assets/images/SVG/Alert.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
-import Nostrich from '../assets/images/SVG/Nostrich.svg';
+import NWCLogo from '../assets/images/SVG/nwc-logo.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Ecash from '../assets/images/SVG/Ecash.svg';
 import Menu from '../assets/images/SVG/Menu.svg';
@@ -91,7 +91,7 @@ const ZeusPayAnimated = () => {
     );
 };
 
-const NostrichAnimated = () => {
+const NWCAnimated = () => {
     let state = new Animated.Value(1);
     Animated.loop(
         Animated.sequence([
@@ -116,7 +116,7 @@ const NostrichAnimated = () => {
                 opacity: state
             }}
         >
-            <Nostrich fill={themeColor('highlight')} width={30} height={30} />
+            <NWCLogo fill={themeColor('highlight')} width={30} height={30} />
         </Animated.View>
     );
 };
@@ -668,7 +668,7 @@ export default class WalletHeader extends React.Component<
                                 )}
                                 {!connecting && nwcloading && (
                                     <View style={{ paddingRight: 15 }}>
-                                        <NostrichAnimated />
+                                        <NWCAnimated />
                                     </View>
                                 )}
 

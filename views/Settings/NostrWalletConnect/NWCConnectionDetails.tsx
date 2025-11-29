@@ -163,7 +163,11 @@ export default class NWCConnectionDetails extends React.Component<
         }
         this.setState({ regenerating: true, error: null });
         try {
+            const totalSpendSats = connection.totalSpendSats;
+            const lastBudgetReset = connection.lastBudgetReset;
             const params = this.buildConnectionParams(connection);
+            params.totalSpendSats = totalSpendSats;
+            params.lastBudgetReset = lastBudgetReset;
             await NostrWalletConnectStore.deleteConnection(connection.id);
             const nostrUrl = await NostrWalletConnectStore.createConnection(
                 params
