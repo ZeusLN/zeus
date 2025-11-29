@@ -1443,9 +1443,9 @@ export default class SettingsStore {
     @observable public settingsUpdateInProgress: boolean = false;
     @observable btcPayError: string | null;
     @observable sponsorsError: string | null;
-    @observable olympians: Array<any>;
-    @observable gods: Array<any>;
-    @observable mortals: Array<any>;
+    @observable olympians: Array<any> = [];
+    @observable gods: Array<any> = [];
+    @observable mortals: Array<any> = [];
     @observable host: string;
     @observable port: string;
     @observable url: string;
