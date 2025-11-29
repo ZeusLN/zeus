@@ -467,7 +467,11 @@ export default class NostrWalletConnectStore {
             );
         }
         try {
-            await this.nodeInfoStore.getNodeInfo();
+            if (BackendUtils.supportsNodeInfo()) {
+                await this.nodeInfoStore.getNodeInfo();
+            } else {
+                await this.balanceStore.getLightningBalance(true);
+            }
         } catch (error) {
             console.warn('NWC: Backend not accessible, but continuing:', error);
         }
