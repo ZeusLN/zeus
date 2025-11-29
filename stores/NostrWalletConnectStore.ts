@@ -3106,10 +3106,14 @@ export default class NostrWalletConnectStore {
                             (sum, e) => sum + e.amount,
                             0
                         );
-                        this.modalStore.toggleNWCPendingPaymentsModal({
-                            pendingEvents: remainingEvents,
-                            totalAmount: remainingTotal
-                        });
+                        if (remainingTotal === 0) {
+                            this.modalStore.toggleNWCPendingPaymentsModal({});
+                        } else {
+                            this.modalStore.toggleNWCPendingPaymentsModal({
+                                pendingEvents: remainingEvents,
+                                totalAmount: remainingTotal
+                            });
+                        }
                     }, 1500);
                 }
             } catch (error) {
@@ -3151,19 +3155,15 @@ export default class NostrWalletConnectStore {
         const hasFailures = this.failedPendingPayInvoiceEventIds.length > 0;
 
         if (hasFailures) {
-            // At this point remainingEvents already only contains failed events,
-            // because successful ones have been removed above.
             this.modalStore.toggleNWCPendingPaymentsModal({
                 pendingEvents: remainingEvents,
                 totalAmount: remainingTotal
             });
         } else {
-            setTimeout(() => {
-                this.modalStore.toggleNWCPendingPaymentsModal({});
-                runInAction(() => {
-                    this.resetPendingPayInvoiceState();
-                });
-            }, 2000);
+            this.modalStore.toggleNWCPendingPaymentsModal({});
+            runInAction(() => {
+                this.resetPendingPayInvoiceState();
+            });
         }
     }
 
