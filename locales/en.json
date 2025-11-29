@@ -237,6 +237,7 @@
     "components.NWCPendingPayInvoiceModal.title": "Pending Payment Requests",
     "components.NWCPendingPayInvoiceModal.description": "Review payment request details below.",
     "components.NWCPendingPayInvoiceModal.descriptionMultiple": "Review payment requests from multiple connections.",
+    "components.NWCPendingPayInvoiceModal.pendingInvoices": "Pending Invoices",
     "components.NWCPendingPayInvoiceModal.totalAmount": "Total Amount:",
     "components.NWCPendingPayInvoiceModal.retryFailed": "Retry failed payments",
     "components.NWCPendingPayInvoiceModal.errorTitle": "Payment Error",

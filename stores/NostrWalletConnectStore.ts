@@ -148,6 +148,8 @@ export interface CreateConnectionParams {
     expiresAt?: Date;
     customExpiryValue?: number;
     customExpiryUnit?: TimeUnit;
+    totalSpendSats?: number;
+    lastBudgetReset?: Date;
 }
 
 export default class NostrWalletConnectStore {
@@ -530,12 +532,20 @@ export default class NostrWalletConnectStore {
                 permissions:
                     params.permissions ||
                     NostrConnectUtils.getFullAccessPermissions(),
-                totalSpendSats: 0,
+                totalSpendSats:
+                    params.totalSpendSats !== undefined
+                        ? params.totalSpendSats
+                        : 0,
                 createdAt: new Date(),
                 maxAmountSats: params.budgetAmount,
                 budgetRenewal: params.budgetRenewal || BudgetRenewalType.Never,
                 expiresAt: params.expiresAt,
-                lastBudgetReset: params.budgetAmount ? new Date() : undefined,
+                lastBudgetReset:
+                    params.lastBudgetReset !== undefined
+                        ? params.lastBudgetReset
+                        : params.budgetAmount
+                        ? new Date()
+                        : undefined,
                 customExpiryValue: params.customExpiryValue,
                 customExpiryUnit: params.customExpiryUnit,
                 nodePubkey,
@@ -3067,29 +3077,21 @@ export default class NostrWalletConnectStore {
                             event.eventId
                         );
                         if (result.errorMessage) {
-                            if (
-                                !this.pendingPayInvoiceErrors.has(
-                                    event.connectionName
-                                )
-                            ) {
-                                let formattedError = result.errorMessage;
-                                try {
-                                    const parsed = JSON.parse(
-                                        result.errorMessage
-                                    );
-                                    if (parsed.message) {
-                                        formattedError = parsed.message;
-                                    } else if (typeof parsed === 'string') {
-                                        formattedError = parsed;
-                                    }
-                                } catch {
-                                    formattedError = result.errorMessage;
+                            let formattedError = result.errorMessage;
+                            try {
+                                const parsed = JSON.parse(result.errorMessage);
+                                if (parsed.message) {
+                                    formattedError = parsed.message;
+                                } else if (typeof parsed === 'string') {
+                                    formattedError = parsed;
                                 }
-                                this.pendingPayInvoiceErrors.set(
-                                    event.connectionName,
-                                    formattedError
-                                );
+                            } catch {
+                                formattedError = result.errorMessage;
                             }
+                            this.pendingPayInvoiceErrors.set(
+                                event.eventId,
+                                formattedError
+                            );
                         }
                     }
                 });
@@ -3106,10 +3108,14 @@ export default class NostrWalletConnectStore {
                             (sum, e) => sum + e.amount,
                             0
                         );
-                        this.modalStore.toggleNWCPendingPaymentsModal({
-                            pendingEvents: remainingEvents,
-                            totalAmount: remainingTotal
-                        });
+                        if (remainingTotal === 0) {
+                            this.modalStore.toggleNWCPendingPaymentsModal({});
+                        } else {
+                            this.modalStore.toggleNWCPendingPaymentsModal({
+                                pendingEvents: remainingEvents,
+                                totalAmount: remainingTotal
+                            });
+                        }
                     }, 1500);
                 }
             } catch (error) {
@@ -3121,25 +3127,21 @@ export default class NostrWalletConnectStore {
                     this.failedPendingPayInvoiceEventIds.push(event.eventId);
                     const message =
                         error instanceof Error ? error.message : String(error);
-                    if (
-                        !this.pendingPayInvoiceErrors.has(event.connectionName)
-                    ) {
-                        let formattedError = message;
-                        try {
-                            const parsed = JSON.parse(message);
-                            if (parsed.message) {
-                                formattedError = parsed.message;
-                            } else if (typeof parsed === 'string') {
-                                formattedError = parsed;
-                            }
-                        } catch {
-                            formattedError = message;
+                    let formattedError = message;
+                    try {
+                        const parsed = JSON.parse(message);
+                        if (parsed.message) {
+                            formattedError = parsed.message;
+                        } else if (typeof parsed === 'string') {
+                            formattedError = parsed;
                         }
-                        this.pendingPayInvoiceErrors.set(
-                            event.connectionName,
-                            formattedError
-                        );
+                    } catch {
+                        formattedError = message;
                     }
+                    this.pendingPayInvoiceErrors.set(
+                        event.eventId,
+                        formattedError
+                    );
                 });
             }
         }
@@ -3151,19 +3153,15 @@ export default class NostrWalletConnectStore {
         const hasFailures = this.failedPendingPayInvoiceEventIds.length > 0;
 
         if (hasFailures) {
-            // At this point remainingEvents already only contains failed events,
-            // because successful ones have been removed above.
             this.modalStore.toggleNWCPendingPaymentsModal({
                 pendingEvents: remainingEvents,
                 totalAmount: remainingTotal
             });
         } else {
-            setTimeout(() => {
-                this.modalStore.toggleNWCPendingPaymentsModal({});
-                runInAction(() => {
-                    this.resetPendingPayInvoiceState();
-                });
-            }, 2000);
+            this.modalStore.toggleNWCPendingPaymentsModal({});
+            runInAction(() => {
+                this.resetPendingPayInvoiceState();
+            });
         }
     }
 

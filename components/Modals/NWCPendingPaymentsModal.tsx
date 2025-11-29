@@ -53,52 +53,27 @@ export default class NWCPendingPaymentsModal extends React.Component<
             pendingEvents: any[];
             totalAmount: number;
         };
+        const eventList = pendingEvents.map((event: any) => {
+            const isProcessed = processedPendingPayInvoiceEventIds.includes(
+                event.eventId
+            );
+            const isFailed = failedPendingPayInvoiceEventIds.includes(
+                event.eventId
+            );
+            const errorMessage = pendingPayInvoiceErrors.get(event.eventId);
+            const isProcessing =
+                isProcessingPendingPayInvoices && !isProcessed && !isFailed;
 
-        const connectionStats = new Map<
-            string,
-            { amount: number; count: number }
-        >();
-        pendingEvents.forEach((event: any) => {
-            const current = connectionStats.get(event.connectionName) || {
-                amount: 0,
-                count: 0
+            return {
+                eventId: event.eventId,
+                connectionName: event.connectionName,
+                amount: event.amount,
+                isProcessed,
+                isFailed,
+                isProcessing,
+                errorMessage
             };
-            connectionStats.set(event.connectionName, {
-                amount: current.amount + event.amount,
-                count: current.count + 1
-            });
         });
-
-        const connectionList = Array.from(connectionStats.entries()).map(
-            ([name, stats]) => {
-                const eventsForConnection = pendingEvents.filter(
-                    (e: any) => e.connectionName === name
-                );
-                const hasEvents = eventsForConnection.length > 0;
-                const successCount = eventsForConnection.filter((e: any) =>
-                    processedPendingPayInvoiceEventIds.includes(e.eventId)
-                ).length;
-                const failureCount = eventsForConnection.filter((e: any) =>
-                    failedPendingPayInvoiceEventIds.includes(e.eventId)
-                ).length;
-
-                const completed =
-                    hasEvents &&
-                    failureCount === 0 &&
-                    successCount === eventsForConnection.length;
-                const failed = failureCount > 0;
-                const errorMessage = pendingPayInvoiceErrors.get(name);
-
-                return {
-                    name,
-                    amount: stats.amount,
-                    count: stats.count,
-                    completed,
-                    failed,
-                    errorMessage
-                };
-            }
-        );
 
         const hasFailures = failedPendingPayInvoiceEventIds.length > 0;
 
@@ -158,7 +133,7 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                     lineHeight: 22
                                 }}
                             >
-                                {connectionList.length > 1
+                                {eventList.length > 1
                                     ? localeString(
                                           'components.NWCPendingPayInvoiceModal.descriptionMultiple'
                                       )
@@ -168,8 +143,8 @@ export default class NWCPendingPaymentsModal extends React.Component<
                             </Text>
                         </View>
 
-                        {connectionList.length > 0 && (
-                            <View style={styles.connectionsSection}>
+                        {eventList.length > 0 && (
+                            <View style={styles.eventsSection}>
                                 <Text
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Book',
@@ -181,7 +156,7 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.NostrWalletConnect.connections'
+                                        'components.NWCPendingPayInvoiceModal.pendingInvoices'
                                     )}{' '}
                                     {':'}
                                 </Text>
@@ -191,23 +166,22 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                         nestedScrollEnabled={true}
                                         scrollEventThrottle={16}
                                     >
-                                        {connectionList.map(
+                                        {eventList.map(
                                             (item: {
-                                                name: string;
+                                                eventId: string;
+                                                connectionName: string;
                                                 amount: number;
-                                                count: number;
-                                                completed: boolean;
-                                                failed: boolean;
+                                                isProcessed: boolean;
+                                                isFailed: boolean;
+                                                isProcessing: boolean;
                                                 errorMessage?: string;
                                             }) => (
                                                 <View
-                                                    key={item.name}
-                                                    style={styles.connectionRow}
+                                                    key={item.eventId}
+                                                    style={styles.eventRow}
                                                 >
                                                     <View
-                                                        style={
-                                                            styles.connectionInfo
-                                                        }
+                                                        style={styles.eventInfo}
                                                     >
                                                         <Text
                                                             style={{
@@ -219,28 +193,25 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                                                 fontSize: 17
                                                             }}
                                                         >
-                                                            {item.name}
-                                                            {item.count > 1
-                                                                ? ` (${item.count})`
-                                                                : ''}
+                                                            {
+                                                                item.connectionName
+                                                            }
                                                         </Text>
                                                     </View>
                                                     <View
                                                         style={
-                                                            styles.connectionStatus
+                                                            styles.eventStatus
                                                         }
                                                     >
-                                                        {isProcessingPendingPayInvoices &&
-                                                            !item.completed &&
-                                                            !item.failed && (
-                                                                <ActivityIndicator
-                                                                    size="small"
-                                                                    color={themeColor(
-                                                                        'secondaryText'
-                                                                    )}
-                                                                />
-                                                            )}
-                                                        {item.failed && (
+                                                        {item.isProcessing && (
+                                                            <ActivityIndicator
+                                                                size="small"
+                                                                color={themeColor(
+                                                                    'secondaryText'
+                                                                )}
+                                                            />
+                                                        )}
+                                                        {item.isFailed && (
                                                             <TouchableOpacity
                                                                 onPress={() => {
                                                                     if (
@@ -298,17 +269,16 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                                                 </Text>
                                                             </TouchableOpacity>
                                                         )}
-                                                        {!item.failed &&
-                                                            item.completed && (
+                                                        {!item.isFailed &&
+                                                            item.isProcessed && (
                                                                 <Text
-                                                                    style={
-                                                                        (styles.connectionCompleted,
-                                                                        {
-                                                                            color: themeColor(
-                                                                                'success'
-                                                                            )
-                                                                        })
-                                                                    }
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'success'
+                                                                        ),
+                                                                        marginRight: 4,
+                                                                        fontSize: 16
+                                                                    }}
                                                                 >
                                                                     ✓
                                                                 </Text>
@@ -398,7 +368,7 @@ const styles = StyleSheet.create({
     header: {
         marginBottom: 16
     },
-    connectionsSection: {
+    eventsSection: {
         marginBottom: 16,
         width: '90%',
         alignSelf: 'center'
@@ -412,27 +382,23 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3
     },
-    connectionRow: {
+    eventRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingVertical: 10,
         paddingHorizontal: 0
     },
-    connectionInfo: {
+    eventInfo: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
         marginRight: 12
     },
-    connectionStatus: {
+    eventStatus: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8
-    },
-    connectionCompleted: {
-        marginRight: 4,
-        fontSize: 16
     },
 
     totalSection: {
