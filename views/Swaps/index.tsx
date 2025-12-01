@@ -37,10 +37,11 @@ import {
     calculateReceiveAmount,
     calculateServiceFeeOnSend,
     calculateSendAmount,
-    calculateLimit
+    calculateLimit,
+    SWAPS_RESCUE_KEY
 } from '../../utils/SwapUtils';
 
-import SwapStore, { SWAPS_RESCUE_KEY } from '../../stores/SwapStore';
+import SwapStore from '../../stores/SwapStore';
 import UnitsStore from '../../stores/UnitsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import FiatStore from '../../stores/FiatStore';
