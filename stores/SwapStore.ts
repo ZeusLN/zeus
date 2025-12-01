@@ -11,6 +11,12 @@ const bip39 = require('bip39');
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
+import {
+    SWAPS_KEY,
+    REVERSE_SWAPS_KEY,
+    SWAPS_RESCUE_KEY,
+    SWAPS_LAST_USED_KEY
+} from '../utils/SwapUtils';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -23,11 +29,6 @@ import SettingsStore, {
 import Storage from '../storage';
 
 import Swap, { SwapState, SwapType } from '../models/Swap';
-
-export const SWAPS_KEY = 'swaps';
-export const REVERSE_SWAPS_KEY = 'reverse-swaps';
-export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
-export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
 
 export default class SwapStore {
     @observable public subInfo = {};

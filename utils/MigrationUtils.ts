@@ -62,6 +62,13 @@ import { LEGACY_LSPS1_ORDERS_KEY, LSPS_ORDERS_KEY } from '../stores/LSPStore';
 import { LNC_STORAGE_KEY, hash } from '../backends/LNC/credentialStore';
 
 import {
+    SWAPS_KEY,
+    REVERSE_SWAPS_KEY,
+    SWAPS_RESCUE_KEY,
+    SWAPS_LAST_USED_KEY
+} from '../utils/SwapUtils';
+
+import {
     LEGACY_ACTIVITY_FILTERS_KEY,
     ACTIVITY_FILTERS_KEY
 } from '../stores/ActivityStore';
@@ -828,7 +835,11 @@ class MigrationsUtils {
                 CURRENCY_CODES_KEY,
                 ACTIVITY_FILTERS_KEY,
                 IS_BACKED_UP_KEY,
-                LSPS_ORDERS_KEY
+                LSPS_ORDERS_KEY,
+                SWAPS_KEY,
+                REVERSE_SWAPS_KEY,
+                SWAPS_RESCUE_KEY,
+                SWAPS_LAST_USED_KEY
             ];
 
             for (const key of migrationKeys) {
