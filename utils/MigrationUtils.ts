@@ -76,7 +76,7 @@ import {
 const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
-const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
+const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
