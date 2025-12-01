@@ -46,7 +46,8 @@ import SettingsStore, {
     SWAP_HOST_KEYS_TESTNET
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SwapStore, { SWAPS_RESCUE_KEY } from '../../stores/SwapStore';
+import SwapStore from '../../stores/SwapStore';
+import { SWAPS_RESCUE_KEY } from '../../utils/SwapUtils';
 
 import Storage from '../../storage';
 

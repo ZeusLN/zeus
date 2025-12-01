@@ -8,6 +8,11 @@ export const bigFloor = (big: BigNumber): BigNumber => {
     return big.integerValue(BigNumber.ROUND_FLOOR);
 };
 
+export const SWAPS_KEY = 'swaps';
+export const REVERSE_SWAPS_KEY = 'reverse-swaps';
+export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
+export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
+
 export const calculateReceiveAmount = (
     sendAmount: BigNumber,
     serviceFee: number,
