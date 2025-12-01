@@ -25,13 +25,13 @@ import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
 
 import SettingsStore from '../../stores/SettingsStore';
+
 import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_LAST_USED_KEY,
     SWAPS_RESCUE_KEY
-} from '../../stores/SwapStore';
-
+} from '../../utils/SwapUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
