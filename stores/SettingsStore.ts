@@ -1226,7 +1226,7 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.damus.io',
     'wss://nostr.land',
     'wss://nostr.wine',
-    'wss://nos.lol',
+    'wss://relay.cashumints.space',
     'wss://relay.snort.social'
 ];
 
