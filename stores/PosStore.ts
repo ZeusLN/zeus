@@ -5,10 +5,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 import FiatStore from './FiatStore';
 import SettingsStore, { PosEnabled } from './SettingsStore';
+import UnitsStore from './UnitsStore';
 
 import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { calculateTaxSats } from '../utils/PosUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 import Storage from '../storage';
 
@@ -58,10 +61,16 @@ export default class PosStore {
 
     settingsStore: SettingsStore;
     fiatStore: FiatStore;
+    unitsStore: UnitsStore;
 
-    constructor(settingsStore: SettingsStore, fiatStore: FiatStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        fiatStore: FiatStore,
+        unitsStore: UnitsStore
+    ) {
         this.settingsStore = settingsStore;
         this.fiatStore = fiatStore;
+        this.unitsStore = unitsStore;
     }
 
     private _enrichAndFilterOrders = async (orders: Order[]) => {
@@ -93,6 +102,86 @@ export default class PosStore {
             this.paidOrders = paidOrders;
             this.filteredPaidOrders = paidOrders;
             this.loading = false;
+        });
+    };
+
+    @action
+    public processCheckout = async (
+        navigation: any,
+        isQuickPay: boolean = false
+    ) => {
+        const currentOrder = this.currentOrder;
+        if (!currentOrder) return;
+
+        await this.saveStandaloneOrder(currentOrder);
+
+        if (!isQuickPay) {
+            navigation.navigate('Order', { order: currentOrder });
+            return;
+        }
+
+        const { settings } = this.settingsStore;
+        const { fiatRates, getRate } = this.fiatStore as any;
+        const { units } = this.unitsStore;
+
+        const { pos, fiat } = settings;
+        const merchantName = pos?.merchantName;
+        const taxPercentage = pos?.taxPercentage;
+        const lineItems = currentOrder.line_items;
+
+        const memo = merchantName
+            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
+            : `ZEUS POS - Order ${currentOrder?.id}`;
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+        const rate =
+            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed() : 0;
+
+        const subTotalSats =
+            (currentOrder?.total_money?.sats ?? 0) > 0
+                ? currentOrder.total_money.sats
+                : new BigNumber(currentOrder?.total_money?.amount)
+                      .div(100)
+                      .div(rate)
+                      .multipliedBy(SATS_PER_BTC)
+                      .toFixed(0);
+
+        const taxSats = Number(
+            calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)
+        );
+
+        const totalSats = new BigNumber(subTotalSats || 0)
+            .plus(taxSats)
+            .toFixed(0);
+
+        const totalFiat = new BigNumber(totalSats ?? 0)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+
+        const destination =
+            settings?.ecash?.enableCashu && BackendUtils.supportsCashuWallet()
+                ? 'ReceiveEcash'
+                : 'Receive';
+
+        navigation.navigate(destination, {
+            amount:
+                units === 'sats'
+                    ? totalSats
+                    : units === 'BTC'
+                    ? new BigNumber(totalSats || 0).div(SATS_PER_BTC).toFixed(8)
+                    : totalFiat,
+            autoGenerate: true,
+            memo,
+            order: currentOrder,
+            orderId: currentOrder.id,
+            orderTip: 0,
+            orderTotal: totalSats,
+            exchangeRate: getRate ? getRate() : '$0.00',
+            rate
         });
     };
 
