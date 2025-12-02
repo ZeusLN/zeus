@@ -7,7 +7,6 @@ import {
     TouchableOpacity,
     SectionList
 } from 'react-native';
-import BigNumber from 'bignumber.js';
 import { ButtonGroup, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -35,8 +34,6 @@ import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
-import BackendUtils from '../../utils/BackendUtils';
-import { calculateTaxSats } from '../../utils/PosUtils';
 
 import { version } from './../../package.json';
 
@@ -684,18 +681,11 @@ export default class StandalonePosPane extends React.PureComponent<
                                     }}
                                     disabled={disableButtons}
                                     onPress={async () => {
-                                        // there is no order so we can't charge
-                                        if (!currentOrder) return;
-
-                                        // save the current order. This will move it to the open orders screen
-                                        await PosStore.saveStandaloneOrder(
-                                            currentOrder
+                                        const { PosStore } = this.props;
+                                        await PosStore?.processCheckout(
+                                            navigation,
+                                            false
                                         );
-
-                                        // now let's create the charge
-                                        navigation.navigate('Order', {
-                                            order: currentOrder
-                                        });
                                     }}
                                 />
                                 <Button
@@ -714,115 +704,10 @@ export default class StandalonePosPane extends React.PureComponent<
                                     }}
                                     disabled={disableButtons}
                                     onPress={async () => {
-                                        if (!currentOrder) return;
-
-                                        await PosStore.saveStandaloneOrder(
-                                            currentOrder
-                                        );
-
-                                        const {
-                                            SettingsStore,
-                                            FiatStore,
-                                            UnitsStore
-                                        } = this.props;
-                                        if (
-                                            !SettingsStore ||
-                                            !FiatStore ||
-                                            !UnitsStore
-                                        )
-                                            return;
-                                        const { settings } = SettingsStore;
-                                        const { getRate, fiatRates } =
-                                            FiatStore;
-                                        const { pos, fiat } = settings;
-                                        const merchantName = pos?.merchantName;
-                                        const taxPercentage =
-                                            pos?.taxPercentage;
-                                        const lineItems =
-                                            currentOrder.line_items;
-
-                                        const memo = merchantName
-                                            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
-                                            : `ZEUS POS - Order ${currentOrder?.id}`;
-
-                                        const fiatEntry =
-                                            fiat && fiatRates
-                                                ? fiatRates.filter(
-                                                      (entry: any) =>
-                                                          entry.code === fiat
-                                                  )[0]
-                                                : null;
-                                        const rate =
-                                            fiat && fiatRates && fiatEntry
-                                                ? fiatEntry.rate.toFixed()
-                                                : 0;
-
-                                        const subTotalSats =
-                                            (currentOrder?.total_money?.sats ??
-                                                0) > 0
-                                                ? currentOrder.total_money.sats
-                                                : new BigNumber(
-                                                      currentOrder?.total_money?.amount
-                                                  )
-                                                      .div(100)
-                                                      .div(rate)
-                                                      .multipliedBy(
-                                                          SATS_PER_BTC
-                                                      )
-                                                      .toFixed(0);
-
-                                        const taxSats = Number(
-                                            calculateTaxSats(
-                                                lineItems,
-                                                subTotalSats,
-                                                rate,
-                                                taxPercentage
-                                            )
-                                        );
-
-                                        const totalSats = new BigNumber(
-                                            subTotalSats || 0
-                                        )
-                                            .plus(taxSats)
-                                            .toFixed(0);
-
-                                        const { units } = UnitsStore;
-
-                                        const totalFiat = new BigNumber(
-                                            totalSats ?? 0
-                                        )
-                                            .multipliedBy(rate)
-                                            .dividedBy(SATS_PER_BTC)
-                                            .toFixed(2);
-                                        navigation.navigate(
-                                            settings?.ecash?.enableCashu &&
-                                                BackendUtils.supportsCashuWallet()
-                                                ? 'ReceiveEcash'
-                                                : 'Receive',
-                                            {
-                                                amount:
-                                                    units === 'sats'
-                                                        ? totalSats
-                                                        : units === 'BTC'
-                                                        ? new BigNumber(
-                                                              totalSats || 0
-                                                          )
-                                                              .div(SATS_PER_BTC)
-                                                              .toFixed(8)
-                                                        : totalFiat,
-                                                autoGenerate: true,
-                                                memo,
-                                                order: currentOrder,
-                                                // For displaying paid orders
-                                                orderId: currentOrder.id,
-                                                // sats
-                                                orderTip: 0,
-                                                orderTotal: totalSats,
-                                                // formatted string rate
-                                                exchangeRate: getRate(),
-                                                // numerical rate
-                                                rate
-                                            }
+                                        const { PosStore } = this.props;
+                                        await PosStore?.processCheckout(
+                                            navigation,
+                                            true
                                         );
                                     }}
                                 />
