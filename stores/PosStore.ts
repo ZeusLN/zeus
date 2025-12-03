@@ -180,7 +180,7 @@ export default class PosStore {
             orderId: currentOrder.id,
             orderTip: 0,
             orderTotal: totalSats,
-            exchangeRate: getRate ? getRate() : '$0.00',
+            exchangeRate: getRate(),
             rate
         });
     };

@@ -1,16 +1,16 @@
 import * as React from 'react';
-import { Animated, FlatList, View, Text, TouchableOpacity } from 'react-native';
+
+import { Animated, View, Text, TouchableOpacity } from 'react-native';
 import { ButtonGroup, SearchBar } from '@rneui/themed';
+
 import { inject, observer } from 'mobx-react';
-import { Swipeable } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 
-import { Spacer } from '../../components/layout/Spacer';
-import SwipeableOrderItem from './SwipeableOrderItem';
+import OrderList from '../POS/OrderList';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -24,7 +24,6 @@ import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import { version } from './../../package.json';
-
 interface SquarePosPaneProps {
     navigation: StackNavigationProp<any, any>;
     ActivityStore?: ActivityStore;
@@ -78,16 +77,6 @@ export default class SquarePosPane extends React.PureComponent<
             ])
         ).start();
     }
-
-    private rows: Array<Swipeable | null> = [];
-    private prevOpenedRow: Swipeable | null = null;
-
-    private closeRow = (index: number) => {
-        if (this.prevOpenedRow && this.prevOpenedRow !== this.rows[index]) {
-            this.prevOpenedRow.close();
-        }
-        this.prevOpenedRow = this.rows[index];
-    };
 
     render() {
         const {
@@ -309,53 +298,33 @@ export default class SquarePosPane extends React.PureComponent<
                     />
                 )}
 
-                {!loading && orders && orders.length > 0 && (
-                    <FlatList
-                        data={orders}
-                        renderItem={({ item, index }) => (
-                            <SwipeableOrderItem
-                                ref={(ref) => (this.rows[index] = ref)}
-                                onSwipeableOpen={() => this.closeRow(index)}
-                                item={item}
-                                navigation={navigation}
-                                fiatStore={FiatStore}
-                                onClickPaid={() => {
-                                    setFiltersPos().then(() => {
-                                        navigation.navigate('Activity', {
-                                            order: item
-                                        });
-                                    });
-                                }}
-                                onClickHide={() => {
-                                    hideOrder(item.id).then(() => getOrders());
-                                }}
-                            />
-                        )}
-                        ListFooterComponent={<Spacer height={100} />}
+                {!loading && (
+                    <OrderList
+                        orders={orders}
+                        loading={loading}
                         onRefresh={() => getOrders()}
-                        refreshing={loading}
-                        keyExtractor={(_, index) => `${index}`}
-                    />
-                )}
-
-                {!loading && orders && orders.length === 0 && (
-                    <TouchableOpacity onPress={() => getOrders()}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                margin: 10,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {selectedIndex === 0
+                        navigation={navigation}
+                        fiatStore={FiatStore}
+                        emptyText={
+                            selectedIndex === 0
                                 ? localeString(
                                       'pos.views.Wallet.PosPane.noOrders'
                                   )
                                 : localeString(
                                       'pos.views.Wallet.PosPane.noOrdersPaid'
-                                  )}
-                        </Text>
-                    </TouchableOpacity>
+                                  )
+                        }
+                        onHideOrder={(id) =>
+                            hideOrder(id).then(() => getOrders())
+                        }
+                        onOrderClick={(item) => {
+                            setFiltersPos().then(() => {
+                                navigation.navigate('Activity', {
+                                    order: item
+                                });
+                            });
+                        }}
+                    />
                 )}
             </View>
         );

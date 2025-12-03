@@ -9,16 +9,14 @@ import {
 } from 'react-native';
 import { ButtonGroup, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { Swipeable } from 'react-native-gesture-handler';
 import moment from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
-import { Spacer } from '../../components/layout/Spacer';
+import OrderList from '../POS/OrderList';
 
-import SwipeableOrderItem from './SwipeableOrderItem';
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 
 import ActivityStore from '../../stores/ActivityStore';
@@ -107,16 +105,6 @@ export default class StandalonePosPane extends React.PureComponent<
             ])
         ).start();
     }
-
-    private rows: Array<Swipeable | null> = [];
-    private prevOpenedRow: Swipeable | null = null;
-
-    private closeRow = (index: number) => {
-        if (this.prevOpenedRow && this.prevOpenedRow !== this.rows[index]) {
-            this.prevOpenedRow.close();
-        }
-        this.prevOpenedRow = this.rows[index];
-    };
 
     async componentDidMount(): Promise<void> {
         this.fetchProducts();
@@ -391,7 +379,7 @@ export default class StandalonePosPane extends React.PureComponent<
 
         const error = NodeInfoStore?.error || SettingsStore?.error;
 
-        const loading = PosStore?.loading || InventoryStore?.loading;
+        const loading = PosStore?.loading || InventoryStore?.loading || false;
 
         const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
 
@@ -730,69 +718,41 @@ export default class StandalonePosPane extends React.PureComponent<
                     </>
                 )}
 
-                {!loading &&
-                    orders &&
-                    orders.length > 0 &&
-                    selectedIndex !== 0 && (
-                        <FlatList
-                            data={orders
-                                .slice()
-                                .sort((a, b) =>
-                                    moment(a.updated_at).unix() >
-                                    moment(b.updated_at).unix()
-                                        ? -1
-                                        : 1
-                                )}
-                            renderItem={({ item, index }) => (
-                                <SwipeableOrderItem
-                                    ref={(ref) => (this.rows[index] = ref)}
-                                    onSwipeableOpen={() => this.closeRow(index)}
-                                    item={item}
-                                    navigation={navigation}
-                                    fiatStore={FiatStore}
-                                    onClickPaid={() => {
-                                        setFiltersPos().then(() => {
-                                            navigation.navigate('Activity', {
-                                                order: item
-                                            });
-                                        });
-                                    }}
-                                    onClickHide={() => {
-                                        hideOrder(item.id).then(() =>
-                                            getOrders()
-                                        );
-                                    }}
-                                />
+                {!loading && selectedIndex !== 0 && (
+                    <OrderList
+                        orders={orders
+                            .slice()
+                            .sort((a, b) =>
+                                moment(a.updated_at).unix() >
+                                moment(b.updated_at).unix()
+                                    ? -1
+                                    : 1
                             )}
-                            ListFooterComponent={<Spacer height={100} />}
-                            onRefresh={() => getOrders()}
-                            refreshing={loading}
-                            keyExtractor={(_, index) => `${index}`}
-                        />
-                    )}
-
-                {!loading &&
-                    orders &&
-                    orders.length === 0 &&
-                    selectedIndex !== 0 && (
-                        <TouchableOpacity onPress={() => getOrders()}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    margin: 10,
-                                    textAlign: 'center'
-                                }}
-                            >
-                                {selectedIndex === 1
-                                    ? localeString(
-                                          'pos.views.Wallet.PosPane.noOrdersStandalone'
-                                      )
-                                    : localeString(
-                                          'pos.views.Wallet.PosPane.noOrdersPaid'
-                                      )}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
+                        loading={loading}
+                        onRefresh={() => getOrders()}
+                        navigation={navigation}
+                        fiatStore={FiatStore}
+                        emptyText={
+                            selectedIndex === 1
+                                ? localeString(
+                                      'pos.views.Wallet.PosPane.noOrdersStandalone'
+                                  )
+                                : localeString(
+                                      'pos.views.Wallet.PosPane.noOrdersPaid'
+                                  )
+                        }
+                        onHideOrder={(id) =>
+                            hideOrder(id).then(() => getOrders())
+                        }
+                        onOrderClick={(item) => {
+                            setFiltersPos().then(() => {
+                                navigation.navigate('Activity', {
+                                    order: item
+                                });
+                            });
+                        }}
+                    />
+                )}
             </View>
         );
     }
