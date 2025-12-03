@@ -1113,7 +1113,10 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetInfoResponse> {
         try {
-            if (!this.nodeInfoStore.nodeInfo?.identity_pubkey) {
+            if (
+                BackendUtils.supportsNodeInfo() &&
+                !this.nodeInfoStore.nodeInfo?.identity_pubkey
+            ) {
                 await this.nodeInfoStore.getNodeInfo();
             }
             const nodeInfo = this.nodeInfoStore.nodeInfo;
@@ -1157,15 +1160,21 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection
     ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
         try {
+            if (connection.hasBudgetLimit) {
+                return {
+                    result: {
+                        balance: satsToMillisats(connection.remainingBudget)
+                    },
+                    error: undefined
+                };
+            }
             const balance = this.isCashuConfigured
                 ? this.cashuStore.totalBalanceSats
                 : (await this.balanceStore.getLightningBalance(true))
                       ?.lightningBalance;
             return {
                 result: {
-                    balance:
-                        satsToMillisats(connection.maxAmountSats || 0) ||
-                        satsToMillisats(Number(balance))
+                    balance: satsToMillisats(Number(balance) || 0)
                 },
                 error: undefined
             };
@@ -1877,7 +1886,8 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const amountSats = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
+        const amountSats = this.getInvoiceAmount(request.invoice, invoiceInfo);
+
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
                 (Number(invoiceInfo.timestamp) + Number(invoiceInfo.expiry)) *
@@ -1939,24 +1949,14 @@ export default class NostrWalletConnectStore {
         if (paymentError) {
             return paymentError;
         }
-
         const preimage = this.transactionsStore.payment_preimage;
-        if (!preimage) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
-                ),
-                ErrorCodes.FAILED_TO_PAY_INVOICE
-            );
-        }
-
         const fees_paid = this.transactionsStore.payment_fee;
 
         await this.finalizePayment(connection, amountSats);
 
         return {
             result: {
-                preimage,
+                preimage: preimage || '',
                 fees_paid: satsToMillisats(Number(fees_paid) || 0)
             },
             error: undefined
@@ -2143,9 +2143,6 @@ export default class NostrWalletConnectStore {
         return { success: true };
     }
 
-    /**
-     * Checks for payment errors and returns error response if found
-     */
     private checkPaymentErrors(
         errorCode: ErrorCodes,
         timeoutMessage?: string,
@@ -2164,16 +2161,62 @@ export default class NostrWalletConnectStore {
                 errorCode
             );
         }
-
-        const preimage = this.transactionsStore.payment_preimage;
-        if (!preimage) {
-            if (this.transactionsStore.loading && timeoutMessage) {
-                return this.handleError(timeoutMessage, errorCode);
-            }
-            if (noPreimageMessage) {
-                return this.handleError(noPreimageMessage, errorCode);
-            }
+        if (this.transactionsStore.loading && timeoutMessage) {
+            return this.handleError(timeoutMessage, errorCode);
         }
+        const preimage = this.transactionsStore.payment_preimage;
+        const paymentCompleted = !this.transactionsStore.loading;
+        const hasPaymentHash = !!this.transactionsStore.payment_hash;
+        const hasSuccessStatus =
+            this.transactionsStore.status === 'complete' ||
+            this.transactionsStore.status === 'SUCCEEDED';
+
+        const canAssumeSuccess =
+            paymentCompleted && (hasPaymentHash || hasSuccessStatus);
+
+        if (!preimage && noPreimageMessage && !canAssumeSuccess) {
+            return this.handleError(noPreimageMessage, errorCode);
+        }
+    }
+    private extractAmountFromInvoice(invoice: string): number {
+        try {
+            const decoded = bolt11.decode(invoice);
+            if (decoded.millisatoshis) {
+                return millisatsToSats(Number(decoded.millisatoshis));
+            } else if (decoded.satoshis) {
+                return Number(decoded.satoshis);
+            }
+        } catch (decodeError) {
+            console.warn(
+                'NWC: Failed to decode invoice to extract amount:',
+                decodeError
+            );
+        }
+        return 0;
+    }
+    private getInvoiceAmount(invoice: string, invoiceInfo: any): number {
+        let backendAmount = Math.floor(Number(invoiceInfo.num_satoshis) || 0);
+        if (backendAmount === 0 && invoiceInfo.satoshis !== undefined) {
+            backendAmount = Math.floor(Number(invoiceInfo.satoshis) || 0);
+        }
+        if (backendAmount === 0 && invoiceInfo.millisatoshis !== undefined) {
+            backendAmount = millisatsToSats(
+                Number(invoiceInfo.millisatoshis) || 0
+            );
+        }
+        if (backendAmount > 0) {
+            return backendAmount;
+        }
+        const decodedAmount = this.extractAmountFromInvoice(invoice);
+        if (decodedAmount > 0) {
+            console.log(
+                'NWC: Backend did not provide amount, using decoded invoice amount:',
+                decodedAmount
+            );
+            return decodedAmount;
+        }
+
+        return backendAmount;
     }
 
     /**
