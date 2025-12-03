@@ -178,13 +178,14 @@ export default class NWCConnection extends BaseModel {
 
     @action
     public checkAndResetBudgetIfNeeded(availableBalance?: number): boolean {
-        if (!this.needsBudgetReset) {
-            return false;
-        }
         if (availableBalance !== undefined && this.maxAmountSats) {
             if (this.maxAmountSats > availableBalance) {
+                this.maxAmountSats = availableBalance;
                 return false;
             }
+        }
+        if (!this.needsBudgetReset) {
+            return false;
         }
         this.resetBudget();
         return true;
