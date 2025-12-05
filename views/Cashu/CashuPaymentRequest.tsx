@@ -464,7 +464,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             }}
                                         >
                                             <Row justify="space-between">
-                                                <View style={{ width: '95%' }}>
+                                                <View style={{ flex: 1 }}>
                                                     <KeyValue
                                                         keyValue={localeString(
                                                             'views.Settings.LightningAddress.zaplockerVerification'
@@ -878,7 +878,8 @@ export default class CashuPaymentRequest extends React.Component<
                                     )}
                                     containerStyle={{
                                         backgroundColor:
-                                            themeColor('secondaryText')
+                                            themeColor('secondaryText'),
+                                        marginBottom: 10
                                     }}
                                     swipeButtonStyle={{
                                         backgroundColor: themeColor('text')
