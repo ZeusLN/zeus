@@ -1,0 +1,57 @@
+diff --git a/utils/handleAnything.ts b/utils/handleAnything.ts
+index 87478b26..8866ea16 100644
+--- a/utils/handleAnything.ts
++++ b/utils/handleAnything.ts
+@@ -101,6 +101,52 @@ const handleAnything = async (
+     data = data.trim();
+     const { nodeInfo } = nodeInfoStore;
+     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
++
++    // Merchant QR support (CryptoQR) - SA retail QR codes via Lightning Address protocol
++    const merchantPatterns = [
++        { id: 'picknpay', regex: /(?<identifier>.*za\.co\.electrum\.picknpay.*)/iu },
++        { id: 'ecentric', regex: /(?<identifier>.*za\.co\.ecentric.*)/iu }
++    ];
++    const merchantDomain = (isTestNet || isRegTest) ? 'staging.cryptoqr.net' : 'cryptoqr.net';
++
++    for (const { regex } of merchantPatterns) {
++        const match = data.match(regex);
++        if (match?.groups?.identifier) {
++            if (isClipboardValue) return true;
++
++            const encodedIdentifier = encodeURIComponent(match.groups.identifier);
++            const lnurlpUrl = `https://${merchantDomain}/.well-known/lnurlp/${encodedIdentifier}`;
++
++            // ecash mode
++            const ecash =
++                BackendUtils.supportsCashuWallet() &&
++                settingsStore?.settings?.ecash?.enableCashu;
++
++            return ReactNativeBlobUtil.fetch('get', lnurlpUrl)
++                .then((response: any) => {
++                    const status = response.info().status;
++                    if (status === 200) {
++                        const lnurlpData = response.json();
++                        if (!lnurlpData.callback) {
++                            throw new Error(localeString('utils.handleAnything.lightningAddressError'));
++                        }
++                        return [
++                            'LnurlPay',
++                            {
++                                lnurlParams: lnurlpData,
++                                amount: setAmount,
++                                ecash
++                            }
++                        ];
++                    }
++                    throw new Error(localeString('utils.handleAnything.lightningAddressError'));
++                })
++                .catch(() => {
++                    throw new Error(localeString('utils.handleAnything.lightningAddressError'));
++                });
++        }
++    }
++
+     const { value, satAmount, lightning, offer }: any =
+         AddressUtils.processBIP21Uri(data);
+     const hasAt: boolean = value.includes('@');
