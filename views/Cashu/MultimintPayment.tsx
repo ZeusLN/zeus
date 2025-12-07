@@ -25,6 +25,7 @@ import UrlUtils from '../../utils/UrlUtils';
 import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
+import Storage from '../../storage';
 
 interface MultimintPaymentProps {
     navigation: StackNavigationProp<any, any>;
@@ -49,6 +50,7 @@ interface MultimintPaymentState {
     isProcessing: boolean;
     step: MultinutPaymentStep;
     error?: string;
+    storedNotes: string;
 }
 
 @inject('CashuStore', 'SettingsStore', 'UnitsStore')
@@ -100,11 +102,28 @@ export default class MultimintPayment extends React.Component<
                 ? localeString('views.Cashu.MultimintPayment.noMintsSelected')
                 : hasInsufficientBalance
                 ? localeString('stores.CashuStore.notEnoughFunds')
-                : undefined
+                : undefined,
+            storedNotes: ''
         };
     }
 
     componentDidMount() {
+        const { CashuStore, navigation } = this.props;
+
+        navigation.addListener('focus', () => {
+            const noteKey: string = CashuStore?.noteKey!!;
+            if (!noteKey) return;
+            Storage.getItem(noteKey)
+                .then((storedNotes) => {
+                    if (storedNotes) {
+                        this.setState({ storedNotes });
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
+
         if (this.state.step !== MultinutPaymentStep.FAILED) {
             this.executePayment();
         }
@@ -394,6 +413,36 @@ export default class MultimintPayment extends React.Component<
 
                     {step !== MultinutPaymentStep.PROCESSING && (
                         <>
+                            {step === MultinutPaymentStep.COMPLETE &&
+                                !hasError &&
+                                CashuStore?.noteKey && (
+                                    <Button
+                                        title={
+                                            this.state.storedNotes
+                                                ? localeString(
+                                                      'views.SendingLightning.UpdateNote'
+                                                  )
+                                                : localeString(
+                                                      'views.SendingLightning.AddANote'
+                                                  )
+                                        }
+                                        onPress={() =>
+                                            navigation.navigate('AddNotes', {
+                                                noteKey: CashuStore.noteKey
+                                            })
+                                        }
+                                        secondary
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                        containerStyle={{
+                                            maxWidth: '100%',
+                                            margin: 3
+                                        }}
+                                    />
+                                )}
+
                             {(step === MultinutPaymentStep.FAILED ||
                                 hasError) && (
                                 <>
