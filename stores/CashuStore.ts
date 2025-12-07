@@ -218,6 +218,23 @@ export default class CashuStore {
         return this.settingsStore.lndDir || 'lnd';
     };
 
+    private getPaymentHashFromBolt11 = (
+        bolt11Invoice: string
+    ): string | undefined => {
+        try {
+            const decoded: any = bolt11.decode(bolt11Invoice || '');
+            for (let i = 0; i < decoded.tags.length; i++) {
+                const tag = decoded.tags[i];
+                if (tag.tagName === 'payment_hash') {
+                    return tag.data;
+                }
+            }
+        } catch (e) {
+            console.error('Error decoding payment_hash from bolt11:', e);
+        }
+        return undefined;
+    };
+
     get selectedMintPubkey() {
         return this.cashuWallets[this.selectedMintUrl]?.pubkey;
     }
@@ -1998,8 +2015,13 @@ export default class CashuStore {
 
                 this.paymentPreimage = meltResponse.quote.payment_preimage!!;
 
+                const paymentHash = this.getPaymentHashFromBolt11(
+                    this.paymentRequest || ''
+                );
+
                 const payment = new CashuPayment({
                     ...this.payReq,
+                    payment_hash: paymentHash,
                     proofs: proofsToSend,
                     bolt11: this.paymentRequest,
                     meltResponse,
@@ -2214,8 +2236,13 @@ export default class CashuStore {
                         this.paymentPreimage =
                             meltResponse.quote.payment_preimage!!;
 
+                        const paymentHash = this.getPaymentHashFromBolt11(
+                            this.paymentRequest || ''
+                        );
+
                         const payment = new CashuPayment({
                             ...this.payReq,
+                            payment_hash: paymentHash,
                             proofs: proofsToSend,
                             bolt11: this.paymentRequest,
                             meltResponse,
@@ -2302,6 +2329,11 @@ export default class CashuStore {
                             mintAmountPaid
                     );
                 });
+
+                if (successfulPayments.length > 0) {
+                    const firstPayment = successfulPayments[0];
+                    this.noteKey = firstPayment.getNoteKey;
+                }
 
                 return successfulPayments.length === 1
                     ? successfulPayments[0]
