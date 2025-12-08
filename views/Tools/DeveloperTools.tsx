@@ -34,6 +34,9 @@ interface DeveloperToolsState {
     response: string | null;
     error: string | null;
     showScrollTop: boolean;
+    showScrollBottom: boolean;
+    contentHeight: number;
+    scrollViewHeight: number;
 }
 
 interface CategoryProps {
@@ -564,16 +567,36 @@ export default class DeveloperTools extends React.Component<
         loading: false,
         response: null,
         error: null,
-        showScrollTop: false
+        showScrollTop: false,
+        showScrollBottom: false,
+        contentHeight: 0,
+        scrollViewHeight: 0
     };
 
     handleScroll = (event: any) => {
         const currentScrollPosition = event.nativeEvent.contentOffset.y;
-        this.setState({ showScrollTop: currentScrollPosition > 100 });
+        const contentHeight = event.nativeEvent.contentSize.height;
+        const scrollViewHeight = event.nativeEvent.layoutMeasurement.height;
+        const scrollableDistance = contentHeight - scrollViewHeight;
+        const distanceFromBottom = scrollableDistance - currentScrollPosition;
+
+        this.setState({
+            showScrollTop: currentScrollPosition > 100,
+            showScrollBottom:
+                distanceFromBottom > 100 && contentHeight > scrollViewHeight,
+            contentHeight,
+            scrollViewHeight
+        });
     };
 
     scrollToTop = () => {
         this.scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    };
+
+    scrollToBottom = () => {
+        const { contentHeight, scrollViewHeight } = this.state;
+        const scrollToY = Math.max(0, contentHeight - scrollViewHeight);
+        this.scrollViewRef.current?.scrollTo({ y: scrollToY, animated: true });
     };
 
     handleCommand = async (
@@ -623,8 +646,14 @@ export default class DeveloperTools extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { expandedCategory, loading, response, error, showScrollTop } =
-            this.state;
+        const {
+            expandedCategory,
+            loading,
+            response,
+            error,
+            showScrollTop,
+            showScrollBottom
+        } = this.state;
 
         return (
             <Screen>
@@ -643,6 +672,14 @@ export default class DeveloperTools extends React.Component<
                     ref={this.scrollViewRef}
                     contentContainerStyle={styles.container}
                     onScroll={this.handleScroll}
+                    onContentSizeChange={(_contentWidth, contentHeight) => {
+                        this.setState({ contentHeight });
+                    }}
+                    onLayout={(event) => {
+                        this.setState({
+                            scrollViewHeight: event.nativeEvent.layout.height
+                        });
+                    }}
                     scrollEventThrottle={16}
                 >
                     {categories
@@ -713,6 +750,24 @@ export default class DeveloperTools extends React.Component<
                         />
                     </TouchableOpacity>
                 )}
+                {showScrollBottom && (
+                    <TouchableOpacity
+                        style={[
+                            styles.scrollBottomButton,
+                            {
+                                backgroundColor: themeColor('secondary'),
+                                borderColor: themeColor('background')
+                            }
+                        ]}
+                        onPress={this.scrollToBottom}
+                    >
+                        <MaterialIcons
+                            name="arrow-downward"
+                            size={24}
+                            color={themeColor('text')}
+                        />
+                    </TouchableOpacity>
+                )}
             </Screen>
         );
     }
@@ -723,6 +778,22 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 10,
         right: 10,
+        width: 45,
+        height: 45,
+        borderRadius: 22.5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3.84,
+        borderWidth: 1
+    },
+    scrollBottomButton: {
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
         width: 45,
         height: 45,
         borderRadius: 22.5,
