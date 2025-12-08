@@ -608,7 +608,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SyncStore.checkRecoveryStatus();
             await NodeInfoStore.getNodeInfo();
             NodeInfoStore.getNetworkInfo();
-            if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
+            if (BackendUtils.supportsAccounts())
+                await UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
                 await ChannelsStore.getChannels();
@@ -662,7 +663,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         await UTXOsStore.listAccounts();
                     await BalanceStore.getCombinedBalance();
                     if (BackendUtils.supportsChannelManagement())
-                        ChannelsStore.getChannels();
+                        await ChannelsStore.getChannels();
                 } catch (connectionError) {
                     console.log('LNC connection failed:', connectionError);
                     return;
@@ -685,10 +686,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             try {
                 await NodeInfoStore.getNodeInfo();
                 if (BackendUtils.supportsAccounts()) {
-                    UTXOsStore.listAccounts();
+                    await UTXOsStore.listAccounts();
                 }
                 await BalanceStore.getCombinedBalance();
-                ChannelsStore.getChannels();
+                await ChannelsStore.getChannels();
             } catch (connectionError) {
                 console.log('Node connection failed:', connectionError);
                 NodeInfoStore.handleGetNodeInfoError();
