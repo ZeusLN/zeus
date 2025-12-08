@@ -212,6 +212,39 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
+        if (this.htlcs) {
+            const succeeded = this.htlcs.filter(
+                (htlc: any) =>
+                    htlc.status === 'SUCCEEDED' ||
+                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED
+            );
+
+            const totalMsat = succeeded.reduce((sum: number, htlc: any) => {
+                // Prefer total_amt_msat from the route when available
+                if (htlc.route?.total_amt_msat !== undefined) {
+                    return sum + Number(htlc.route.total_amt_msat);
+                }
+                // Fallback to total_amt (sats) on the route
+                if (htlc.route?.total_amt !== undefined) {
+                    return sum + Number(htlc.route.total_amt) * 1000;
+                }
+                // Use hop-level amounts if route totals are missing
+                const firstHop = htlc.route?.hops?.[0];
+                if (firstHop?.amt_msat !== undefined) {
+                    return sum + Number(firstHop.amt_msat);
+                }
+                if (firstHop?.amt_to_forward_msat !== undefined) {
+                    return sum + Number(firstHop.amt_to_forward_msat);
+                }
+                if (firstHop?.amt_to_forward !== undefined) {
+                    return sum + Number(firstHop.amt_to_forward) * 1000;
+                }
+                return sum;
+            }, 0);
+
+            return totalMsat ? totalMsat / 1000 : 0;
+        }
+
         return this.amount_msat
             ? Number(this.amount_msat.toString().replace('msat', '')) / 1000
             : this.value_sat ||
