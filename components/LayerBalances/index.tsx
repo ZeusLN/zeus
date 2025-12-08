@@ -171,7 +171,8 @@ const Row = ({ item }: { item: DataRow }) => {
                     <View
                         style={{
                             flexDirection: 'column',
-                            left: moreAccounts ? 5 : 0
+                            left: moreAccounts ? 5 : 0,
+                            flex: 1
                         }}
                     >
                         <Text
@@ -201,26 +202,36 @@ const Row = ({ item }: { item: DataRow }) => {
                             </Text>
                         )}
                         {item.custodial && !item.needsConfig && (
-                            <View style={{ marginTop: 5 }}>
+                            <View
+                                style={{
+                                    marginTop: 5,
+                                    alignSelf: 'flex-start'
+                                }}
+                            >
                                 <Pill
                                     title={localeString(
                                         'general.custodialWallet'
                                     ).toUpperCase()}
                                     textColor={themeColor('highlight')}
-                                    width={160}
                                     height={25}
+                                    scrollOnOverflow={true}
                                 />
                             </View>
                         )}
                         {item.needsConfig && (
-                            <View style={{ marginTop: 5 }}>
+                            <View
+                                style={{
+                                    marginTop: 5,
+                                    alignSelf: 'flex-start'
+                                }}
+                            >
                                 <Pill
                                     title={localeString(
                                         'cashu.tapToConfigure'
                                     ).toUpperCase()}
                                     textColor={themeColor('highlight')}
                                     borderColor={themeColor('highlight')}
-                                    width={'110%'}
+                                    scrollOnOverflow={true}
                                     height={25}
                                 />
                             </View>
@@ -527,7 +538,9 @@ const styles = StyleSheet.create({
     left: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'flex-start'
+        justifyContent: 'flex-start',
+        flex: 1,
+        marginRight: 16
     },
     separator: {
         backgroundColor: 'transparent',
