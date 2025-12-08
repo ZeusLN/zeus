@@ -533,6 +533,34 @@ export default class LND {
 
         return this.deleteRequest(requestString);
     };
+    abandonChannel = (urlParams?: Array<string | boolean | undefined>) => {
+        const fundingTxIdStr =
+            urlParams && typeof urlParams[0] === 'string' ? urlParams[0] : '';
+        const outputIndex =
+            urlParams && typeof urlParams[1] === 'string'
+                ? Number(urlParams[1])
+                : 0;
+
+        // Build URL path: /v1/channels/abandon/{funding_txid_str}/{output_index}
+        let requestString = `/v1/channels/abandon/${fundingTxIdStr}/${outputIndex}`;
+
+        // Add boolean query parameters only if explicitly set (not undefined)
+        const queryParams: string[] = [];
+        if (urlParams && urlParams[2]) {
+            queryParams.push(
+                `pending_funding_shim_only=${Boolean(urlParams[2])}`
+            );
+        }
+        if (urlParams && urlParams[3]) {
+            queryParams.push(`i_know_what_i_am_doing=${Boolean(urlParams[3])}`);
+        }
+
+        if (queryParams.length > 0) {
+            requestString += `?${queryParams.join('&')}`;
+        }
+
+        return this.deleteRequest(requestString);
+    };
     getNodeInfo = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
