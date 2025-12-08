@@ -19,7 +19,10 @@ export enum BudgetRenewalType {
     Monthly = 'monthly',
     Yearly = 'yearly'
 }
-
+export enum ConnectionWarningType {
+    WalletBalanceLowerThanBudget = 'wallet_balance_lower_than_budget',
+    BudgetLimitReached = 'budget_limit_reached'
+}
 export type TimeUnit = 'Hours' | 'Days' | 'Weeks' | 'Months' | 'Years';
 export interface NWCConnectionData {
     id: string;
@@ -42,6 +45,27 @@ export interface NWCConnectionData {
     implementation: string;
     metadata?: any;
 }
+export interface ConnectionWarning {
+    type: ConnectionWarningType;
+    severity: 'info' | 'warning' | 'error';
+    translationKey: string;
+    metadata?: Record<string, any>;
+}
+export const WARNING_CONFIG: Record<
+    ConnectionWarningType,
+    Omit<ConnectionWarning, 'type' | 'metadata'>
+> = {
+    [ConnectionWarningType.WalletBalanceLowerThanBudget]: {
+        severity: 'warning',
+        translationKey:
+            'views.Settings.NostrWalletConnect.warning.walletBalanceLowerThanBudget'
+    },
+    [ConnectionWarningType.BudgetLimitReached]: {
+        severity: 'warning',
+        translationKey:
+            'views.Settings.NostrWalletConnect.warning.budgetLimitReached'
+    }
+};
 
 const BUDGET_RENEWAL_MS = {
     daily: 24 * 60 * 60 * 1000,
@@ -72,6 +96,7 @@ export default class NWCConnection extends BaseModel {
     @observable nodePubkey: string;
     @observable implementation: Implementations;
     @observable metadata?: any;
+    @observable private _warningTypes: ConnectionWarningType[] = [];
 
     constructor(data?: NWCConnectionData) {
         super(data);
@@ -134,7 +159,61 @@ export default class NWCConnection extends BaseModel {
         if (!this.hasBudgetLimit) return 0;
         return Math.min(100, (this.totalSpendSats / this.maxAmountSats!) * 100);
     }
+    @action
+    public addWarning(warningType: ConnectionWarningType): void {
+        if (!this._warningTypes.includes(warningType)) {
+            this._warningTypes.push(warningType);
+        }
+    }
+    @action
+    public removeWarning(warningType: ConnectionWarningType): void {
+        const index = this._warningTypes.indexOf(warningType);
+        if (index > -1) {
+            this._warningTypes.splice(index, 1);
+        }
+    }
+    @action
+    public clearWarnings(): void {
+        this._warningTypes = [];
+    }
+    @computed public get warnings(): ConnectionWarning[] {
+        return this._warningTypes.map((type) => ({
+            type,
+            ...WARNING_CONFIG[type],
+            metadata: this.getWarningMetadata(type)
+        }));
+    }
+    @computed public get hasWarnings(): boolean {
+        return this._warningTypes.length > 0;
+    }
+    @computed public get hasErrors(): boolean {
+        return this.warnings.some((w) => w.severity === 'error');
+    }
+    @computed public get primaryWarning(): ConnectionWarning | null {
+        // Return highest severity warning (error > warning > info)
+        const errors = this.warnings.filter((w) => w.severity === 'error');
+        if (errors.length > 0) return errors[0];
 
+        const warnings = this.warnings.filter((w) => w.severity === 'warning');
+        if (warnings.length > 0) return warnings[0];
+
+        const info = this.warnings.filter((w) => w.severity === 'info');
+        if (info.length > 0) return info[0];
+
+        return null;
+    }
+    private getWarningMetadata(
+        warningType: ConnectionWarningType
+    ): Record<string, any> | undefined {
+        switch (warningType) {
+            case ConnectionWarningType.WalletBalanceLowerThanBudget:
+                return {
+                    maxAmount: this.maxAmountSats
+                };
+            default:
+                return undefined;
+        }
+    }
     @computed public get needsBudgetReset(): boolean {
         if (
             !this.hasBudgetLimit ||
@@ -178,15 +257,32 @@ export default class NWCConnection extends BaseModel {
 
     @action
     public checkAndResetBudgetIfNeeded(availableBalance?: number): boolean {
+        let changed = false;
         if (availableBalance !== undefined && this.maxAmountSats) {
-            if (this.maxAmountSats > availableBalance) {
-                this.maxAmountSats = availableBalance;
-                return false;
+            const normalizedAvailable = Math.max(
+                0,
+                Math.floor(Number(availableBalance))
+            );
+            if (this.maxAmountSats >= normalizedAvailable) {
+                this.addWarning(
+                    ConnectionWarningType.WalletBalanceLowerThanBudget
+                );
+                changed = true;
+            } else if (this.maxAmountSats <= normalizedAvailable) {
+                this.removeWarning(
+                    ConnectionWarningType.WalletBalanceLowerThanBudget
+                );
+                changed = true;
+            }
+            if (this.budgetLimitReached) {
+                this.addWarning(ConnectionWarningType.BudgetLimitReached);
+                changed = true;
             }
         }
         if (!this.needsBudgetReset) {
-            return false;
+            return changed;
         }
+
         this.resetBudget();
         return true;
     }

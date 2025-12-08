@@ -61,6 +61,7 @@ import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NWCConnection, {
     BudgetRenewalType,
+    ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
 import Transaction from '../models/Transaction';
@@ -1954,21 +1955,13 @@ export default class NostrWalletConnectStore {
             return paymentError;
         }
         const preimage = this.transactionsStore.payment_preimage;
-        if (!preimage) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
-                ),
-                ErrorCodes.FAILED_TO_PAY_INVOICE
-            );
-        }
         const fees_paid = this.transactionsStore.payment_fee;
 
         await this.finalizePayment(connection, amountSats, skipNotification);
 
         return {
             result: {
-                preimage,
+                preimage: preimage || '',
                 fees_paid: satsToMillisats(Number(fees_paid) || 0)
             },
             error: undefined
@@ -2113,7 +2106,9 @@ export default class NostrWalletConnectStore {
         const maxBudget = await this.getMaxBudget();
         runInAction(() => {
             for (const connection of this.connections) {
-                if (connection.checkAndResetBudgetIfNeeded(maxBudget)) {
+                const changed =
+                    connection.checkAndResetBudgetIfNeeded(maxBudget);
+                if (changed) {
                     needsSave = true;
                 }
             }
@@ -2123,6 +2118,29 @@ export default class NostrWalletConnectStore {
             await this.saveConnections();
         }
     };
+    @action
+    public async clearWarnings(
+        connectionId: string,
+        warningType: ConnectionWarningType
+    ): Promise<void> {
+        const connection = this.connections.find((c) => c.id === connectionId);
+        if (!connection) return;
+        switch (warningType) {
+            case ConnectionWarningType.WalletBalanceLowerThanBudget:
+                const maxBudget = await this.getMaxBudget();
+                runInAction(() => {
+                    connection.checkAndResetBudgetIfNeeded(maxBudget);
+                    connection.removeWarning(warningType);
+                    this.findAndUpdateConnection(connection);
+                });
+                break;
+            default:
+                runInAction(() => {
+                    connection.removeWarning(warningType);
+                });
+        }
+        await this.saveConnections();
+    }
 
     // HELPER METHODS
 
