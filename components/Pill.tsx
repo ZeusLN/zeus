@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface PillProps {
@@ -17,6 +18,7 @@ interface PillProps {
     width?: DimensionValue;
     height?: DimensionValue;
     onPress?: () => void;
+    scrollOnOverflow?: boolean;
 }
 
 function Pill(props: PillProps) {
@@ -28,57 +30,66 @@ function Pill(props: PillProps) {
         backgroundColor,
         width,
         height,
-        onPress
+        onPress,
+        scrollOnOverflow
     } = props;
 
-    if (!onPress) {
-        return (
-            <View
+    const wrapperStyle: any = {
+        ...styles.wrapper,
+        borderWidth: borderWidth ? borderWidth : borderColor ? 3 : 0,
+        borderColor: borderColor || themeColor('highlight'),
+        height: height || 40,
+        backgroundColor: backgroundColor || themeColor('background')
+    };
+
+    if (width) {
+        wrapperStyle.width = width;
+    } else if (scrollOnOverflow) {
+        wrapperStyle.maxWidth = '100%';
+    } else {
+        wrapperStyle.width = 90;
+    }
+
+    const TextElement = (
+        <Text
+            style={{
+                ...styles.text,
+                color: textColor || themeColor('highlight')
+            }}
+        >
+            {title}
+        </Text>
+    );
+
+    let PillContent;
+    if (scrollOnOverflow) {
+        PillContent = (
+            <ScrollView
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                disallowInterruption={true}
                 style={{
-                    ...styles.wrapper,
-                    borderWidth: borderWidth
-                        ? borderWidth
-                        : borderColor
-                        ? 3
-                        : 0,
-                    borderColor: borderColor || themeColor('highlight'),
-                    width: width || 90,
-                    height: height || 40,
-                    backgroundColor: backgroundColor || themeColor('background')
+                    height: '100%'
+                }}
+                contentContainerStyle={{
+                    alignItems: 'center',
+                    paddingHorizontal: 14
                 }}
             >
-                <Text
-                    style={{
-                        ...styles.text,
-                        color: textColor || themeColor('highlight')
-                    }}
-                >
-                    {title}
-                </Text>
-            </View>
+                {TextElement}
+            </ScrollView>
         );
+    } else {
+        PillContent = TextElement;
+    }
+
+    if (!onPress) {
+        return <View style={wrapperStyle}>{PillContent}</View>;
     }
 
     return (
-        <TouchableOpacity
-            style={{
-                ...styles.wrapper,
-                borderWidth: borderWidth ? borderWidth : borderColor ? 3 : 0,
-                borderColor: borderColor || themeColor('highlight'),
-                width: width || 90,
-                height: height || 40,
-                backgroundColor: backgroundColor || themeColor('background')
-            }}
-            onPress={onPress}
-        >
-            <Text
-                style={{
-                    ...styles.text,
-                    color: textColor || themeColor('highlight')
-                }}
-            >
-                {title}
-            </Text>
+        <TouchableOpacity style={wrapperStyle} onPress={onPress}>
+            {PillContent}
         </TouchableOpacity>
     );
 }
@@ -87,7 +98,8 @@ const styles = StyleSheet.create({
     wrapper: {
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: 50
+        borderRadius: 50,
+        overflow: 'hidden'
     },
     text: {
         fontFamily: 'PPNeueMontreal-Book'
