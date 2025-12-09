@@ -604,14 +604,26 @@ export default class LND {
                 urlParams && urlParams[1]
             }`
         );
-    getForwardingHistory = (hours = 24) => {
-        const req = {
+    getForwardingHistory = (
+        hours = 24,
+        chanIdIn?: string,
+        chanIdOut?: string
+    ) => {
+        const req: any = {
             num_max_events: 10000000,
             start_time: Math.round(
                 new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
             ).toString(),
             end_time: Math.round(new Date().getTime() / 1000).toString()
         };
+        if (this.supports('v0.20.0')) {
+            if (chanIdIn) {
+                req.incoming_chan_ids = [chanIdIn];
+            }
+            if (chanIdOut) {
+                req.outgoing_chan_ids = [chanIdOut];
+            }
+        }
         return this.postRequest('/v1/switch', req);
     };
     // Coin Control

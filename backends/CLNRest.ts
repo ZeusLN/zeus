@@ -427,12 +427,23 @@ export default class CLNRest {
         };
     };
 
-    getForwardingHistory = () => {
-        const data = this.postRequest('/v1/listforwards', {
+    getForwardingHistory = (
+        _hours?: number,
+        chanIdIn?: string,
+        chanIdOut?: string
+    ) => {
+        const req: any = {
             status: 'settled',
             limit: 10000000,
             index: 'created'
-        });
+        };
+        if (chanIdIn) {
+            req.in_channel = chanIdIn;
+        }
+        if (chanIdOut) {
+            req.out_channel = chanIdOut;
+        }
+        const data = this.postRequest('/v1/listforwards', req);
         return data;
     };
 
