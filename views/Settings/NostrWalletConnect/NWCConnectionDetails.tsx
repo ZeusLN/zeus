@@ -18,6 +18,8 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import KeyValue from '../../../components/KeyValue';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
+import ModalStore from '../../../stores/ModalStore';
+
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -33,6 +35,7 @@ interface NWCConnectionDetailsProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'NWCConnectionDetails', { connectionId: string }>;
     NostrWalletConnectStore: NostrWalletConnectStore;
+    ModalStore: ModalStore;
 }
 
 interface NWCConnectionDetailsState {
@@ -44,7 +47,7 @@ interface NWCConnectionDetailsState {
     error: string | null;
 }
 
-@inject('NostrWalletConnectStore')
+@inject('NostrWalletConnectStore', 'ModalStore')
 @observer
 export default class NWCConnectionDetails extends React.Component<
     NWCConnectionDetailsProps,
@@ -71,6 +74,52 @@ export default class NWCConnectionDetails extends React.Component<
         );
         this.loadConnection();
     }
+    componentDidUpdate(
+        _prevProps: NWCConnectionDetailsProps,
+        prevState: NWCConnectionDetailsState
+    ) {
+        const { connection } = this.state;
+        if (
+            connection?.hasWarnings &&
+            connection.hasWarnings !== prevState.connection?.hasWarnings
+        ) {
+            this.showWarning();
+        }
+    }
+
+    showWarning = () => {
+        const { connection } = this.state;
+        const { ModalStore } = this.props;
+
+        if (connection?.hasWarnings) {
+            const primary = connection.primaryWarning;
+            ModalStore.toggleInfoModal({
+                title: localeString('general.warning'),
+                text: localeString(primary?.translationKey!),
+                buttons: [
+                    {
+                        title: localeString('general.iUnderstand'),
+                        callback: this.clearWarning
+                    }
+                ]
+            });
+        }
+    };
+
+    clearWarning = async () => {
+        const { connection } = this.state;
+        const { NostrWalletConnectStore } = this.props;
+        if (!connection) return;
+        const primaryMessage = connection.primaryWarning;
+        try {
+            await NostrWalletConnectStore.clearWarnings(
+                connection.id,
+                primaryMessage?.type!
+            );
+        } catch (error) {
+            console.error('Failed to clear budget warning:', error);
+        }
+    };
 
     loadConnection = async () => {
         const { NostrWalletConnectStore } = this.props;

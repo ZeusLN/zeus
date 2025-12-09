@@ -16,7 +16,6 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
             colors.background = '#2C553D';
             colors.dot = '#46E80E';
             break;
-
         case Status.Stable:
             colors.background = '#FFB040';
             colors.dot = '#FFC778';
@@ -39,6 +38,8 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
             colors.background = themeColor('warning');
             break;
         case ExpirationStatus.Expired:
+        case Status.Error:
+        case Status.LimitExceed:
             colors.background = themeColor('error');
             break;
         case ExpirationStatus.LSPDiscretion:

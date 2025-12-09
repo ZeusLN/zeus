@@ -311,7 +311,12 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                         'components.NWCPendingPayInvoiceModal.totalAmount'
                                     )}
                                 </Text>
-                                <Amount sats={totalAmount} jumboText debit />
+                                <Amount
+                                    sats={totalAmount}
+                                    jumboText
+                                    debit
+                                    toggleable
+                                />
                             </View>
                         </View>
 
