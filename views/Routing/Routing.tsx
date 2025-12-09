@@ -16,8 +16,10 @@ import Pie from '../../assets/images/SVG/Pie.svg';
 import FeeStore from '../../stores/FeeStore';
 
 import BackendUtils from '../../utils/BackendUtils';
+import VersionUtils from '../../utils/VersionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { nodeInfoStore } from '../../stores/Stores';
 
 import { RoutingListItem } from './RoutingListItem';
 import { RoutingHeader } from './RoutingHeader';
@@ -97,6 +99,12 @@ export default class Routing extends React.PureComponent<
     render() {
         const { FeeStore, navigation } = this.props;
         const { selectedIndex, filterChanIdIn, filterChanIdOut } = this.state;
+        const supportsChannelFilter =
+            !BackendUtils.isLNDBased() ||
+            VersionUtils.isSupportedVersion(
+                nodeInfoStore.nodeInfo?.version,
+                'v0.20.0'
+            );
         const {
             dayEarned,
             weekEarned,
@@ -238,21 +246,24 @@ export default class Routing extends React.PureComponent<
                                 alignItems: 'center'
                             }}
                         >
-                            {(filterChanIdIn || filterChanIdOut) && (
-                                <TouchableOpacity
-                                    onPress={clearFilter}
-                                    style={{ marginRight: 10 }}
-                                >
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 12
-                                        }}
+                            {supportsChannelFilter &&
+                                (filterChanIdIn || filterChanIdOut) && (
+                                    <TouchableOpacity
+                                        onPress={clearFilter}
+                                        style={{ marginRight: 10 }}
                                     >
-                                        Clear Filter
-                                    </Text>
-                                </TouchableOpacity>
-                            )}
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 12
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Routing.clearFilter'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
                             <FeeBadge navigation={navigation} />
                         </View>
                     }
@@ -272,8 +283,12 @@ export default class Routing extends React.PureComponent<
                             onPress={(selectedIndex: number) => {
                                 getForwardingHistory(
                                     HOURS[selectedIndex],
-                                    this.state.filterChanIdIn,
-                                    this.state.filterChanIdOut
+                                    supportsChannelFilter
+                                        ? this.state.filterChanIdIn
+                                        : undefined,
+                                    supportsChannelFilter
+                                        ? this.state.filterChanIdOut
+                                        : undefined
                                 );
                                 this.setState({ selectedIndex });
                             }}
@@ -305,8 +320,12 @@ export default class Routing extends React.PureComponent<
                                 onRefresh={() => {
                                     getForwardingHistory(
                                         HOURS[this.state.selectedIndex],
-                                        this.state.filterChanIdIn,
-                                        this.state.filterChanIdOut
+                                        supportsChannelFilter
+                                            ? this.state.filterChanIdIn
+                                            : undefined,
+                                        supportsChannelFilter
+                                            ? this.state.filterChanIdOut
+                                            : undefined
                                     );
                                 }}
                                 refreshing={false}
