@@ -26,7 +26,9 @@ import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 
-import NWCConnection from '../../../models/NWCConnection';
+import NWCConnection, {
+    ConnectionWarningType
+} from '../../../models/NWCConnection';
 import { Status, ExpirationStatus } from '../../../models/Status';
 
 import Add from '../../../assets/images/SVG/Add.svg';
@@ -209,9 +211,19 @@ export default class NWCConnectionsList extends React.Component<
                             >
                                 {connection.name}
                             </Text>
-                            <View style={{ flexDirection: 'row', gap: 1 }}>
+                            <View style={{ flexDirection: 'row', gap: 4 }}>
                                 {!hasPaymentPermissions && (
                                     <Tag status={Status.ReadOnly} />
+                                )}
+                                {connection.hasWarnings && (
+                                    <Tag
+                                        status={
+                                            connection.primaryWarning?.type ==
+                                            ConnectionWarningType.BudgetLimitReached
+                                                ? Status.LimitExceed
+                                                : ExpirationStatus.LSPDiscretion
+                                        }
+                                    />
                                 )}
                                 <Tag
                                     status={
@@ -225,26 +237,35 @@ export default class NWCConnectionsList extends React.Component<
                     </View>
                     {connection.maxAmountSats && (
                         <View style={styles.budgetSection}>
-                            <Text
-                                style={[
-                                    styles.budgetLabel,
-                                    { color: themeColor('secondaryText') }
-                                ]}
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    gap: 10,
+                                    alignItems: 'center'
+                                }}
                             >
-                                {localeString(
-                                    'views.Settings.NostrWalletConnect.leftInBudget'
-                                )}
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.budgetAmount,
-                                    { color: themeColor('text') }
-                                ]}
-                            >
-                                {`${connection.remainingBudget.toLocaleString()} ${localeString(
-                                    'general.sats'
-                                )}`}
-                            </Text>
+                                <Text
+                                    style={[
+                                        styles.budgetAmount,
+                                        { color: themeColor('text') }
+                                    ]}
+                                >
+                                    {`${connection.remainingBudget.toLocaleString()} ${localeString(
+                                        'general.sats'
+                                    )}`}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.budgetLabel,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
+                                    {localeString(
+                                        'views.Settings.NostrWalletConnect.leftInBudget'
+                                    ).toLowerCase()}
+                                </Text>
+                            </View>
+
                             <View style={styles.budgetBarContainer}>
                                 <View
                                     style={[

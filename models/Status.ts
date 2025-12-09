@@ -5,10 +5,12 @@ export enum Status {
     Active = localeString('general.active'),
     Stable = localeString('channel.status.stable'),
     Unstable = localeString('channel.status.unstable'),
+    Error = localeString('general.error'),
     Offline = localeString('channel.status.offline'),
     Opening = localeString('channel.status.opening'),
     Closing = localeString('channel.status.closing'),
-    ReadOnly = localeString('views.Settings.NostrWalletConnect.readOnly')
+    ReadOnly = localeString('views.Settings.NostrWalletConnect.readOnly'),
+    LimitExceed = localeString('general.limitexceed')
 }
 
 export enum ExpirationStatus {
