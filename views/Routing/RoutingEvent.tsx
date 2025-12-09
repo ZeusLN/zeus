@@ -18,7 +18,7 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import Screen from '../../components/Screen';
 
-import { Divider } from '@rneui/themed';
+import { Divider, Icon } from '@rneui/themed';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -169,6 +169,18 @@ export default class RoutingEvent extends React.Component<
         const channelInPoint = chanIn && chanIn.channel_point;
         const channelOutPoint = chanOut && chanOut.channel_point;
 
+        const filterByInChannel = () => {
+            navigation.navigate('Routing', {
+                filterChanIdIn: inChannelId
+            });
+        };
+
+        const filterByOutChannel = () => {
+            navigation.navigate('Routing', {
+                filterChanIdOut: outChannelId
+            });
+        };
+
         return (
             <Screen>
                 <Header
@@ -232,6 +244,37 @@ export default class RoutingEvent extends React.Component<
                                     })
                             )}
 
+                            <TouchableOpacity
+                                onPress={filterByInChannel}
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    marginVertical: 10,
+                                    marginHorizontal: 20,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Icon
+                                    name="filter"
+                                    type="feather"
+                                    color={themeColor('highlight')}
+                                    size={18}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 14,
+                                        marginLeft: 8,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    Filter by Incoming Channel
+                                </Text>
+                            </TouchableOpacity>
+
                             <Divider
                                 orientation="horizontal"
                                 style={{ margin: 8 }}
@@ -248,6 +291,37 @@ export default class RoutingEvent extends React.Component<
                                         channel: chanOut
                                     })
                             )}
+
+                            <TouchableOpacity
+                                onPress={filterByOutChannel}
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    marginVertical: 10,
+                                    marginHorizontal: 20,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Icon
+                                    name="filter"
+                                    type="feather"
+                                    color={themeColor('highlight')}
+                                    size={18}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 14,
+                                        marginLeft: 8,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    Filter by Outgoing Channel
+                                </Text>
+                            </TouchableOpacity>
                         </>
                     ) : (
                         <>
@@ -343,6 +417,37 @@ export default class RoutingEvent extends React.Component<
                                 )}
                             />
 
+                            <TouchableOpacity
+                                onPress={filterByInChannel}
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    marginVertical: 10,
+                                    marginHorizontal: 20,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Icon
+                                    name="filter"
+                                    type="feather"
+                                    color={themeColor('highlight')}
+                                    size={18}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 14,
+                                        marginLeft: 8,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    Filter by Incoming Channel
+                                </Text>
+                            </TouchableOpacity>
+
                             <FeeBreakdown
                                 channelId={outChannelId}
                                 peerDisplay={chanOutLabel}
@@ -351,6 +456,37 @@ export default class RoutingEvent extends React.Component<
                                     'views.Routing.RoutingEvent.destinationChannel'
                                 )}
                             />
+
+                            <TouchableOpacity
+                                onPress={filterByOutChannel}
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    marginVertical: 10,
+                                    marginHorizontal: 20,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Icon
+                                    name="filter"
+                                    type="feather"
+                                    color={themeColor('highlight')}
+                                    size={18}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 14,
+                                        marginLeft: 8,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    Filter by Outgoing Channel
+                                </Text>
+                            </TouchableOpacity>
                         </>
                     )}
                 </ScrollView>
