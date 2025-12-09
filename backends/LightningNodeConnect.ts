@@ -443,7 +443,11 @@ export default class LightningNodeConnect {
                 amt: urlParams && urlParams[1] && Number(urlParams[1])
             })
             .then((data: lnrpc.QueryRoutesResponse) => snakeize(data));
-    getForwardingHistory = async (hours = 24) => {
+    getForwardingHistory = async (
+        hours = 24,
+        chanIdIn?: string,
+        chanIdOut?: string
+    ) => {
         const req: any = {
             numMaxEvents: 10000000,
             startTime: Math.round(
@@ -452,6 +456,14 @@ export default class LightningNodeConnect {
             endTime: Math.round(new Date().getTime() / 1000).toString(),
             indexOffset: 0
         };
+        if (this.supports('v0.20.0')) {
+            if (chanIdIn) {
+                req.incomingChanIds = [chanIdIn];
+            }
+            if (chanIdOut) {
+                req.outgoingChanIds = [chanIdOut];
+            }
+        }
         return await this.lnc.lnd.lightning
             .forwardingHistory(req)
             .then((data: lnrpc.ForwardingHistoryResponse) => snakeize(data));
