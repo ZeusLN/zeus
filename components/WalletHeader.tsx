@@ -23,6 +23,7 @@ import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
+import NostrWalletConnectStore from '../stores/NostrWalletConnectStore';
 
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -39,6 +40,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import Add from '../assets/images/SVG/Add.svg';
 import Alert from '../assets/images/SVG/Alert.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
+import NWCLogo from '../assets/images/SVG/nwc-logo.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
 import Ecash from '../assets/images/SVG/Ecash.svg';
 import Menu from '../assets/images/SVG/Menu.svg';
@@ -85,6 +87,36 @@ const ZeusPayAnimated = () => {
             }}
         >
             <ZeusPay />
+        </Animated.View>
+    );
+};
+
+const NWCAnimated = () => {
+    let state = new Animated.Value(1);
+    Animated.loop(
+        Animated.sequence([
+            Animated.timing(state, {
+                toValue: 0,
+                duration: 300,
+                delay: 500,
+                useNativeDriver: true
+            }),
+            Animated.timing(state, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true
+            })
+        ])
+    ).start();
+
+    return (
+        <Animated.View
+            style={{
+                alignSelf: 'center',
+                opacity: state
+            }}
+        >
+            <NWCLogo fill={themeColor('highlight')} width={30} height={30} />
         </Animated.View>
     );
 };
@@ -221,6 +253,7 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
+    NostrWalletConnectStore?: NostrWalletConnectStore;
     navigation: StackNavigationProp<any, any>;
     connecting?: boolean;
     loading?: boolean;
@@ -242,7 +275,8 @@ interface WalletHeaderState {
     'SettingsStore',
     'NodeInfoStore',
     'PosStore',
-    'SyncStore'
+    'SyncStore',
+    'NostrWalletConnectStore'
 )
 @observer
 export default class WalletHeader extends React.Component<
@@ -301,12 +335,14 @@ export default class WalletHeader extends React.Component<
             LightningAddressStore,
             ModalStore,
             PosStore,
-            SyncStore
+            SyncStore,
+            NostrWalletConnectStore
         } = this.props;
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
+        const { loading: nwcloading } = NostrWalletConnectStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
@@ -630,6 +666,12 @@ export default class WalletHeader extends React.Component<
                                         <LoadingIndicator size={35} />
                                     </View>
                                 )}
+                                {!connecting && nwcloading && (
+                                    <View style={{ paddingRight: 15 }}>
+                                        <NWCAnimated />
+                                    </View>
+                                )}
+
                                 {!connecting && !!clipboard && (
                                     <View style={{ marginRight: 15 }}>
                                         <ClipboardBadge

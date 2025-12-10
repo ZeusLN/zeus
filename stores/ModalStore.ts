@@ -7,6 +7,11 @@ export default class ModalStore {
     @observable public showAlertModal: boolean = false;
     @observable public showShareModal: boolean = false;
     @observable public showNewChannelModal: boolean = false;
+    @observable public showNWCPendingPaymentsModal: boolean = false;
+    @observable public nwcPendingPaymentsData?: {
+        pendingEvents: any[];
+        totalAmount: number;
+    };
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
     @observable public infoModalTitle: string | undefined;
@@ -72,6 +77,21 @@ export default class ModalStore {
     };
 
     @action
+    public toggleNWCPendingPaymentsModal = ({
+        pendingEvents,
+        totalAmount
+    }: {
+        pendingEvents?: any[];
+        totalAmount?: number;
+    }) => {
+        this.showNWCPendingPaymentsModal =
+            pendingEvents && totalAmount !== undefined ? true : false;
+        this.nwcPendingPaymentsData =
+            pendingEvents && totalAmount !== undefined
+                ? { pendingEvents, totalAmount }
+                : undefined;
+    };
+
     @action
     public shareQR = () => {
         if (this.onShareQR) this.onShareQR();
@@ -127,6 +147,11 @@ export default class ModalStore {
         }
         if (this.showNewChannelModal) {
             this.showNewChannelModal = false;
+        }
+        if (this.showNWCPendingPaymentsModal) {
+            this.showNWCPendingPaymentsModal = false;
+            this.nwcPendingPaymentsData = undefined;
+            return true;
         }
         return false;
     };

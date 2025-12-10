@@ -37,7 +37,8 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                 isOpen={showInfoModal}
                 style={{
                     backgroundColor: 'transparent',
-                    minHeight: 200
+                    minHeight: 200,
+                    zIndex: 9999
                 }}
                 onClosed={() => toggleInfoModal({})}
             >

@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     Animated,
     AppState,
+    AppStateStatus,
     BackHandler,
     Linking,
     NativeEventSubscription,
@@ -82,6 +83,7 @@ import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
 import NotesStore from '../../stores/NotesStore';
 import SwapStore from '../../stores/SwapStore';
+import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -119,6 +121,7 @@ interface WalletProps {
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
     LnurlPayStore: LnurlPayStore;
+    NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
 interface WalletState {
@@ -148,7 +151,8 @@ interface WalletState {
     'ChannelBackupStore',
     'LightningAddressStore',
     'NotesStore',
-    'SwapStore'
+    'SwapStore',
+    'NostrWalletConnectStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -273,21 +277,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     }
 
-    handleAppStateChange = (nextAppState: any) => {
-        const { SettingsStore } = this.props;
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        const { SettingsStore, NostrWalletConnectStore } = this.props;
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
-
         if (
             nextAppState === 'background' &&
             SettingsStore.loginMethodConfigured() &&
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
+        } else if (nextAppState === 'inactive') {
+            NostrWalletConnectStore.reset();
         } else if (nextAppState === 'active') {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
+                NostrWalletConnectStore.initializeService();
                 this.getSettingsAndNavigate();
             }
         }
@@ -388,7 +394,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LightningAddressStore,
             LnurlPayStore,
             NotesStore,
-            SwapStore
+            SwapStore,
+            NostrWalletConnectStore
         } = this.props;
         const {
             settings,
@@ -783,6 +790,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.initChannelAcceptor();
         }
 
+        if (connecting) {
+            try {
+                NostrWalletConnectStore.initializeService();
+            } catch (error) {
+                console.warn(
+                    'Failed to initialize Nostr Wallet Connect service:',
+                    error
+                );
+            }
+        }
         if (implementation === 'embedded-lnd' && settings?.ecash?.enableCashu) {
             // Check Cashu balance for upgrade prompts
             CashuStore.checkAndShowUpgradeModal(
