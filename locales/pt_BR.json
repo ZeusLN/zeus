@@ -1679,9 +1679,9 @@
     "views.Settings.NostrWalletConnect.warning.walletBalanceLowerThanBudget": "O saldo da sua carteira principal é inferior ao orçamento desta conexão. Por favor, verifique e atualize-o.",
     "views.Settings.NostrWalletConnect.warning.budgetLimitReached": "O orçamento atribuído a esta ligação atingiu o limite. Por favor, reveja e atualize-o se desejar continuar a utilizar esta ligação.",
     "views.Settings.NostrWalletConnect.nwcSettings": "Configurações NWC",
-    "views.Settings.NostrWalletConnect.persistentNWCService": "Persistent Mode",
-    "views.Settings.NostrWalletConnect.persistentNWCServiceDescription": "Continue to run Nostr Wallet Connect service in the background even when the app is closed.",
-    "views.Settings.NostrWalletConnect.chooseRelay": "Choose the Nostr relay for this connection",
+    "views.Settings.NostrWalletConnect.persistentNWCService": "Modo persistente",
+    "views.Settings.NostrWalletConnect.persistentNWCServiceDescription": "Continue executando o serviço Nostr Wallet Connect em segundo plano, mesmo quando o aplicativo estiver fechado.",
+    "views.Settings.NostrWalletConnect.chooseRelay": "Selecione o relé Nostr para esta conexão.",
     "views.LspExplanation.text1": "Zeus é uma carteira relâmpago auto-custodial. Para enviar ou receber um pagamento relâmpago, você deve abrir um canal de pagamento relâmpago, que possui uma taxa de configuração.",
     "views.LspExplanation.text2": "Depois que o canal estiver configurado, você só terá que pagar as taxas normais de rede até que seu canal esgote sua capacidade.",
     "views.LspExplanation.buttonText": "Saiba mais sobre liquidez",
@@ -1863,7 +1863,7 @@
     "stores.CashuStore.notEnoughFunds": "Fundos insuficientes para cobrir o pagamento",
     "stores.CashuStore.feeExceedsAmt": "Taxas de derretimento iguais ou superiores à quantidade de tokens",
     "stores.CashuStore.autoSweep": "Varredura automática de Cashu",
-    "stores.CashuStore.notProperlyConfigured": "Cashu wallet is not properly configured. Please add at least one mint.",
+    "stores.CashuStore.notProperlyConfigured": "A carteira Cashu não está configurada corretamente. Adicione pelo menos uma moeda.",
     "cashu.upgradePrompt.title": "Atualizar para autocustódia?",
     "cashu.upgradePrompt.messageGeneral": "Seu saldo de eCash está crescendo! Considere migrar para uma carteira Lightning com autocustódia para maior segurança e controle sobre seus fundos.",
     "cashu.upgradePrompt.message10k": "Agora você tem sats suficientes para comprar seu primeiro canal Lightning! Atualize para a autocustódia e tenha a posse definitiva do seu bitcoin.",
@@ -1987,7 +1987,7 @@
     "views.RebalancingChannels.rebalanceSummary": "Ver resumo do rebalanceamento",
     "androidNotification.lndRunningBackground": "LND está sendo executado em segundo plano",
     "androidNotification.shutdown": "Desligar",
-    "backends.NWC.permissionDenied": "Permission denied for this operation",
-    "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
-    "androidNotification.nwcShutdown": "Stop Service"
+    "backends.NWC.permissionDenied": "Permissão negada para esta operação.",
+    "androidNotification.nwcRunningBackground": "O Nostr Wallet Connect está sendo executado em segundo plano.",
+    "androidNotification.nwcShutdown": "Interromper serviço"
 }
