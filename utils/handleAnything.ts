@@ -101,7 +101,7 @@ const handleAnything = async (
     data = data.trim();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    const { value, satAmount, lightning, offer }: any =
+    let { value, satAmount, lightning, offer }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
@@ -111,6 +111,19 @@ const handleAnything = async (
     const ecash =
         BackendUtils.supportsCashuWallet() &&
         settingsStore?.settings?.ecash?.enableCashu;
+
+    // Handle nested URI schemes: LIGHTNING:lnurlp://...
+    // Convert lnurlp:// to https:// (or http:// for .onion) for processing
+    if (value) {
+        const urlMatch = value.match(/^lnurl(p|w|c|auth):\/\/(.+)$/i);
+        if (urlMatch) {
+            const urlPath = urlMatch[2];
+            const protocol = urlPath.toLowerCase().includes('.onion')
+                ? 'http'
+                : 'https';
+            value = `${protocol}://${urlPath}`;
+        }
+    }
 
     let lnurl;
     // if the value is from clipboard and looks like a url we don't want to decode it
@@ -599,8 +612,12 @@ const handleAnything = async (
                     { cancelable: false }
                 );
             });
-    } else if (!!findlnurl(value) || !!lnurl) {
-        const raw: string = findlnurl(value) || lnurl || '';
+    } else if (
+        !!findlnurl(value) ||
+        !!lnurl ||
+        (value && /\/lnurl|lnurlp|lnurlw|lnurlc|lnurlauth/i.test(value))
+    ) {
+        const raw: string = findlnurl(value) || lnurl || value || '';
         return getlnurlParams(raw)
             .then((params: any) => {
                 if (
