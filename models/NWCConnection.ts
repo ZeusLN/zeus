@@ -11,6 +11,12 @@ export enum PermissionType {
     ReadOnly = 'read_only',
     Custom = 'custom'
 }
+export type ConnectionActivityType =
+    | 'pay_invoice'
+    | 'make_invoice'
+    | 'pay_keysend';
+
+export type ConnectionPaymentSourceType = 'lightning' | 'cashu';
 
 export enum BudgetRenewalType {
     Never = 'never',
@@ -22,6 +28,14 @@ export enum BudgetRenewalType {
 export enum ConnectionWarningType {
     WalletBalanceLowerThanBudget = 'wallet_balance_lower_than_budget',
     BudgetLimitReached = 'budget_limit_reached'
+}
+export interface ConnectionActivity {
+    type: ConnectionActivityType;
+    satAmount: number;
+    payment_source: ConnectionPaymentSourceType;
+    status: 'success' | 'pending' | 'failed';
+    error?: string;
+    lastprocessAt: Date;
 }
 export type TimeUnit = 'Hours' | 'Days' | 'Weeks' | 'Months' | 'Years';
 export interface NWCConnectionData {
@@ -43,6 +57,7 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
+    activity?: ConnectionActivity[];
     metadata?: any;
 }
 export interface ConnectionWarning {
@@ -97,7 +112,7 @@ export default class NWCConnection extends BaseModel {
     @observable implementation: Implementations;
     @observable metadata?: any;
     @observable private _warningTypes: ConnectionWarningType[] = [];
-
+    @observable activity: ConnectionActivity[] = [];
     constructor(data?: NWCConnectionData) {
         super(data);
 

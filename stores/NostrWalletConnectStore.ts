@@ -61,6 +61,8 @@ import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NWCConnection, {
     BudgetRenewalType,
+    ConnectionActivityType,
+    ConnectionPaymentSourceType,
     ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
@@ -1191,8 +1193,10 @@ export default class NostrWalletConnectStore {
         request: Nip47PayInvoiceRequest,
         skipNotification: boolean = false
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
+        let payment_source: ConnectionPaymentSourceType = 'lightning';
         try {
             if (this.isCashuConfigured) {
+                payment_source = 'cashu';
                 return this.handleCashuPayInvoice(
                     connection,
                     request,
@@ -1206,6 +1210,15 @@ export default class NostrWalletConnectStore {
             );
         } catch (error: any) {
             console.error('NWC: Error in handlePayInvoice:', error);
+            connection.activity.push({
+                payment_source,
+                status: 'failed',
+                error: error instanceof Error ? error.message : String(error),
+                lastprocessAt: new Date(),
+                type: 'pay_invoice',
+                satAmount: millisatsToSats(request.amount || 0)
+            });
+            this.saveConnections();
             return this.handleError(
                 (error instanceof Error ? error.message : String(error)) ||
                     localeString(
@@ -1254,7 +1267,14 @@ export default class NostrWalletConnectStore {
                             ErrorCodes.INVALID_INVOICE
                         );
                     }
-
+                    connection.activity.push({
+                        satAmount: millisatsToSats(request.amount),
+                        type: 'make_invoice',
+                        payment_source: 'cashu',
+                        status: 'success',
+                        lastprocessAt: new Date()
+                    });
+                    this.saveConnections();
                     this.showInvoiceCreatedNotification(
                         millisatsToSats(request.amount),
                         connection.name,
@@ -1821,6 +1841,8 @@ export default class NostrWalletConnectStore {
             }
 
             await this.finalizePayment(
+                'pay_keysend',
+                'lightning',
                 connection,
                 amountSats,
                 skipNotification
@@ -1967,7 +1989,13 @@ export default class NostrWalletConnectStore {
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
-        await this.finalizePayment(connection, amountSats, skipNotification);
+        await this.finalizePayment(
+            'pay_invoice',
+            'lightning',
+            connection,
+            amountSats,
+            skipNotification
+        );
 
         return {
             result: {
@@ -2100,7 +2128,13 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        await this.finalizePayment(connection, amount, skipNotification);
+        await this.finalizePayment(
+            'pay_invoice',
+            'cashu',
+            connection,
+            amount,
+            skipNotification
+        );
 
         return {
             result: {
@@ -2286,12 +2320,21 @@ export default class NostrWalletConnectStore {
      * Processes payment completion: tracks spending, saves, and shows notification
      */
     private async finalizePayment(
+        type: ConnectionActivityType,
+        payment_source: ConnectionPaymentSourceType,
         connection: NWCConnection,
         amountSats: number,
         skipNotification: boolean = false
     ): Promise<void> {
         runInAction(() => {
             connection.trackSpending(amountSats);
+            connection.activity.push({
+                type,
+                satAmount: amountSats,
+                status: 'success',
+                lastprocessAt: new Date(),
+                payment_source
+            });
             this.findAndUpdateConnection(connection);
         });
         await this.saveConnections();
