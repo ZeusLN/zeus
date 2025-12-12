@@ -64,8 +64,8 @@ import NWCConnection, {
     ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
-import Transaction from '../models/Transaction';
 import Invoice from '../models/Invoice';
+import Payment from '../models/Payment';
 
 import Storage from '../storage';
 
@@ -78,6 +78,7 @@ import InvoicesStore from './InvoicesStore';
 import MessageSignStore from './MessageSignStore';
 import LightningAddressStore from './LightningAddressStore';
 import ModalStore from './ModalStore';
+import PaymentsStore from './PaymentsStore';
 
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
 export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
@@ -97,7 +98,7 @@ const PAYMENT_PROCESSING_DELAY_MS = 100;
 
 export const DEFAULT_NOSTR_RELAYS = [
     'wss://relay.getalby.com/v1',
-    'wss://relay.snort.social',
+    // 'wss://relay.snort.social',
     'wss://relay.damus.io'
 ];
 
@@ -194,27 +195,28 @@ export default class NostrWalletConnectStore {
     messageSignStore: MessageSignStore;
     lightningAddressStore: LightningAddressStore;
     modalStore: ModalStore;
+    paymentStore: PaymentsStore;
 
     constructor(
         settingsStore: SettingsStore,
         balanceStore: BalanceStore,
         nodeInfoStore: NodeInfoStore,
-        transactionsStore: TransactionsStore,
         cashuStore: CashuStore,
         invoicesStore: InvoicesStore,
         messageSignStore: MessageSignStore,
         lightningAddressStore: LightningAddressStore,
-        modalStore: ModalStore
+        modalStore: ModalStore,
+        paymentStore: PaymentsStore
     ) {
         this.settingsStore = settingsStore;
         this.balanceStore = balanceStore;
         this.nodeInfoStore = nodeInfoStore;
-        this.transactionsStore = transactionsStore;
         this.cashuStore = cashuStore;
         this.invoicesStore = invoicesStore;
         this.messageSignStore = messageSignStore;
         this.lightningAddressStore = lightningAddressStore;
         this.modalStore = modalStore;
+        this.paymentStore = paymentStore;
     }
 
     @action
@@ -1648,54 +1650,35 @@ export default class NostrWalletConnectStore {
                 ];
                 nip47Transactions.sort((a, b) => b.created_at - a.created_at);
             } else {
-                await this.transactionsStore.getTransactions();
-                const transactions = this.transactionsStore.transactions;
+                await this.paymentStore.getPayments();
+                const transactions: Payment[] = this.paymentStore.payments;
 
-                nip47Transactions = (transactions || []).map(
-                    (tx: Transaction) => {
-                        const amount = Number(tx.amount);
-                        const type: 'incoming' | 'outgoing' =
-                            amount >= 0 ? 'incoming' : 'outgoing';
-                        // Determine state: failed if status indicates failure, settled if confirmed, pending otherwise
-                        let state: 'settled' | 'pending' | 'failed' = 'pending';
-                        if (
-                            tx.status &&
-                            (tx.status === 'failed' ||
-                                tx.status === 'FAILED' ||
-                                tx.status.toLowerCase().includes('fail'))
-                        ) {
-                            state = 'failed';
-                        } else if (tx.num_confirmations > 0) {
-                            state = 'settled';
-                        }
-                        const amountMsats = satsToMillisats(Math.abs(amount));
-                        const feesMsats = satsToMillisats(
-                            Number(tx.total_fees) || 0
-                        );
-                        const timestamp = Number(tx.time_stamp) || 0;
-                        const txHash = tx.tx_hash || tx.txid || '';
-
-                        return NostrConnectUtils.createNip47Transaction({
-                            type,
-                            state,
-                            invoice: '',
-                            payment_hash: txHash,
-                            amount: amountMsats,
-                            description: tx.note || undefined,
-                            fees_paid: feesMsats,
-                            settled_at: state === 'settled' ? timestamp : 0,
-                            created_at: timestamp,
-                            expires_at: 0, // On-chain transactions don't expire
-                            metadata: {
-                                block_height: tx.block_height,
-                                block_hash: tx.block_hash,
-                                num_confirmations: tx.num_confirmations,
-                                dest_addresses: tx.dest_addresses,
-                                raw_tx_hex: tx.raw_tx_hex
-                            }
-                        });
+                nip47Transactions = (transactions || []).map((tx: Payment) => {
+                    const amount = Number(tx.amount);
+                    const type: 'incoming' | 'outgoing' =
+                        amount >= 0 ? 'incoming' : 'outgoing';
+                    let state: 'settled' | 'pending' | 'failed' = 'pending';
+                    if (
+                        tx.status &&
+                        (tx.status === 'failed' ||
+                            tx.status === 'FAILED' ||
+                            tx.status.toLowerCase().includes('fail'))
+                    ) {
+                        state = 'failed';
                     }
-                );
+
+                    return NostrConnectUtils.createNip47Transaction({
+                        type,
+                        state,
+                        invoice: tx.getPaymentRequest || '',
+                        preimage: tx.getPreimage,
+                        payment_hash: tx.paymentHash || '',
+                        amount: satsToMillisats(Number(tx.getAmount)),
+                        description: tx.getNote,
+                        fees_paid: satsToMillisats(Number(tx.getFee)),
+                        created_at: Number(tx.getTimestamp)
+                    });
+                });
             }
             if (request.type && request.type.trim() !== '') {
                 nip47Transactions = nip47Transactions.filter(
