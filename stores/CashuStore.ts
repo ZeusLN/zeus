@@ -2234,21 +2234,31 @@ export default class CashuStore {
             : undefined;
 
         const mintUrl = this.selectedMintUrl;
-        if (!this.cashuWallets[mintUrl].wallet) {
-            await this.initializeWallet(mintUrl, true);
-        }
 
+        const isNetworkError = (e: any) => {
+            return (
+                e.message?.toLowerCase().includes('network') ||
+                e.message?.toLowerCase().includes('fetch') ||
+                e.message?.toLowerCase().includes('timeout') ||
+                e.message?.toLowerCase().includes('connect')
+            );
+        };
+        if (!this.cashuWallets[mintUrl].wallet) {
+            try {
+                await this.initializeWallet(mintUrl, true);
+            } catch (e) {
+                if (isNetworkError(e)) {
+                    return this.createOfflineToken({ memo, value, pubkey });
+                }
+            }
+        }
         const { wallet, proofs, counter, balanceSats } =
             this.cashuWallets[mintUrl];
 
         if (balanceSats < Number(value)) {
-            runInAction(() => {
-                this.mintingTokenError = true;
-                this.mintingToken = false;
-                this.error_msg = localeString(
-                    'stores.CashuStore.insufficientBalance'
-                );
-            });
+            this.setMintingError(
+                localeString('stores.CashuStore.insufficientBalance')
+            );
             return;
         }
         const { proofsToUse } = this.getProofsToUse(proofs, Number(value));
@@ -2294,6 +2304,21 @@ export default class CashuStore {
                             attempt + 1
                         } failed with counter ${attemptCounter}: ${e.message}`
                     );
+
+                    if (isNetworkError(e) && attempt === 0) {
+                        console.log(
+                            'mintToken: Network error detected, falling back to offline mode'
+                        );
+                        runInAction(() => {
+                            this.mintingToken = false;
+                        });
+                        return await this.createOfflineToken({
+                            memo,
+                            value,
+                            pubkey
+                        });
+                    }
+
                     if (attempt === maxAttempts - 1) {
                         throw e; // Re-throw error after last attempt
                     }
@@ -2369,15 +2394,115 @@ export default class CashuStore {
             return { token, decoded };
         } catch (e) {
             console.log('Cashu mintToken err', e);
-            const error = e;
-            runInAction(() => {
-                this.mintingTokenError = true;
-                this.mintingToken = false;
-                this.error_msg = error
-                    ? error.toString()
-                    : localeString('stores.CashuStore.errorMintingToken');
-            });
+            this.setMintingError(
+                (e as Error).message ||
+                    localeString('stores.CashuStore.errorMintingToken')
+            );
         }
+    };
+
+    @action
+    public createOfflineToken = async ({
+        memo,
+        value,
+        pubkey
+    }: {
+        memo: string;
+        value: string;
+        pubkey?: string;
+    }): Promise<{ token: string; decoded: CashuToken } | undefined> => {
+        runInAction(() => {
+            this.mintingToken = true;
+            this.mintingTokenError = false;
+            this.error_msg = undefined;
+        });
+        try {
+            const mintUrl = this.selectedMintUrl;
+
+            if (!this.cashuWallets[this.selectedMintUrl]) {
+                this.setMintingError(
+                    localeString('stores.CashuStore.errorWalletNotInitialized')
+                );
+                return;
+            }
+            const { proofs, balanceSats } = this.cashuWallets[mintUrl];
+            // P2PK locked tokens require network access to swap proofs
+            if (pubkey) {
+                this.setMintingError(
+                    localeString('stores.CashuStore.offlineP2PKNotSupported')
+                );
+                return;
+            }
+            // Check if user has enough balance
+            if (balanceSats < Number(value)) {
+                this.setMintingError(
+                    localeString('stores.CashuStore.insufficientBalance')
+                );
+                return;
+            }
+            // Select proofs for the requested amount
+            const { selectedProofs, totalAmount, changeAmount, hasEnough } =
+                CashuUtils.selectProofsForAmount(proofs, Number(value));
+
+            if (!hasEnough || selectedProofs.length === 0) {
+                this.setMintingError(
+                    localeString('stores.CashuStore.insufficientBalance')
+                );
+                return;
+            }
+            // Remove the used proofs from storage
+            await this.removeMintProofs(mintUrl, selectedProofs);
+            if (changeAmount > 0) {
+                console.log(
+                    `Offline token: Selected proofs total ${totalAmount} sats for requested ${value} sats. ` +
+                        `Receiver will get ${totalAmount} sats (${changeAmount} sats extra).`
+                );
+            }
+
+            await this.setTotalBalance(this.totalBalanceSats - totalAmount);
+            await this.setMintBalance(
+                mintUrl,
+                this.cashuWallets[mintUrl].balanceSats - totalAmount
+            );
+            const tokenObj = {
+                mint: mintUrl,
+                proofs: selectedProofs,
+                memo,
+                unit: 'sat'
+            };
+            const token = getEncodedToken(tokenObj);
+
+            const decoded = new CashuToken({
+                ...tokenObj,
+                sent: true,
+                encodedToken: token,
+                created_at: Date.now() / 1000,
+                spent: false
+            });
+            this.sentTokens?.push(decoded);
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-sent-tokens`,
+                this.sentTokens
+            );
+            runInAction(() => {
+                this.mintingToken = false;
+            });
+            return { token, decoded };
+        } catch (e) {
+            console.log('Cashu createOfflineToken err', e);
+            this.setMintingError(
+                (e as Error).message ||
+                    localeString('stores.CashuStore.errorMintingToken')
+            );
+        }
+    };
+
+    private setMintingError = (errorMessage: string) => {
+        runInAction(() => {
+            this.mintingTokenError = true;
+            this.mintingToken = false;
+            this.error_msg = errorMessage;
+        });
     };
 
     @action
