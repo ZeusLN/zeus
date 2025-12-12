@@ -179,6 +179,7 @@ export default class NostrWalletConnectStore {
     @observable public processedPendingPayInvoiceEventIds: string[] = [];
     @observable public failedPendingPayInvoiceEventIds: string[] = [];
     @observable public pendingPayInvoiceErrors: Map<string, string> = new Map();
+    @observable public maxBudgetLimit: number = 0; // Max wallet balance
     private iosBackgroundTimerInterval: any = null;
     private androidReconnectionListener: any = null;
     private appStateListener: any = null;
@@ -232,24 +233,23 @@ export default class NostrWalletConnectStore {
                     this.initializeNWCWalletServices(),
                     this.initializeWalletServiceKeys()
                 ]);
-
                 await Promise.all([
                     this.loadPersistentServiceSetting(),
                     this.loadCashuSetting(),
                     this.loadConnections()
                 ]);
                 await this.startService();
+                await this.loadMaxBudget();
+                await this.checkAndResetAllBudgets();
                 if (Platform.OS === 'android') {
                     this.setupAndroidReconnectionListener();
                     this.setupAppStateMonitoring();
                     this.setupAndroidLogListener();
                 }
-
                 if (Platform.OS === 'ios') {
                     await this.fetchAndProcessPendingEvents();
                     await this.sendHandoffRequest();
                 }
-
                 runInAction(() => {
                     this.loadingMsg = undefined;
                     this.loading = false;
@@ -2113,11 +2113,11 @@ export default class NostrWalletConnectStore {
     @action
     private checkAndResetAllBudgets = async (): Promise<void> => {
         let needsSave = false;
-        const maxBudget = await this.getMaxBudget();
         runInAction(() => {
             for (const connection of this.connections) {
-                const changed =
-                    connection.checkAndResetBudgetIfNeeded(maxBudget);
+                const changed = connection.checkAndResetBudgetIfNeeded(
+                    this.maxBudgetLimit
+                );
                 if (changed) {
                     needsSave = true;
                 }
@@ -2137,9 +2137,8 @@ export default class NostrWalletConnectStore {
         if (!connection) return;
         switch (warningType) {
             case ConnectionWarningType.WalletBalanceLowerThanBudget:
-                const maxBudget = await this.getMaxBudget();
                 runInAction(() => {
-                    connection.checkAndResetBudgetIfNeeded(maxBudget);
+                    connection.checkAndResetBudgetIfNeeded(this.maxBudgetLimit);
                     connection.removeWarning(warningType);
                     this.findAndUpdateConnection(connection);
                 });
@@ -2519,19 +2518,26 @@ export default class NostrWalletConnectStore {
             errorMessage
         };
     }
-    public async getMaxBudget(): Promise<number> {
+    public async loadMaxBudget() {
         try {
             if (this.isCashuConfigured) {
-                return this.cashuStore.totalBalanceSats || 0;
+                runInAction(() => {
+                    this.maxBudgetLimit = this.cashuStore.totalBalanceSats || 0;
+                });
             } else {
                 const balance = await this.balanceStore.getLightningBalance(
                     true
                 );
-                return Number(balance?.lightningBalance) || 0;
+                runInAction(() => {
+                    this.maxBudgetLimit =
+                        Number(balance?.lightningBalance) || 0;
+                });
             }
         } catch (error) {
+            runInAction(() => {
+                this.maxBudgetLimit = 0;
+            });
             console.error('Failed to get max budget:', error);
-            return 0;
         }
     }
     @computed
@@ -2612,7 +2618,7 @@ export default class NostrWalletConnectStore {
         }
     }
     // Android: Set up listener for background reconnection events from native service
-    private setupAndroidReconnectionListener(): void {
+    private setupAndroidReconnectionListener() {
         if (this.androidReconnectionListener) {
             this.androidReconnectionListener.remove();
         }
@@ -2623,7 +2629,7 @@ export default class NostrWalletConnectStore {
             }
         );
     }
-    private setupAndroidLogListener(): void {
+    private async setupAndroidLogListener() {
         if (this.androidLogListener) {
             this.androidLogListener.remove();
         }
@@ -2646,7 +2652,7 @@ export default class NostrWalletConnectStore {
             }
         );
     }
-    private setupAppStateMonitoring(): void {
+    private setupAppStateMonitoring() {
         if (this.appStateListener) {
             this.appStateListener.remove();
         }
