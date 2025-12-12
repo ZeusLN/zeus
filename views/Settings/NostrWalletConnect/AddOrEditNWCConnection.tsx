@@ -109,9 +109,9 @@ export default class AddOrEditNWCConnection extends React.Component<
     private unsubscribeFocus?: () => void;
 
     async componentDidMount() {
-        const { route, navigation } = this.props;
+        const { route, navigation, NostrWalletConnectStore } = this.props;
         const connectionId = route.params?.connectionId;
-
+        await NostrWalletConnectStore.loadMaxBudget();
         await this.updateMaxBudgetLimit();
         if (connectionId) {
             await this.loadConnectionForEdit(connectionId);
@@ -129,7 +129,7 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     updateMaxBudgetLimit = async () => {
         const { NostrWalletConnectStore } = this.props;
-        const maxLimit = await NostrWalletConnectStore.getMaxBudget();
+        const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
         const clampedMaxLimit = Math.max(0, maxLimit);
 
         const existingBudgetValue = this.state.budgetValue || 0;

@@ -70,40 +70,38 @@ export default class NWCConnectionsList extends React.Component<
         };
     }
 
-    async componentDidMount() {
-        this.props.navigation.addListener('focus', this.handleFocus);
-        await this.loadSettings();
+    componentDidMount() {
+        const { navigation } = this.props;
+        navigation.addListener('focus', this.handleFocus);
+        this.getConnections();
     }
-
     componentWillUnmount() {
-        this.props.navigation.removeListener &&
-            this.props.navigation.removeListener('focus', this.handleFocus);
+        const { navigation } = this.props;
+        navigation.removeListener('focus', this.handleFocus);
     }
-
-    loadSettings = async () => {
+    async getConnections() {
         try {
             this.setState({
                 connectionsLoading: true,
                 error: ''
             });
-            await this.props.NostrWalletConnectStore.loadConnections();
+            const { NostrWalletConnectStore } = this.props;
+            await NostrWalletConnectStore.loadConnections();
             this.setState({
                 connectionsLoading: false
             });
-        } catch (error: any) {
+        } catch (error) {
             this.setState({
+                connectionsLoading: false,
                 error: localeString(
                     'stores.NostrWalletConnectStore.error.failedToLoadConnections'
-                ),
-                connectionsLoading: false
+                )
             });
         }
-    };
-
+    }
     handleFocus = async () => {
-        await this.loadSettings();
+        await this.getConnections();
     };
-
     getFilterOptions = () => {
         const { connections } = this.props.NostrWalletConnectStore;
         return [
@@ -608,7 +606,7 @@ export default class NWCConnectionsList extends React.Component<
                                     refreshControl={
                                         <RefreshControl
                                             refreshing={connectionsLoading}
-                                            onRefresh={this.loadSettings}
+                                            onRefresh={this.getConnections}
                                             tintColor={themeColor('text')}
                                             colors={[themeColor('highlight')]}
                                         />
