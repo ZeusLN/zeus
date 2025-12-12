@@ -925,6 +925,7 @@
     "views.Settings.SignMessage.noDataReceived": "No data received from sign operation",
     "views.Settings.SignMessage.signOperationFailed": "Sign operation not supported",
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
+    "views.Settings.SignMessage.addressVerificationNotSupported": "Address verification is not supported in the current node implementation.",
     "views.Settings.Language.title": "Language",
     "views.Settings.Currency.title": "Currency",
     "views.Settings.Currency.source": "Source",
