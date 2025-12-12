@@ -1,4 +1,4 @@
-import { getDecodedToken, Token } from '@cashu/cashu-ts';
+import { getDecodedToken, Proof, Token } from '@cashu/cashu-ts';
 
 export const cashuTokenPrefixes = [
     'https://wallet.nutstash.app/#',
@@ -87,6 +87,33 @@ class CashuUtils {
         } catch {
             return undefined;
         }
+    };
+    selectProofsForAmount = (proofs: Proof[], targetAmount: number) => {
+        const sortedProofs = [...proofs].sort((a, b) => a.amount - b.amount);
+
+        const selectedProofs: Proof[] = [];
+        let totalAmount = 0;
+        for (const proof of sortedProofs) {
+            if (totalAmount >= targetAmount) {
+                break;
+            }
+            selectedProofs.push(proof);
+            totalAmount += proof.amount;
+        }
+        if (totalAmount < targetAmount) {
+            return {
+                selectedProofs: [],
+                totalAmount: 0,
+                changeAmount: 0,
+                hasEnough: false
+            };
+        }
+        return {
+            selectedProofs,
+            totalAmount,
+            changeAmount: totalAmount - targetAmount,
+            hasEnough: true
+        };
     };
 }
 
