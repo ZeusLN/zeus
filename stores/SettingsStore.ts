@@ -728,6 +728,12 @@ export const CURRENCY_KEYS = [
         supportedSources: ['Zeus', 'Yadio']
     },
     {
+        key: 'West African CFA franc',
+        value: 'XOF',
+        flag: '🇧🇯🇧🇫🇨🇮🇬🇼🇲🇱🇳🇪🇸🇳🇹🇬',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
         key: 'Kenyan Shilling',
         value: 'KES',
         flag: '🇰🇪',
@@ -1007,6 +1013,24 @@ export const CURRENCY_KEYS = [
         key: 'Zambian Kwacha',
         value: 'ZMW',
         flag: '🇿🇲',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: 'Malawian Kwacha',
+        value: 'MWK',
+        flag: '🇲🇼',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: 'Lesotho Loti',
+        value: 'LSL',
+        flag: '🇱🇸',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
+        key: 'Swazi Lilangeni',
+        value: 'SZL',
+        flag: '🇸🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
