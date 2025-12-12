@@ -1008,7 +1008,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 <View
                                     style={{
                                         flexDirection: 'row',
-                                        width: '95%',
+                                        flex: 1,
                                         alignSelf: 'center'
                                     }}
                                 >

@@ -1935,9 +1935,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 }}
                                             >
                                                 <Row justify="space-between">
-                                                    <View
-                                                        style={{ width: '95%' }}
-                                                    >
+                                                    <View style={{ flex: 1 }}>
                                                         <KeyValue
                                                             keyValue={localeString(
                                                                 'views.Swaps.setFeeRate'

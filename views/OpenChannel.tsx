@@ -884,7 +884,7 @@ export default class OpenChannel extends React.Component<
                                         }}
                                     >
                                         <Row justify="space-between">
-                                            <View style={{ width: '95%' }}>
+                                            <View style={{ flex: 1 }}>
                                                 <KeyValue
                                                     keyValue={localeString(
                                                         'general.advancedSettings'

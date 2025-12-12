@@ -296,7 +296,7 @@ export default class PaymentView extends React.Component<
                                     }}
                                 >
                                     <Row justify="space-between">
-                                        <View style={{ width: '95%' }}>
+                                        <View style={{ flex: 1 }}>
                                             <KeyValue
                                                 keyValue={
                                                     enhancedPath.length > 1

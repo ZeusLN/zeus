@@ -128,7 +128,7 @@ export default class DisasterRecovery extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <ScrollView>
+                    <ScrollView showsVerticalScrollIndicator={false}>
                         <>
                             {lastDisasterRecoveryBackupStatus && (
                                 <View

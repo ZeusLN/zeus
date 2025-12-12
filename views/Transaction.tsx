@@ -342,7 +342,7 @@ export default class TransactionView extends React.Component<
                                     }}
                                 >
                                     <Row justify="space-between">
-                                        <View style={{ width: '95%' }}>
+                                        <View style={{ flex: 1 }}>
                                             <KeyValue
                                                 keyValue={localeString(
                                                     'views.Transaction.rawTxHex'

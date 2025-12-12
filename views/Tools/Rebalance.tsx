@@ -1394,7 +1394,7 @@ export default class Rebalance extends React.Component<
                 >
                     <View style={{ marginBottom: 10 }}>
                         <Row justify="space-between">
-                            <View style={{ width: '95%' }}>
+                            <View style={{ flex: 1 }}>
                                 <KeyValue
                                     keyValue={localeString(
                                         'general.advancedSettings'

@@ -343,7 +343,7 @@ export default class RefundSwap extends React.Component<
                             }}
                         >
                             <Row justify="space-between">
-                                <View style={{ width: '95%' }}>
+                                <View style={{ flex: 1 }}>
                                     <KeyValue
                                         keyValue={'Raw details'}
                                         color={themeColor('secondaryText')}

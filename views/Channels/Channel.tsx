@@ -430,6 +430,7 @@ export default class ChannelView extends React.Component<
                 <ScrollView
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
                 >
                     <View style={styles.center}>
                         <Text
@@ -683,7 +684,7 @@ export default class ChannelView extends React.Component<
                         >
                             <View>
                                 <Row justify="space-between">
-                                    <View style={{ width: '95%' }}>
+                                    <View style={{ flex: 1 }}>
                                         <KeyValue
                                             keyValue={localeString(
                                                 'views.Channel.aliases'
