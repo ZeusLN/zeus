@@ -13,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
 import Slider from '@react-native-community/slider';
+import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -26,7 +27,6 @@ import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
-import ForwardIcon from '../../../assets/images/SVG/Caret Right-3.svg';
 import NostrConnectUtils, {
     PermissionOption,
     IndividualPermissionOption
@@ -43,7 +43,7 @@ import NWCConnection, {
     TimeUnit
 } from '../../../models/NWCConnection';
 
-import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
+import ForwardIcon from '../../../assets/images/SVG/Caret Right-3.svg';
 
 interface AddOrEditNWCConnectionProps {
     navigation: StackNavigationProp<any, any>;
@@ -58,6 +58,7 @@ interface AddOrEditNWCConnectionProps {
 interface AddOrEditNWCConnectionState {
     connectionName: string;
     selectedRelayUrl: string;
+    customRelayUrl: string;
     selectedPermissions: Nip47SingleMethod[];
     selectedBudgetRenewalIndex: number;
     expiresAt: Date | undefined;
@@ -87,6 +88,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.state = {
             connectionName: '',
             selectedRelayUrl: DEFAULT_NOSTR_RELAYS[0],
+            customRelayUrl: '',
             selectedPermissions: NostrConnectUtils.getFullAccessPermissions(),
             selectedBudgetRenewalIndex: 0,
             expiresAt: NostrConnectUtils.getExpiryDateFromPreset(0),
@@ -175,11 +177,15 @@ export default class AddOrEditNWCConnection extends React.Component<
             let customExpiryValue = connection.customExpiryValue || null;
             let customExpiryUnit =
                 connection.customExpiryUnit || NostrConnectUtils.TIME_UNITS[1];
-
+            const isCustomRelay = !DEFAULT_NOSTR_RELAYS.find(
+                (relay) => relay === connection.relayUrl
+            );
             this.setState({
                 connectionName: connection.name,
-                selectedRelayUrl:
-                    connection.relayUrl || DEFAULT_NOSTR_RELAYS[0],
+                selectedRelayUrl: isCustomRelay
+                    ? localeString('general.custom')
+                    : connection.relayUrl || DEFAULT_NOSTR_RELAYS[0],
+                customRelayUrl: connection.relayUrl || '',
                 selectedPermissions: connection.permissions,
                 selectedBudgetRenewalIndex: budgetRenewalIndex,
                 expiresAt: connection.expiresAt!,
@@ -202,7 +208,10 @@ export default class AddOrEditNWCConnection extends React.Component<
         if (!originalConnection) return false;
         const currentState: any = {
             name: this.state.connectionName.trim(),
-            relayUrl: this.state.selectedRelayUrl,
+            relayUrl:
+                this.state.selectedRelayUrl === localeString('general.custom')
+                    ? this.state.customRelayUrl
+                    : this.state.selectedRelayUrl,
             permissions: [...this.state.selectedPermissions].sort(),
             maxAmountSats:
                 this.state.budgetValue > 0 ? this.state.budgetValue : undefined,
@@ -245,10 +254,17 @@ export default class AddOrEditNWCConnection extends React.Component<
         const { originalConnection } = this.state;
         if (!originalConnection) return false;
 
-        return (
-            this.state.selectedRelayUrl !==
-            (originalConnection.relayUrl || DEFAULT_NOSTR_RELAYS[0])
-        );
+        if (this.state.selectedRelayUrl === localeString('general.custom')) {
+            return this.state.customRelayUrl !== originalConnection.relayUrl;
+        } else {
+            return this.state.selectedRelayUrl !== originalConnection.relayUrl;
+        }
+    };
+
+    isValidRelayUrl = (url: string) => {
+        const pattern =
+            /^(wss?:\/\/)([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:\d+)?(\/.*)?$/;
+        return pattern.test(url);
     };
 
     updateStateWithChangeTracking = (newState: any) => {
@@ -268,12 +284,22 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue,
             selectedPermissionType,
             budgetValue,
-            maxBudgetLimit
+            maxBudgetLimit,
+            customRelayUrl,
+            selectedRelayUrl
         } = this.state;
 
         const basicValidation =
             connectionName.trim().length > 0 && selectedPermissions.length > 0;
 
+        if (selectedRelayUrl === localeString('general.custom')) {
+            if (
+                customRelayUrl.trim().length <= 0 ||
+                !this.isValidRelayUrl(customRelayUrl)
+            ) {
+                return false;
+            }
+        }
         if (!basicValidation) return false;
 
         if (showCustomExpiryInput) {
@@ -482,7 +508,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         });
     };
 
-    buildConnectionParams = (isEdit: boolean, connectionId?: string) => {
+    buildConnectionParams = async (isEdit: boolean, connectionId?: string) => {
         const {
             connectionName,
             selectedRelayUrl,
@@ -494,18 +520,29 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue,
             customExpiryUnit,
             showCustomExpiryInput,
-            maxBudgetLimit
+            maxBudgetLimit,
+            customRelayUrl
         } = this.state;
+        const { NostrWalletConnectStore } = this.props;
 
         const budgetRenewalOptions =
             NostrConnectUtils.getBudgetRenewalOptions();
         const budgetRenewal =
             budgetRenewalOptions[selectedBudgetRenewalIndex]?.key || 'never';
-
+        const isCustomRelay =
+            selectedRelayUrl === localeString('general.custom');
+        if (isCustomRelay) {
+            const { status, error } = await NostrWalletConnectStore.pingRelay(
+                customRelayUrl
+            );
+            if (!status) {
+                throw new Error(error!);
+            }
+        }
         const params: any = {
             ...(connectionId && { id: connectionId }),
             name: connectionName.trim(),
-            relayUrl: selectedRelayUrl,
+            relayUrl: isCustomRelay ? customRelayUrl : selectedRelayUrl,
             permissions: selectedPermissions,
             budgetRenewal
         };
@@ -574,7 +611,11 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
             const totalSpendSats = connection.totalSpendSats;
             const lastBudgetReset = connection.lastBudgetReset;
-            const params = this.buildConnectionParams(false, connectionId);
+            const params = await this.buildConnectionParams(
+                false,
+                connectionId
+            );
+            if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
             await NostrWalletConnectStore.deleteConnection(connectionId);
@@ -603,7 +644,11 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.setState({ loading: true, error: '' });
 
         try {
-            const params = this.buildConnectionParams(!!isEdit, connectionId);
+            const params = await this.buildConnectionParams(
+                !!isEdit,
+                connectionId
+            );
+            if (!params) return;
 
             if (isEdit && connectionId) {
                 const updated = await NostrWalletConnectStore.updateConnection(
@@ -860,7 +905,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryUnit,
             budgetValue,
             selectedPermissionType,
-            selectedPermissions
+            selectedPermissions,
+            customRelayUrl
         } = this.state;
         const { persistentNWCServiceEnabled } = NostrWalletConnectStore;
         const budgetRenewalButtons: any =
@@ -1067,14 +1113,48 @@ export default class AddOrEditNWCConnection extends React.Component<
                                             selectedRelayUrl: value
                                         });
                                     }}
-                                    values={DEFAULT_NOSTR_RELAYS.map(
-                                        (relay) => ({
-                                            key: relay,
-                                            value: relay
-                                        })
-                                    )}
+                                    values={[
+                                        ...DEFAULT_NOSTR_RELAYS.map(
+                                            (relay) => ({
+                                                key: relay,
+                                                value: relay
+                                            })
+                                        ),
+                                        {
+                                            key: localeString('general.custom'),
+                                            value: localeString(
+                                                'general.custom'
+                                            )
+                                        }
+                                    ]}
                                 />
                             </View>
+                            {this.state.selectedRelayUrl ===
+                                localeString('general.custom') && (
+                                <View>
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'views.Settings.NostrWalletConnect.customNostrUrlPlaceholder'
+                                        )}
+                                        value={customRelayUrl}
+                                        onChangeText={(text: string) =>
+                                            this.updateStateWithChangeTracking({
+                                                customRelayUrl: text
+                                            })
+                                        }
+                                        autoCapitalize="none"
+                                        style={styles.textInput}
+                                        textColor={
+                                            customRelayUrl.trim().length > 0 &&
+                                            !this.isValidRelayUrl(
+                                                customRelayUrl
+                                            )
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                    />
+                                </View>
+                            )}
                         </View>
 
                         {/* Permission Types */}
