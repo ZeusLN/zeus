@@ -154,7 +154,7 @@ export interface CreateConnectionParams {
 }
 
 export default class NostrWalletConnectStore {
-    @observable public loading = true;
+    @observable public loading = false;
     @observable public error = false;
     @observable public errorMessage = '';
     @observable public loadingMsg?: string;
@@ -219,6 +219,10 @@ export default class NostrWalletConnectStore {
 
     @action
     public initializeService = async () => {
+        await this.loadInitialSettings();
+        const hasActiveConnections = this.activeConnections.length > 0;
+        if (!hasActiveConnections) return;
+
         if (this.isInNWCConnectionQRView) this.endIOSBackgroundTask();
         await this.retryWithBackoff(async () => {
             runInAction(() => {
@@ -229,16 +233,8 @@ export default class NostrWalletConnectStore {
                 );
             });
             try {
-                await Promise.all([
-                    this.initializeNWCWalletServices(),
-                    this.initializeWalletServiceKeys()
-                ]);
-                await Promise.all([
-                    this.loadPersistentServiceSetting(),
-                    this.loadCashuSetting(),
-                    this.loadConnections()
-                ]);
-                await this.startService();
+                await this.initializeNWCWalletServices();
+                await this.startService(hasActiveConnections);
                 await this.loadMaxBudget();
                 await this.checkAndResetAllBudgets();
                 if (Platform.OS === 'android') {
@@ -272,6 +268,15 @@ export default class NostrWalletConnectStore {
         }, MAX_RELAY_ATTEMPTS);
     };
 
+    private async loadInitialSettings() {
+        await Promise.all([
+            this.initializeWalletServiceKeys(),
+            this.loadPersistentServiceSetting(),
+            this.loadCashuSetting(),
+            this.loadConnections()
+        ]);
+    }
+
     private async initializeWalletServiceKeys(): Promise<void> {
         let keys = await this.loadWalletServiceKeys();
         if (!keys) {
@@ -285,7 +290,9 @@ export default class NostrWalletConnectStore {
     }
     private initializeNWCWalletServices = async () => {
         let successfulRelays = 0;
-        for (const relayUrl of DEFAULT_NOSTR_RELAYS) {
+        const relays = this.activeConnections.map((conn) => conn.relayUrl);
+        const uniqueRelaysArr = [...new Set(relays)];
+        for (const relayUrl of uniqueRelaysArr) {
             if (this.nwcWalletServices.has(relayUrl)) {
                 successfulRelays++;
                 continue;
@@ -316,7 +323,7 @@ export default class NostrWalletConnectStore {
         }
     };
     @action
-    public startService = async () => {
+    public startService = async (hasActiveConnections = false) => {
         try {
             if (!this.walletServiceKeys?.privateKey) {
                 throw new Error(
@@ -325,7 +332,6 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
-            const hasActiveConnections = this.activeConnections.length > 0;
             if (hasActiveConnections && this.persistentNWCServiceEnabled) {
                 await this.initializeAndroidPersistentService();
             }
@@ -513,7 +519,12 @@ export default class NostrWalletConnectStore {
             const { implementation } = this.settingsStore;
 
             if (!this.nwcWalletServices.has(params.relayUrl)) {
-                await this.initializeNWCWalletServices();
+                this.nwcWalletServices.set(
+                    params.relayUrl,
+                    new nwc.NWCWalletService({
+                        relayUrl: params.relayUrl
+                    })
+                );
             }
             if (params.id) {
                 const connection = this.connections.find(
@@ -3728,6 +3739,31 @@ export default class NostrWalletConnectStore {
 
             console.warn('NWC: isInvoiceAlreadyPaid check failed:', error);
             return false;
+        }
+    }
+    public async pingRelay(relayUrl: string): Promise<{
+        status: boolean;
+        error?: string | null;
+    }> {
+        try {
+            const relay = relayInit(relayUrl);
+            const timeout = new Promise<void>((_, reject) =>
+                setTimeout(
+                    () => reject(new Error('Connection timed out')),
+                    5000
+                )
+            );
+            await Promise.race([relay.connect(), timeout]);
+            relay.close();
+            return { status: true, error: null };
+        } catch (e) {
+            return {
+                status: false,
+                error: localeString(
+                    'stores.NostrWalletConnectStore.error.failedToConnectRelay',
+                    { relayUrl }
+                )
+            };
         }
     }
 }
