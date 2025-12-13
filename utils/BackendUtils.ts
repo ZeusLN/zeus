@@ -209,6 +209,13 @@ class BackendUtils {
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
+    supportsForwardingHistoryChannelFilter = (nodeInfoVersion?: string) => {
+        const VersionUtils = require('./VersionUtils').default;
+        return (
+            !this.isLNDBased() ||
+            VersionUtils.isSupportedVersion(nodeInfoVersion, 'v0.20.0')
+        );
+    };
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
