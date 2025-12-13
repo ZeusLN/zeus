@@ -16,7 +16,6 @@ import Pie from '../../assets/images/SVG/Pie.svg';
 import FeeStore from '../../stores/FeeStore';
 
 import BackendUtils from '../../utils/BackendUtils';
-import VersionUtils from '../../utils/VersionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { nodeInfoStore } from '../../stores/Stores';
@@ -76,6 +75,19 @@ export default class Routing extends React.PureComponent<
         }
     }
 
+    private refetchHistory = (selectedIndex: number) => {
+        const { getForwardingHistory } = this.props.FeeStore;
+        const supportsChannelFilter =
+            BackendUtils.supportsForwardingHistoryChannelFilter(
+                nodeInfoStore.nodeInfo?.version
+            );
+        getForwardingHistory(
+            HOURS[selectedIndex],
+            supportsChannelFilter ? this.state.filterChanIdIn : undefined,
+            supportsChannelFilter ? this.state.filterChanIdOut : undefined
+        );
+    };
+
     renderItem = ({ item }: { item: any }) => {
         const { navigation } = this.props;
         return (
@@ -100,10 +112,8 @@ export default class Routing extends React.PureComponent<
         const { FeeStore, navigation } = this.props;
         const { selectedIndex, filterChanIdIn, filterChanIdOut } = this.state;
         const supportsChannelFilter =
-            !BackendUtils.isLNDBased() ||
-            VersionUtils.isSupportedVersion(
-                nodeInfoStore.nodeInfo?.version,
-                'v0.20.0'
+            BackendUtils.supportsForwardingHistoryChannelFilter(
+                nodeInfoStore.nodeInfo?.version
             );
         const {
             dayEarned,
@@ -281,15 +291,7 @@ export default class Routing extends React.PureComponent<
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
-                                getForwardingHistory(
-                                    HOURS[selectedIndex],
-                                    supportsChannelFilter
-                                        ? this.state.filterChanIdIn
-                                        : undefined,
-                                    supportsChannelFilter
-                                        ? this.state.filterChanIdOut
-                                        : undefined
-                                );
+                                this.refetchHistory(selectedIndex);
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
@@ -318,14 +320,8 @@ export default class Routing extends React.PureComponent<
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
                                 onRefresh={() => {
-                                    getForwardingHistory(
-                                        HOURS[this.state.selectedIndex],
-                                        supportsChannelFilter
-                                            ? this.state.filterChanIdIn
-                                            : undefined,
-                                        supportsChannelFilter
-                                            ? this.state.filterChanIdOut
-                                            : undefined
+                                    this.refetchHistory(
+                                        this.state.selectedIndex
                                     );
                                 }}
                                 refreshing={false}
