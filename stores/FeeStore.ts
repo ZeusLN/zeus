@@ -272,7 +272,12 @@ export default class FeeStore {
                             errorMessage = parsed.message;
                         }
                     }
-                } catch {}
+                } catch (parseError) {
+                    console.debug(
+                        'Could not parse error message as JSON:',
+                        parseError
+                    );
+                }
 
                 const isUnsupportedFieldError =
                     errorMessage.includes('unknown field') &&
