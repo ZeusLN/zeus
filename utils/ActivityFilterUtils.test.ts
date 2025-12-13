@@ -229,7 +229,9 @@ describe('ActivityFilterUtils', () => {
                 ).toString(),
                 htlcs: [
                     {
+                        status: 'SUCCEEDED',
                         route: {
+                            total_amt: 100,
                             hops: [
                                 {
                                     custom_records: {
@@ -248,7 +250,9 @@ describe('ActivityFilterUtils', () => {
                 ).toString(),
                 htlcs: [
                     {
+                        status: 'SUCCEEDED',
                         route: {
+                            total_amt: 200,
                             hops: [
                                 {
                                     custom_records: {
@@ -351,7 +355,9 @@ describe('ActivityFilterUtils', () => {
                 ).toString(),
                 htlcs: [
                     {
+                        status: 'SUCCEEDED',
                         route: {
+                            total_amt: 100,
                             hops: [
                                 {
                                     custom_records: {
@@ -371,7 +377,9 @@ describe('ActivityFilterUtils', () => {
                 ).toString(),
                 htlcs: [
                     {
+                        status: 'SUCCEEDED',
                         route: {
+                            total_amt: 200,
                             hops: [
                                 {
                                     custom_records: {
@@ -413,8 +421,7 @@ describe('ActivityFilterUtils', () => {
                 value: '600',
                 creation_date: (
                     new Date(2000, 1, 6, 3, 4, 4).getTime() / 1000
-                ).toString(),
-                htlcs: []
+                ).toString()
             }),
             new Invoice({
                 value: '700',
