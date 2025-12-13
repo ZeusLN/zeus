@@ -508,7 +508,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         });
     };
 
-    buildConnectionParams = (isEdit: boolean, connectionId?: string) => {
+    buildConnectionParams = async (isEdit: boolean, connectionId?: string) => {
         const {
             connectionName,
             selectedRelayUrl,
@@ -523,6 +523,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             maxBudgetLimit,
             customRelayUrl
         } = this.state;
+        const { NostrWalletConnectStore } = this.props;
 
         const budgetRenewalOptions =
             NostrConnectUtils.getBudgetRenewalOptions();
@@ -530,6 +531,14 @@ export default class AddOrEditNWCConnection extends React.Component<
             budgetRenewalOptions[selectedBudgetRenewalIndex]?.key || 'never';
         const isCustomRelay =
             selectedRelayUrl === localeString('general.custom');
+        if (isCustomRelay) {
+            const { status, error } = await NostrWalletConnectStore.pingRelay(
+                customRelayUrl
+            );
+            if (!status) {
+                throw new Error(error!);
+            }
+        }
         const params: any = {
             ...(connectionId && { id: connectionId }),
             name: connectionName.trim(),
@@ -602,7 +611,11 @@ export default class AddOrEditNWCConnection extends React.Component<
             }
             const totalSpendSats = connection.totalSpendSats;
             const lastBudgetReset = connection.lastBudgetReset;
-            const params = this.buildConnectionParams(false, connectionId);
+            const params = await this.buildConnectionParams(
+                false,
+                connectionId
+            );
+            if (!params) return;
             params.totalSpendSats = totalSpendSats;
             params.lastBudgetReset = lastBudgetReset;
             await NostrWalletConnectStore.deleteConnection(connectionId);
@@ -631,7 +644,11 @@ export default class AddOrEditNWCConnection extends React.Component<
         this.setState({ loading: true, error: '' });
 
         try {
-            const params = this.buildConnectionParams(!!isEdit, connectionId);
+            const params = await this.buildConnectionParams(
+                !!isEdit,
+                connectionId
+            );
+            if (!params) return;
 
             if (isEdit && connectionId) {
                 const updated = await NostrWalletConnectStore.updateConnection(
