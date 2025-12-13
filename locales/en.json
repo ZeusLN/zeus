@@ -1603,6 +1603,7 @@
     "views.Settings.NostrWalletConnect.addConnection": "Add Connection",
     "views.Settings.NostrWalletConnect.editConnection": "Edit Connection",
     "views.Settings.NostrWalletConnect.enterConnectionName": "Enter connection name",
+    "views.Settings.NostrWalletConnect.customNostrUrlPlaceholder": "wss://your-custom-relay.com",
     "views.Settings.NostrWalletConnect.createConnection": "Create Connection",
     "views.Settings.NostrWalletConnect.updateConnection": "Update Connection",
     "views.Settings.NostrWalletConnect.regenerateConnection": "Regenerate Connection",
