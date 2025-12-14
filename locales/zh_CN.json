@@ -1664,7 +1664,7 @@
     "views.Settings.NostrWalletConnect.budgetRenewal.never": "暂无",
     "views.Settings.NostrWalletConnect.budgetRenewal.daily": "每天",
     "views.Settings.NostrWalletConnect.budgetRenewal.weekly": "每周",
-    "views.Settings.NostrWalletConnect.budgetRenewal.monthly": "每个月",
+    "views.Settings.NostrWalletConnect.budgetRenewal.monthly": "每月",
     "views.Settings.NostrWalletConnect.budgetRenewal.yearly": "每年",
     "views.Settings.NostrWalletConnect.budgetRenewal": "Budget Renewal",
     "views.Settings.NostrWalletConnect.noBalanceAvailable": "No balance available",
