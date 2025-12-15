@@ -93,12 +93,60 @@ const nostrProfileLookup = async (data: string) => {
     ];
 };
 
+const merchantConfigs = [
+    {
+        identifierRegex: /(?<identifier>.*za\.co\.electrum\.picknpay.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*za\.co\.ecentric.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    }
+];
+
+function getNetworkString(): 'mainnet' | 'signet' | 'regtest' {
+    const { nodeInfo } = nodeInfoStore;
+    if (!nodeInfo) return 'mainnet';
+    if (nodeInfo.isTestNet || nodeInfo.isSigNet) return 'signet';
+    if (nodeInfo.isRegTest) return 'regtest';
+    return 'mainnet';
+}
+
+function convertMerchantQRToLightningAddress(
+    qrContent: string,
+    network: 'mainnet' | 'signet' | 'regtest'
+): string | null {
+    if (!qrContent) return null;
+    for (const merchant of merchantConfigs) {
+        const match = qrContent.match(merchant.identifierRegex);
+        if (match?.groups?.identifier) {
+            const domain =
+                merchant.domains[network] || merchant.domains['mainnet'];
+            return `${encodeURIComponent(match.groups.identifier)}@${domain}`;
+        }
+    }
+    return null;
+}
+
 const handleAnything = async (
     data: string,
     setAmount?: string,
     isClipboardValue?: boolean
 ): Promise<any> => {
     data = data.trim();
+    const network = getNetworkString();
+    const merchantLnAddr = convertMerchantQRToLightningAddress(data, network);
+    if (merchantLnAddr) {
+        data = merchantLnAddr;
+    }
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     let { value, satAmount, lightning, offer }: any =
