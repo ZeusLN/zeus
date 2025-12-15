@@ -58,6 +58,11 @@ export default class HandleAnythingQRScanner extends React.Component<
         };
     }
 
+    private resetDecoderState = () => {
+        this.decoder = null;
+        this.setState({ parts: [], totalParts: 0 });
+    };
+
     handleAnythingScanned = async (data: string) => {
         const { navigation, route } = this.props;
         const view = route.params?.view;
@@ -178,8 +183,8 @@ export default class HandleAnythingQRScanner extends React.Component<
 
         // BBQR
         if (data.toUpperCase().startsWith('B$')) {
-            let parts = this.state.parts;
-            parts.push(data);
+            // Create a new array instead of mutating state
+            const parts = [...this.state.parts, data];
 
             this.setState({
                 parts,
@@ -202,17 +207,28 @@ export default class HandleAnythingQRScanner extends React.Component<
         // BC-UR
         if (data.toUpperCase().startsWith('UR:')) {
             if (!this.decoder) this.decoder = new URDecoder();
-            if (!this.decoder.isComplete()) {
-                let parts = this.state.parts;
-                parts.push(data);
-                this.decoder.receivePart(data);
 
-                this.setState({
-                    parts,
-                    mode: 'BC-UR'
-                });
+            // If decoder is already complete, ignore additional frames to prevent over-scanning
+            if (this.decoder.isComplete()) {
+                return;
+            }
 
-                if (this.decoder.isComplete()) {
+            // Check if we've already processed this part to prevent duplicates
+            if (this.state.parts.includes(data)) {
+                return;
+            }
+
+            // Create a new array instead of mutating state
+            const parts = [...this.state.parts, data];
+            this.decoder.receivePart(data);
+
+            this.setState({
+                parts,
+                mode: 'BC-UR'
+            });
+
+            if (this.decoder.isComplete()) {
+                try {
                     if (this.decoder.isSuccess()) {
                         // Get the UR representation of the message
                         const ur = this.decoder.resultUR();
@@ -262,37 +278,72 @@ export default class HandleAnythingQRScanner extends React.Component<
                                     'Error found while decoding BC-UR crypto-account',
                                     e
                                 );
+                                return; // Stop execution to prevent processing incomplete data
                             }
                         } else if (ur._type === 'crypto-psbt') {
-                            const psbt = CryptoPSBT.fromCBOR(ur._cborPayload);
-                            handleData = psbt.getPSBT().toString('base64');
+                            try {
+                                const psbt = CryptoPSBT.fromCBOR(
+                                    ur._cborPayload
+                                );
+                                handleData = psbt.getPSBT().toString('base64');
+                            } catch (e) {
+                                console.log(
+                                    'Error found while decoding BC-UR crypto-psbt',
+                                    e
+                                );
+                                return; // Stop execution to prevent processing incomplete data
+                            }
                         } else if (ur._type === 'bytes') {
-                            const data = Bytes.fromCBOR(ur._cborPayload);
-                            handleData = Buffer.from(data.getData()).toString();
+                            try {
+                                const data = Bytes.fromCBOR(ur._cborPayload);
+                                handleData = Buffer.from(
+                                    data.getData()
+                                ).toString();
+                            } catch (e) {
+                                console.log(
+                                    'Error found while decoding BC-UR bytes',
+                                    e
+                                );
+                                return; // Stop execution to prevent processing incomplete data
+                            }
                         } else {
-                            // Decode the CBOR message to a Buffer
-                            const decoded = ur.decodeCBOR();
-                            handleData = decoded.toString();
+                            try {
+                                // Decode the CBOR message to a Buffer
+                                const decoded = ur.decodeCBOR();
+                                handleData = decoded.toString();
+                            } catch (e) {
+                                console.log(
+                                    'Error found while decoding BC-UR unknown type',
+                                    e
+                                );
+                                return; // Stop execution to prevent processing incomplete data
+                            }
                         }
                     } else {
                         const error = this.decoder.resultError();
                         console.log('Error found while decoding BC-UR', error);
+                        return; // Stop execution to prevent processing incomplete data
                     }
-                } else {
-                    if (!this.state.totalParts) {
-                        const [_, index] = data.split('/');
-                        if (index) {
-                            const [_, totalParts] = index.split('-');
-                            if (totalParts) {
-                                this.setState({
-                                    totalParts: Number(totalParts) || 0
-                                });
-                            }
+                } finally {
+                    // Always reset decoder state after processing (success or failure)
+                    // This ensures clean state for next scan
+                    this.resetDecoderState();
+                }
+            } else {
+                // Not complete yet, extract total parts info if available
+                if (!this.state.totalParts) {
+                    const [_, index] = data.split('/');
+                    if (index) {
+                        const [_, totalParts] = index.split('-');
+                        if (totalParts) {
+                            this.setState({
+                                totalParts: Number(totalParts) || 0
+                            });
                         }
                     }
-
-                    return;
                 }
+
+                return;
             }
         }
 

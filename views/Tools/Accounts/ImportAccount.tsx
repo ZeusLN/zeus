@@ -127,7 +127,20 @@ export default class ImportAccount extends React.Component<
     }
 
     componentDidUpdate(prevProps: ImportAccountProps) {
-        if (this.props.route.params !== prevProps.route.params) {
+        // Use deep comparison instead of reference equality to catch param changes
+        // Reference equality can fail in production when React Navigation reuses object references
+        const currentParams = this.props.route.params ?? {};
+        const prevParams = prevProps.route.params ?? {};
+
+        // Check if any of the relevant params have changed
+        if (
+            currentParams.name !== prevParams.name ||
+            currentParams.extended_public_key !==
+                prevParams.extended_public_key ||
+            currentParams.master_key_fingerprint !==
+                prevParams.master_key_fingerprint ||
+            currentParams.address_type !== prevParams.address_type
+        ) {
             this.handleParams(this.props);
         }
     }
