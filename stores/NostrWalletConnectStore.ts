@@ -61,6 +61,9 @@ import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NWCConnection, {
     BudgetRenewalType,
+    ConnectionActivity,
+    ConnectionActivityType,
+    ConnectionPaymentSourceType,
     ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
@@ -810,6 +813,30 @@ export default class NostrWalletConnectStore {
         );
         return connection;
     };
+    public getActivities = async (
+        connectionId: string
+    ): Promise<{ name: string; activity: ConnectionActivity[] }> => {
+        const connection = this.getConnection(connectionId);
+        if (!connection) {
+            throw new Error('connection not found');
+        }
+        const promises = connection.activity.map(async (activity) => {
+            if (
+                activity.type === 'make_invoice' &&
+                activity.status === 'pending'
+            ) {
+                const isPaid = await this.isInvoiceAlreadyPaid(activity.id);
+                if (isPaid) {
+                    runInAction(() => {
+                        activity.status = 'success';
+                    });
+                }
+            }
+        });
+        await Promise.all(promises);
+        this.saveConnections();
+        return { name: connection.name, activity: connection.activity || [] };
+    };
     @action
     private markConnectionUsed = async (connectionId: string) => {
         const connection = this.connections.find((c) => c.id === connectionId);
@@ -1260,12 +1287,29 @@ export default class NostrWalletConnectStore {
                         descriptionHash = decoded.descriptionHash;
                         expiryTime = decoded.expiryTime;
                     } catch (decodeError) {
-                        return this.handleError(
-                            (decodeError as Error).message,
-                            ErrorCodes.INVALID_INVOICE
+                        console.error(
+                            'handleMakeInvoice: Failed to decode Cashu invoice tags',
+                            decodeError
                         );
+                        expiryTime =
+                            dateTimeUtils.getCurrentTimestamp() +
+                            (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
                     }
-
+                    runInAction(() => {
+                        connection.activity.push({
+                            id: cashuInvoice.paymentRequest,
+                            status: 'pending',
+                            type: 'make_invoice',
+                            payment_source: 'lightning',
+                            paymentHash: paymentHash || '',
+                            description: request.description,
+                            lastprocessAt: new Date(),
+                            satAmount: millisatsToSats(request.amount),
+                            expiresAt: new Date(expiryTime)
+                        });
+                        this.findAndUpdateConnection(connection);
+                    });
+                    this.saveConnections();
                     this.showInvoiceCreatedNotification(
                         millisatsToSats(request.amount),
                         connection.name,
@@ -1275,7 +1319,7 @@ export default class NostrWalletConnectStore {
                         type: 'incoming',
                         state: 'pending',
                         invoice: cashuInvoice.paymentRequest,
-                        payment_hash: paymentHash,
+                        payment_hash: paymentHash || '',
                         amount: request.amount,
                         description: request.description,
                         description_hash: descriptionHash,
@@ -1325,7 +1369,22 @@ export default class NostrWalletConnectStore {
                 );
                 throw new Error(errorMessage);
             }
-
+            runInAction(() => {
+                connection.activity.push({
+                    id: paymentRequest,
+                    status: 'pending',
+                    type: 'make_invoice',
+                    payment_source: 'lightning',
+                    description: request.description,
+                    lastprocessAt: new Date(),
+                    paymentHash,
+                    expiresAt: new Date(expiryTime),
+                    satAmount: millisatsToSats(request.amount)
+                });
+                this.findAndUpdateConnection(connection);
+            });
+            this.saveConnections();
+            console.log('adding activity make invoice', connection.activity);
             this.showInvoiceCreatedNotification(
                 millisatsToSats(request.amount),
                 connection.name,
@@ -1364,7 +1423,6 @@ export default class NostrWalletConnectStore {
                         )
                     );
                 }
-                // Use fallback expiry if decode failed
                 expiryTime =
                     dateTimeUtils.getCurrentTimestamp() +
                     (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
@@ -1380,7 +1438,6 @@ export default class NostrWalletConnectStore {
                 description_hash: descriptionHash,
                 expires_at: expiryTime
             });
-            console.log('handleMakeInvoice result', result);
             return {
                 result,
                 error: undefined
@@ -1831,12 +1888,16 @@ export default class NostrWalletConnectStore {
                 );
             }
 
-            await this.finalizePayment(
+            await this.finalizePayment({
+                id: request.preimage || request.pubkey,
                 connection,
                 amountSats,
-                skipNotification
-            );
-
+                skipNotification,
+                preimage,
+                paymentHash: payment_hash,
+                payment_source: 'lightning',
+                type: 'pay_keysend'
+            });
             return {
                 result: NostrConnectUtils.createNip47Transaction({
                     type: 'outgoing',
@@ -1921,13 +1982,14 @@ export default class NostrWalletConnectStore {
             const now = Date.now();
 
             if (now > expiryTime) {
+                const errorMessage = localeString(
+                    'stores.NostrWalletConnectStore.error.invoiceExpired'
+                );
                 return {
                     result: undefined,
                     error: {
                         code: ErrorCodes.INVOICE_EXPIRED,
-                        message: localeString(
-                            'stores.NostrWalletConnectStore.error.invoiceExpired'
-                        )
+                        message: errorMessage
                     }
                 };
             }
@@ -1945,14 +2007,24 @@ export default class NostrWalletConnectStore {
         }
         const currentLightningBalance = lightningBalance?.lightningBalance || 0;
         if (currentLightningBalance < amountSats) {
+            const errorMessage = localeString(
+                'stores.NostrWalletConnectStore.error.lightningInsufficientBalance',
+                {
+                    amount: amountSats.toString(),
+                    balance: currentLightningBalance.toString()
+                }
+            );
+            await this.recordFailedPayment(
+                request.invoice,
+                connection,
+                'pay_invoice',
+                amountSats,
+                'lightning',
+                errorMessage,
+                request.invoice
+            );
             return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.lightningInsufficientBalance',
-                    {
-                        amount: amountSats.toString(),
-                        balance: currentLightningBalance.toString()
-                    }
-                ),
+                errorMessage,
                 ErrorCodes.INSUFFICIENT_BALANCE
             );
         }
@@ -1973,12 +2045,29 @@ export default class NostrWalletConnectStore {
             )
         );
         if (paymentError) {
+            await this.recordFailedPayment(
+                request.invoice,
+                connection,
+                'pay_invoice',
+                amountSats,
+                'lightning',
+                paymentError.error?.message || 'Payment failed',
+                request.invoice
+            );
             return paymentError;
         }
         const preimage = this.transactionsStore.payment_preimage;
         const fees_paid = this.transactionsStore.payment_fee;
 
-        await this.finalizePayment(connection, amountSats, skipNotification);
+        await this.finalizePayment({
+            id: request.invoice,
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            connection,
+            amountSats,
+            skipNotification,
+            preimage: preimage!
+        });
 
         return {
             result: {
@@ -2110,8 +2199,15 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
         }
-
-        await this.finalizePayment(connection, amount, skipNotification);
+        await this.finalizePayment({
+            id: request.invoice,
+            type: 'pay_invoice',
+            payment_source: 'cashu',
+            amountSats: amount,
+            skipNotification,
+            preimage: preimage!,
+            connection
+        });
 
         return {
             result: {
@@ -2296,19 +2392,87 @@ export default class NostrWalletConnectStore {
     /**
      * Processes payment completion: tracks spending, saves, and shows notification
      */
-    private async finalizePayment(
-        connection: NWCConnection,
-        amountSats: number,
-        skipNotification: boolean = false
-    ): Promise<void> {
+    private async finalizePayment({
+        id,
+        type,
+        payment_source,
+        connection,
+        amountSats,
+        preimage,
+        paymentHash,
+        fees_paid,
+        skipNotification = false
+    }: {
+        id: string;
+        type: ConnectionActivityType;
+        payment_source: ConnectionPaymentSourceType;
+        connection: NWCConnection;
+        amountSats: number;
+        preimage?: string;
+        paymentHash?: string;
+        fees_paid?: number;
+        skipNotification?: boolean;
+    }): Promise<void> {
         runInAction(() => {
             connection.trackSpending(amountSats);
+            connection.activity.push({
+                id,
+                type,
+                satAmount: amountSats,
+                status: 'success',
+                lastprocessAt: new Date(),
+                payment_source,
+                preimage,
+                paymentHash,
+                fees_paid
+            });
             this.findAndUpdateConnection(connection);
         });
         await this.saveConnections();
         if (!skipNotification) {
             this.showPaymentSentNotification(amountSats, connection.name);
         }
+    }
+
+    private async recordFailedPayment(
+        id: string,
+        connection: NWCConnection,
+        type: ConnectionActivityType,
+        amountSats: number,
+        payment_source: ConnectionPaymentSourceType,
+        errorMessage: string,
+        paymentHash?: string
+    ): Promise<void> {
+        const activity = connection.activity.find((conn) => conn.id === id);
+        if (activity?.status === 'success') {
+            return;
+        }
+        const index = connection.activity.findIndex((conn) => conn.id === id);
+        runInAction(() => {
+            const record: ConnectionActivity = {
+                id,
+                type,
+                satAmount: amountSats,
+                status: 'failed',
+                lastprocessAt: new Date(),
+                payment_source,
+                error: errorMessage,
+                paymentHash
+            };
+
+            if (index !== -1) {
+                connection.activity[index] = {
+                    ...connection.activity[index],
+                    ...record
+                };
+            } else {
+                // ➕ add new element
+                connection.activity.push(record);
+            }
+
+            this.findAndUpdateConnection(connection);
+        });
+        await this.saveConnections();
     }
 
     // STORAGE OPERATIONS
@@ -3694,35 +3858,7 @@ export default class NostrWalletConnectStore {
 
     private async isInvoiceAlreadyPaid(invoice: string): Promise<boolean> {
         try {
-            if (this.isCashuConfigured) {
-                await this.cashuStore.getPayReq(invoice);
-                const inv = this.cashuStore.payReq;
-                return !!inv?.isPaid;
-            }
-            let paymentHash = '';
-            try {
-                const decoded = NostrConnectUtils.decodeInvoiceTags(
-                    invoice,
-                    DEFAULT_INVOICE_EXPIRY_SECONDS
-                );
-                paymentHash = decoded.paymentHash;
-            } catch (decodeError) {
-                console.warn(
-                    'NWC: Failed to decode invoice when checking paid status',
-                    decodeError
-                );
-                return false;
-            }
-
-            if (!paymentHash) {
-                return false;
-            }
-
-            const rawInvoice = await BackendUtils.lookupInvoice({
-                r_hash: paymentHash
-            });
-            const inv = new Invoice(rawInvoice);
-            return inv.isPaid;
+            return (await this.getDecodedInvoice(invoice)).isPaid;
         } catch (error: any) {
             const message =
                 typeof error?.message === 'string'
@@ -3741,6 +3877,41 @@ export default class NostrWalletConnectStore {
             return false;
         }
     }
+
+    public async getDecodedInvoice(
+        invoice: string,
+        source: 'cashu' | 'lightning' = 'lightning'
+    ): Promise<Invoice> {
+        if (this.isCashuConfigured || source === 'cashu') {
+            await this.cashuStore.getPayReq(invoice);
+            const inv = this.cashuStore.payReq;
+            return inv!;
+        }
+        let paymentHash = '';
+        try {
+            const decoded = NostrConnectUtils.decodeInvoiceTags(
+                invoice,
+                DEFAULT_INVOICE_EXPIRY_SECONDS
+            );
+            paymentHash = decoded.paymentHash;
+        } catch (decodeError) {
+            console.warn(
+                'NWC: Failed to decode invoice when checking paid status',
+                decodeError
+            );
+            throw new Error(
+                'NWC: Failed to decode invoice when checking paid status'
+            );
+        }
+        if (!paymentHash) {
+            throw new Error('could not found paymentHash');
+        }
+        const rawInvoice = await BackendUtils.lookupInvoice({
+            r_hash: paymentHash
+        });
+        return new Invoice(rawInvoice);
+    }
+
     public async pingRelay(relayUrl: string): Promise<{
         status: boolean;
         error?: string | null;
