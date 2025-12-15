@@ -110,6 +110,24 @@ ZEUS is proud to be integrated on the following platforms:
 
 ### Prerequisites
 - Node.js (minimum version: 18.18)
+### Dependency installation notes (npm vs yarn)
+
+ZEUS depends on Nostr Wallet Connect (NWC) libraries, including
+`@nostr-dev-kit/ndk`, which introduces peer dependency constraints
+with `nostr-tools`.
+
+Because of this, **`npm install` may fail** with an `ERESOLVE`
+dependency tree error, especially on Windows.
+
+#### Recommended (preferred)
+Use **Yarn**, which correctly resolves these dependencies:
+
+```bash
+yarn install
+
+If using npm
+use npm install --legacy-peer-deps
+
 
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
