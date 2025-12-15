@@ -262,22 +262,6 @@ class AddressUtils {
         }
     };
 
-    processJsonWalletExport = (input: string) => {
-        try {
-            const parsed = JSON.parse(input);
-            return {
-                MasterFingerprint: parsed.MasterFingerprint,
-                ExtPubKey: parsed.ExtPubKey
-            };
-        } catch (e: any) {
-            // console.error('Error processing JSON wallet export');
-            return {
-                MasterFingerprint: '',
-                ExtPubKey: ''
-            };
-        }
-    };
-
     isStringWalletExport = (input: string) => stringWalletExport.test(input);
 
     processStringWalletExport = (input: string) => {
