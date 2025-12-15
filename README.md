@@ -127,6 +127,16 @@ yarn install
 
 If using npm
 use npm install --legacy-peer-deps
+### Environment variables on Windows
+
+Some npm scripts require environment variables (e.g. `NODE_ENV`), which
+are not consistently supported across Windows shells (PowerShell / CMD).
+
+An optional cross-platform script is provided:
+
+```bash
+yarn start:prod
+
 
 
 ### Android
