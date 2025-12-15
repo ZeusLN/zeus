@@ -743,14 +743,18 @@ const handleAnything = async (
         BackendUtils.supportsAccounts() &&
         AddressUtils.isJsonWalletExport(value)
     ) {
-        const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
-        return [
-            'ImportAccount',
-            {
-                extended_public_key: ExtPubKey,
-                master_key_fingerprint: MasterFingerprint
-            }
-        ];
+        const { MasterFingerprint, ExtPubKey } =
+            AddressUtils.processJsonWalletExport(value);
+        if (MasterFingerprint && ExtPubKey) {
+            return [
+                'ImportAccount',
+                {
+                    extended_public_key: ExtPubKey,
+                    master_key_fingerprint: MasterFingerprint
+                }
+            ];
+        }
+        // If parsing failed, fall through to next checks
     } else if (
         BackendUtils.supportsAccounts() &&
         AddressUtils.isStringWalletExport(value)
