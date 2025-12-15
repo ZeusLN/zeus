@@ -2,51 +2,77 @@ name: Build Android
 on:
   workflow_dispatch:
     inputs:
-        branch:
-          description: 'The branch to build'
-          required: true
-    permissions:
-        users:
-          - kaloudis
+      branch:
+        description: 'The branch to build'
+        required: true
   push:
     branches:
       - "master"
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: true
+
     steps:
     - uses: actions/checkout@v4
+
+    # 🔥 Free up disk space (CRITICAL for Android)
+    - name: Free disk space
+      run: |
+        df -h
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf /opt/ghc
+        sudo apt-get clean
+        df -h
+
+    # 🧹 Clean Gradle caches that cause "executionHistory.bin" issues
+    - name: Clean Gradle cache
+      run: |
+        rm -rf ~/.gradle/caches
+        rm -rf ~/.gradle/daemon
+        rm -rf android/.gradle
+
     - name: Envinfo
       run: npx envinfo
+
+    # 🚀 Build (disable build cache for safety)
     - name: Build application
-      run: chmod +x build.sh && bash ./build.sh --no-tty
+      run: |
+        chmod +x build.sh
+        bash ./build.sh --no-tty
+
     - name: 'Archive arm64-v8a'
       uses: actions/upload-artifact@v4
       with:
         name: arm64-v8a
         path: android/app/build/outputs/apk/release/zeus-arm64-v8a.apk
         retention-days: 5
+
     - name: 'Archive armeabi-v7a'
       uses: actions/upload-artifact@v4
       with:
         name: armeabi-v7a
         path: android/app/build/outputs/apk/release/zeus-armeabi-v7a.apk
         retention-days: 5
+
     - name: 'Archive universal'
       uses: actions/upload-artifact@v4
       with:
         name: universal
         path: android/app/build/outputs/apk/release/zeus-universal.apk
         retention-days: 5
+
     - name: 'Archive x86'
       uses: actions/upload-artifact@v4
       with:
         name: x86
         path: android/app/build/outputs/apk/release/zeus-x86.apk
         retention-days: 5
+
     - name: 'Archive x86_64'
       uses: actions/upload-artifact@v4
       with:
