@@ -67,7 +67,10 @@ import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import PosStore from '../stores/PosStore';
-import SettingsStore, { TIME_PERIOD_KEYS } from '../stores/SettingsStore';
+import SettingsStore, {
+    TIME_PERIOD_KEYS,
+    DefaultInvoiceType
+} from '../stores/SettingsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -339,8 +342,16 @@ export default class Receive extends React.Component<
             this.setState({ account });
         }
 
-        if (selectedIndex) {
+        if (selectedIndex !== undefined) {
             this.setState({ selectedIndex });
+        } else if (!lnOnly) {
+            // Use default invoice type from settings if no index provided
+            const defaultInvoiceType =
+                settings?.invoices?.defaultInvoiceType ||
+                DefaultInvoiceType.Lightning;
+            const defaultIndex =
+                defaultInvoiceType === DefaultInvoiceType.Lightning ? 1 : 0;
+            this.setState({ selectedIndex: defaultIndex });
         }
 
         const { expirySeconds, routeHints, ampInvoice, blindedPaths } =
@@ -1213,10 +1224,29 @@ export default class Receive extends React.Component<
         }
     };
 
-    updateIndex = (selectedIndex: number) => {
+    updateIndex = async (selectedIndex: number) => {
+        const { InvoicesStore } = this.props;
+        const { onChainAddress, payment_request, getNewAddress } =
+            InvoicesStore;
+        const { addressType, account } = this.state;
+
         this.setState({
             selectedIndex
         });
+
+        // If switching to unified or on-chain and there's a lightning invoice
+        // but no on-chain address, generate one
+        if (
+            (selectedIndex === 0 || selectedIndex === 2) &&
+            payment_request &&
+            !onChainAddress &&
+            BackendUtils.supportsOnchainReceiving()
+        ) {
+            await getNewAddress({
+                type: addressType,
+                account: account !== 'default' ? account : undefined
+            });
+        }
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
