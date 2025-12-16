@@ -1893,10 +1893,12 @@ export default class CashuStore {
             // Check the quote state to determine how to handle the pending proofs
             let quoteState;
             try {
-                const mintQuote = await wallet!!.checkMeltQuote(
-                    this.meltQuote!!.quote
-                );
-                quoteState = mintQuote.state;
+                if (this.meltQuote?.quote) {
+                    const mintQuote = await wallet!.checkMeltQuote(
+                        this.meltQuote.quote
+                    );
+                    quoteState = mintQuote.state;
+                }
             } catch (checkErr) {
                 console.log('Error checking melt quote state:', checkErr);
             }
