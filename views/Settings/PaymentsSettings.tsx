@@ -580,38 +580,35 @@ export default class PaymentsSettings extends React.Component<
 
                     {autoPayEnabled && (
                         <View style={{ marginTop: 20 }}>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.Payments.quickPayThreshold'
-                                ) +
-                                    ' ' +
-                                    '(' +
-                                    localeString('general.sats') +
-                                    ')'}
-                            </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                value={autoPayThreshold.toString()}
-                                onChangeText={async (text: string) => {
-                                    const threshold = parseInt(text) || 0;
+                            <AmountInput
+                                amount={autoPayThreshold.toString()}
+                                title={
+                                    localeString('general.lightning') +
+                                    ' - ' +
+                                    localeString(
+                                        'views.Settings.Payments.quickPayThreshold'
+                                    )
+                                }
+                                onAmountChange={async (amount, _) => {
                                     this.setState({
-                                        autoPayThreshold: threshold.toString()
+                                        autoPayThreshold: amount
                                     });
-                                    await updateSettings({
-                                        payments: {
-                                            ...settings.payments,
-                                            autoPayThreshold: threshold
-                                        }
-                                    });
+                                    const amountNumber = Number(amount);
+                                    if (
+                                        this.state.mounted &&
+                                        !Number.isNaN(amountNumber)
+                                    ) {
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                autoPayThreshold: Number(amount)
+                                            }
+                                        });
+                                    }
                                 }}
-                                style={{
-                                    marginTop: 10
-                                }}
+                                hideConversion={true}
+                                hideUnitChangeButton={true}
+                                forceUnit="sats"
                             />
                             <Text
                                 style={{
