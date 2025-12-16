@@ -122,13 +122,7 @@ dependency tree error, especially on Windows.
 #### Recommended (preferred)
 Use **Yarn**, which correctly resolves these dependencies:
 
-```bash
 yarn install
-
-If using npm
-use npm install --legacy-peer-deps
-
-
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
