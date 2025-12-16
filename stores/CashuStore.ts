@@ -665,14 +665,11 @@ export default class CashuStore {
                             );
 
                             // Update balance to reflect the spent proofs
-                            const spentAmount = CashuUtils.sumProofsValue(
-                                pendingEntry.proofs
+                            // Recalculate balance from the remaining unspent proofs to ensure idempotency.
+                            const newMintBalance = CashuUtils.sumProofsValue(
+                                this.cashuWallets[mintUrl].proofs
                             );
-                            await this.setMintBalance(
-                                mintUrl,
-                                this.cashuWallets[mintUrl].balanceSats -
-                                    spentAmount
-                            );
+                            await this.setMintBalance(mintUrl, newMintBalance);
                             await this.calculateTotalBalance();
                         } else if (mintQuote.state === MeltQuoteState.PENDING) {
                             console.log(
