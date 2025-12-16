@@ -110,9 +110,12 @@ export default class AddMint extends React.Component<
                 />
                 <View style={{ flex: 1 }}>
                     <View style={styles.content}>
-                        {error && (
+                        {(error || (showDiscoverMints && CashuStore.error)) && (
                             <ErrorMessage
-                                message={localeString('general.error')}
+                                message={
+                                    CashuStore.error_msg ||
+                                    localeString('general.error')
+                                }
                             />
                         )}
 

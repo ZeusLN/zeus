@@ -231,15 +231,20 @@ export default class CashuStore {
     public fetchMints = async () => {
         runInAction(() => {
             this.loading = true;
+            this.error = false;
+            this.error_msg = undefined;
         });
 
-        this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
-        await this.ndk.connect(); // Ensure connection is established before fetching
+        try {
+            this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
+            await this.ndk.connect();
 
-        const filter: NDKFilter = { kinds: [38000 as NDKKind], limit: 2000 };
-        const events = await this.ndk.fetchEvents(filter);
+            const filter: NDKFilter = {
+                kinds: [38000 as NDKKind],
+                limit: 2000
+            };
+            const events = await this.ndk.fetchEvents(filter);
 
-        InteractionManager.runAfterInteractions(() => {
             const mintCounts = new Map<string, number>();
 
             for (const event of events) {
@@ -267,7 +272,16 @@ export default class CashuStore {
             });
 
             return mintUrlsCounted;
-        });
+        } catch (e) {
+            console.error('Error fetching mints:', e);
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorDiscoveringMints'
+                );
+            });
+        }
     };
 
     @action
@@ -292,44 +306,58 @@ export default class CashuStore {
     ) => {
         this.loading = true;
         this.errorAddingMint = false;
+        this.error = false;
+        this.error_msg = undefined;
 
-        if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
-            const seedVersion = 'v2-bip39';
+        try {
+            if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
+                const seedVersion = 'v2-bip39';
+                await Storage.setItem(
+                    `${this.getLndDir()}-cashu-seed-version`,
+                    seedVersion
+                );
+                this.seedVersion = seedVersion;
+            }
+
+            const wallet = await this.initializeWallet(mintUrl, true);
+            if (wallet.errorConnecting) {
+                this.errorAddingMint = true;
+                this.loading = false;
+                return;
+            }
+            if (checkForExistingProofs) {
+                await this.restoreMintProofs(mintUrl);
+                await this.calculateTotalBalance();
+            }
+
+            const newMintUrls = this.mintUrls;
+            newMintUrls.push(mintUrl);
             await Storage.setItem(
-                `${this.getLndDir()}-cashu-seed-version`,
-                seedVersion
+                `${this.getLndDir()}-cashu-mintUrls`,
+                this.mintUrls
             );
-            this.seedVersion = seedVersion;
-        }
 
-        const wallet = await this.initializeWallet(mintUrl, true);
-        if (wallet.errorConnecting) {
-            this.errorAddingMint = true;
-            this.loading = false;
-            return;
-        }
-        if (checkForExistingProofs) {
-            await this.restoreMintProofs(mintUrl);
-            await this.calculateTotalBalance();
-        }
+            // set mint as selected if it's the first one
+            if (newMintUrls.length === 1) {
+                await this.setSelectedMint(mintUrl);
+            }
 
-        const newMintUrls = this.mintUrls;
-        newMintUrls.push(mintUrl);
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-mintUrls`,
-            this.mintUrls
-        );
-
-        // set mint as selected if it's the first one
-        if (newMintUrls.length === 1) {
-            await this.setSelectedMint(mintUrl);
+            runInAction(() => {
+                this.mintUrls = newMintUrls;
+                this.loading = false;
+            });
+            return this.cashuWallets;
+        } catch (e) {
+            console.error('Error adding mint:', e);
+            runInAction(() => {
+                this.loading = false;
+                this.errorAddingMint = true;
+                this.error = true;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorAddingMint'
+                );
+            });
         }
-
-        runInAction(() => {
-            this.mintUrls = newMintUrls;
-            this.loading = false;
-        });
-        return this.cashuWallets;
     };
 
     @action
