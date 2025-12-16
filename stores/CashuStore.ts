@@ -321,8 +321,14 @@ export default class CashuStore {
 
             const wallet = await this.initializeWallet(mintUrl, true);
             if (wallet.errorConnecting) {
-                this.errorAddingMint = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.loading = false;
+                    this.errorAddingMint = true;
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'stores.CashuStore.errorAddingMint'
+                    );
+                });
                 return;
             }
             if (checkForExistingProofs) {
