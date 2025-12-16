@@ -1,5 +1,14 @@
 import React from 'react';
-import { View, StyleSheet, Text, ScrollView, Platform } from 'react-native';
+import {
+    View,
+    StyleSheet,
+    Text,
+    ScrollView,
+    Platform,
+    AppState,
+    AppStateStatus,
+    NativeEventSubscription
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
@@ -22,6 +31,7 @@ interface NWCConnectionQRProps {
 
 interface NWCConnectionQRState {
     isConnected: boolean;
+    appState: AppStateStatus;
 }
 
 @inject('NostrWalletConnectStore')
@@ -30,16 +40,24 @@ export default class NWCConnectionQR extends React.Component<
     NWCConnectionQRProps,
     NWCConnectionQRState
 > {
+    appStateSubscription: NativeEventSubscription | null = null;
+
     constructor(props: NWCConnectionQRProps) {
         super(props);
         this.state = {
-            isConnected: false
+            isConnected: false,
+            appState: AppState.currentState
         };
     }
+
     componentDidMount() {
         const { NostrWalletConnectStore, route } = this.props;
         const { connectionId } = route.params;
         NostrWalletConnectStore.startWaitingForConnection(connectionId);
+        this.appStateSubscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
     }
 
     componentDidUpdate() {
@@ -58,11 +76,26 @@ export default class NWCConnectionQR extends React.Component<
     componentWillUnmount() {
         const { NostrWalletConnectStore } = this.props;
         NostrWalletConnectStore.stopWaitingForConnection();
+        if (this.appStateSubscription) {
+            this.appStateSubscription.remove();
+        }
     }
+
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        this.setState({ appState: nextAppState });
+    };
 
     render() {
         const { navigation, NostrWalletConnectStore, route } = this.props;
         const { nostrUrl } = route.params;
+        const { appState } = this.state;
+
+        const shouldShowIosTimer =
+            Platform.OS === 'ios' &&
+            appState === 'inactive' &&
+            NostrWalletConnectStore.iosHandoffInProgress &&
+            NostrWalletConnectStore.iosBackgroundTimeRemaining > 0;
+
         return (
             <Screen>
                 <Header
@@ -107,57 +140,52 @@ export default class NWCConnectionQR extends React.Component<
                         </View>
                     )}
 
-                    {Platform.OS === 'ios' &&
-                        NostrWalletConnectStore.iosHandoffInProgress &&
-                        NostrWalletConnectStore.iosBackgroundTimeRemaining >
-                            0 && (
-                            <View style={styles.iosTimerContainer}>
+                    {shouldShowIosTimer && (
+                        <View style={styles.iosTimerContainer}>
+                            <Text
+                                style={[
+                                    styles.iosTimerTitle,
+                                    { color: themeColor('text') }
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.switchToNostrClient'
+                                )}
+                            </Text>
+                            <View style={styles.timerCircle}>
                                 <Text
                                     style={[
-                                        styles.iosTimerTitle,
-                                        { color: themeColor('text') }
+                                        styles.timerText,
+                                        { color: themeColor('highlight') }
                                     ]}
                                 >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.switchToNostrClient'
-                                    )}
+                                    {
+                                        NostrWalletConnectStore.iosBackgroundTimeRemaining
+                                    }
                                 </Text>
-                                <View style={styles.timerCircle}>
-                                    <Text
-                                        style={[
-                                            styles.timerText,
-                                            { color: themeColor('highlight') }
-                                        ]}
-                                    >
-                                        {
-                                            NostrWalletConnectStore.iosBackgroundTimeRemaining
-                                        }
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.timerLabel,
-                                            {
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }
-                                        ]}
-                                    >
-                                        {localeString('models.Invoice.seconds')}
-                                    </Text>
-                                </View>
                                 <Text
                                     style={[
-                                        styles.iosTimerSubtitle,
-                                        { color: themeColor('secondaryText') }
+                                        styles.timerLabel,
+                                        {
+                                            color: themeColor('secondaryText')
+                                        }
                                     ]}
                                 >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.backgroundConnectionWindow'
-                                    )}
+                                    {localeString('models.Invoice.seconds')}
                                 </Text>
                             </View>
-                        )}
+                            <Text
+                                style={[
+                                    styles.iosTimerSubtitle,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.backgroundConnectionWindow'
+                                )}
+                            </Text>
+                        </View>
+                    )}
 
                     {this.state.isConnected && (
                         <View style={[styles.connectedContainer]}>
