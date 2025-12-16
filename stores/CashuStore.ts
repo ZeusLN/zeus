@@ -1905,6 +1905,12 @@ export default class CashuStore {
                 // Payment actually succeeded - remove from pending and update balances
                 if (meltQuoteId) {
                     await this.removePendingProofsByQuote(mintUrl, meltQuoteId);
+                    // Recalculate balance from current unspent proofs to ensure consistency
+                    const newMintBalance = CashuUtils.sumProofsValue(
+                        this.cashuWallets[mintUrl].proofs
+                    );
+                    await this.setMintBalance(mintUrl, newMintBalance);
+                    await this.calculateTotalBalance();
                 }
                 this.paymentError = true;
                 this.paymentErrorMsg = localeString(
