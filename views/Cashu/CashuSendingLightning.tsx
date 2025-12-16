@@ -45,6 +45,7 @@ import CopyBox from '../../components/CopyBox';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import ModalBox from '../../components/ModalBox';
+import RatingModal from '../../components/Modals/RatingModal';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
 import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
@@ -534,6 +535,31 @@ export default class CashuSendingLightning extends React.Component<
                 )}
                 {this.renderZaplockerWarningModal()}
                 {this.renderInfoModal()}
+                {<RatingModal />}
+                {loading && (
+                    <View
+                        style={{
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            height: '100%',
+                            marginTop: 25
+                        }}
+                    >
+                        <LightningLoadingPattern />
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                // paddingBottom for centering
+                                paddingBottom: windowSize.height / 10,
+                                fontSize:
+                                    windowSize.width * windowSize.scale * 0.014
+                            }}
+                        >
+                            {localeString('views.SendingLightning.sending')}
+                        </Text>
+                    </View>
+                )}
                 {paymentType === 'donation' && (
                     <View
                         style={{

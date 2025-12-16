@@ -25,6 +25,7 @@ import { Row } from '../components/layout/Row';
 import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import ModalBox from '../components/ModalBox';
+import RatingModal from '../components/Modals/RatingModal';
 
 import BalanceStore from '../stores/BalanceStore';
 import ContactStore from '../stores/ContactStore';
@@ -613,6 +614,7 @@ export default class SendingLightning extends React.Component<
         return (
             <Screen>
                 {this.renderInfoModal()}
+                {<RatingModal />}
                 {loading && (
                     <View
                         style={{

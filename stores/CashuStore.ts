@@ -2848,6 +2848,10 @@ export default class CashuStore {
                 }
             });
 
+            setTimeout(() => {
+                this.modalStore.checkAndTriggerRatingModal();
+            }, 1000);
+
             return payment;
         } catch (err: any) {
             console.error('CDK payLnInvoiceFromEcash error:', err);
