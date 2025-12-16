@@ -1803,18 +1803,26 @@ export default class CashuStore {
 
             proofs = proofsToSend;
 
+            // Ensure meltQuote exists before proceeding
+            if (!this.meltQuote) {
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice') +
+                        ' (missing melt quote)'
+                );
+            }
+
             // After successful swap, the original proofsToUse are spent at the mint
             // Remove them and add back the change (proofsToKeep)
-            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
+            await this.removeMintProofs(mintUrl, this.proofsToUse!);
             if (proofsToKeep.length)
                 await this.addMintProofs(mintUrl, proofsToKeep);
 
             // Move proofsToSend to pending bucket before attempting melt
-            const meltQuoteId = this.meltQuote!!.quote;
+            const meltQuoteId = this.meltQuote.quote;
             await this.addPendingProofs(mintUrl, meltQuoteId, proofsToSend);
 
-            let meltResponse = await wallet!!.meltProofs(
-                this.meltQuote!!,
+            let meltResponse = await wallet!.meltProofs(
+                this.meltQuote,
                 proofsToSend,
                 {
                     counter: newCounterValue + 1
