@@ -15,18 +15,25 @@ import ModalBox from '../ModalBox';
 import { localeString } from '../../utils/LocaleUtils';
 
 import ModalStore from '../../stores/ModalStore';
+import { ANDROID_PACKAGE, APP_STORE_ID } from '../../stores/SettingsStore';
 
 interface RatingModalProps {
     ModalStore?: ModalStore;
 }
 
-const APP_STORE_ID = '1456038895';
-
 type ViewState = 'initial' | 'low_rating' | 'high_rating';
+
+interface RatingModalState {
+    rating: number;
+    viewState: ViewState;
+}
 
 @inject('ModalStore')
 @observer
-export default class RatingModal extends React.Component<RatingModalProps, {}> {
+export default class RatingModal extends React.Component<
+    RatingModalProps,
+    RatingModalState
+> {
     state = {
         rating: 0,
         viewState: 'initial' as ViewState
@@ -48,7 +55,7 @@ export default class RatingModal extends React.Component<RatingModalProps, {}> {
         const url =
             Platform.OS === 'ios'
                 ? `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`
-                : 'market://details?id=com.zeusln.zeus';
+                : `market://details?id=${ANDROID_PACKAGE}`;
 
         const supported = await Linking.canOpenURL(url);
         if (supported) {
@@ -154,7 +161,7 @@ export default class RatingModal extends React.Component<RatingModalProps, {}> {
     renderHighRatingView = () => (
         <>
             <Text style={styles.title}>
-                {localeString('component.RatingModal.thankYouFeedback')}
+                {localeString('components.RatingModal.thankYouFeedback')}
             </Text>
 
             <Text style={styles.subtitle}>
@@ -168,7 +175,7 @@ export default class RatingModal extends React.Component<RatingModalProps, {}> {
                 onPress={this.redirectToStore}
             >
                 <Text style={[styles.actionText, styles.bold]}>
-                    {localeString('component.RatingModal.writeAReview')}
+                    {localeString('components.RatingModal.writeAReview')}
                 </Text>
             </TouchableOpacity>
 
