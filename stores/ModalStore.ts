@@ -1,5 +1,7 @@
 import { action, observable } from 'mobx';
 
+import Storage from '../storage';
+
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
@@ -8,6 +10,7 @@ export default class ModalStore {
     @observable public showShareModal: boolean = false;
     @observable public showNewChannelModal: boolean = false;
     @observable public showNWCPendingPaymentsModal: boolean = false;
+    @observable public showRatingModal: boolean = false;
     @observable public nwcPendingPaymentsData?: {
         pendingEvents: any[];
         totalAmount: number;
@@ -97,6 +100,28 @@ export default class ModalStore {
     };
 
     @action
+    public toggleRatingModal = (status: boolean) => {
+        this.showRatingModal = status;
+    };
+
+    @action
+    public checkAndTriggerRatingModal = async () => {
+        try {
+            const KEY_FIRST_PAYMENT = 'hasTriggeredRatingModalOnFirstPayment';
+
+            const hasTriggered = await Storage.getItem(KEY_FIRST_PAYMENT);
+
+            if (hasTriggered === 'true') return;
+
+            await Storage.setItem(KEY_FIRST_PAYMENT, 'true');
+
+            this.toggleRatingModal(true);
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
+    @action
     public shareQR = () => {
         if (this.onShareQR) this.onShareQR();
     };
@@ -159,6 +184,10 @@ export default class ModalStore {
         if (this.showNWCPendingPaymentsModal) {
             this.showNWCPendingPaymentsModal = false;
             this.nwcPendingPaymentsData = undefined;
+            return true;
+        }
+        if (this.showRatingModal) {
+            this.showRatingModal = false;
             return true;
         }
         return false;

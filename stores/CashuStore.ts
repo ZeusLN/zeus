@@ -2203,6 +2203,10 @@ export default class CashuStore {
                 this.loading = false;
             }
 
+            setTimeout(() => {
+                this.modalStore.checkAndTriggerRatingModal();
+            }, 1000);
+
             return payment;
         } catch (err: any) {
             console.log('paying ln invoice from ecash error', err);

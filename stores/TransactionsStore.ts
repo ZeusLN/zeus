@@ -22,6 +22,7 @@ import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
 import ChannelsStore from './ChannelsStore';
 import BalanceStore from './BalanceStore';
+import ModalStore from './ModalStore';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -76,17 +77,20 @@ export default class TransactionsStore {
     nodeInfoStore: NodeInfoStore;
     channelsStore: ChannelsStore;
     balanceStore: BalanceStore;
+    modalStore: ModalStore;
 
     constructor(
         settingsStore: SettingsStore,
         nodeInfoStore: NodeInfoStore,
         channelsStore: ChannelsStore,
-        balanceStore: BalanceStore
+        balanceStore: BalanceStore,
+        modalStore: ModalStore
     ) {
         this.settingsStore = settingsStore;
         this.nodeInfoStore = nodeInfoStore;
         this.channelsStore = channelsStore;
         this.balanceStore = balanceStore;
+        this.modalStore = modalStore;
     }
 
     @action
@@ -746,6 +750,13 @@ export default class TransactionsStore {
             ] != null;
 
         const isSuccess = status === 'complete' || status === 'SUCCEEDED';
+
+        if (isSuccess) {
+            setTimeout(() => {
+                this.modalStore.checkAndTriggerRatingModal();
+            }, 1000);
+        }
+
         if (isSuccess && this.paymentStartTime && !this.paymentDuration) {
             this.paymentDuration = (Date.now() - this.paymentStartTime) / 1000;
         }
