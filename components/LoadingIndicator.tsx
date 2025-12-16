@@ -2,6 +2,8 @@ import React, { useEffect, useRef } from 'react';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
+import { AppState, AppStateStatus } from 'react-native';
+
 const loader = require('../assets/images/Lottie/loader.json');
 
 interface LoadingIndicatorProps {
@@ -17,7 +19,19 @@ function LoadingIndicator(props: LoadingIndicatorProps) {
             animationRef.current?.play();
         }, 100);
 
-        return () => clearTimeout(timer);
+        const subscription = AppState.addEventListener(
+            'change',
+            (nextAppState: AppStateStatus) => {
+                if (nextAppState === 'active') {
+                    animationRef.current?.play();
+                }
+            }
+        );
+
+        return () => {
+            clearTimeout(timer);
+            subscription.remove();
+        };
     }, []);
 
     return (
