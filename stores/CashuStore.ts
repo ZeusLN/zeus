@@ -133,6 +133,7 @@ export default class CashuStore {
     @observable public mintRecommendations?: MintRecommendation[];
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
+    @observable private isCheckingPendingProofs = false;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -599,94 +600,112 @@ export default class CashuStore {
 
     @action
     checkPendingProofs = async () => {
-        console.log('CashuStore: Checking pending proofs...');
-
-        for (const mintUrl of Object.keys(this.cashuWallets)) {
-            const walletData = this.cashuWallets[mintUrl];
-            if (
-                !walletData.pendingProofs ||
-                walletData.pendingProofs.length === 0
-            ) {
-                continue;
-            }
-
+        if (this.isCheckingPendingProofs) {
             console.log(
-                `CashuStore: Found ${walletData.pendingProofs.length} pending proof entries for mint ${mintUrl}`
+                'CashuStore: Check for pending proofs already in progress. Skipping.'
             );
-
-            // Ensure wallet is initialized
-            if (!walletData.wallet) {
-                try {
-                    await this.initializeWallet(mintUrl, true);
-                } catch (e) {
-                    console.error(
-                        `CashuStore: Failed to initialize wallet for ${mintUrl}:`,
-                        e
-                    );
-                    continue;
-                }
-            }
-
-            const wallet = this.cashuWallets[mintUrl].wallet;
-            if (!wallet) continue;
-
-            // Check each pending proof entry
-            for (const pendingEntry of [...walletData.pendingProofs]) {
-                try {
-                    console.log(
-                        `CashuStore: Checking melt quote ${pendingEntry.meltQuote}`
-                    );
-
-                    const mintQuote = await wallet.checkMeltQuote(
-                        pendingEntry.meltQuote
-                    );
-
-                    if (mintQuote.state === MeltQuoteState.PAID) {
-                        console.log(
-                            `CashuStore: Melt quote ${pendingEntry.meltQuote} is PAID - removing from pending`
-                        );
-                        // Payment completed successfully - remove from pending
-                        await this.removePendingProofsByQuote(
-                            mintUrl,
-                            pendingEntry.meltQuote
-                        );
-
-                        // Update balance to reflect the spent proofs
-                        const spentAmount = CashuUtils.sumProofsValue(
-                            pendingEntry.proofs
-                        );
-                        await this.setMintBalance(
-                            mintUrl,
-                            this.cashuWallets[mintUrl].balanceSats - spentAmount
-                        );
-                        await this.calculateTotalBalance();
-                    } else if (mintQuote.state === MeltQuoteState.PENDING) {
-                        console.log(
-                            `CashuStore: Melt quote ${pendingEntry.meltQuote} still PENDING`
-                        );
-                        // Still in-flight, keep in pending bucket
-                    } else {
-                        // UNPAID or expired - restore proofs to unspent
-                        console.log(
-                            `CashuStore: Melt quote ${pendingEntry.meltQuote} is ${mintQuote.state} - restoring to unspent`
-                        );
-                        await this.restorePendingProofsToUnspent(
-                            mintUrl,
-                            pendingEntry.meltQuote
-                        );
-                    }
-                } catch (e) {
-                    console.error(
-                        `CashuStore: Error checking pending proof entry ${pendingEntry.meltQuote}:`,
-                        e
-                    );
-                    // If we can't check the quote, keep it in pending for now
-                    // User can manually resolve later
-                }
-            }
+            return;
         }
 
-        console.log('CashuStore: Finished checking pending proofs.');
+        runInAction(() => {
+            this.isCheckingPendingProofs = true;
+        });
+
+        try {
+            console.log('CashuStore: Checking pending proofs...');
+
+            for (const mintUrl of Object.keys(this.cashuWallets)) {
+                const walletData = this.cashuWallets[mintUrl];
+                if (
+                    !walletData.pendingProofs ||
+                    walletData.pendingProofs.length === 0
+                ) {
+                    continue;
+                }
+
+                console.log(
+                    `CashuStore: Found ${walletData.pendingProofs.length} pending proof entries for mint ${mintUrl}`
+                );
+
+                // Ensure wallet is initialized
+                if (!walletData.wallet) {
+                    try {
+                        await this.initializeWallet(mintUrl, true);
+                    } catch (e) {
+                        console.error(
+                            `CashuStore: Failed to initialize wallet for ${mintUrl}:`,
+                            e
+                        );
+                        continue;
+                    }
+                }
+
+                const wallet = this.cashuWallets[mintUrl].wallet;
+                if (!wallet) continue;
+
+                // Check each pending proof entry
+                for (const pendingEntry of [...walletData.pendingProofs]) {
+                    try {
+                        console.log(
+                            `CashuStore: Checking melt quote ${pendingEntry.meltQuote}`
+                        );
+
+                        const mintQuote = await wallet.checkMeltQuote(
+                            pendingEntry.meltQuote
+                        );
+
+                        if (mintQuote.state === MeltQuoteState.PAID) {
+                            console.log(
+                                `CashuStore: Melt quote ${pendingEntry.meltQuote} is PAID - removing from pending`
+                            );
+                            // Payment completed successfully - remove from pending
+                            await this.removePendingProofsByQuote(
+                                mintUrl,
+                                pendingEntry.meltQuote
+                            );
+
+                            // Update balance to reflect the spent proofs
+                            const spentAmount = CashuUtils.sumProofsValue(
+                                pendingEntry.proofs
+                            );
+                            await this.setMintBalance(
+                                mintUrl,
+                                this.cashuWallets[mintUrl].balanceSats -
+                                    spentAmount
+                            );
+                            await this.calculateTotalBalance();
+                        } else if (mintQuote.state === MeltQuoteState.PENDING) {
+                            console.log(
+                                `CashuStore: Melt quote ${pendingEntry.meltQuote} still PENDING`
+                            );
+                            // Still in-flight, keep in pending bucket
+                        } else {
+                            // UNPAID or expired - restore proofs to unspent
+                            console.log(
+                                `CashuStore: Melt quote ${pendingEntry.meltQuote} is ${mintQuote.state} - restoring to unspent`
+                            );
+                            await this.restorePendingProofsToUnspent(
+                                mintUrl,
+                                pendingEntry.meltQuote
+                            );
+                        }
+                    } catch (e) {
+                        console.error(
+                            `CashuStore: Error checking pending proof entry ${pendingEntry.meltQuote}:`,
+                            e
+                        );
+                        // If we can't check the quote, keep it in pending for now
+                        // User can manually resolve later
+                    }
+                }
+            }
+
+            console.log('CashuStore: Finished checking pending proofs.');
+        } finally {
+            runInAction(() => {
+                this.isCheckingPendingProofs = false;
+            });
+        }
     };
 
     setMintBalance = async (mintUrl: string, balanceSats: number) => {
