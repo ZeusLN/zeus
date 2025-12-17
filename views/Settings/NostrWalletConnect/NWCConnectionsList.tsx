@@ -85,7 +85,10 @@ export default class NWCConnectionsList extends React.Component<
                 connectionsLoading: true,
                 error: ''
             });
-            const { NostrWalletConnectStore } = this.props;
+            const { NostrWalletConnectStore, SettingsStore } = this.props;
+            if (!SettingsStore.connecting) {
+                await NostrWalletConnectStore.loadMaxBudget();
+            }
             await NostrWalletConnectStore.loadConnections();
             this.setState({
                 connectionsLoading: false
