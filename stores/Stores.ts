@@ -61,7 +61,6 @@ export const paymentsStore = new PaymentsStore(settingsStore, channelsStore);
 export const lnurlPayStore = new LnurlPayStore(settingsStore, nodeInfoStore);
 export const feeStore = new FeeStore(settingsStore, nodeInfoStore);
 export const utxosStore = new UTXOsStore(settingsStore);
-export const messageSignStore = new MessageSignStore();
 export const notesStore = new NotesStore();
 export const contactStore = new ContactStore();
 export const syncStore = new SyncStore(settingsStore);
@@ -71,6 +70,7 @@ export const cashuStore = new CashuStore(
     channelsStore,
     modalStore
 );
+export const messageSignStore = new MessageSignStore(cashuStore);
 export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
 export const activityStore = new ActivityStore(
     settingsStore,
