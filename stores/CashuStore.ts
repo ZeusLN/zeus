@@ -51,6 +51,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
+import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -2205,7 +2206,7 @@ export default class CashuStore {
 
             setTimeout(() => {
                 this.modalStore.checkAndTriggerRatingModal();
-            }, 1000);
+            }, RATING_MODAL_TRIGGER_DELAY);
 
             return payment;
         } catch (err: any) {

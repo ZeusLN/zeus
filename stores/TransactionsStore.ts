@@ -17,6 +17,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
+import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -754,7 +755,7 @@ export default class TransactionsStore {
         if (isSuccess) {
             setTimeout(() => {
                 this.modalStore.checkAndTriggerRatingModal();
-            }, 1000);
+            }, RATING_MODAL_TRIGGER_DELAY);
         }
 
         if (isSuccess && this.paymentStartTime && !this.paymentDuration) {
