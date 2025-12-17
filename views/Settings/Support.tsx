@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, View, Linking, Platform } from 'react-native';
+import { FlatList, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -9,9 +9,9 @@ import Screen from '../../components/Screen';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { openStoreForReview } from '../../utils/RatingUtils';
 
 import { nodeInfoStore } from '../../stores/Stores';
-import { ANDROID_PACKAGE, APP_STORE_ID } from '../../stores/SettingsStore';
 
 interface SupportProps {
     navigation: StackNavigationProp<any, any>;
@@ -28,21 +28,6 @@ function Support(props: SupportProps) {
             }}
         />
     );
-
-    const rateApp = () => {
-        const url =
-            Platform.OS === 'ios'
-                ? `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`
-                : `market://details?id=${ANDROID_PACKAGE}`;
-
-        Linking.canOpenURL(url).then((supported) => {
-            if (supported) {
-                Linking.openURL(url);
-            } else {
-                console.log("can't open url:" + url);
-            }
-        });
-    };
 
     const ABOUT_ITEMS = [
         {
@@ -66,7 +51,7 @@ function Support(props: SupportProps) {
         },
         {
             label: localeString('components.RatingModal.give5starReview'),
-            action: rateApp
+            action: openStoreForReview
         }
     ];
 

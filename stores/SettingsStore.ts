@@ -15,9 +15,6 @@ import Storage from '../storage';
 // lndhub
 import LoginRequest from '../models/LoginRequest';
 
-export const APP_STORE_ID = '1456038895';
-export const ANDROID_PACKAGE = 'com.zeusln.zeus';
-
 const LEGACY_STORAGE_KEY = 'zeus-settings';
 export const STORAGE_KEY = 'zeus-settings-v2';
 
