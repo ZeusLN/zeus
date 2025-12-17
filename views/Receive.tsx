@@ -242,6 +242,14 @@ export default class Receive extends React.Component<
     onChainInterval: any;
     hopPickerRef: HopPicker | null;
 
+    private getDefaultIndex = (): number => {
+        const { settings } = this.props.SettingsStore;
+        const defaultInvoiceType =
+            settings?.invoices?.defaultInvoiceType ||
+            DefaultInvoiceType.Lightning;
+        return defaultInvoiceType === DefaultInvoiceType.Lightning ? 1 : 0;
+    };
+
     async componentDidMount() {
         const {
             InvoicesStore,
@@ -345,13 +353,7 @@ export default class Receive extends React.Component<
         if (selectedIndex !== undefined) {
             this.setState({ selectedIndex });
         } else if (!lnOnly) {
-            // Use default invoice type from settings if no index provided
-            const defaultInvoiceType =
-                settings?.invoices?.defaultInvoiceType ||
-                DefaultInvoiceType.Lightning;
-            const defaultIndex =
-                defaultInvoiceType === DefaultInvoiceType.Lightning ? 1 : 0;
-            this.setState({ selectedIndex: defaultIndex });
+            this.setState({ selectedIndex: this.getDefaultIndex() });
         }
 
         const { expirySeconds, routeHints, ampInvoice, blindedPaths } =
@@ -1366,17 +1368,9 @@ export default class Receive extends React.Component<
                             selectedIndex: route.params.selectedIndex
                         });
                     } else if (!lnOnly) {
-                        // Use default invoice type from settings if no index provided
-                        const defaultInvoiceType =
-                            settings?.invoices?.defaultInvoiceType ||
-                            DefaultInvoiceType.Lightning;
-                        const defaultIndex =
-                            defaultInvoiceType === DefaultInvoiceType.Lightning
-                                ? 1
-                                : 0;
                         this.setState({
                             account: 'default',
-                            selectedIndex: defaultIndex
+                            selectedIndex: this.getDefaultIndex()
                         });
                     }
 
