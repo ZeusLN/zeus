@@ -209,6 +209,8 @@ class BackendUtils {
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
+    supportsSettingInvoiceExpiration = () =>
+        this.call('supportsSettingInvoiceExpiration');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
