@@ -273,98 +273,52 @@ export default class InvoicesSettings extends React.Component<
                         </>
                     )}
 
-                    {implementation !== 'lndhub' && (
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    paddingTop: 10
-                                }}
-                            >
-                                {localeString('views.Receive.expiration')}
-                            </Text>
-                            <Row style={{ width: '100%' }}>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    value={expiry}
+                    {implementation !== 'lndhub' &&
+                        implementation !== 'nostr-wallet-connect' && (
+                            <>
+                                <Text
                                     style={{
-                                        width: '58%'
-                                    }}
-                                    onChangeText={async (text: string) => {
-                                        let expirySeconds = '3600';
-                                        if (timePeriod === 'Seconds') {
-                                            expirySeconds = text;
-                                        } else if (timePeriod === 'Minutes') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60)
-                                                .toString();
-                                        } else if (timePeriod === 'Hours') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60 * 60)
-                                                .toString();
-                                        } else if (timePeriod === 'Days') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60 * 60 * 24)
-                                                .toString();
-                                        } else if (timePeriod === 'Weeks') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60 * 60 * 24 * 7)
-                                                .toString();
-                                        }
-
-                                        this.setState({
-                                            expiry: text,
-                                            expirySeconds
-                                        });
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                expiry: text,
-                                                expirySeconds
-                                            }
-                                        });
-                                    }}
-                                />
-                                <Spacer width={4} />
-                                <View
-                                    style={{
-                                        flex: 1
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText'),
+                                        paddingTop: 10
                                     }}
                                 >
-                                    <DropdownSetting
-                                        selectedValue={timePeriod}
-                                        values={TIME_PERIOD_KEYS}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
-                                        onValueChange={async (
-                                            value: string
-                                        ) => {
-                                            let expirySeconds;
-                                            if (value === 'Seconds') {
-                                                expirySeconds = expiry;
-                                            } else if (value === 'Minutes') {
+                                    {localeString('views.Receive.expiration')}
+                                </Text>
+                                <Row style={{ width: '100%' }}>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={expiry}
+                                        style={{
+                                            width: '58%'
+                                        }}
+                                        onChangeText={async (text: string) => {
+                                            let expirySeconds = '3600';
+                                            if (timePeriod === 'Seconds') {
+                                                expirySeconds = text;
+                                            } else if (
+                                                timePeriod === 'Minutes'
+                                            ) {
                                                 expirySeconds = new BigNumber(
-                                                    expiry
+                                                    text
                                                 )
                                                     .multipliedBy(60)
                                                     .toString();
-                                            } else if (value === 'Hours') {
+                                            } else if (timePeriod === 'Hours') {
                                                 expirySeconds = new BigNumber(
-                                                    expiry
+                                                    text
                                                 )
                                                     .multipliedBy(60 * 60)
                                                     .toString();
-                                            } else if (value === 'Days') {
+                                            } else if (timePeriod === 'Days') {
                                                 expirySeconds = new BigNumber(
-                                                    expiry
+                                                    text
                                                 )
                                                     .multipliedBy(60 * 60 * 24)
                                                     .toString();
-                                            } else if (value === 'Weeks') {
+                                            } else if (timePeriod === 'Weeks') {
                                                 expirySeconds = new BigNumber(
-                                                    expiry
+                                                    text
                                                 )
                                                     .multipliedBy(
                                                         60 * 60 * 24 * 7
@@ -373,25 +327,86 @@ export default class InvoicesSettings extends React.Component<
                                             }
 
                                             this.setState({
-                                                timePeriod: value,
-                                                expirySeconds: expirySeconds
-                                                    ? expirySeconds
-                                                    : ''
+                                                expiry: text,
+                                                expirySeconds
                                             });
-
                                             await updateSettings({
                                                 invoices: {
                                                     ...settings.invoices,
-                                                    timePeriod: value,
+                                                    expiry: text,
                                                     expirySeconds
                                                 }
                                             });
                                         }}
                                     />
-                                </View>
-                            </Row>
-                        </>
-                    )}
+                                    <Spacer width={4} />
+                                    <View
+                                        style={{
+                                            flex: 1
+                                        }}
+                                    >
+                                        <DropdownSetting
+                                            selectedValue={timePeriod}
+                                            values={TIME_PERIOD_KEYS}
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress
+                                            }
+                                            onValueChange={async (
+                                                value: string
+                                            ) => {
+                                                let expirySeconds;
+                                                if (value === 'Seconds') {
+                                                    expirySeconds = expiry;
+                                                } else if (
+                                                    value === 'Minutes'
+                                                ) {
+                                                    expirySeconds =
+                                                        new BigNumber(expiry)
+                                                            .multipliedBy(60)
+                                                            .toString();
+                                                } else if (value === 'Hours') {
+                                                    expirySeconds =
+                                                        new BigNumber(expiry)
+                                                            .multipliedBy(
+                                                                60 * 60
+                                                            )
+                                                            .toString();
+                                                } else if (value === 'Days') {
+                                                    expirySeconds =
+                                                        new BigNumber(expiry)
+                                                            .multipliedBy(
+                                                                60 * 60 * 24
+                                                            )
+                                                            .toString();
+                                                } else if (value === 'Weeks') {
+                                                    expirySeconds =
+                                                        new BigNumber(expiry)
+                                                            .multipliedBy(
+                                                                60 * 60 * 24 * 7
+                                                            )
+                                                            .toString();
+                                                }
+
+                                                this.setState({
+                                                    timePeriod: value,
+                                                    expirySeconds: expirySeconds
+                                                        ? expirySeconds
+                                                        : ''
+                                                });
+
+                                                await updateSettings({
+                                                    invoices: {
+                                                        ...settings.invoices,
+                                                        timePeriod: value,
+                                                        expirySeconds
+                                                    }
+                                                });
+                                            }}
+                                        />
+                                    </View>
+                                </Row>
+                            </>
+                        )}
 
                     {BackendUtils.isLNDBased() && (
                         <View
