@@ -13,9 +13,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import ModalBox from '../ModalBox';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import {
+    LOW_RATING_THRESHOLD,
+    openStoreForReview
+} from '../../utils/RatingUtils';
 
 import ModalStore from '../../stores/ModalStore';
-import { ANDROID_PACKAGE, APP_STORE_ID } from '../../stores/SettingsStore';
 
 interface RatingModalProps {
     ModalStore?: ModalStore;
@@ -34,16 +38,16 @@ export default class RatingModal extends React.Component<
     RatingModalProps,
     RatingModalState
 > {
-    state = {
+    state: RatingModalState = {
         rating: 0,
-        viewState: 'initial' as ViewState
+        viewState: 'initial'
     };
 
-    handleRating = async (score: number) => {
+    handleRating = (score: number) => {
         this.setState({ rating: score });
 
         setTimeout(() => {
-            if (score <= 2) {
+            if (score <= LOW_RATING_THRESHOLD) {
                 this.setState({ viewState: 'low_rating' });
             } else {
                 this.setState({ viewState: 'high_rating' });
@@ -51,26 +55,11 @@ export default class RatingModal extends React.Component<
         }, 400);
     };
 
-    redirectToStore = async () => {
-        const url =
-            Platform.OS === 'ios'
-                ? `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`
-                : `market://details?id=${ANDROID_PACKAGE}`;
-
-        const supported = await Linking.canOpenURL(url);
-        if (supported) {
-            Linking.openURL(url);
-        }
-        this.handleClose();
-    };
-
     handleClose = () => {
         const { ModalStore } = this.props;
         ModalStore?.toggleRatingModal(false);
 
-        setTimeout(() => {
-            this.setState({ rating: 0, viewState: 'initial' });
-        }, 400);
+        this.setState({ rating: 0, viewState: 'initial' });
     };
 
     renderStars = () => {
@@ -95,20 +84,30 @@ export default class RatingModal extends React.Component<
 
     renderInitialView = (storeName: string) => (
         <>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.enjoyingZeus')}
             </Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
                 {`${localeString(
                     'components.RatingModal.tapToRate'
                 )} \n${storeName}.`}
             </Text>
 
-            <View style={styles.divider} />
+            <View
+                style={[
+                    styles.divider,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+            />
 
             {this.renderStars()}
 
-            <View style={styles.divider} />
+            <View
+                style={[
+                    styles.divider,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+            />
 
             <TouchableOpacity
                 style={styles.actionButton}
@@ -123,14 +122,19 @@ export default class RatingModal extends React.Component<
 
     renderLowRatingView = () => (
         <>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.weAreSorry')}
             </Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.whatWentWrong')}
             </Text>
 
-            <View style={styles.divider} />
+            <View
+                style={[
+                    styles.divider,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+            />
 
             <TouchableOpacity
                 style={styles.actionButton}
@@ -145,7 +149,12 @@ export default class RatingModal extends React.Component<
                     {localeString('components.RatingModal.contactSupport')}
                 </Text>
             </TouchableOpacity>
-            <View style={styles.divider} />
+            <View
+                style={[
+                    styles.divider,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+            />
 
             <TouchableOpacity
                 style={styles.actionButton}
@@ -160,26 +169,39 @@ export default class RatingModal extends React.Component<
 
     renderHighRatingView = () => (
         <>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.thankYouFeedback')}
             </Text>
 
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.leaveReview')}
             </Text>
 
-            <View style={styles.divider} />
+            <View
+                style={[
+                    styles.divider,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+            />
 
             <TouchableOpacity
                 style={styles.actionButton}
-                onPress={this.redirectToStore}
+                onPress={() => {
+                    openStoreForReview();
+                    this.handleClose();
+                }}
             >
                 <Text style={[styles.actionText, styles.bold]}>
                     {localeString('components.RatingModal.writeAReview')}
                 </Text>
             </TouchableOpacity>
 
-            <View style={styles.divider} />
+            <View
+                style={[
+                    styles.divider,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+            />
 
             <TouchableOpacity
                 style={styles.actionButton}
@@ -239,7 +261,6 @@ const styles = StyleSheet.create({
         borderRadius: 14
     },
     title: {
-        color: '#000',
         fontSize: 20,
         fontWeight: '600',
         marginBottom: 4
@@ -247,7 +268,6 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#000',
         textAlign: 'center',
         marginBottom: 20,
         lineHeight: 18,
@@ -261,7 +281,6 @@ const styles = StyleSheet.create({
     divider: {
         height: 1,
         width: '100%',
-        backgroundColor: '#3F3F3F',
         opacity: 0.15
     },
     actionText: {
