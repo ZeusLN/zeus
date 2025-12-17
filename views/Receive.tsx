@@ -518,10 +518,14 @@ export default class Receive extends React.Component<
         blindedPaths?: boolean,
         addressType?: string
     ) => {
-        const { InvoicesStore, PosStore } = this.props;
+        const { InvoicesStore, PosStore, SettingsStore } = this.props;
         const { lspIsActive, receiverName, orderId, orderTip, exchangeRate } =
             this.state;
         const { createUnifiedInvoice } = InvoicesStore;
+        const { settings } = SettingsStore;
+        const skipOnchain =
+            settings?.invoices?.defaultInvoiceType !==
+            DefaultInvoiceType.Unified;
 
         // POS invoice reuse logic
         const checkExistingInvoice = async () => {
@@ -571,7 +575,8 @@ export default class Receive extends React.Component<
                 addressType: BackendUtils.supportsAddressTypeSelection()
                     ? addressType || '1'
                     : undefined,
-                noLsp: !lspIsActive
+                noLsp: !lspIsActive,
+                skipOnchain
             }).then(
                 ({
                     rHash,
@@ -690,10 +695,14 @@ export default class Receive extends React.Component<
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, route } = this.props;
+        const { navigation, InvoicesStore, SettingsStore, route } = this.props;
         const { lspIsActive, receiverName } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
+        const { settings } = SettingsStore;
         const satAmount = getSatAmount(route.params?.amount);
+        const skipOnchain =
+            settings?.invoices?.defaultInvoiceType !==
+            DefaultInvoiceType.Unified;
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
@@ -715,7 +724,8 @@ export default class Receive extends React.Component<
                             value: satAmount.toString(),
                             expirySeconds: '3600',
                             lnurl: lnurlParams,
-                            noLsp: !lspIsActive
+                            noLsp: !lspIsActive,
+                            skipOnchain
                         })
                             .then(
                                 ({
@@ -1244,7 +1254,7 @@ export default class Receive extends React.Component<
         ) {
             await getNewAddress({
                 type: addressType,
-                account: account !== 'default' ? account : undefined
+                account: account !== 'default' ? account : 'default'
             });
         }
     };
@@ -1331,6 +1341,10 @@ export default class Receive extends React.Component<
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
 
+        const skipOnchain =
+            settings?.invoices?.defaultInvoiceType !==
+            DefaultInvoiceType.Unified;
+
         const lnOnly =
             (settings &&
                 posStatus &&
@@ -1346,9 +1360,26 @@ export default class Receive extends React.Component<
             <Icon
                 name="cancel"
                 onPress={() => {
-                    this.setState({
-                        account: 'default'
-                    });
+                    if (route.params?.selectedIndex !== undefined) {
+                        this.setState({
+                            account: 'default',
+                            selectedIndex: route.params.selectedIndex
+                        });
+                    } else if (!lnOnly) {
+                        // Use default invoice type from settings if no index provided
+                        const defaultInvoiceType =
+                            settings?.invoices?.defaultInvoiceType ||
+                            DefaultInvoiceType.Lightning;
+                        const defaultIndex =
+                            defaultInvoiceType === DefaultInvoiceType.Lightning
+                                ? 1
+                                : 0;
+                        this.setState({
+                            account: 'default',
+                            selectedIndex: defaultIndex
+                        });
+                    }
+
                     InvoicesStore.clearUnified();
                 }}
                 color={themeColor('text')}
@@ -1670,10 +1701,7 @@ export default class Receive extends React.Component<
         const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
 
         const showButtonGroup =
-            !belowDustLimit &&
-            haveUnifiedInvoice &&
-            !lnOnly &&
-            !watchedInvoicePaid;
+            !belowDustLimit && !lnOnly && !watchedInvoicePaid;
 
         const showNfcButton =
             !(
@@ -2036,7 +2064,8 @@ export default class Receive extends React.Component<
                                     <View>
                                         {selectedIndex == 0 &&
                                             !belowDustLimit &&
-                                            haveUnifiedInvoice && (
+                                            haveUnifiedInvoice &&
+                                            !creatingInvoice && (
                                                 <CollapsedQR
                                                     value={unifiedInvoice || ''}
                                                     iconOnly={true}
@@ -2061,7 +2090,8 @@ export default class Receive extends React.Component<
                                             )}
                                         {selectedIndex == 1 &&
                                             !belowDustLimit &&
-                                            haveUnifiedInvoice && (
+                                            haveUnifiedInvoice &&
+                                            !creatingInvoice && (
                                                 <CollapsedQR
                                                     value={lnInvoice || ''}
                                                     copyValue={
@@ -2089,7 +2119,8 @@ export default class Receive extends React.Component<
                                             )}
                                         {selectedIndex == 2 &&
                                             !belowDustLimit &&
-                                            btcAddress && (
+                                            btcAddress &&
+                                            !creatingInvoice && (
                                                 <CollapsedQR
                                                     value={btcAddress}
                                                     copyValue={
@@ -2169,7 +2200,8 @@ export default class Receive extends React.Component<
 
                                         {selectedIndex == 3 &&
                                             !lightningAddressLoading &&
-                                            lightningAddress && (
+                                            lightningAddress &&
+                                            !creatingInvoice && (
                                                 <CollapsedQR
                                                     value={`lightning:${lightningAddress}`}
                                                     iconOnly={true}
@@ -2201,7 +2233,8 @@ export default class Receive extends React.Component<
                                         {(selectedIndex === 0 ||
                                             selectedIndex === 1) &&
                                             (belowDustLimit ||
-                                                !haveUnifiedInvoice) && (
+                                                !haveUnifiedInvoice) &&
+                                            !creatingInvoice && (
                                                 <CollapsedQR
                                                     value={lnInvoice || ''}
                                                     copyValue={
@@ -2220,114 +2253,118 @@ export default class Receive extends React.Component<
                                                     displayAmount
                                                 />
                                             )}
-                                        {(showButtonGroup || showNfcButton) && (
-                                            <>
-                                                <View
-                                                    style={{
-                                                        alignItems: 'center',
-                                                        marginTop: 30
-                                                    }}
-                                                >
-                                                    <TouchableOpacity
-                                                        activeOpacity={0.5}
-                                                        onPress={() =>
-                                                            this.setState({
-                                                                showAdvanced:
-                                                                    !this.state
-                                                                        .showAdvanced
-                                                            })
-                                                        }
+                                        {!creatingInvoice &&
+                                            (showButtonGroup ||
+                                                showNfcButton) && (
+                                                <>
+                                                    <View
                                                         style={{
-                                                            height: 40,
-                                                            paddingHorizontal: 12,
-                                                            borderRadius: 12,
-                                                            justifyContent:
-                                                                'center'
+                                                            alignItems:
+                                                                'center',
+                                                            marginTop: 30
                                                         }}
                                                     >
-                                                        <View
+                                                        <TouchableOpacity
+                                                            activeOpacity={0.5}
+                                                            onPress={() =>
+                                                                this.setState({
+                                                                    showAdvanced:
+                                                                        !this
+                                                                            .state
+                                                                            .showAdvanced
+                                                                })
+                                                            }
                                                             style={{
-                                                                flexDirection:
-                                                                    'row',
-                                                                alignItems:
-                                                                    'center',
+                                                                height: 40,
+                                                                paddingHorizontal: 12,
+                                                                borderRadius: 12,
                                                                 justifyContent:
                                                                     'center'
                                                             }}
                                                         >
-                                                            <Text
+                                                            <View
                                                                 style={{
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    ),
-                                                                    fontFamily:
-                                                                        'PPNeueMontreal-Book',
-                                                                    fontSize: 16
+                                                                    flexDirection:
+                                                                        'row',
+                                                                    alignItems:
+                                                                        'center',
+                                                                    justifyContent:
+                                                                        'center'
                                                                 }}
                                                             >
-                                                                {localeString(
-                                                                    'general.advanced'
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        ),
+                                                                        fontFamily:
+                                                                            'PPNeueMontreal-Book',
+                                                                        fontSize: 16
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        'general.advanced'
+                                                                    )}
+                                                                </Text>
+                                                                {showAdvanced ? (
+                                                                    <CaretDown
+                                                                        fill={themeColor(
+                                                                            'secondaryText'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                        style={{
+                                                                            marginLeft: 8
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    <CaretRight
+                                                                        fill={themeColor(
+                                                                            'secondaryText'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                        style={{
+                                                                            marginLeft: 8
+                                                                        }}
+                                                                    />
                                                                 )}
-                                                            </Text>
-                                                            {showAdvanced ? (
-                                                                <CaretDown
-                                                                    fill={themeColor(
-                                                                        'secondaryText'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                    style={{
-                                                                        marginLeft: 8
-                                                                    }}
-                                                                />
-                                                            ) : (
-                                                                <CaretRight
-                                                                    fill={themeColor(
-                                                                        'secondaryText'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                    style={{
-                                                                        marginLeft: 8
-                                                                    }}
-                                                                />
-                                                            )}
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                </View>
+                                                            </View>
+                                                        </TouchableOpacity>
+                                                    </View>
 
-                                                {showAdvanced &&
-                                                    showNfcButton &&
-                                                    nfcSupported && (
-                                                        <View
-                                                            style={[
-                                                                styles.button
-                                                            ]}
-                                                        >
-                                                            <Button
-                                                                title={
-                                                                    posStatus ===
-                                                                    'active'
-                                                                        ? localeString(
-                                                                              'general.payNfc'
-                                                                          )
-                                                                        : localeString(
-                                                                              'general.receiveNfc'
-                                                                          )
-                                                                }
-                                                                icon={{
-                                                                    name: 'nfc',
-                                                                    size: 25
-                                                                }}
-                                                                onPress={() =>
-                                                                    this.enableNfc()
-                                                                }
-                                                                secondary
-                                                            />
-                                                        </View>
-                                                    )}
-                                            </>
-                                        )}
+                                                    {showAdvanced &&
+                                                        showNfcButton &&
+                                                        nfcSupported && (
+                                                            <View
+                                                                style={[
+                                                                    styles.button
+                                                                ]}
+                                                            >
+                                                                <Button
+                                                                    title={
+                                                                        posStatus ===
+                                                                        'active'
+                                                                            ? localeString(
+                                                                                  'general.payNfc'
+                                                                              )
+                                                                            : localeString(
+                                                                                  'general.receiveNfc'
+                                                                              )
+                                                                    }
+                                                                    icon={{
+                                                                        name: 'nfc',
+                                                                        size: 25
+                                                                    }}
+                                                                    onPress={() =>
+                                                                        this.enableNfc()
+                                                                    }
+                                                                    secondary
+                                                                />
+                                                            </View>
+                                                        )}
+                                                </>
+                                            )}
                                     </View>
                                 )}
                                 {!loading &&
@@ -3441,7 +3478,8 @@ export default class Receive extends React.Component<
                                                                 showCustomPreimageField
                                                                     ? customPreimage
                                                                     : undefined,
-                                                            noLsp: !lspIsActive
+                                                            noLsp: !lspIsActive,
+                                                            skipOnchain
                                                         }).then(
                                                             ({
                                                                 rHash,
@@ -3467,31 +3505,26 @@ export default class Receive extends React.Component<
                 </View>
                 {showAdvanced && showButtonGroup && (
                     <View style={{ bottom: 0 }}>
-                        {!belowDustLimit &&
-                            haveUnifiedInvoice &&
-                            !lnOnly &&
-                            !watchedInvoicePaid && (
-                                <ButtonGroup
-                                    onPress={this.updateIndex}
-                                    selectedIndex={selectedIndex}
-                                    buttons={buttons}
-                                    selectedButtonStyle={{
-                                        backgroundColor:
-                                            themeColor('highlight'),
-                                        borderRadius: 12
-                                    }}
-                                    containerStyle={{
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 12,
-                                        borderWidth: 0,
-                                        height: 80
-                                    }}
-                                    innerBorderStyle={{
-                                        color: themeColor('secondary')
-                                    }}
-                                />
-                            )}
+                        {!belowDustLimit && !lnOnly && !watchedInvoicePaid && (
+                            <ButtonGroup
+                                onPress={this.updateIndex}
+                                selectedIndex={selectedIndex}
+                                buttons={buttons}
+                                selectedButtonStyle={{
+                                    backgroundColor: themeColor('highlight'),
+                                    borderRadius: 12
+                                }}
+                                containerStyle={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 12,
+                                    borderWidth: 0,
+                                    height: 80
+                                }}
+                                innerBorderStyle={{
+                                    color: themeColor('secondary')
+                                }}
+                            />
+                        )}
                     </View>
                 )}
                 <ModalBox
