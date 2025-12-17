@@ -49,7 +49,7 @@ export default class DropdownSetting extends React.Component<
                         value={value.value}
                     />
                 );
-                pickerValuesIOS.push(value.key);
+                pickerValuesIOS.push(translatedKey ?? value.key);
             }
         );
 
@@ -57,7 +57,12 @@ export default class DropdownSetting extends React.Component<
             (value: any) => value.value === selectedValue
         );
 
-        const display = displayItem ? displayItem.key : null;
+        const displayTranslatedKey = displayItem?.translateKey
+            ? localeString(displayItem.translateKey)
+            : undefined;
+        const display = displayItem
+            ? displayTranslatedKey ?? displayItem.key
+            : null;
 
         return (
             <React.Fragment>
