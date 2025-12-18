@@ -216,13 +216,13 @@ export default class RoutingEvent extends React.Component<
         const channelOutPoint = chanOut && chanOut.channel_point;
 
         const filterByInChannel = () => {
-            navigation.navigate('Routing', {
+            navigation.replace('Routing', {
                 filterChanIdIn: inChannelId
             });
         };
 
         const filterByOutChannel = () => {
-            navigation.navigate('Routing', {
+            navigation.replace('Routing', {
                 filterChanIdOut: outChannelId
             });
         };
