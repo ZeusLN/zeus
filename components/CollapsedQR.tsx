@@ -336,40 +336,44 @@ export default class CollapsedQR extends React.Component<
                                 quietZone={width / 40}
                             />
                         </TouchableOpacity>
-                        {satAmount != null && this.props.displayAmount && (
-                            <View
-                                style={{
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    alignSelf: 'center',
-                                    backgroundColor:
-                                        themeColor('buttonBackground') ||
-                                        themeColor('secondary'),
-                                    width:
-                                        height > width
-                                            ? width * 0.75
-                                            : height * 0.6,
-                                    borderBottomLeftRadius: 12,
-                                    borderBottomRightRadius: 12,
-                                    marginTop: -10,
-                                    margin: 15,
-                                    padding: 15
-                                }}
-                            >
-                                <Amount
-                                    sats={satAmount}
-                                    toggleable
-                                    jumboText
-                                    colorOverride={themeColor('buttonText')}
-                                ></Amount>
-                                <View>
-                                    <Conversion
+                        {satAmount != null &&
+                            satAmount != 0 &&
+                            this.props.displayAmount && (
+                                <View
+                                    style={{
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        alignSelf: 'center',
+                                        backgroundColor:
+                                            themeColor('buttonBackground') ||
+                                            themeColor('secondary'),
+                                        width:
+                                            height > width
+                                                ? width * 0.75
+                                                : height * 0.6,
+                                        borderBottomLeftRadius: 12,
+                                        borderBottomRightRadius: 12,
+                                        marginTop: -10,
+                                        margin: 15,
+                                        padding: 15
+                                    }}
+                                >
+                                    <Amount
                                         sats={satAmount}
+                                        toggleable
+                                        jumboText
                                         colorOverride={themeColor('buttonText')}
-                                    />
+                                    ></Amount>
+                                    <View>
+                                        <Conversion
+                                            sats={satAmount}
+                                            colorOverride={themeColor(
+                                                'buttonText'
+                                            )}
+                                        />
+                                    </View>
                                 </View>
-                            </View>
-                        )}
+                            )}
                     </View>
                 )}
                 {!hideText && textBottom && (
