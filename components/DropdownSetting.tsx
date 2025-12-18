@@ -49,15 +49,15 @@ export default class DropdownSetting extends React.Component<
                         value={value.value}
                     />
                 );
-                pickerValuesIOS.push(value.key);
+                pickerValuesIOS.push(translatedKey ?? value.key);
             }
         );
 
-        const displayItem = values.find(
+        const selectedIndex = values.findIndex(
             (value: any) => value.value === selectedValue
         );
-
-        const display = displayItem ? displayItem.key : null;
+        const display =
+            selectedIndex > -1 ? pickerValuesIOS[selectedIndex + 1] : null;
 
         return (
             <React.Fragment>
