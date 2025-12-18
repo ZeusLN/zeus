@@ -20,6 +20,7 @@ import backendUtils from '../utils/BackendUtils';
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
 import ChannelsFilter from './Channels/ChannelsFilter';
+import LoadingIndicator from './LoadingIndicator';
 
 import Channel from '../models/Channel';
 import { Status } from '../models/Status';
@@ -264,15 +265,27 @@ export default class ChannelPicker extends React.Component<
                                     <ChannelsFilter />
                                 </View>
 
-                                <FlatList
-                                    data={channels}
-                                    renderItem={(item) => this.renderItem(item)}
-                                    style={styles.list}
-                                    contentContainerStyle={styles.listContent}
-                                    onEndReachedThreshold={50}
-                                    refreshing={loading}
-                                    onRefresh={() => this.refreshChannels()}
-                                />
+                                {loading && (
+                                    <View style={styles.loadingContainer}>
+                                        <LoadingIndicator />
+                                    </View>
+                                )}
+
+                                {!loading && (
+                                    <FlatList
+                                        data={channels}
+                                        renderItem={(item) =>
+                                            this.renderItem(item)
+                                        }
+                                        style={styles.list}
+                                        contentContainerStyle={
+                                            styles.listContent
+                                        }
+                                        onEndReachedThreshold={50}
+                                        refreshing={loading}
+                                        onRefresh={() => this.refreshChannels()}
+                                    />
+                                )}
 
                                 <View style={styles.buttonRow}>
                                     <Button
@@ -420,6 +433,11 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingBottom: 16
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     buttonRow: {
         flexDirection: 'row',
