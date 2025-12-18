@@ -67,6 +67,7 @@
     "general.pos": "Point of Sale",
     "general.admin": "Admin",
     "general.pay": "Pay",
+    "general.payLater": "Pay Later",
     "general.open": "Open",
     "general.settled": "Settled",
     "general.new": "New",
