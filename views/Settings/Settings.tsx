@@ -21,7 +21,6 @@ import POS from '../../assets/images/SVG/POS.svg';
 import ReceiveIcon from '../../assets/images/SVG/Receive.svg';
 import SendIcon from '../../assets/images/SVG/Send.svg';
 import CloudIcon from '../../assets/images/SVG/Cloud.svg';
-import NWCLogo from '../../assets/images/SVG/nwc-logo.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -469,44 +468,6 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 }}
                             >
                                 {localeString('views.Settings.Display.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() =>
-                                navigation.navigate('NostrWalletConnect')
-                            }
-                        >
-                            <View style={styles.icon}>
-                                <NWCLogo
-                                    fill={themeColor('text')}
-                                    width={23}
-                                    height={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.NostrWalletConnect.title'
-                                )}
                             </Text>
                             <View style={styles.ForwardArrow}>
                                 <ForwardIcon stroke={forwardArrowColor} />
