@@ -1590,7 +1590,7 @@
     "views.Settings.Ecash.automaticallySweep": "Automatically sweep ecash to self-custody",
     "views.Settings.Ecash.sweepThresholdSatsTitle": "Mint sweep threshold",
     "views.Settings.Ecash.sweepThresholdSatsTitle.description": "Funds will be automatically swept to your self-custodial wallet if the balance you have with a mint exceeds this threshold.",
-    "views.Settings.NostrWalletConnect.title": "Nostr Wallet Connect Service",
+    "views.Settings.NostrWalletConnect.title": "Nostr Wallet Connect service",
     "views.Settings.NostrWalletConnect.connections": "Connections",
     "views.Settings.NostrWalletConnect.noConnections": "No connections created yet. Create a connection to allow external apps to connect to your wallet.",
     "views.Settings.NostrWalletConnect.connectionName": "Connection Name",

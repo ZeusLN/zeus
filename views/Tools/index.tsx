@@ -19,6 +19,7 @@ import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
+import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -122,6 +123,45 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('NostrWalletConnect')
+                            }
+                        >
+                            <View style={styles.icon}>
+                                <NWCIcon
+                                    fill={themeColor('text')}
+                                    width={23}
+                                    height={23}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.title'
+                                )}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
                     {selectedNode && BackendUtils.supportsWatchtowerClient() && (
                         <View
                             style={{
