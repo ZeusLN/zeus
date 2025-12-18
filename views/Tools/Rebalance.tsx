@@ -15,7 +15,6 @@ import { Route } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import BigNumber from 'bignumber.js';
 
-import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import HopPicker from '../../components/HopPicker';
@@ -33,6 +32,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import Channel from '../../models/Channel';
@@ -50,8 +50,33 @@ const REBALANCE_CONSTANTS = {
     MAX_PAYMENT_PARTS: 5,
     PAYMENT_CHECK_DELAY: 3000,
     MIN_REBALANCE_AMOUNT: 1,
-    CIRCULAR_LAYER_NAME: 'circular-rebalance'
+    CIRCULAR_LAYER_NAME: 'circular-rebalance',
+    BALANCE_PRECISION: 3,
+    MSAT_MULTIPLIER: 1000,
+    DEFAULT_CLN_CLTV_EXPIRY: 144,
+    TIMEOUT_BUFFER_MS: 5000
 } as const;
+
+const calculateProjectedBalance = (
+    currentBalance: number,
+    amount: number,
+    isSource: boolean
+): number => {
+    const balance = new BigNumber(currentBalance);
+    return isSource
+        ? Math.max(0, balance.minus(amount).toNumber())
+        : balance.plus(amount).toNumber();
+};
+
+const formatBalanceDisplay = (value: number): number => {
+    return Number(
+        new BigNumber(value).toFixed(REBALANCE_CONSTANTS.BALANCE_PRECISION)
+    );
+};
+
+const calculateCapacity = (balance: number, reserve: number): number => {
+    return Math.max(0, new BigNumber(balance).minus(reserve).toNumber());
+};
 
 export enum PaymentStatus {
     SUCCEEDED = 'SUCCEEDED',
@@ -131,12 +156,11 @@ interface RebalanceState {
     executing: boolean;
     projectedSourceBalance: number;
     projectedDestinationBalance: number;
-    adjustedSourceBalance: number;
-    adjustedDestinationBalance: number;
     originalSourceBalance: number;
     originalDestinationBalance: number;
     totalBalance: number;
     balanceSliderValue: number;
+    preciseAmount: string;
 }
 
 @inject(
@@ -169,12 +193,11 @@ export default class Rebalance extends React.Component<
             executing: false,
             projectedSourceBalance: 0,
             projectedDestinationBalance: 0,
-            adjustedSourceBalance: 0,
-            adjustedDestinationBalance: 0,
             originalSourceBalance: 0,
             originalDestinationBalance: 0,
             totalBalance: 0,
-            balanceSliderValue: REBALANCE_CONSTANTS.DEFAULT_SLIDER_VALUE
+            balanceSliderValue: REBALANCE_CONSTANTS.DEFAULT_SLIDER_VALUE,
+            preciseAmount: '0'
         };
     }
 
@@ -277,16 +300,16 @@ export default class Rebalance extends React.Component<
             return;
         }
 
-        const projectedSourceBalance = new BigNumber(
-            selectedSourceChannel.localBalance
-        )
-            .minus(rebalanceAmount)
-            .toNumber();
-        const projectedDestinationBalance = new BigNumber(
-            selectedDestinationChannel.localBalance
-        )
-            .plus(rebalanceAmount)
-            .toNumber();
+        const projectedSourceBalance = calculateProjectedBalance(
+            Number(selectedSourceChannel.localBalance),
+            rebalanceAmount,
+            true
+        );
+        const projectedDestinationBalance = calculateProjectedBalance(
+            Number(selectedDestinationChannel.localBalance),
+            rebalanceAmount,
+            false
+        );
 
         this.updateStateWithCallback({
             projectedSourceBalance,
@@ -305,11 +328,11 @@ export default class Rebalance extends React.Component<
         if (type === 'source') {
             stateUpdates.selectedSourceChannel = channel;
             stateUpdates.originalSourceBalance = localBalance;
-            stateUpdates.adjustedSourceBalance = localBalance;
+            stateUpdates.projectedSourceBalance = localBalance;
         } else {
             stateUpdates.selectedDestinationChannel = channel;
             stateUpdates.originalDestinationBalance = localBalance;
-            stateUpdates.adjustedDestinationBalance = localBalance;
+            stateUpdates.projectedDestinationBalance = localBalance;
         }
 
         this.updateStateWithCallback(stateUpdates, () => {
@@ -323,17 +346,16 @@ export default class Rebalance extends React.Component<
             maxAmount: 0,
             balanceSliderValue: 0,
             projectedSourceBalance: 0,
-            projectedDestinationBalance: 0
+            projectedDestinationBalance: 0,
+            preciseAmount: '0'
         };
 
         if (type === 'source') {
             stateUpdates.selectedSourceChannel = null;
             stateUpdates.originalSourceBalance = 0;
-            stateUpdates.adjustedSourceBalance = 0;
         } else {
             stateUpdates.selectedDestinationChannel = null;
             stateUpdates.originalDestinationBalance = 0;
-            stateUpdates.adjustedDestinationBalance = 0;
         }
 
         this.updateStateWithCallback(stateUpdates, () => {
@@ -403,15 +425,13 @@ export default class Rebalance extends React.Component<
         if (selectedSourceChannel && selectedDestinationChannel) {
             const sourceBalance = Number(selectedSourceChannel.localBalance);
             const destBalance = Number(selectedDestinationChannel.localBalance);
-            const total = new BigNumber(sourceBalance)
-                .plus(destBalance)
-                .toNumber();
+            const total = sourceBalance + destBalance;
 
             this.updateStateWithCallback({
                 originalSourceBalance: sourceBalance,
                 originalDestinationBalance: destBalance,
-                adjustedSourceBalance: sourceBalance,
-                adjustedDestinationBalance: destBalance,
+                projectedSourceBalance: sourceBalance,
+                projectedDestinationBalance: destBalance,
                 totalBalance: total,
                 balanceSliderValue: 0
             });
@@ -424,39 +444,96 @@ export default class Rebalance extends React.Component<
 
         const rebalanceAmount = Math.round(value);
 
-        const projectedSourceBalance = Math.max(
-            0,
-            new BigNumber(originalSourceBalance)
-                .minus(rebalanceAmount)
-                .toNumber()
+        const projectedSourceBalance = calculateProjectedBalance(
+            originalSourceBalance,
+            rebalanceAmount,
+            true
         );
-        const projectedDestinationBalance = new BigNumber(
-            originalDestinationBalance
-        )
-            .plus(rebalanceAmount)
-            .toNumber();
+        const projectedDestinationBalance = calculateProjectedBalance(
+            originalDestinationBalance,
+            rebalanceAmount,
+            false
+        );
 
         this.updateStateWithCallback({
             balanceSliderValue: value,
             rebalanceAmount,
-            adjustedSourceBalance: projectedSourceBalance,
-            adjustedDestinationBalance: projectedDestinationBalance,
             projectedSourceBalance,
-            projectedDestinationBalance
+            projectedDestinationBalance,
+            preciseAmount: numberWithCommas(rebalanceAmount)
         });
     };
 
-    resetBalances = () => {
+    resetSlider = () => {
+        const {
+            selectedSourceChannel,
+            selectedDestinationChannel,
+            originalSourceBalance,
+            originalDestinationBalance
+        } = this.state;
+
+        if (selectedSourceChannel && selectedDestinationChannel) {
+            this.updateStateWithCallback({
+                balanceSliderValue: 0,
+                rebalanceAmount: 0,
+                projectedSourceBalance: originalSourceBalance,
+                projectedDestinationBalance: originalDestinationBalance,
+                preciseAmount: '0'
+            });
+        }
+    };
+
+    onPreciseAmountChange = (text: string) => {
+        const sanitizedValue = text.replace(/[^\d.]/g, '');
+
+        const cleanValue = sanitizedValue
+            .replace(/,/g, '')
+            .replace(/\.{2,}/g, '.')
+            .replace(/^\./, '0.')
+            .replace(/(\.\d*)\./g, '$1');
+
+        if (cleanValue === '' || cleanValue === '0.') {
+            this.updateStateWithCallback({
+                preciseAmount: cleanValue,
+                rebalanceAmount: 0,
+                balanceSliderValue: 0,
+                projectedSourceBalance: this.state.originalSourceBalance,
+                projectedDestinationBalance:
+                    this.state.originalDestinationBalance
+            });
+            return;
+        }
+
+        const amount = parseFloat(cleanValue) || 0;
+        const { maxAmount } = this.state;
+        const validatedAmount = Math.min(amount, maxAmount);
+
+        let displayValue: string;
+        if (amount <= maxAmount) {
+            displayValue = cleanValue;
+        } else {
+            displayValue = maxAmount.toString();
+        }
+
         const { originalSourceBalance, originalDestinationBalance } =
             this.state;
+        const projectedSourceBalance = calculateProjectedBalance(
+            originalSourceBalance,
+            validatedAmount,
+            true
+        );
+        const projectedDestinationBalance = calculateProjectedBalance(
+            originalDestinationBalance,
+            validatedAmount,
+            false
+        );
 
         this.updateStateWithCallback({
-            adjustedSourceBalance: originalSourceBalance,
-            adjustedDestinationBalance: originalDestinationBalance,
-            balanceSliderValue: 0,
-            rebalanceAmount: 0,
-            projectedSourceBalance: originalSourceBalance,
-            projectedDestinationBalance: originalDestinationBalance
+            preciseAmount: displayValue,
+            rebalanceAmount: validatedAmount,
+            balanceSliderValue: validatedAmount,
+            projectedSourceBalance,
+            projectedDestinationBalance
         });
     };
 
@@ -514,7 +591,8 @@ export default class Rebalance extends React.Component<
         try {
             const invoiceResult = await BackendUtils.createInvoice({
                 memo,
-                value: rebalanceAmount
+                value: rebalanceAmount,
+                private: true
             });
             return invoiceResult;
         } catch (error) {
@@ -674,13 +752,15 @@ export default class Rebalance extends React.Component<
                 source: selectedSourceChannel.remotePubkey,
                 destination: ownNodePubkey,
                 amount_msat: new BigNumber(rebalanceAmount)
-                    .multipliedBy(1000)
+                    .multipliedBy(REBALANCE_CONSTANTS.MSAT_MULTIPLIER)
                     .toNumber(),
                 maxfee_msat: new BigNumber(feeLimit)
-                    .multipliedBy(1000)
+                    .multipliedBy(REBALANCE_CONSTANTS.MSAT_MULTIPLIER)
                     .toNumber(),
                 layers: [REBALANCE_CONSTANTS.CIRCULAR_LAYER_NAME],
-                final_cltv: invoiceData.min_final_cltv_expiry || 144
+                final_cltv:
+                    invoiceData.min_final_cltv_expiry ||
+                    REBALANCE_CONSTANTS.DEFAULT_CLN_CLTV_EXPIRY
             };
 
             const routeResponse = await BackendUtils.getRoutes(routeParams);
@@ -1102,28 +1182,22 @@ export default class Rebalance extends React.Component<
         localReserve: number,
         remoteReserve: number
     ) => ({
-        sendingCapacity: Math.max(
-            0,
-            new BigNumber(localBalance).minus(localReserve).toNumber()
-        ),
-        receivingCapacity: Math.max(
-            0,
-            new BigNumber(remoteBalance).minus(remoteReserve).toNumber()
-        )
+        sendingCapacity: calculateCapacity(localBalance, localReserve),
+        receivingCapacity: calculateCapacity(remoteBalance, remoteReserve)
     });
 
     private calculateProjectedBalances = (
         channel: Channel,
         projectedBalance: number
     ) => {
-        const originalTotal = new BigNumber(channel.localBalance || 0)
-            .plus(Number(channel.remoteBalance) || 0)
-            .toNumber();
+        const originalTotal =
+            (Number(channel.localBalance) || 0) +
+            (Number(channel.remoteBalance) || 0);
 
         const displayLocalBalance = Math.max(0, projectedBalance);
         const displayRemoteBalance = Math.max(
             0,
-            new BigNumber(originalTotal).minus(displayLocalBalance).toNumber()
+            originalTotal - displayLocalBalance
         );
 
         return { displayLocalBalance, displayRemoteBalance };
@@ -1221,17 +1295,13 @@ export default class Rebalance extends React.Component<
         }
 
         return {
-            displayLocalBalance: Number(
-                new BigNumber(displayLocalBalance).toFixed(3)
+            displayLocalBalance: formatBalanceDisplay(displayLocalBalance),
+            displayRemoteBalance: formatBalanceDisplay(displayRemoteBalance),
+            displaySendingCapacity: formatBalanceDisplay(
+                displaySendingCapacity
             ),
-            displayRemoteBalance: Number(
-                new BigNumber(displayRemoteBalance).toFixed(3)
-            ),
-            displaySendingCapacity: Number(
-                new BigNumber(displaySendingCapacity).toFixed(3)
-            ),
-            displayReceivingCapacity: Number(
-                new BigNumber(displayReceivingCapacity).toFixed(3)
+            displayReceivingCapacity: formatBalanceDisplay(
+                displayReceivingCapacity
             )
         };
     };
@@ -1316,7 +1386,7 @@ export default class Rebalance extends React.Component<
     };
 
     private renderBalanceAdjustmentSection = (): React.ReactElement => {
-        const { rebalanceAmount } = this.state;
+        const { preciseAmount, maxAmount } = this.state;
 
         return (
             <View style={styles.section}>
@@ -1324,55 +1394,65 @@ export default class Rebalance extends React.Component<
                     {localeString('views.Rebalance.balanceAdjustment')}
                 </Text>
 
-                {/* Current rebalance amount */}
-                <View
-                    style={[
-                        styles.rebalanceAmountDisplay,
-                        { backgroundColor: themeColor('highlight') }
-                    ]}
-                >
-                    <Text
-                        style={{
-                            ...styles.rebalanceAmountLabel,
-                            color: themeColor('background')
-                        }}
-                    >
-                        {localeString('views.Rebalance.rebalanceAmount') +
-                            ' : '}
+                {/* Precise Amount Input */}
+                <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>
+                        {localeString(
+                            'views.Rebalance.preciseInputDescription'
+                        )}
                     </Text>
-                    <Amount
-                        sats={rebalanceAmount}
-                        sensitive
-                        color={themeColor('background')}
+                    <TextInput
+                        keyboardType="numeric"
+                        placeholder="0"
+                        value={preciseAmount}
+                        onChangeText={this.onPreciseAmountChange}
+                        textInputStyle={{
+                            borderColor: themeColor('secondary'),
+                            fontSize: 16,
+                            color: themeColor('text')
+                        }}
                     />
+                    <Row justify="space-between" style={{ marginVertical: 10 }}>
+                        <Text
+                            style={{
+                                color: themeColor('text')
+                            }}
+                        >
+                            0
+                        </Text>
+                        <Text
+                            style={{
+                                color: themeColor('text')
+                            }}
+                        >
+                            {numberWithCommas(maxAmount)}
+                        </Text>
+                    </Row>
                 </View>
 
-                {/* Balance adjustment slider */}
+                {/* Visual Slider */}
                 <View>
-                    <Text style={styles.sliderDescription}>
-                        {localeString('views.Rebalance.sliderDescription')}
-                    </Text>
                     <View style={styles.sliderWithResetContainer}>
                         <Slider
                             style={styles.balanceSlider}
                             minimumValue={0}
-                            maximumValue={this.state.maxAmount}
+                            maximumValue={maxAmount}
                             value={this.state.balanceSliderValue}
                             onValueChange={this.onBalanceSliderChange}
                             minimumTrackTintColor={themeColor('highlight')}
                             maximumTrackTintColor={themeColor('secondary')}
                         />
                         <TouchableOpacity
+                            onPress={this.resetSlider}
                             style={[
-                                styles.refreshButton,
+                                styles.resetButton,
                                 { backgroundColor: themeColor('secondary') }
                             ]}
-                            onPress={this.resetBalances}
                         >
                             <SyncIcon
+                                fill={themeColor('text')}
                                 width={20}
                                 height={20}
-                                fill={themeColor('text')}
                             />
                         </TouchableOpacity>
                     </View>
@@ -1536,7 +1616,7 @@ export default class Rebalance extends React.Component<
                     this.cleanupPaymentListener();
                     reject(timeoutError);
                 }
-            }, timeoutMs + 5000); // 5 seconds buffer to the timeout
+            }, timeoutMs + REBALANCE_CONSTANTS.TIMEOUT_BUFFER_MS);
         });
     };
 
@@ -1633,8 +1713,6 @@ export default class Rebalance extends React.Component<
             executing: false, // Reset executing state
             projectedSourceBalance: this.state.projectedSourceBalance,
             projectedDestinationBalance: this.state.projectedDestinationBalance,
-            adjustedSourceBalance: this.state.adjustedSourceBalance,
-            adjustedDestinationBalance: this.state.adjustedDestinationBalance,
             originalSourceBalance: this.state.originalSourceBalance,
             originalDestinationBalance: this.state.originalDestinationBalance,
             totalBalance: this.state.totalBalance,
@@ -1738,7 +1816,7 @@ const styles = StyleSheet.create({
         marginTop: 5
     },
     inputContainer: {
-        marginBottom: 8
+        marginBottom: 2
     },
     inputLabel: {
         fontSize: 14,
@@ -1753,35 +1831,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 5
     },
-    sliderDescription: {
-        fontSize: 14,
-        marginBottom: 10,
-        textAlign: 'center',
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     balanceSlider: {
         flex: 1,
         height: 40,
         marginRight: 10
-    },
-    refreshButton: {
-        padding: 8,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    rebalanceAmountDisplay: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 10,
-        borderRadius: 8,
-        marginBottom: 15
-    },
-    rebalanceAmountLabel: {
-        fontSize: 16,
-        fontWeight: '500',
-        fontFamily: 'PPNeueMontreal-Book'
     },
     contentContainer: {
         flex: 1
@@ -1795,5 +1848,11 @@ const styles = StyleSheet.create({
         right: 8,
         padding: 8,
         zIndex: 1
+    },
+    resetButton: {
+        padding: 8,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center'
     }
 });
