@@ -124,7 +124,7 @@ import NWCConnectionDetails from './views/Settings/NostrWalletConnect/NWCConnect
 import NWCConnectionQR from './views/Settings/NostrWalletConnect/NWCConnectionQR';
 import NWCSettings from './views/Settings/NostrWalletConnect/NWCSettings';
 import NWCConnectionActivity from './views/Settings/NostrWalletConnect/NWCConnectionActivity';
-
+import NWCPendingPayments from './views/Settings/NostrWalletConnect/NWCPendingPayments';
 // Lightning address
 import LightningAddress from './views/LightningAddress';
 import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
@@ -805,6 +805,12 @@ export default class App extends React.PureComponent {
                                                         name="NWCConnectionActivity" // @ts-ignore:next-line
                                                         component={
                                                             NWCConnectionActivity
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCPendingPayments" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCPendingPayments
                                                         }
                                                     />
                                                     <Stack.Screen
