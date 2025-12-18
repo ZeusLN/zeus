@@ -16,18 +16,18 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import Button from '../../../components/Button';
 import Amount from '../../../components/Amount';
-
 import NostrWalletConnectStore, {
     PendingPayment
 } from '../../../stores/NostrWalletConnectStore';
 import ModalStore from '../../../stores/ModalStore';
-
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import bolt11Utils from '../../../utils/Bolt11Utils';
 import { Tag } from '../../../components/Channels/Tag';
 import { ExpirationStatus } from '../../../models/Status';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
+import PaidIndicator from '../../../components/PaidIndicator';
+import SuccessAnimation from '../../../components/SuccessAnimation';
 
 interface NWCPendingPaymentsProps {
     navigation: StackNavigationProp<any, any>;
@@ -40,6 +40,7 @@ interface NWCPendingPaymentState {
     error: string | null;
     pendingPayments: PendingPayment[];
     processing: boolean;
+    showSuccess: boolean;
 }
 
 @inject('NostrWalletConnectStore', 'ModalStore')
@@ -54,7 +55,8 @@ export default class NWCPendingPayments extends React.Component<
             loading: false,
             error: null,
             pendingPayments: [],
-            processing: false
+            processing: false,
+            showSuccess: false
         };
     }
 
@@ -63,29 +65,26 @@ export default class NWCPendingPayments extends React.Component<
         navigation.addListener('focus', () => this.handleFocus(true));
         this.getPendingPayments();
     }
+
     componentWillUnmount() {
         const { navigation, NostrWalletConnectStore } = this.props;
         NostrWalletConnectStore.setisInNWCPendingPaymentsView(false);
         navigation.removeListener('focus', () => this.handleFocus(false));
     }
+
     handleFocus = async (state: boolean) => {
         const { NostrWalletConnectStore } = this.props;
         NostrWalletConnectStore.setisInNWCPendingPaymentsView(state);
         this.getPendingPayments();
     };
+
     async getPendingPayments() {
         try {
-            this.setState({
-                loading: true,
-                error: null
-            });
+            this.setState({ loading: true, error: null });
             const { NostrWalletConnectStore } = this.props;
             const pendingPayments =
                 await NostrWalletConnectStore.getPendingPayments();
-            this.setState({
-                pendingPayments,
-                loading: false
-            });
+            this.setState({ pendingPayments, loading: false });
         } catch (e) {
             this.setState({
                 error: (e as Error).message,
@@ -93,6 +92,7 @@ export default class NWCPendingPayments extends React.Component<
             });
         }
     }
+
     deletePendingPayments = () => {
         const { ModalStore, NostrWalletConnectStore } = this.props;
         ModalStore.toggleInfoModal({
@@ -103,7 +103,7 @@ export default class NWCPendingPayments extends React.Component<
                     title: localeString('general.delete') || 'Delete',
                     callback: async () => {
                         const result =
-                            await NostrWalletConnectStore.deletePendingPayments();
+                            await NostrWalletConnectStore.deleteAllPendingPayments();
                         if (!result) {
                             this.setState({ error: 'failed to delete' });
                         }
@@ -119,11 +119,22 @@ export default class NWCPendingPayments extends React.Component<
 
         try {
             this.setState({ processing: true, error: null });
-
             await NostrWalletConnectStore.processPendingPaymentsEvents(
                 pendingPayments
             );
             await this.getPendingPayments();
+            const {
+                failedPendingPayInvoiceEventIds,
+                isAllPendingPaymentsSuccessful
+            } = NostrWalletConnectStore;
+            const hasFailures = failedPendingPayInvoiceEventIds.length > 0;
+
+            if (isAllPendingPaymentsSuccessful && !hasFailures) {
+                this.setState({ showSuccess: true });
+                setTimeout(() => {
+                    this.setState({ showSuccess: false });
+                }, 4000);
+            }
         } catch (error) {
             this.setState({
                 error: (error as Error).message || 'Failed to process payments'
@@ -133,22 +144,259 @@ export default class NWCPendingPayments extends React.Component<
         }
     };
 
-    render() {
-        const { navigation, NostrWalletConnectStore } = this.props;
-        const { loading, error, pendingPayments, processing } = this.state;
-        const { failedPendingPayInvoiceEventIds } = NostrWalletConnectStore;
+    showErrorModal = (errorMessage: string) => {
+        const { ModalStore } = this.props;
+        let displayMessage = errorMessage;
 
-        const hasFailures = failedPendingPayInvoiceEventIds.length > 0;
+        try {
+            const parsed = JSON.parse(errorMessage);
+            if (parsed.message) {
+                displayMessage = parsed.message;
+            } else if (typeof parsed === 'string') {
+                displayMessage = parsed;
+            }
+        } catch {
+            displayMessage = errorMessage;
+        }
+
+        ModalStore.toggleInfoModal({
+            title: localeString(
+                'components.NWCPendingPayInvoiceModal.errorTitle'
+            ),
+            text: displayMessage
+        });
+    };
+
+    renderPaymentItem = (item: PendingPayment, index: number) => {
+        const { NostrWalletConnectStore } = this.props;
+
+        const isProcessed =
+            NostrWalletConnectStore.processedPendingPayInvoiceEventIds.includes(
+                item.eventId
+            );
+        const isFailed =
+            NostrWalletConnectStore.failedPendingPayInvoiceEventIds.includes(
+                item.eventId
+            );
+        const errorMessage =
+            NostrWalletConnectStore.pendingPayInvoiceErrors.get(item.eventId);
+        const isProcessing =
+            NostrWalletConnectStore.isProcessingPendingPayInvoices &&
+            !isProcessed &&
+            !isFailed;
+
+        let decodedInvoice: any = null;
+        let isExpired = false;
+
+        try {
+            if (item.request?.params?.invoice) {
+                decodedInvoice = bolt11Utils.decode(
+                    item.request.params.invoice
+                );
+                const expiryTime =
+                    decodedInvoice.timestamp + decodedInvoice.expiry;
+                const currentTime = Math.floor(Date.now() / 1000);
+                isExpired = currentTime > expiryTime;
+            }
+        } catch (e) {
+            console.log('Error decoding invoice:', e);
+        }
+
+        return (
+            <TouchableOpacity
+                key={`${item.eventId}-${index}`}
+                style={styles.eventRow}
+            >
+                <View style={styles.eventInfo}>
+                    <View>
+                        <View style={styles.nameRow}>
+                            <Text
+                                style={{
+                                    ...styles.displayName,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {item.connectionName}
+                            </Text>
+                            {isExpired && (
+                                <Tag status={ExpirationStatus.Expired} />
+                            )}
+                        </View>
+                        {decodedInvoice && (
+                            <Text
+                                style={{
+                                    ...styles.expiryLabel,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.Invoice.expiration')}
+                            </Text>
+                        )}
+                    </View>
+                </View>
+
+                <View style={styles.eventStatus}>
+                    {isProcessing && (
+                        <ActivityIndicator
+                            size="small"
+                            color={themeColor('secondaryText')}
+                        />
+                    )}
+                    {isFailed && (
+                        <TouchableOpacity
+                            onPress={() =>
+                                errorMessage &&
+                                this.showErrorModal(errorMessage)
+                            }
+                            hitSlop={{
+                                top: 10,
+                                bottom: 10,
+                                left: 10,
+                                right: 10
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    fontSize: 18,
+                                    color: themeColor('error')
+                                }}
+                            >
+                                {'ⓘ'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+                    {!isFailed && isProcessed && (
+                        <Text
+                            style={{
+                                color: themeColor('success'),
+                                marginRight: 4,
+                                fontSize: 16
+                            }}
+                        >
+                            ✓
+                        </Text>
+                    )}
+                    <View style={{ alignItems: 'flex-end' }}>
+                        <Amount toggleable sats={item.amount} />
+                        {decodedInvoice && (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 12,
+                                    marginTop: 4
+                                }}
+                            >
+                                {DateTimeUtils.listFormattedDateShort(
+                                    decodedInvoice.timestamp +
+                                        decodedInvoice.expiry
+                                )}
+                            </Text>
+                        )}
+                    </View>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    renderSuccessView = () => (
+        <View style={styles.successContainer}>
+            <PaidIndicator />
+            <SuccessAnimation />
+        </View>
+    );
+
+    renderEmptyView = () => (
+        <View style={styles.emptyContainer}>
+            <Text
+                style={{
+                    ...styles.emptyText,
+                    color: themeColor('secondaryText')
+                }}
+            >
+                {localeString(
+                    'components.NWCPendingPayInvoiceModal.noPending'
+                ) || 'No pending payments'}
+            </Text>
+        </View>
+    );
+
+    renderPaymentsList = (
+        payInvoicePayments: PendingPayment[],
+        totalAmount: number
+    ) => {
+        const { processing } = this.state;
+        const { NostrWalletConnectStore } = this.props;
+        const hasFailures =
+            NostrWalletConnectStore.failedPendingPayInvoiceEventIds.length > 0;
+
+        return (
+            <>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.totalSection}>
+                        <Text
+                            style={{
+                                ...styles.totalLabel,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString(
+                                'components.NWCPendingPayInvoiceModal.totalAmount'
+                            )}
+                        </Text>
+                        <Amount sats={totalAmount} jumboText debit toggleable />
+                    </View>
+
+                    <View
+                        style={{
+                            ...styles.listContainer,
+                            backgroundColor: themeColor('card')
+                        }}
+                    >
+                        {payInvoicePayments.map((item, index) =>
+                            this.renderPaymentItem(item, index)
+                        )}
+                    </View>
+                </ScrollView>
+
+                <View style={styles.footer}>
+                    <Button
+                        title={
+                            processing
+                                ? localeString('general.processing')
+                                : hasFailures
+                                ? localeString('general.retry')
+                                : localeString('general.pay')
+                        }
+                        disabled={processing}
+                        onPress={this.processPendingPayments}
+                    />
+                    <Button
+                        warning
+                        title={'Clear All'}
+                        disabled={processing}
+                        onPress={this.deletePendingPayments}
+                    />
+                </View>
+            </>
+        );
+    };
+
+    render() {
+        const { navigation } = this.props;
+        const { loading, error, pendingPayments, processing, showSuccess } =
+            this.state;
 
         const safePendingPayments = Array.isArray(pendingPayments)
             ? pendingPayments
             : [];
-
-        // Filter to show only pay_invoice method payments
         const payInvoicePayments = safePendingPayments.filter(
             (payment) => payment.request?.method === 'pay_invoice'
         );
-
         const totalAmount = payInvoicePayments.reduce(
             (sum, payment) => sum + payment.amount,
             0
@@ -168,12 +416,7 @@ export default class NWCPendingPayments extends React.Component<
                         }
                     }}
                     rightComponent={
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center'
-                            }}
-                        >
+                        <View style={styles.headerRight}>
                             {(loading || processing) && (
                                 <View style={{ marginRight: 10 }}>
                                     <LoadingIndicator size={30} />
@@ -186,316 +429,16 @@ export default class NWCPendingPayments extends React.Component<
 
                 {error ? (
                     <ErrorMessage message={error} />
+                ) : showSuccess ? (
+                    this.renderSuccessView()
                 ) : (
                     <View style={styles.container}>
-                        {payInvoicePayments.length === 0 && !loading ? (
-                            <View style={styles.emptyContainer}>
-                                <Text
-                                    style={{
-                                        ...styles.emptyText,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'components.NWCPendingPayInvoiceModal.noPending'
-                                    ) || 'No pending payments'}
-                                </Text>
-                            </View>
-                        ) : (
-                            <>
-                                <ScrollView
-                                    style={styles.scrollView}
-                                    contentContainerStyle={styles.scrollContent}
-                                    showsVerticalScrollIndicator={false}
-                                >
-                                    <View style={styles.totalSection}>
-                                        <Text
-                                            style={{
-                                                ...styles.totalLabel,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'components.NWCPendingPayInvoiceModal.totalAmount'
-                                            )}
-                                        </Text>
-                                        <Amount
-                                            sats={totalAmount}
-                                            jumboText
-                                            debit
-                                            toggleable
-                                        />
-                                    </View>
-
-                                    <View
-                                        style={{
-                                            ...styles.listContainer,
-                                            backgroundColor: themeColor('card')
-                                        }}
-                                    >
-                                        {payInvoicePayments.map(
-                                            (item, index) => {
-                                                const {
-                                                    NostrWalletConnectStore,
-                                                    ModalStore
-                                                } = this.props;
-
-                                                const isProcessed =
-                                                    NostrWalletConnectStore.processedPendingPayInvoiceEventIds.includes(
-                                                        item.eventId
-                                                    );
-                                                const isFailed =
-                                                    NostrWalletConnectStore.failedPendingPayInvoiceEventIds.includes(
-                                                        item.eventId
-                                                    );
-                                                const errorMessage =
-                                                    NostrWalletConnectStore.pendingPayInvoiceErrors.get(
-                                                        item.eventId
-                                                    );
-                                                const isProcessing =
-                                                    NostrWalletConnectStore.isProcessingPendingPayInvoices &&
-                                                    !isProcessed &&
-                                                    !isFailed;
-
-                                                // Decode invoice for more details
-                                                let decodedInvoice: any = null;
-                                                let isExpired = false;
-                                                try {
-                                                    if (
-                                                        item.request?.params
-                                                            ?.invoice
-                                                    ) {
-                                                        decodedInvoice =
-                                                            bolt11Utils.decode(
-                                                                item.request
-                                                                    .params
-                                                                    .invoice
-                                                            );
-                                                        // Check if invoice is expired
-                                                        const expiryTime =
-                                                            decodedInvoice.timestamp +
-                                                            decodedInvoice.expiry;
-                                                        const currentTime =
-                                                            Math.floor(
-                                                                Date.now() /
-                                                                    1000
-                                                            );
-                                                        isExpired =
-                                                            currentTime >
-                                                            expiryTime;
-                                                    }
-                                                } catch (e) {
-                                                    console.log(
-                                                        'Error decoding invoice:',
-                                                        e
-                                                    );
-                                                }
-
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={`${item.eventId}-${index}`}
-                                                        style={styles.eventRow}
-                                                    >
-                                                        <View
-                                                            style={
-                                                                styles.eventInfo
-                                                            }
-                                                        >
-                                                            <View>
-                                                                <View
-                                                                    style={{
-                                                                        flexDirection:
-                                                                            'row',
-                                                                        alignItems:
-                                                                            'center'
-                                                                    }}
-                                                                >
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.displayName,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {
-                                                                            item.connectionName
-                                                                        }
-                                                                    </Text>
-                                                                    {isExpired && (
-                                                                        <Tag
-                                                                            status={
-                                                                                ExpirationStatus.Expired
-                                                                            }
-                                                                        />
-                                                                    )}
-                                                                </View>
-                                                                {decodedInvoice && (
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.expiryLabel,
-                                                                            color: themeColor(
-                                                                                'secondaryText'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {localeString(
-                                                                            'views.Invoice.expiration'
-                                                                        )}
-                                                                    </Text>
-                                                                )}
-                                                            </View>
-                                                        </View>
-
-                                                        <View
-                                                            style={
-                                                                styles.eventStatus
-                                                            }
-                                                        >
-                                                            {isProcessing && (
-                                                                <ActivityIndicator
-                                                                    size="small"
-                                                                    color={themeColor(
-                                                                        'secondaryText'
-                                                                    )}
-                                                                />
-                                                            )}
-                                                            {isFailed && (
-                                                                <TouchableOpacity
-                                                                    onPress={() => {
-                                                                        if (
-                                                                            errorMessage
-                                                                        ) {
-                                                                            let displayMessage =
-                                                                                errorMessage;
-                                                                            try {
-                                                                                const parsed =
-                                                                                    JSON.parse(
-                                                                                        errorMessage
-                                                                                    );
-                                                                                if (
-                                                                                    parsed.message
-                                                                                ) {
-                                                                                    displayMessage =
-                                                                                        parsed.message;
-                                                                                } else if (
-                                                                                    typeof parsed ===
-                                                                                    'string'
-                                                                                ) {
-                                                                                    displayMessage =
-                                                                                        parsed;
-                                                                                }
-                                                                            } catch {
-                                                                                displayMessage =
-                                                                                    errorMessage;
-                                                                            }
-                                                                            ModalStore.toggleInfoModal(
-                                                                                {
-                                                                                    title: localeString(
-                                                                                        'components.NWCPendingPayInvoiceModal.errorTitle'
-                                                                                    ),
-                                                                                    text: displayMessage
-                                                                                }
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                    hitSlop={{
-                                                                        top: 10,
-                                                                        bottom: 10,
-                                                                        left: 10,
-                                                                        right: 10
-                                                                    }}
-                                                                >
-                                                                    <Text
-                                                                        style={{
-                                                                            fontSize: 18,
-                                                                            color: themeColor(
-                                                                                'error'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {'ⓘ'}
-                                                                    </Text>
-                                                                </TouchableOpacity>
-                                                            )}
-                                                            {!isFailed &&
-                                                                isProcessed && (
-                                                                    <Text
-                                                                        style={{
-                                                                            color: themeColor(
-                                                                                'success'
-                                                                            ),
-                                                                            marginRight: 4,
-                                                                            fontSize: 16
-                                                                        }}
-                                                                    >
-                                                                        ✓
-                                                                    </Text>
-                                                                )}
-                                                            <View
-                                                                style={{
-                                                                    alignItems:
-                                                                        'flex-end'
-                                                                }}
-                                                            >
-                                                                <Amount
-                                                                    toggleable
-                                                                    sats={
-                                                                        item.amount
-                                                                    }
-                                                                />
-                                                                {decodedInvoice && (
-                                                                    <Text
-                                                                        style={{
-                                                                            fontFamily:
-                                                                                'PPNeueMontreal-Book',
-                                                                            color: themeColor(
-                                                                                'secondaryText'
-                                                                            ),
-                                                                            fontSize: 12,
-                                                                            marginTop: 4
-                                                                        }}
-                                                                    >
-                                                                        {DateTimeUtils.listFormattedDateShort(
-                                                                            decodedInvoice.timestamp +
-                                                                                decodedInvoice.expiry
-                                                                        )}
-                                                                    </Text>
-                                                                )}
-                                                            </View>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                );
-                                            }
-                                        )}
-                                    </View>
-                                </ScrollView>
-
-                                <View style={styles.footer}>
-                                    <Button
-                                        title={
-                                            processing
-                                                ? localeString(
-                                                      'general.processing'
-                                                  )
-                                                : hasFailures
-                                                ? localeString('general.retry')
-                                                : localeString('general.pay')
-                                        }
-                                        disabled={processing}
-                                        onPress={this.processPendingPayments}
-                                    />
-                                    <Button
-                                        warning
-                                        title={'Clear All'}
-                                        disabled={processing}
-                                        onPress={this.deletePendingPayments}
-                                    />
-                                </View>
-                            </>
-                        )}
+                        {payInvoicePayments.length === 0 && !loading
+                            ? this.renderEmptyView()
+                            : this.renderPaymentsList(
+                                  payInvoicePayments,
+                                  totalAmount
+                              )}
                     </View>
                 )}
             </Screen>
@@ -508,12 +451,21 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 15
     },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
     scrollView: {
         flex: 1,
         marginTop: 10
     },
     scrollContent: {
         paddingBottom: 100
+    },
+    successContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
     emptyContainer: {
         flex: 1,
@@ -539,13 +491,16 @@ const styles = StyleSheet.create({
         flex: 1,
         marginRight: 12
     },
+    nameRow: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
     displayName: {
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 17,
         fontWeight: '600',
         marginBottom: 4
     },
-
     expiryLabel: {
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 13,
