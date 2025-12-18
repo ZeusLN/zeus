@@ -353,7 +353,14 @@ export default class SeedRecovery extends React.PureComponent<
                             padding: 0
                         }}
                     >
-                        {text}
+                        {index != null &&
+                        text &&
+                        !(
+                            selectedInputType === 'word' &&
+                            selectedWordIndex === index
+                        )
+                            ? '********'
+                            : text}
                     </Text>
                 </TouchableOpacity>
             );
