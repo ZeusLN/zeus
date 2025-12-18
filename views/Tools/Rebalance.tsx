@@ -484,7 +484,7 @@ export default class Rebalance extends React.Component<
     };
 
     onPreciseAmountChange = (text: string) => {
-        const sanitizedValue = text.replace(/[^\d.,-]/g, '');
+        const sanitizedValue = text.replace(/[^\d.]/g, '');
 
         const cleanValue = sanitizedValue
             .replace(/,/g, '')
