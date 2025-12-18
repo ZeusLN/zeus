@@ -46,23 +46,11 @@ export default class FiatStore {
         symbol: string
     ): CurrencyDisplayRules => {
         const symbolPairs: any = {
-            USD: {
-                symbol: '$',
-                space: false,
-                rtl: false,
-                separatorSwap: false
-            },
             AED: {
                 symbol: 'د.إ',
                 space: false,
                 rtl: true,
                 separatorSwap: false
-            },
-            ARS: {
-                symbol: '$',
-                space: true,
-                rtl: false,
-                separatorSwap: true
             },
             ALL: {
                 symbol: 'L',
@@ -78,6 +66,12 @@ export default class FiatStore {
             },
             AOA: {
                 symbol: 'Kz',
+                space: true,
+                rtl: false,
+                separatorSwap: true
+            },
+            ARS: {
+                symbol: '$',
                 space: true,
                 rtl: false,
                 separatorSwap: true
@@ -355,8 +349,20 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
+            LSL: {
+                symbol: 'L',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
             MAD: {
                 symbol: 'DH',
+                space: true,
+                rtl: true,
+                separatorSwap: true
+            },
+            MGA: {
+                symbol: 'Ar',
                 space: true,
                 rtl: true,
                 separatorSwap: true
@@ -367,11 +373,11 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
-            MGA: {
-                symbol: 'Ar',
+            MWK: {
+                symbol: 'MK',
                 space: true,
-                rtl: true,
-                separatorSwap: true
+                rtl: false,
+                separatorSwap: false
             },
             MXN: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             MYR: {
@@ -445,6 +451,12 @@ export default class FiatStore {
                 separatorSwap: true,
                 decimalPlaces: 0
             },
+            QAR: {
+                symbol: 'QR',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
             RON: {
                 symbol: 'lei',
                 space: true,
@@ -483,6 +495,12 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
+            SZL: {
+                symbol: 'E',
+                space: true,
+                rtl: false,
+                separatorSwap: false
+            },
             THB: { symbol: '฿', space: true, rtl: true, separatorSwap: false },
             TND: {
                 symbol: 'د.ت',
@@ -518,6 +536,18 @@ export default class FiatStore {
                 separatorSwap: false,
                 decimalPlaces: 0
             },
+            USD: {
+                symbol: '$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
+            UYU: {
+                symbol: 'U$',
+                space: false,
+                rtl: false,
+                separatorSwap: false
+            },
             UZS: {
                 symbol: 'soʻm',
                 space: true,
@@ -537,19 +567,26 @@ export default class FiatStore {
                 separatorSwap: true,
                 decimalPlaces: 0
             },
-            QAR: {
-                symbol: 'QR',
+            XAF: {
+                symbol: 'F.CFA',
                 space: true,
                 rtl: false,
+                separatorSwap: false,
+                decimalPlaces: 0
+            },
+            XAG: {
+                symbol: 'Ag oz',
+                space: true,
+                rtl: true,
                 separatorSwap: false
             },
-            UYU: {
-                symbol: 'U$',
-                space: false,
-                rtl: false,
+            XAU: {
+                symbol: 'Au oz',
+                space: true,
+                rtl: true,
                 separatorSwap: false
             },
-            XAF: {
+            XOF: {
                 symbol: 'F.CFA',
                 space: true,
                 rtl: false,
@@ -566,18 +603,6 @@ export default class FiatStore {
                 symbol: 'K',
                 space: false,
                 rtl: false,
-                separatorSwap: false
-            },
-            XAG: {
-                symbol: 'Ag oz',
-                space: true,
-                rtl: true,
-                separatorSwap: false
-            },
-            XAU: {
-                symbol: 'Au oz',
-                space: true,
-                rtl: true,
                 separatorSwap: false
             }
         };
@@ -653,9 +678,9 @@ export default class FiatStore {
         return '$N/A';
     };
 
-    // as of July 15, 2025
+    // as of December 8, 2025
     // BTCPAY rates string:
-    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND,BTC_NOK,BTC_AED,BTC_TTD,BTC_PHP,BTC_CDF,BTC_XAF,BTC_KES,BTC_UGX,BTC_ZAR,BTC_CUP,BTC_DOP,BTC_BZD,BTC_BOB,BTC_CRC,BTC_GTQ,BTC_NIO,BTC_PYG,BTC_UYU,BTC_MRU,BTC_ALL,BTC_ANG,BTC_AOA,BTC_BDT,BTC_BGN,BTC_BHD,BTC_BIF,BTC_BMD,BTC_BWP,BTC_DJF,BTC_DZD,BTC_EGP,BTC_ETB,BTC_GEL,BTC_GHS,BTC_GNF,BTC_HNL,BTC_IRR,BTC_JOD,BTC_KGS,BTC_KZT,BTC_LKR,BTC_MAD,BTC_MGA,BTC_NAD,BTC_NPR,BTC_PAB,BTC_PEN,BTC_PKR,BTC_RSD,BTC_RWF,BTC_UZS,BTC_VND,BTC_XAG,BTC_XAU,BTC_ZMW,BTC_SAR,BTC_OMR
+    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND,BTC_NOK,BTC_AED,BTC_TTD,BTC_PHP,BTC_CDF,BTC_XAF,BTC_KES,BTC_UGX,BTC_ZAR,BTC_CUP,BTC_DOP,BTC_BZD,BTC_BOB,BTC_CRC,BTC_GTQ,BTC_NIO,BTC_PYG,BTC_UYU,BTC_MRU,BTC_ALL,BTC_ANG,BTC_AOA,BTC_BDT,BTC_BGN,BTC_BHD,BTC_BIF,BTC_BMD,BTC_BWP,BTC_DJF,BTC_DZD,BTC_EGP,BTC_ETB,BTC_GEL,BTC_GHS,BTC_GNF,BTC_HNL,BTC_IRR,BTC_JOD,BTC_KGS,BTC_KZT,BTC_LKR,BTC_MAD,BTC_MGA,BTC_NAD,BTC_NPR,BTC_PAB,BTC_PEN,BTC_PKR,BTC_RSD,BTC_RWF,BTC_UZS,BTC_VND,BTC_XAG,BTC_XAU,BTC_ZMW,BTC_SAR,BTC_OMR,BTC_XOF,BTC_MWK,BTC_LSL,BTC_SZL
     @action
     public getFiatRates = async () => {
         // try not to slam endpoint
