@@ -429,21 +429,14 @@ export default class CLNRest {
 
     getForwardingHistory = (
         _hours?: number,
-        chanIdIn?: string,
-        chanIdOut?: string
+        _chanIdIn?: string,
+        _chanIdOut?: string
     ) => {
-        const req: any = {
+        const data = this.postRequest('/v1/listforwards', {
             status: 'settled',
             limit: 10000000,
             index: 'created'
-        };
-        if (chanIdIn) {
-            req.in_channel = chanIdIn;
-        }
-        if (chanIdOut) {
-            req.out_channel = chanIdOut;
-        }
-        const data = this.postRequest('/v1/listforwards', req);
+        });
         return data;
     };
 
