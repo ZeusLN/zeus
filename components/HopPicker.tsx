@@ -22,6 +22,8 @@ import { ChannelItem } from './Channels/ChannelItem';
 import ChannelsFilter from './Channels/ChannelsFilter';
 import LoadingIndicator from './LoadingIndicator';
 
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
+
 import Channel from '../models/Channel';
 import { Status } from '../models/Status';
 
@@ -359,7 +361,10 @@ export default class ChannelPicker extends React.Component<
                             onPress={() => this.openPicker()}
                             style={{
                                 ...styles.selectorText,
-                                backgroundColor: themeColor('secondary')
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 10,
+                                flexDirection: 'row',
+                                alignItems: 'center'
                             }}
                         >
                             <Text
@@ -367,13 +372,21 @@ export default class ChannelPicker extends React.Component<
                                     ...styles.text,
                                     color: themeColor('text'),
                                     padding: 10,
-                                    fontSize: 16
+                                    fontSize: 16,
+                                    flex: 1
                                 }}
                             >
                                 {localeString(
                                     'components.HopPicker.selectChannel'
                                 )}
                             </Text>
+                            <CaretRight
+                                stroke={themeColor('text')}
+                                fill={themeColor('text')}
+                                width={20}
+                                height={20}
+                                style={{ marginRight: 10 }}
+                            />
                         </TouchableOpacity>
                     )}
                 </View>
