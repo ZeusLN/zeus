@@ -353,7 +353,7 @@ export default class NWCPendingPaymentsModal extends React.Component<
                             </View>
                             <View style={styles.button}>
                                 <Button
-                                    title={localeString('general.cancel')}
+                                    title={localeString('general.payLater')}
                                     onPress={() => {
                                         toggleNWCPendingPaymentsModal({});
                                         NostrWalletConnectStore.resetPendingPayInvoiceState();
