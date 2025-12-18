@@ -34,6 +34,7 @@ import { Status, ExpirationStatus } from '../../../models/Status';
 import Add from '../../../assets/images/SVG/Add.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
 import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
+import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionsListProps {
     navigation: StackNavigationProp<any, any>;
@@ -431,6 +432,20 @@ export default class NWCConnectionsList extends React.Component<
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'NWCPendingPayments'
+                                        )
+                                    }
+                                >
+                                    <ClockIcon
+                                        color={themeColor('bitcoin')}
+                                        width={30}
+                                        height={30}
+                                    />
+                                </TouchableOpacity>
+
                                 {!(
                                     Platform.OS === 'ios' &&
                                     (SettingsStore.implementation !==

@@ -190,7 +190,12 @@ export default class NWCPendingPayments extends React.Component<
                     <View style={styles.container}>
                         {payInvoicePayments.length === 0 && !loading ? (
                             <View style={styles.emptyContainer}>
-                                <Text style={styles.emptyText}>
+                                <Text
+                                    style={{
+                                        ...styles.emptyText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
                                     {localeString(
                                         'components.NWCPendingPayInvoiceModal.noPending'
                                     ) || 'No pending payments'}
@@ -204,7 +209,14 @@ export default class NWCPendingPayments extends React.Component<
                                     showsVerticalScrollIndicator={false}
                                 >
                                     <View style={styles.totalSection}>
-                                        <Text style={styles.totalLabel}>
+                                        <Text
+                                            style={{
+                                                ...styles.totalLabel,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {localeString(
                                                 'components.NWCPendingPayInvoiceModal.totalAmount'
                                             )}
@@ -217,7 +229,12 @@ export default class NWCPendingPayments extends React.Component<
                                         />
                                     </View>
 
-                                    <View style={styles.listContainer}>
+                                    <View
+                                        style={{
+                                            ...styles.listContainer,
+                                            backgroundColor: themeColor('card')
+                                        }}
+                                    >
                                         {payInvoicePayments.map(
                                             (item, index) => {
                                                 const {
@@ -296,9 +313,12 @@ export default class NWCPendingPayments extends React.Component<
                                                                     }}
                                                                 >
                                                                     <Text
-                                                                        style={
-                                                                            styles.displayName
-                                                                        }
+                                                                        style={{
+                                                                            ...styles.displayName,
+                                                                            color: themeColor(
+                                                                                'text'
+                                                                            )
+                                                                        }}
                                                                     >
                                                                         {
                                                                             item.connectionName
@@ -314,13 +334,16 @@ export default class NWCPendingPayments extends React.Component<
                                                                 </View>
                                                                 {decodedInvoice && (
                                                                     <Text
-                                                                        style={
-                                                                            styles.expiryLabel
-                                                                        }
+                                                                        style={{
+                                                                            ...styles.expiryLabel,
+                                                                            color: themeColor(
+                                                                                'secondaryText'
+                                                                            )
+                                                                        }}
                                                                     >
-                                                                        Time
-                                                                        Until
-                                                                        Expiry
+                                                                        {localeString(
+                                                                            'views.Invoice.expiration'
+                                                                        )}
                                                                     </Text>
                                                                 )}
                                                             </View>
@@ -499,19 +522,9 @@ const styles = StyleSheet.create({
     },
     emptyText: {
         fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 16,
-        color: themeColor('secondaryText')
-    },
-    sectionLabel: {
-        fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('secondaryText'),
-        fontSize: 14,
-        marginBottom: 8,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5
+        fontSize: 16
     },
     listContainer: {
-        backgroundColor: themeColor('card'), // Assuming card or similar background if needed, but keeping transparent for now as per modal
         borderRadius: 12,
         paddingVertical: 4,
         marginBottom: 20
@@ -528,25 +541,13 @@ const styles = StyleSheet.create({
     },
     displayName: {
         fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('text'),
         fontSize: 17,
         fontWeight: '600',
         marginBottom: 4
     },
-    connectionName: {
-        fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('secondaryText'),
-        fontSize: 14
-    },
-    expiryText: {
-        fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('secondaryText'),
-        fontSize: 13,
-        marginTop: 4
-    },
+
     expiryLabel: {
         fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('secondaryText'),
         fontSize: 13,
         marginTop: 4
     },
@@ -562,7 +563,6 @@ const styles = StyleSheet.create({
     },
     totalLabel: {
         fontFamily: 'PPNeueMontreal-Book',
-        color: themeColor('secondaryText'),
         fontSize: 14,
         marginBottom: 8,
         textTransform: 'uppercase',
