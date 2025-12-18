@@ -190,6 +190,7 @@ export default class NostrWalletConnectStore {
     @observable public iosBackgroundTimeRemaining: number = 0;
     @observable public iosHandoffInProgress: boolean = false;
     @observable public isProcessingPendingPayInvoices: boolean = false;
+    @observable public isAllPendingPaymentsSuccessful: boolean = false;
     @observable public processedPendingPayInvoiceEventIds: string[] = [];
     @observable public failedPendingPayInvoiceEventIds: string[] = [];
     @observable public pendingPayInvoiceErrors: Map<string, string> = new Map();
@@ -829,10 +830,27 @@ export default class NostrWalletConnectStore {
             console.error('failed to save pending payment');
         }
     };
-    public deletePendingPayments = async () => {
+    public deleteAllPendingPayments = async () => {
         try {
             await Storage.setItem(NWC_PENDING_PAYMENTS, []);
             return true;
+        } catch (error) {
+            console.error('failed to delete pending payment');
+            return false;
+        }
+    };
+    public deletePendingPaymentById = async (deleteId: string) => {
+        try {
+            const result = await Storage.getItem(NWC_PENDING_PAYMENTS);
+            if (result) {
+                const pendingPayments: PendingPayment[] = JSON.parse(result);
+                const newpendingPayments = pendingPayments.filter(
+                    (item) => item.eventId !== deleteId
+                );
+                await Storage.setItem(NWC_PENDING_PAYMENTS, newpendingPayments);
+                return true;
+            }
+            return false;
         } catch (error) {
             console.error('failed to delete pending payment');
             return false;
@@ -3539,6 +3557,7 @@ export default class NostrWalletConnectStore {
                     amount: result.value.event.amount,
                     connectionName: result.value.event.connectionName
                 });
+                await this.deletePendingPaymentById(result.value.event.eventId);
             }
         }
         remainingEvents = remainingEvents.filter(
@@ -3595,7 +3614,11 @@ export default class NostrWalletConnectStore {
         } else {
             if (!this.isInNWCPendingPaymentsView)
                 this.modalStore.toggleNWCPendingPaymentsModal({});
-            await this.deletePendingPayments();
+            runInAction(() => {
+                this.isAllPendingPaymentsSuccessful = true;
+            });
+            await this.deleteAllPendingPayments();
+
             runInAction(() => {
                 this.resetPendingPayInvoiceState();
             });
