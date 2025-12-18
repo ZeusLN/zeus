@@ -32,6 +32,7 @@ import UnitsStore from '../stores/UnitsStore';
 
 interface ChannelPickerProps {
     title?: string;
+    hideTitle?: boolean;
     displayValue?: string;
     onValueChange: (channels: Channel[]) => void;
     onCancel?: () => void;
@@ -205,6 +206,7 @@ export default class ChannelPicker extends React.Component<
     render() {
         const {
             title,
+            hideTitle,
             onValueChange,
             onCancel,
             ChannelsStore,
@@ -326,15 +328,17 @@ export default class ChannelPicker extends React.Component<
                 </Modal>
 
                 <View style={{ ...containerStyle, ...styles.field }}>
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('text'),
-                            marginLeft: 8
-                        }}
-                    >
-                        {title || DEFAULT_TITLE}
-                    </Text>
+                    {!hideTitle && (
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('text'),
+                                marginLeft: 8
+                            }}
+                        >
+                            {title || DEFAULT_TITLE}
+                        </Text>
+                    )}
                     {valueSet ? (
                         <TouchableOpacity
                             onPress={() => {
