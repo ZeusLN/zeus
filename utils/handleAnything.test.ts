@@ -28,7 +28,8 @@ jest.mock('./TorUtils', () => ({}));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => false,
-    supportsCashuWallet: () => false
+    supportsCashuWallet: () => false,
+    supportsWithdrawalRequests: () => false
 }));
 jest.mock('../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
@@ -390,6 +391,67 @@ describe('handleAnything', () => {
             const result = await handleAnything(data, undefined, true);
 
             expect(result).toEqual(true);
+        });
+    });
+
+    describe('merchant legacy invoice conversion', () => {
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockReset();
+            mockIsValidBitcoinAddress = false;
+            mockIsValidLightningPubKey = false;
+            mockIsValidLightningPaymentRequest = false;
+            mockSupportsOnchainSends = true;
+            mockGetLnurlParams = {};
+        });
+
+        it('should handle picknpay legacy invoice like an invalid lightning input', async () => {
+            const legacyInvoice =
+                '00020129530019za.co.electrum.picknpay0122RD2HAK3KTI53EC/confirm520458125303710540115802ZA5916cryptoqrtestscan6002CT63049BE2';
+
+            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
+
+            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        });
+
+        it('should handle ecentric legacy invoice like an invalid lightning input', async () => {
+            const legacyInvoice =
+                '00020129530019za.co.ecentric.payment0122RD2HAK3KTI53EC/confirm520458125303710540115802ZA5916cryptoqrtestscan6002CT63049BE2';
+
+            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
+
+            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        });
+
+        it('should respect signet network when handling legacy invoices', async () => {
+            require('../stores/Stores').nodeInfoStore.nodeInfo = {
+                isSigNet: true
+            };
+
+            const legacyInvoice =
+                '00020129530019za.co.electrum.picknpay0122RD2HAK3KTI53EC/confirm520458125303710540115802ZA5916cryptoqrtestscan6002CT63049BE2';
+
+            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
+
+            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        });
+
+        it('should return false for legacy invoice when pasted from clipboard', async () => {
+            const legacyInvoice =
+                '00020129530019za.co.ecentric.payment0122RD2HAK3KTI53EC/confirm6304ABCD';
+
+            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
+
+            const result = await handleAnything(legacyInvoice, undefined, true);
+            expect(result).toEqual(false);
+        });
+
+        it('should treat non-matching legacy invoice as invalid input', async () => {
+            const legacyInvoice =
+                '00020129530019za.co.unrelated.merchant0122RD2HAK3KTI53EC/confirm6304ABCD';
+
+            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
+
+            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
         });
     });
 });
