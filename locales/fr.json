@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "Afficher un champ de préimage personnalisé",
     "views.Settings.Invoices.memoExplainer": "Un mémo par défaut à utiliser pour vos factures.",
     "views.Settings.Invoices.receiverNameExplainer": "Un nom de destinataire qui est ajouté à toutes vos factures, pour aider les payeurs à identifier à qui ils paient.",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "Paramètres des canaux",
     "views.Settings.Privacy.blockExplorer": "Explorateur de blocs par défaut",
     "views.Settings.Privacy.BlockExplorer.custom": "Personnalisé",

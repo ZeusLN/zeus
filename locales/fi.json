@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "Näytä mukautettu alkukuvakenttä",
     "views.Settings.Invoices.memoExplainer": "Laskuissa käytettävä oletusmuistio.",
     "views.Settings.Invoices.receiverNameExplainer": "Vastaanottajan nimi, joka lisätään kaikkiin laskuihisi, jotta maksajat voivat tunnistaa, kenelle he maksavat.",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "Kanava-asetukset",
     "views.Settings.Privacy.blockExplorer": "Oletus lohkoketjuselain",
     "views.Settings.Privacy.BlockExplorer.custom": "Mukautettu",

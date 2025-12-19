@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "顯示自訂驗證碼的輸入欄位",
     "views.Settings.Invoices.memoExplainer": "你開出去的帳單上的備註的預設值。",
     "views.Settings.Invoices.receiverNameExplainer": "你開出去的帳單上都會有的收款人名稱，可以給付款人識別付給了誰。",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "管道設定",
     "views.Settings.Privacy.blockExplorer": "預設的區塊探索網站",
     "views.Settings.Privacy.BlockExplorer.custom": "自訂",
