@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "कस्टम प्रीइमेज फील्ड दिखाएं",
     "views.Settings.Invoices.memoExplainer": "आपके इनवॉइस के लिए उपयोग करने हेतु एक डिफॉल्ट मेमो।",
     "views.Settings.Invoices.receiverNameExplainer": "एक प्राप्तकर्ता नाम जो आपके सभी इनवॉइस में जोड़ा जाता है, जिससे भुगतानकर्ताओं को यह पहचानने में मदद मिलती है कि वे किसे भुगतान कर रहे हैं।",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "चैनल्स सेटिंग्स",
     "views.Settings.Privacy.blockExplorer": "डिफॉल्ट ब्लॉक एक्सप्लोरर",
     "views.Settings.Privacy.BlockExplorer.custom": "कस्टम",
