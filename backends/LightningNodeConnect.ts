@@ -695,4 +695,5 @@ export default class LightningNodeConnect {
     supportsForwardingHistory = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
+    supportsSettingInvoiceExpiration = () => true;
 }

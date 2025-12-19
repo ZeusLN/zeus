@@ -440,4 +440,5 @@ export default class EmbeddedLND extends LND {
     supportsForwardingHistory = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => true;
+    supportsSettingInvoiceExpiration = () => true;
 }

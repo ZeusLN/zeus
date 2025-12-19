@@ -172,4 +172,5 @@ export default class LndHub extends LND {
     supportInboundFees = () => false;
     supportsDevTools = () => true;
     supportsCashuWallet = () => false;
+    supportsSettingInvoiceExpiration = () => false;
 }
