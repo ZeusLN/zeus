@@ -4,6 +4,10 @@ BUILDER_IMAGE="reactnativecommunity/react-native-android@sha256:c390bfb35a15ffdf
 CONTAINER_NAME="zeus_builder_container"
 ZEUS_PATH=/olympus/zeus
 
+# SOURCE_DATE_EPOCH for reproducible builds - set to a fixed timestamp
+# Can use the timestamp of a release commit (or use 0 for epoch)
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-0}"
+
 # Default options for the Docker command
 TTY_FLAG="-it"
 
@@ -16,8 +20,10 @@ while [[ "$#" -gt 0 ]]; do
     shift
 done
 
-# Run the Docker command
-docker run --rm $TTY_FLAG --name $CONTAINER_NAME -v "$(pwd):$ZEUS_PATH" $BUILDER_IMAGE bash -c \
+# Run the Docker command with SOURCE_DATE_EPOCH for reproducible builds
+docker run --rm $TTY_FLAG --name $CONTAINER_NAME \
+    -e SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH \
+    -v "$(pwd):$ZEUS_PATH" $BUILDER_IMAGE bash -c \
      'echo -e "\n\n********************************\n*** Building ZEUS...\n********************************\n" && \
       cd /olympus/zeus ; yarn install --frozen-lockfile && \
       cd /olympus/zeus/android ; ./gradlew app:assembleRelease && \
