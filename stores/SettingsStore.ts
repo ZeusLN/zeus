@@ -72,6 +72,11 @@ export enum PosEnabled {
     Standalone = 'standalone'
 }
 
+export enum DefaultInvoiceType {
+    Unified = 'unified',
+    Lightning = 'lightning'
+}
+
 interface PosSettings {
     posEnabled?: PosEnabled;
     squareEnabled?: boolean;
@@ -110,6 +115,7 @@ interface InvoicesSettings {
     blindedPaths: boolean;
     showCustomPreimageField?: boolean;
     displayAmountOnInvoice?: boolean; // deprecated
+    defaultInvoiceType?: DefaultInvoiceType;
 }
 
 interface ChannelsSettings {
@@ -1187,6 +1193,19 @@ export const DEFAULT_VIEW_KEYS_POS = [
     }
 ];
 
+export const DEFAULT_INVOICE_TYPE_KEYS = [
+    {
+        key: 'Unified',
+        translateKey: 'general.unified',
+        value: DefaultInvoiceType.Unified
+    },
+    {
+        key: 'Lightning',
+        translateKey: 'general.lightning',
+        value: DefaultInvoiceType.Lightning
+    }
+];
+
 export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
 export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
@@ -1382,7 +1401,8 @@ export default class SettingsStore {
             ampInvoice: false,
             blindedPaths: false,
             showCustomPreimageField: false,
-            displayAmountOnInvoice: false // deprecated
+            displayAmountOnInvoice: false, // deprecated
+            defaultInvoiceType: DefaultInvoiceType.Lightning
         },
         channels: {
             min_confs: 1,

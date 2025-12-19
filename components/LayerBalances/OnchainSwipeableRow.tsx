@@ -60,8 +60,8 @@ export default class OnchainSwipeableRow extends Component<
             if (text === localeString('general.receive')) {
                 navigation.navigate('Receive', {
                     account: account === 'On-chain' ? 'default' : account,
-                    selectedIndex: 2,
-                    autoGenerateOnChain: true
+                    autoGenerateOnChain: true,
+                    forceOnChain: true
                 });
             } else if (text === localeString('general.coins')) {
                 navigation.navigate('CoinControl', { account });

@@ -126,4 +126,5 @@ export default class NostrWalletConnect {
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;
     supportsCashuWallet = () => false;
+    supportsSettingInvoiceExpiration = () => false;
 }

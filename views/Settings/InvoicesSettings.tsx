@@ -15,7 +15,11 @@ import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import { Spacer } from '../../components/layout/Spacer';
 
-import SettingsStore, { TIME_PERIOD_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    TIME_PERIOD_KEYS,
+    DEFAULT_INVOICE_TYPE_KEYS,
+    DefaultInvoiceType
+} from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -39,6 +43,7 @@ interface InvoicesSettingsState {
     ampInvoice: boolean;
     blindedPaths: boolean;
     showCustomPreimageField: boolean;
+    defaultInvoiceType: DefaultInvoiceType;
 }
 
 @inject('SettingsStore')
@@ -57,7 +62,8 @@ export default class InvoicesSettings extends React.Component<
         routeHints: false,
         ampInvoice: false,
         blindedPaths: false,
-        showCustomPreimageField: false
+        showCustomPreimageField: false,
+        defaultInvoiceType: DefaultInvoiceType.Lightning
     };
 
     async componentDidMount() {
@@ -76,7 +82,10 @@ export default class InvoicesSettings extends React.Component<
             ampInvoice: settings?.invoices?.ampInvoice || false,
             blindedPaths: settings?.invoices?.blindedPaths || false,
             showCustomPreimageField:
-                settings?.invoices?.showCustomPreimageField || false
+                settings?.invoices?.showCustomPreimageField || false,
+            defaultInvoiceType:
+                settings?.invoices?.defaultInvoiceType ||
+                DefaultInvoiceType.Lightning
         });
     }
 
@@ -102,9 +111,10 @@ export default class InvoicesSettings extends React.Component<
             routeHints,
             ampInvoice,
             blindedPaths,
-            showCustomPreimageField
+            showCustomPreimageField,
+            defaultInvoiceType
         } = this.state;
-        const { implementation, settings, updateSettings }: any = SettingsStore;
+        const { settings, updateSettings }: any = SettingsStore;
 
         const ADDRESS_TYPES = [];
 
@@ -225,7 +235,45 @@ export default class InvoicesSettings extends React.Component<
                         />
                     </>
 
-                    {implementation !== 'lndhub' && (
+                    {BackendUtils.supportsOnchainReceiving() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    paddingTop: 10
+                                }}
+                                infoModalText={localeString(
+                                    'views.Settings.Invoices.defaultInvoiceType.explainer'
+                                )}
+                            >
+                                {localeString(
+                                    'views.Settings.Invoices.defaultInvoiceType'
+                                )}
+                            </Text>
+                            <DropdownSetting
+                                selectedValue={defaultInvoiceType}
+                                values={DEFAULT_INVOICE_TYPE_KEYS}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
+                                onValueChange={async (value: string) => {
+                                    this.setState({
+                                        defaultInvoiceType:
+                                            value as DefaultInvoiceType
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            ...settings.invoices,
+                                            defaultInvoiceType: value
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {BackendUtils.supportsSettingInvoiceExpiration() && (
                         <>
                             <Text
                                 style={{
