@@ -2142,6 +2142,7 @@ export default class Receive extends React.Component<
                                             lightningAddress && (
                                                 <CollapsedQR
                                                     value={`lightning:${lightningAddress}`}
+                                                    copyValue={lightningAddress}
                                                     iconOnly={true}
                                                     iconContainerStyle={{
                                                         marginRight: 40
