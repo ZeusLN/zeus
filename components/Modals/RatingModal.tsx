@@ -62,7 +62,9 @@ export default class RatingModal extends React.Component<
         const { ModalStore } = this.props;
         ModalStore?.toggleRatingModal(false);
 
-        this.setState({ rating: 0, viewState: 'initial' });
+        setTimeout(() => {
+            this.setState({ rating: 0, viewState: 'initial' });
+        }, 400);
     };
 
     renderStars = () => {
@@ -143,10 +145,12 @@ export default class RatingModal extends React.Component<
             <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => {
-                    Linking.openURL(
-                        `mailto:support@zeusln.com?subject=Feedback (Rating: ${this.state.rating} stars)`
-                    );
                     this.handleClose();
+                    setTimeout(() => {
+                        Linking.openURL(
+                            `mailto:support@zeusln.com?subject=Feedback (Rating: ${this.state.rating} stars)`
+                        );
+                    }, 400);
                 }}
             >
                 <Text style={[styles.actionText, styles.bold]}>
@@ -234,6 +238,7 @@ export default class RatingModal extends React.Component<
                 style={styles.modalBox}
                 onClosed={this.handleClose}
                 position="center"
+                entry="center"
                 swipeToClose={false}
                 backButtonClose={false}
                 backdropPressToClose={false}

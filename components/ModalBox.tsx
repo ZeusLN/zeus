@@ -351,26 +351,40 @@ export default class ModalBox extends React.PureComponent<
                     // Fallback for undefined positionDest
                     positionDest = positionDest ?? 0;
 
-                    const animOpen = Animated.timing(this.state.position, {
-                        toValue: positionDest,
-                        duration: this.props.animationDuration,
-                        easing: this.props.easing,
-                        useNativeDriver: this.props.useNativeDriver ?? true
-                    });
-
-                    this.setState({ animOpen });
-
-                    animOpen.start(() => {
-                        this.setState({
-                            isAnimateOpen: false,
-                            animOpen,
-                            positionDest
+                    if (this.props.entry === 'center') {
+                        this.state.position.setValue(positionDest);
+                        const animOpen = Animated.timing(this.state.position, {
+                            toValue: positionDest,
+                            duration: 0,
+                            useNativeDriver: this.props.useNativeDriver ?? true
+                        });
+                        this.setState({ animOpen, positionDest });
+                        animOpen.start(() => {
+                            this.setState({ isAnimateOpen: false });
+                            if (this.props.onOpened) this.props.onOpened();
+                        });
+                    } else {
+                        const animOpen = Animated.timing(this.state.position, {
+                            toValue: positionDest,
+                            duration: this.props.animationDuration,
+                            easing: this.props.easing,
+                            useNativeDriver: this.props.useNativeDriver ?? true
                         });
 
-                        if (this.props.onOpened) {
-                            this.props.onOpened();
-                        }
-                    });
+                        this.setState({ animOpen });
+
+                        animOpen.start(() => {
+                            this.setState({
+                                isAnimateOpen: false,
+                                animOpen,
+                                positionDest
+                            });
+
+                            if (this.props.onOpened) {
+                                this.props.onOpened();
+                            }
+                        });
+                    }
                 });
             }
         );
@@ -401,33 +415,45 @@ export default class ModalBox extends React.PureComponent<
                 isOpen: false
             },
             () => {
-                const animClose = Animated.timing(this.state.position, {
-                    toValue:
-                        this.props.entry === 'top'
-                            ? -this.state.containerHeight
-                            : this.state.containerHeight,
-                    duration: this.props.animationDuration,
-                    easing: this.props.easing,
-                    useNativeDriver: this.props.useNativeDriver ?? true
-                });
-                // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
-                animClose.start(() => {
-                    this.setState(
-                        {
-                            isAnimateClose: false,
-                            animClose
-                        },
-                        () => {
-                            /* Set the state to the starting position of the modal, preventing from animating where the swipe stopped */
-                            this.state.position.setValue(
-                                this.props.entry === 'top'
-                                    ? -this.state.containerHeight
-                                    : this.state.containerHeight
-                            );
-                        }
-                    );
-                });
-                if (this.props.onClosed) this.props.onClosed();
+                if (this.props.entry === 'center') {
+                    const animClose = Animated.timing(this.state.position, {
+                        toValue: this.state.positionDest || 0,
+                        duration: 0,
+                        useNativeDriver: this.props.useNativeDriver ?? true
+                    });
+                    animClose.start(() => {
+                        this.setState({ isAnimateClose: false, animClose });
+                        if (this.props.onClosed) this.props.onClosed();
+                    });
+                } else {
+                    const animClose = Animated.timing(this.state.position, {
+                        toValue:
+                            this.props.entry === 'top'
+                                ? -this.state.containerHeight
+                                : this.state.containerHeight,
+                        duration: this.props.animationDuration,
+                        easing: this.props.easing,
+                        useNativeDriver: this.props.useNativeDriver ?? true
+                    });
+                    // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
+                    animClose.start(() => {
+                        this.setState(
+                            {
+                                isAnimateClose: false,
+                                animClose
+                            },
+                            () => {
+                                /* Set the state to the starting position of the modal, preventing from animating where the swipe stopped */
+                                this.state.position.setValue(
+                                    this.props.entry === 'top'
+                                        ? -this.state.containerHeight
+                                        : this.state.containerHeight
+                                );
+                            }
+                        );
+                    });
+                    if (this.props.onClosed) this.props.onClosed();
+                }
             }
         );
     }
@@ -632,7 +658,11 @@ export default class ModalBox extends React.PureComponent<
                         transform: [
                             { translateY: this.state.position },
                             { translateX: offsetX }
-                        ]
+                        ],
+                        opacity:
+                            this.props.entry === 'center'
+                                ? this.state.backdropOpacity
+                                : 1
                     }
                 ]}
                 {...this.state.pan.panHandlers}
