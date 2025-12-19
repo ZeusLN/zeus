@@ -2211,6 +2211,7 @@ export default class Receive extends React.Component<
                                             !creatingInvoice && (
                                                 <CollapsedQR
                                                     value={`lightning:${lightningAddress}`}
+                                                    copyValue={lightningAddress}
                                                     iconOnly={true}
                                                     iconContainerStyle={{
                                                         marginRight: 40
