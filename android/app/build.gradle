@@ -169,6 +169,12 @@ android {
         }
     }
 
+    // Reproducible build settings
+    tasks.withType(Zip).configureEach {
+        reproducibleFileOrder = true
+        preserveFileTimestamps = false
+    }
+
     sourceSets {
         main {
             proto {
