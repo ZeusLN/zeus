@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "显示自定义预映像字段",
     "views.Settings.Invoices.memoExplainer": "用于发票的默认备注。",
     "views.Settings.Invoices.receiverNameExplainer": "在所有发票中添加的收款人名称，用于帮助付款方识别他们正在支付给谁。",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "通道设置",
     "views.Settings.Privacy.blockExplorer": "默认区块链浏览器",
     "views.Settings.Privacy.BlockExplorer.custom": "自定义",

@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "Zobrazit vlastní pole s předobrazem",
     "views.Settings.Invoices.memoExplainer": "Výchozí poznámka, která bude použita ve vašich fakturách.",
     "views.Settings.Invoices.receiverNameExplainer": "Jméno příjemce, které je přidáno ke všem vašim fakturám. Plátcům pomáhá identifikovat, komu platí.",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "Nastavení kanálů",
     "views.Settings.Privacy.blockExplorer": "Výchozí průzkumník bloků",
     "views.Settings.Privacy.BlockExplorer.custom": "Vlastní",
