@@ -227,6 +227,7 @@ export default class LightningAddress extends React.Component<
                     onPress={() =>
                         navigation.navigate('QR', {
                             value: `lightning:${address}`,
+                            copyValue: address,
                             label: address,
                             hideText: true,
                             jumboLabel: true,
