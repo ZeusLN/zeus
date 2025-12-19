@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "Show custom preimage field",
     "views.Settings.Invoices.memoExplainer": "Một ghi chú mặc định để sử dụng cho hóa đơn của bạn.",
     "views.Settings.Invoices.receiverNameExplainer": "Một tên người nhận được thêm vào tất cả các hóa đơn của bạn, để giúp người trả tiền xác định người họ đang thanh toán đến.",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "Thiết lập kênh",
     "views.Settings.Privacy.blockExplorer": "Trình khám phá khối mặc định ",
     "views.Settings.Privacy.BlockExplorer.custom": "Tuỳ chỉnh",
