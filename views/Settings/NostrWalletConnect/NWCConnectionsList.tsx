@@ -53,6 +53,7 @@ interface NWCConnectionsListState {
     connectionsLoading: boolean;
     error: string;
     filter: ConnectionFilter;
+    hasPendingPayments: boolean;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -67,7 +68,8 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: ConnectionFilter.All
+            filter: ConnectionFilter.All,
+            hasPendingPayments: false
         };
     }
 
@@ -79,6 +81,23 @@ export default class NWCConnectionsList extends React.Component<
     componentWillUnmount() {
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
+    }
+    async getPendingPayments() {
+        try {
+            this.setState({ connectionsLoading: true });
+            const { NostrWalletConnectStore } = this.props;
+            const pendingPayments =
+                await NostrWalletConnectStore.getPendingPayments();
+            this.setState({
+                hasPendingPayments: pendingPayments.length > 0,
+                connectionsLoading: false
+            });
+        } catch (e) {
+            this.setState({
+                error: (e as Error).message,
+                connectionsLoading: false
+            });
+        }
     }
     async getConnections() {
         try {
@@ -105,6 +124,7 @@ export default class NWCConnectionsList extends React.Component<
     }
     handleFocus = async () => {
         await this.getConnections();
+        await this.getPendingPayments();
     };
     getFilterOptions = () => {
         const { connections } = this.props.NostrWalletConnectStore;
@@ -387,7 +407,7 @@ export default class NWCConnectionsList extends React.Component<
         const { NostrWalletConnectStore, navigation, SettingsStore } =
             this.props;
         const { connections, loading } = NostrWalletConnectStore;
-        const { connectionsLoading, error } = this.state;
+        const { connectionsLoading, error, hasPendingPayments } = this.state;
 
         return (
             <Screen>
@@ -432,19 +452,21 @@ export default class NWCConnectionsList extends React.Component<
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'NWCPendingPayments'
-                                        )
-                                    }
-                                >
-                                    <ClockIcon
-                                        color={themeColor('bitcoin')}
-                                        width={30}
-                                        height={30}
-                                    />
-                                </TouchableOpacity>
+                                {hasPendingPayments && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'NWCPendingPayments'
+                                            )
+                                        }
+                                    >
+                                        <ClockIcon
+                                            color={themeColor('bitcoin')}
+                                            width={30}
+                                            height={30}
+                                        />
+                                    </TouchableOpacity>
+                                )}
 
                                 {!(
                                     Platform.OS === 'ios' &&
