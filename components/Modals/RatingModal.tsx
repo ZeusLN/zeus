@@ -5,7 +5,8 @@ import {
     Text,
     TouchableOpacity,
     Linking,
-    Platform
+    Platform,
+    Image
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -20,6 +21,8 @@ import {
 } from '../../utils/RatingUtils';
 
 import ModalStore from '../../stores/ModalStore';
+
+const ZEUS = require('../../assets/images/ZEUS.jpg');
 
 interface RatingModalProps {
     ModalStore?: ModalStore;
@@ -84,6 +87,7 @@ export default class RatingModal extends React.Component<
 
     renderInitialView = (storeName: string) => (
         <>
+            <Image source={ZEUS} style={styles.appIcon} />
             <Text style={[styles.title, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.enjoyingZeus')}
             </Text>
@@ -169,6 +173,7 @@ export default class RatingModal extends React.Component<
 
     renderHighRatingView = () => (
         <>
+            <Image source={ZEUS} style={styles.appIcon} />
             <Text style={[styles.title, { color: themeColor('qr') }]}>
                 {localeString('components.RatingModal.thankYouFeedback')}
             </Text>
@@ -259,6 +264,12 @@ const styles = StyleSheet.create({
         paddingTop: 20,
         width: '100%',
         borderRadius: 14
+    },
+    appIcon: {
+        width: 60,
+        height: 60,
+        borderRadius: 12,
+        marginBottom: 16
     },
     title: {
         fontSize: 20,
