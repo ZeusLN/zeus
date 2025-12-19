@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "Afișați câmpul preimage personalizat",
     "views.Settings.Invoices.memoExplainer": "O notă implicită de utilizat pentru facturi.",
     "views.Settings.Invoices.receiverNameExplainer": "Un nume de destinatar care este adăugat la toate facturile dvs., pentru a ajuta plătitorii să identifice pe cine plătesc.",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "Setări canale",
     "views.Settings.Privacy.blockExplorer": "Explorator de blocuri implicit",
     "views.Settings.Privacy.BlockExplorer.custom": "Valoare",
