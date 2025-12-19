@@ -977,6 +977,8 @@
     "views.Settings.Invoices.showCustomPreimageField": "프리이미지 직접 입력란 표시",
     "views.Settings.Invoices.memoExplainer": "인보이스에 사용할 기본 메모입니다.",
     "views.Settings.Invoices.receiverNameExplainer": "모든 인보이스에 추가되는 수신자명으로, 결제자가 결제 대상자를 식별하는 데 도움이 됩니다.",
+    "views.Settings.Invoices.defaultInvoiceType": "Default invoice type",
+    "views.Settings.Invoices.defaultInvoiceType.explainer": "When creating an invoice from the keypad view, set whether the default is a unified (Bitcoin + Lightning) or Lightning-only invoice.",
     "views.Settings.Channels.title": "채널 설정",
     "views.Settings.Privacy.blockExplorer": "기본 블록 탐색기",
     "views.Settings.Privacy.BlockExplorer.custom": "사용자 정의",
