@@ -1210,7 +1210,7 @@ export const POS_ENABLED_KEYS = [
     },
     {
         key: 'Standalone',
-        tanslateKey: 'views.Settings.POS.standalone',
+        translateKey: 'views.Settings.POS.standalone',
         value: PosEnabled.Standalone
     },
     { key: 'Square', value: PosEnabled.Square }
