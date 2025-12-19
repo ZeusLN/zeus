@@ -336,8 +336,8 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                     <View style={styles.icon}>
                                         <RebalanceIcon
                                             fill={themeColor('text')}
-                                            width={23}
-                                            height={23}
+                                            width={18}
+                                            height={18}
                                         />
                                     </View>
                                     <Text

@@ -33,6 +33,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
+import { font } from '../../utils/FontUtils';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import Channel from '../../models/Channel';
@@ -1346,7 +1347,7 @@ export default class Rebalance extends React.Component<
 
         return (
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
+                <Text style={styles.sectionTitleFancy}>
                     {localeString(titleKey)}
                 </Text>
                 {!selectedChannel && (
@@ -1358,6 +1359,7 @@ export default class Rebalance extends React.Component<
                         onChannelValidation={(channel: Channel) =>
                             this.validateChannelCapacity(channel, type)
                         }
+                        hideTitle
                     />
                 )}
                 {selectedChannel && (
@@ -1806,9 +1808,12 @@ const styles = StyleSheet.create({
         marginBottom: 24
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 20,
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    sectionTitleFancy: {
+        fontSize: 28,
+        fontFamily: font('marlideBold')
     },
     channelInfo: {
         padding: 6,
