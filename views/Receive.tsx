@@ -122,6 +122,7 @@ interface ReceiveProps {
             autoGenerateOnChain: boolean;
             autoGenerateChange?: boolean;
             forceLn?: boolean; // when coming from the LN balance slider action
+            forceOnChain?: boolean; // when coming from the on-chain balance slider action
             account: string;
             addressType?: string;
             selectedIndex: number;
@@ -328,6 +329,7 @@ export default class Receive extends React.Component<
                 settings.pos.confirmationPreference &&
                 settings.pos.confirmationPreference === 'lnOnly') ||
             route.params?.forceLn;
+        const onChainOnly = route.params?.forceOnChain;
 
         reset();
 
@@ -352,7 +354,7 @@ export default class Receive extends React.Component<
 
         if (selectedIndex !== undefined) {
             this.setState({ selectedIndex });
-        } else if (!lnOnly) {
+        } else if (!lnOnly && !onChainOnly) {
             this.setState({ selectedIndex: this.getDefaultIndex() });
         }
 
@@ -416,6 +418,12 @@ export default class Receive extends React.Component<
         if (lnOnly) {
             this.setState({
                 selectedIndex: 1
+            });
+        }
+
+        if (onChainOnly) {
+            this.setState({
+                selectedIndex: 2
             });
         }
 
@@ -1355,6 +1363,7 @@ export default class Receive extends React.Component<
                 settings.pos.confirmationPreference &&
                 settings.pos.confirmationPreference === 'lnOnly') ||
             route.params?.forceLn;
+        const onChainOnly = route.params?.forceOnChain;
 
         const lnurl = route.params?.lnurlParams;
 
@@ -1367,7 +1376,7 @@ export default class Receive extends React.Component<
                             account: 'default',
                             selectedIndex: route.params.selectedIndex
                         });
-                    } else if (!lnOnly) {
+                    } else if (!lnOnly && !onChainOnly) {
                         this.setState({
                             account: 'default',
                             selectedIndex: this.getDefaultIndex()
@@ -1695,7 +1704,7 @@ export default class Receive extends React.Component<
         const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
 
         const showButtonGroup =
-            !belowDustLimit && !lnOnly && !watchedInvoicePaid;
+            !belowDustLimit && !lnOnly && !onChainOnly && !watchedInvoicePaid;
 
         const showNfcButton =
             !(
@@ -3495,26 +3504,31 @@ export default class Receive extends React.Component<
                 </View>
                 {showAdvanced && showButtonGroup && (
                     <View style={{ bottom: 0 }}>
-                        {!belowDustLimit && !lnOnly && !watchedInvoicePaid && (
-                            <ButtonGroup
-                                onPress={this.updateIndex}
-                                selectedIndex={selectedIndex}
-                                buttons={buttons}
-                                selectedButtonStyle={{
-                                    backgroundColor: themeColor('highlight'),
-                                    borderRadius: 12
-                                }}
-                                containerStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 12,
-                                    borderWidth: 0,
-                                    height: 80
-                                }}
-                                innerBorderStyle={{
-                                    color: themeColor('secondary')
-                                }}
-                            />
-                        )}
+                        {!belowDustLimit &&
+                            !lnOnly &&
+                            !onChainOnly &&
+                            !watchedInvoicePaid && (
+                                <ButtonGroup
+                                    onPress={this.updateIndex}
+                                    selectedIndex={selectedIndex}
+                                    buttons={buttons}
+                                    selectedButtonStyle={{
+                                        backgroundColor:
+                                            themeColor('highlight'),
+                                        borderRadius: 12
+                                    }}
+                                    containerStyle={{
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        borderRadius: 12,
+                                        borderWidth: 0,
+                                        height: 80
+                                    }}
+                                    innerBorderStyle={{
+                                        color: themeColor('secondary')
+                                    }}
+                                />
+                            )}
                     </View>
                 )}
                 <ModalBox
