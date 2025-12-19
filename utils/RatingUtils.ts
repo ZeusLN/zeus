@@ -1,7 +1,7 @@
 import { Linking, Platform } from 'react-native';
 
 export const APP_STORE_ID = '1456038895';
-export const ANDROID_PACKAGE = 'com.zeusln.zeus';
+export const ANDROID_PACKAGE = 'app.zeusln.zeus';
 
 export const LOW_RATING_THRESHOLD = 2;
 export const RATING_MODAL_TRIGGER_DELAY = 1000;
