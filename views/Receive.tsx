@@ -1704,7 +1704,11 @@ export default class Receive extends React.Component<
         const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
 
         const showButtonGroup =
-            !belowDustLimit && !lnOnly && !onChainOnly && !watchedInvoicePaid;
+            !belowDustLimit &&
+            !lnOnly &&
+            !onChainOnly &&
+            !watchedInvoicePaid &&
+            haveInvoice;
 
         const showNfcButton =
             !(
