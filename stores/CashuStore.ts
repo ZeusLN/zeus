@@ -367,6 +367,21 @@ export default class CashuStore {
     };
 
     @action
+    public setReceiveMint = async (mintUrl: string) => {
+        this.clearInvoice();
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrl`,
+            mintUrl
+        );
+
+        runInAction(() => {
+            this.selectedMintUrl = mintUrl;
+        });
+
+        return mintUrl;
+    };
+
+    @action
     public setSelectedMintUrls = async (mintUrls: string[]) => {
         this.clearInvoice();
 

@@ -22,6 +22,7 @@ interface EcashMintPickerProps {
     hideAmount?: boolean;
     disabled?: boolean;
     setFromCashuSend?: (value: boolean) => void;
+    isReceiveView?: boolean;
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -112,7 +113,7 @@ export default class EcashMintPicker extends React.Component<
             </Row>
         );
 
-        if (multiMint) {
+        if (multiMint && !this.props.isReceiveView) {
             if (selectedMintUrls.length === 0) {
                 return (
                     <View style={{ flex: 1, flexDirection: 'row' }}>
@@ -259,7 +260,12 @@ export default class EcashMintPicker extends React.Component<
         return (
             <View style={{ flex: 1, flexDirection: 'row' }}>
                 <TouchableOpacity
-                    onPress={() => navigation.navigate('Mints')}
+                    onPress={() =>
+                        navigation.navigate('Mints', {
+                            forceSingleMint:
+                                multiMint && this.props.isReceiveView
+                        })
+                    }
                     style={{
                         opacity: disabled ? 0.25 : 1,
                         backgroundColor: themeColor('secondary'),

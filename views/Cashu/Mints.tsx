@@ -30,7 +30,7 @@ interface MintsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     SettingsStore: SettingsStore;
-    route: Route<'Mints'>;
+    route: Route<'Mints', { forceSingleMint: boolean }>;
 }
 
 interface MintsState {
@@ -121,7 +121,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         } = CashuStore;
 
         const { settings } = SettingsStore;
-        const multiMint = settings.ecash.enableMultiMint;
+        const forceSingleMint = this.props.route.params?.forceSingleMint;
+
+        const multiMint = settings.ecash.enableMultiMint && !forceSingleMint;
 
         const AddMintButton = () => (
             <TouchableOpacity
@@ -202,10 +204,19 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             if (isDisabled) {
                                                 return;
                                             }
-                                            if (multiMint) {
+                                            const forceSingleMint =
+                                                this.props.route.params
+                                                    ?.forceSingleMint;
+
+                                            if (multiMint && !forceSingleMint) {
                                                 await toggleMintSelection(
                                                     mintInfo?.mintUrl
                                                 );
+                                            } else if (forceSingleMint) {
+                                                await CashuStore.setReceiveMint(
+                                                    mintInfo?.mintUrl
+                                                );
+                                                navigation.goBack();
                                             } else {
                                                 await setSelectedMint(
                                                     mintInfo?.mintUrl
