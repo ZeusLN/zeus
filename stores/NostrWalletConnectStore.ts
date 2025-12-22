@@ -812,27 +812,29 @@ export default class NostrWalletConnectStore {
         }
     };
     private savePendingPayments = async (pendingPayments: PendingPayment[]) => {
-        console.log('pendingPayments', pendingPayments);
         try {
             const existsPendingPayment = await Storage.getItem(
                 NWC_PENDING_PAYMENTS
             );
             if (existsPendingPayment) {
                 const prev: PendingPayment[] = JSON.parse(existsPendingPayment);
-                await Storage.setItem(NWC_PENDING_PAYMENTS, [
-                    ...prev,
-                    ...pendingPayments
-                ]);
+                await Storage.setItem(
+                    NWC_PENDING_PAYMENTS,
+                    JSON.stringify([...prev, ...pendingPayments])
+                );
                 return;
             }
-            await Storage.setItem(NWC_PENDING_PAYMENTS, pendingPayments);
+            await Storage.setItem(
+                NWC_PENDING_PAYMENTS,
+                JSON.stringify(pendingPayments)
+            );
         } catch (error) {
             console.error('failed to save pending payment');
         }
     };
     public deleteAllPendingPayments = async () => {
         try {
-            await Storage.setItem(NWC_PENDING_PAYMENTS, []);
+            await Storage.setItem(NWC_PENDING_PAYMENTS, JSON.stringify([]));
             return true;
         } catch (error) {
             console.error('failed to delete pending payment');
@@ -847,7 +849,10 @@ export default class NostrWalletConnectStore {
                 const newpendingPayments = pendingPayments.filter(
                     (item) => item.eventId !== deleteId
                 );
-                await Storage.setItem(NWC_PENDING_PAYMENTS, newpendingPayments);
+                await Storage.setItem(
+                    NWC_PENDING_PAYMENTS,
+                    JSON.stringify(newpendingPayments)
+                );
                 return true;
             }
             return false;
@@ -921,9 +926,10 @@ export default class NostrWalletConnectStore {
                 activity.type === 'make_invoice' &&
                 activity.status === 'pending'
             ) {
-                const isPaid = (await this.getDecodedInvoice(activity.id))!
-                    .isPaid;
-                if (isPaid) {
+                const decodedInvoice = await this.getDecodedInvoice(
+                    activity.id
+                );
+                if (decodedInvoice?.isPaid) {
                     runInAction(() => {
                         activity.status = 'success';
                     });
@@ -1397,7 +1403,7 @@ export default class NostrWalletConnectStore {
                             id: cashuInvoice.paymentRequest,
                             status: 'pending',
                             type: 'make_invoice',
-                            payment_source: 'lightning',
+                            payment_source: 'cashu',
                             paymentHash: paymentHash || '',
                             description: request.description || descriptionHash,
                             lastprocessAt: new Date(),
@@ -1481,7 +1487,6 @@ export default class NostrWalletConnectStore {
                 this.findAndUpdateConnection(connection);
             });
             this.saveConnections();
-            console.log('adding activity make invoice', connection.activity);
             this.showInvoiceCreatedNotification(
                 millisatsToSats(request.amount),
                 connection.name,
@@ -1986,7 +1991,7 @@ export default class NostrWalletConnectStore {
             }
 
             await this.finalizePayment({
-                id: request.preimage || request.pubkey,
+                id: payment_hash,
                 connection,
                 amountSats,
                 skipNotification,
@@ -2111,15 +2116,18 @@ export default class NostrWalletConnectStore {
                     balance: currentLightningBalance.toString()
                 }
             );
-            await this.recordFailedPayment(
-                request.invoice,
-                connection,
-                'pay_invoice',
-                amountSats,
-                'lightning',
-                errorMessage,
-                request.invoice
-            );
+            const { paymentHash, paymentRequest } =
+                NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            if (paymentHash || paymentRequest)
+                await this.recordFailedPayment(
+                    paymentHash || paymentRequest,
+                    connection,
+                    'pay_invoice',
+                    amountSats,
+                    'lightning',
+                    errorMessage,
+                    request.invoice
+                );
             return this.handleError(
                 errorMessage,
                 ErrorCodes.INSUFFICIENT_BALANCE
@@ -2141,16 +2149,20 @@ export default class NostrWalletConnectStore {
                 'stores.NostrWalletConnectStore.error.noPreimageReceived'
             )
         );
+
         if (paymentError) {
-            await this.recordFailedPayment(
-                request.invoice,
-                connection,
-                'pay_invoice',
-                amountSats,
-                'lightning',
-                paymentError.error?.message || 'Payment failed',
-                request.invoice
-            );
+            const { paymentHash, paymentRequest } =
+                NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            if (paymentHash || paymentRequest)
+                await this.recordFailedPayment(
+                    paymentHash || paymentRequest,
+                    connection,
+                    'pay_invoice',
+                    amountSats,
+                    'lightning',
+                    paymentError.error?.message || 'Payment failed',
+                    request.invoice
+                );
             return paymentError;
         }
         const preimage = this.transactionsStore.payment_preimage;
@@ -3321,19 +3333,10 @@ export default class NostrWalletConnectStore {
                                 error
                             );
                         }
-                        let alreadyPaid = false;
-                        try {
-                            alreadyPaid = (await this.getDecodedInvoice(
-                                invoice
-                            ))!.isPaid;
-                        } catch (checkError) {
-                            console.warn(
-                                'NWC: Failed to check if invoice is already paid',
-                                checkError
-                            );
-                        }
-
-                        if (!alreadyPaid) {
+                        const decodedInvoice = await this.getDecodedInvoice(
+                            invoice
+                        );
+                        if (!decodedInvoice?.isPaid) {
                             return {
                                 type: 'pay_invoice',
                                 eventStr,
@@ -3995,7 +3998,7 @@ export default class NostrWalletConnectStore {
         if (this.isCashuConfigured) {
             await this.cashuStore.getPayReq(invoice);
             const inv = this.cashuStore.payReq;
-            return inv!;
+            return inv || null;
         }
         const decoded = NostrConnectUtils.decodeInvoiceTags(invoice);
         try {
@@ -4003,13 +4006,23 @@ export default class NostrWalletConnectStore {
                 r_hash: decoded.paymentHash
             });
             return new Invoice(rawInvoice);
-        } catch (e) {}
+        } catch (e) {
+            console.log(
+                'NWC: Failed to decoded with lookupInvoice method',
+                (e as Error).message
+            );
+        }
         try {
             const rawInvoice = await BackendUtils.decodePaymentRequest([
                 decoded.paymentRequest
             ]);
             return new Invoice(rawInvoice);
-        } catch (e) {}
+        } catch (e) {
+            console.log(
+                'NWC: Failed to decoded with decodePaymentRequest method',
+                (e as Error).message
+            );
+        }
         return null;
     }
 

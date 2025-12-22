@@ -216,7 +216,8 @@ export default class NWCConnectionActivity extends React.Component<
                             await NostrWalletConnectStore.getDecodedInvoice(
                                 item.id
                             );
-                        navigation.navigate('Invoice', { invoice });
+                        if (invoice)
+                            navigation.navigate('Invoice', { invoice });
                     } catch (e) {
                         console.log('Navigation failed:', e);
                     }
