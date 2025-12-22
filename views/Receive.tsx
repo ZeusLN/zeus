@@ -3029,7 +3029,7 @@ export default class Receive extends React.Component<
                                                         <Row justify="space-between">
                                                             <View
                                                                 style={{
-                                                                    width: '95%'
+                                                                    flex: 1
                                                                 }}
                                                             >
                                                                 <KeyValue

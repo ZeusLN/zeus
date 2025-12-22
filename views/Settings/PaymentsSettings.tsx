@@ -134,8 +134,9 @@ export default class PaymentsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {`${localeString('general.lightning')} -${' '}
-                                ${localeString(
+                                {`${localeString(
+                                    'general.lightning'
+                                )} - ${localeString(
                                     'views.Settings.Payments.defaultFeeLimit'
                                 )}`}
                             </Text>
@@ -233,8 +234,9 @@ export default class PaymentsSettings extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {`${localeString('general.lightning')} -${' '}
-                                ${localeString(
+                                {`${localeString(
+                                    'general.lightning'
+                                )} - ${localeString(
                                     'views.Settings.Payments.defaultFeeLimit'
                                 )}`}
                             </Text>
@@ -333,7 +335,7 @@ export default class PaymentsSettings extends React.Component<
                             >
                                 {`${localeString(
                                     'general.lightning'
-                                )} -${' '}${localeString(
+                                )} - ${localeString(
                                     'views.Settings.Payments.timeoutSeconds'
                                 )}`}
                             </Text>
