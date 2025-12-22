@@ -869,30 +869,34 @@ export default class NostrWalletConnectStore {
             }
             const parsed = JSON.parse(pendingPayments);
             const payments = Array.isArray(parsed) ? parsed : [];
-
-            const restoredPayments = payments
-                .map((payment: PendingPayment) => {
-                    const connection = this.getConnection(
-                        payment.connection.id
-                    );
-                    if (!connection) {
-                        console.warn(
-                            'NWC: Pending payment connection not found',
-                            {
-                                connectionId: payment.connection.id,
-                                eventId: payment.eventId
-                            }
+            const restoredPayments = (
+                await Promise.all(
+                    payments.map(async (payment: PendingPayment) => {
+                        const connection = this.getConnection(
+                            payment.connection.id
                         );
-                        return null;
-                    }
-                    return {
-                        ...payment,
-                        connection // Replace with proper instance
-                    };
-                })
-                .filter(
-                    (payment): payment is PendingPayment => payment !== null
-                );
+
+                        if (!connection) {
+                            console.warn(
+                                'NWC: Pending payment connection not found',
+                                {
+                                    connectionId: payment.connection.id,
+                                    eventId: payment.eventId
+                                }
+                            );
+                            await this.deletePendingPaymentById(
+                                payment.eventId
+                            );
+                            return null;
+                        }
+
+                        return {
+                            ...payment,
+                            connection
+                        };
+                    })
+                )
+            ).filter((payment): payment is PendingPayment => payment !== null);
 
             return restoredPayments;
         } catch (error) {
@@ -3462,16 +3466,7 @@ export default class NostrWalletConnectStore {
                     const connection = this.getConnection(event.connection.id);
 
                     if (!connection) {
-                        console.warn(
-                            'NWC: Connection not found for pending payment',
-                            {
-                                connectionId: event.connection.id,
-                                eventId: event.eventId
-                            }
-                        );
-                        throw new Error(
-                            `Connection ${event.connectionName} not found. It may have been deleted.`
-                        );
+                        return;
                     }
 
                     const result = await this.handleEventRequest(
