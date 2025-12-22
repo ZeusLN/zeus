@@ -433,7 +433,7 @@ export default class NWCConnectionsList extends React.Component<
                                 style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 15
+                                    gap: 8
                                 }}
                             >
                                 <TouchableOpacity
