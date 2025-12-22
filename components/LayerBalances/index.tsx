@@ -202,12 +202,7 @@ const Row = ({ item }: { item: DataRow }) => {
                             </Text>
                         )}
                         {item.custodial && !item.needsConfig && (
-                            <View
-                                style={{
-                                    marginTop: 5,
-                                    alignSelf: 'flex-start'
-                                }}
-                            >
+                            <View style={styles.pill}>
                                 <Pill
                                     title={localeString(
                                         'general.custodialWallet'
@@ -219,12 +214,7 @@ const Row = ({ item }: { item: DataRow }) => {
                             </View>
                         )}
                         {item.needsConfig && (
-                            <View
-                                style={{
-                                    marginTop: 5,
-                                    alignSelf: 'flex-start'
-                                }}
-                            >
+                            <View style={styles.pill}>
                                 <Pill
                                     title={localeString(
                                         'cashu.tapToConfigure'
@@ -534,6 +524,10 @@ const styles = StyleSheet.create({
         marginLeft: 15,
         marginRight: 15,
         borderRadius: 15
+    },
+    pill: {
+        marginTop: 5,
+        alignSelf: 'flex-start'
     },
     left: {
         flexDirection: 'row',

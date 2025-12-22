@@ -4,7 +4,8 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
-    View
+    View,
+    ViewStyle
 } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { themeColor } from './../utils/ThemeUtils';
@@ -34,7 +35,7 @@ function Pill(props: PillProps) {
         scrollOnOverflow
     } = props;
 
-    const wrapperStyle: any = {
+    const wrapperStyle: ViewStyle = {
         ...styles.wrapper,
         borderWidth: borderWidth ? borderWidth : borderColor ? 3 : 0,
         borderColor: borderColor || themeColor('highlight'),
