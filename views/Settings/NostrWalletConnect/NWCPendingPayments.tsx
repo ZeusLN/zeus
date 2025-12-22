@@ -49,6 +49,8 @@ export default class NWCPendingPayments extends React.Component<
     NWCPendingPaymentsProps,
     NWCPendingPaymentState
 > {
+    private focusUnsubscribe?: () => void;
+
     constructor(props: NWCPendingPaymentsProps) {
         super(props);
         this.state = {
@@ -62,14 +64,20 @@ export default class NWCPendingPayments extends React.Component<
 
     componentDidMount(): void {
         const { navigation } = this.props;
-        navigation.addListener('focus', () => this.handleFocus(true));
+        this.focusUnsubscribe = navigation.addListener('focus', () => {
+            this.handleFocus(true);
+        });
+
         this.getPendingPayments();
     }
 
     componentWillUnmount() {
-        const { navigation, NostrWalletConnectStore } = this.props;
+        const { NostrWalletConnectStore } = this.props;
         NostrWalletConnectStore.setisInNWCPendingPaymentsView(false);
-        navigation.removeListener('focus', () => this.handleFocus(false));
+        if (this.focusUnsubscribe) {
+            this.focusUnsubscribe();
+            this.focusUnsubscribe = undefined;
+        }
     }
 
     handleFocus = async (state: boolean) => {
