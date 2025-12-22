@@ -1866,6 +1866,7 @@
     "stores.CashuStore.autoSweep": "Cashu auto-sweep",
     "stores.CashuStore.notProperlyConfigured": "Cashu wallet is not properly configured. Please add at least one mint.",
     "stores.CashuStore.errorDiscoveringMints": "Failed to discover mints from Nostr relays",
+    "stores.CashuStore.errorDiscoveringMintsTimeout": "Mint discovery timed out after 90 seconds",
     "stores.CashuStore.errorAddingMint": "Failed to add mint",
     "cashu.upgradePrompt.title": "Upgrade to Self-Custody?",
     "cashu.upgradePrompt.messageGeneral": "Your ecash balance is growing! Consider upgrading to a self-custodial Lightning wallet for better security and control over your funds.",

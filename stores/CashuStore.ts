@@ -235,7 +235,9 @@ export default class CashuStore {
             this.error_msg = undefined;
         });
 
-        try {
+        const MINT_DISCOVERY_TIMEOUT_MS = 90000;
+
+        const fetchMintsWithTimeout = async (): Promise<Set<any>> => {
             this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
             await this.ndk.connect();
 
@@ -243,7 +245,21 @@ export default class CashuStore {
                 kinds: [38000 as NDKKind],
                 limit: 2000
             };
-            const events = await this.ndk.fetchEvents(filter);
+
+            return await this.ndk.fetchEvents(filter);
+        };
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+                reject(new Error('MINT_DISCOVERY_TIMEOUT'));
+            }, MINT_DISCOVERY_TIMEOUT_MS);
+        });
+
+        try {
+            const events = await Promise.race([
+                fetchMintsWithTimeout(),
+                timeoutPromise
+            ]);
 
             const mintCounts = new Map<string, number>();
 
@@ -272,14 +288,17 @@ export default class CashuStore {
             });
 
             return mintUrlsCounted;
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error fetching mints:', e);
+            const isTimeout = e?.message === 'MINT_DISCOVERY_TIMEOUT';
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
-                this.error_msg = localeString(
-                    'stores.CashuStore.errorDiscoveringMints'
-                );
+                this.error_msg = isTimeout
+                    ? localeString(
+                          'stores.CashuStore.errorDiscoveringMintsTimeout'
+                      )
+                    : localeString('stores.CashuStore.errorDiscoveringMints');
             });
         }
     };
