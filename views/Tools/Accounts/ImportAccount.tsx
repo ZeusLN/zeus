@@ -260,7 +260,10 @@ export default class ImportAccount extends React.Component<
                     navigation={navigation}
                 />
                 <View style={styles.content}>
-                    <ScrollView keyboardShouldPersistTaps="handled">
+                    <ScrollView
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
                         {errorMsg && (
                             <ErrorMessage message={errorMsg} dismissable />
                         )}
