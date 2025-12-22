@@ -50,7 +50,6 @@ export default class NWCConnectionActivityFilter extends React.Component<
                 }
             }),
             () => {
-                // Apply filters immediately after toggling
                 this.applyFilters();
             }
         );

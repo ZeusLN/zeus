@@ -102,19 +102,29 @@ export default class NWCPendingPayments extends React.Component<
     }
 
     deletePendingPayments = () => {
-        const { ModalStore, NostrWalletConnectStore } = this.props;
+        const { ModalStore, NostrWalletConnectStore, navigation } = this.props;
         ModalStore.toggleInfoModal({
             title: localeString('general.confirm'),
-            text: 'Are you sure you want to delete all pending payments?',
+            text: localeString(
+                'views.Settings.NostrWalletConnect.confirmDeletePendingPayments'
+            ),
             buttons: [
                 {
-                    title: localeString('general.delete') || 'Delete',
+                    title: localeString('general.delete'),
                     callback: async () => {
                         const result =
                             await NostrWalletConnectStore.deleteAllPendingPayments();
                         if (!result) {
-                            this.setState({ error: 'failed to delete' });
+                            this.setState({
+                                error: localeString(
+                                    'views.Settings.NostrWalletConnect.error.failedTodelete'
+                                )
+                            });
+                            return;
                         }
+                        setTimeout(() => {
+                            navigation.goBack();
+                        }, 1000);
                     }
                 }
             ]
@@ -122,7 +132,7 @@ export default class NWCPendingPayments extends React.Component<
     };
 
     processPendingPayments = async () => {
-        const { NostrWalletConnectStore } = this.props;
+        const { NostrWalletConnectStore, navigation } = this.props;
         const { pendingPayments } = this.state;
 
         try {
@@ -141,11 +151,16 @@ export default class NWCPendingPayments extends React.Component<
                 this.setState({ showSuccess: true });
                 setTimeout(() => {
                     this.setState({ showSuccess: false });
+                    navigation.goBack();
                 }, 4000);
             }
         } catch (error) {
             this.setState({
-                error: (error as Error).message || 'Failed to process payments'
+                error:
+                    (error as Error).message ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.failedToProcessPayments'
+                    )
             });
         } finally {
             this.setState({ processing: false });
@@ -435,9 +450,8 @@ export default class NWCPendingPayments extends React.Component<
                     navigation={navigation}
                 />
 
-                {error ? (
-                    <ErrorMessage message={error} />
-                ) : showSuccess ? (
+                {error && <ErrorMessage message={error} />}
+                {showSuccess ? (
                     this.renderSuccessView()
                 ) : (
                     <View style={styles.container}>
