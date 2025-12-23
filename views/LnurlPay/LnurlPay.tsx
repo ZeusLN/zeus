@@ -8,7 +8,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../../components/Amount';
-import AmountInput from '../../components/AmountInput';
+import AmountInput, { getSatAmount } from '../../components/AmountInput';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -119,9 +119,14 @@ export default class LnurlPay extends React.Component<
         const unspecifiedDefault =
             units === 'sats' ? minSendableSats.toString() : unformattedAmount;
 
+        const finalAmount = amount && amount != 0 ? amount : unspecifiedDefault;
+        const finalSatAmount = satAmount
+            ? satAmount
+            : getSatAmount(finalAmount);
+
         return {
-            amount: amount && amount != 0 ? amount : unspecifiedDefault,
-            satAmount: satAmount ? satAmount : minSendableSats,
+            amount: finalAmount,
+            satAmount: finalSatAmount,
             domain: lnurl.domain,
             comment: ''
         };
