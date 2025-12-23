@@ -1,3 +1,5 @@
+import BigNumber from 'bignumber.js';
+
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import {
     numberWithCommas,
@@ -325,4 +327,57 @@ export function satsToMillisats(sats: number): number {
  */
 export function millisatsToSats(millisats: number): number {
     return Math.floor(millisats / 1000);
+}
+
+/**
+ * Converts an amount in the current display unit (sats, BTC, or fiat) to satoshis
+ * @param amount - The amount to convert (as string or number)
+ * @param forceUnit - Optional unit override ('sats', 'BTC', or 'fiat')
+ * @returns The amount in satoshis
+ */
+export function getSatAmount(
+    amount: string | number,
+    forceUnit?: string
+): string | number {
+    const { fiatRates } = fiatStore;
+    const { settings } = settingsStore;
+    const { fiat } = settings;
+    const { units } = unitsStore;
+    const effectiveUnits = forceUnit || units;
+
+    const value = amount ? amount.toString().replace(/,/g, '.') : '';
+
+    const fiatEntry =
+        fiat && fiatRates
+            ? fiatRates.find((entry: any) => entry.code === fiat)
+            : null;
+
+    const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+    let satAmount: string | number = 0;
+    switch (effectiveUnits) {
+        case 'sats':
+            satAmount = value;
+            break;
+        case 'BTC':
+            satAmount = new BigNumber(value || 0)
+                .multipliedBy(SATS_PER_BTC)
+                .toNumber();
+            break;
+        case 'fiat':
+            satAmount =
+                rate && value
+                    ? new BigNumber(value.toString().replace(/,/g, '.'))
+                          .dividedBy(rate)
+                          .multipliedBy(SATS_PER_BTC)
+                          .toNumber()
+                          .toFixed(0)
+                    : 0;
+            break;
+        default:
+            satAmount = 0;
+            break;
+    }
+
+    return satAmount;
 }

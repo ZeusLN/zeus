@@ -8,7 +8,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from '../../components/Amount';
-import AmountInput, { getSatAmount } from '../../components/AmountInput';
+import AmountInput from '../../components/AmountInput';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -25,7 +25,7 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { getUnformattedAmount } from '../../utils/AmountUtils';
+import { getUnformattedAmount, getSatAmount } from '../../utils/AmountUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
