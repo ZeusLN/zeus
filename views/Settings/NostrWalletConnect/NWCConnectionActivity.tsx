@@ -5,17 +5,21 @@ import React from 'react';
 import { FlatList, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
+import SettingsStore from '../../../stores/SettingsStore';
+
 import { ConnectionActivity } from '../../../models/NWCConnection';
 import Payment from '../../../models/Payment';
+
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import Amount from '../../../components/Amount';
 import LoadingIndicator from '../../../components/LoadingIndicator';
+
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import PrivacyUtils from '../../../utils/PrivacyUtils';
 
 import Filter from '../../../assets/images/SVG/Filter On.svg';
+import dateTimeUtils from '../../../utils/DateTimeUtils';
 
 export interface NWCFilterState {
     sent: boolean;
@@ -35,6 +39,7 @@ interface ConnectionActivityProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'NWCConnectionActivity', { connectionId: string }>;
     NostrWalletConnectStore: NostrWalletConnectStore;
+    SettingsStore: SettingsStore;
 }
 
 interface ConnectionActivityState {
@@ -46,7 +51,7 @@ interface ConnectionActivityState {
     activeFilters: NWCFilterState;
 }
 
-@inject('NostrWalletConnectStore')
+@inject('NostrWalletConnectStore', 'SettingsStore')
 @observer
 export default class NWCConnectionActivity extends React.Component<
     ConnectionActivityProps,
@@ -76,24 +81,71 @@ export default class NWCConnectionActivity extends React.Component<
             this.setState({ loading: true, error: null });
             const { name, activity } =
                 await NostrWalletConnectStore.getActivities(connectionId);
+            const enrichedActivity = await this.enrichActivitiesWithInvoiceData(
+                activity
+            );
 
             const filteredActivity = this.applyFilters(
-                activity,
+                enrichedActivity,
                 this.state.activeFilters
             );
 
             this.setState({
-                activity,
+                activity: enrichedActivity,
                 filteredActivity,
                 connectionName: name,
                 loading: false
             });
         } catch (e: any) {
             this.setState({
-                error: e.message || 'Failed to load activity',
+                error:
+                    e.message ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.error.failedToLoadActivity'
+                    ),
                 loading: false
             });
         }
+    };
+
+    enrichActivitiesWithInvoiceData = async (
+        activities: ConnectionActivity[]
+    ): Promise<ConnectionActivity[]> => {
+        const { NostrWalletConnectStore, SettingsStore } = this.props;
+
+        const enrichedActivities = await Promise.all(
+            activities.map(async (item) => {
+                // Only fetch invoice data for pending make_invoice items
+                if (item.type === 'make_invoice' && item.status === 'pending') {
+                    try {
+                        const invoice =
+                            await NostrWalletConnectStore.getDecodedInvoice(
+                                item.id
+                            );
+
+                        if (invoice) {
+                            const locale = SettingsStore?.settings.locale;
+                            invoice?.determineFormattedOriginalTimeUntilExpiry(
+                                locale
+                            );
+                            invoice?.determineFormattedRemainingTimeUntilExpiry(
+                                locale
+                            );
+                            return {
+                                ...item,
+                                isExpired: invoice.isExpired,
+                                expiryLabel: invoice.formattedTimeUntilExpiry
+                            };
+                        }
+                    } catch (e) {
+                        console.error('Failed to fetch invoice:', e);
+                    }
+                }
+                return item;
+            })
+        );
+
+        return enrichedActivities;
     };
 
     applyFilters = (
@@ -103,38 +155,39 @@ export default class NWCConnectionActivity extends React.Component<
         const allFiltersActive = Object.values(filters).every(
             (v) => v === true
         );
-        if (allFiltersActive) {
-            return activities;
-        }
+        if (allFiltersActive) return activities;
+
         const noFiltersActive = Object.values(filters).every(
             (v) => v === false
         );
-        if (noFiltersActive) {
-            return [];
-        }
+        if (noFiltersActive) return [];
+
         return activities.filter((item) => {
             const isSentType =
                 item.type === 'pay_invoice' || item.type === 'pay_keysend';
             const isReceivedType = item.type === 'make_invoice';
 
             if (item.status === 'success') {
-                if (isSentType && filters.sent) return true;
-                if (isReceivedType && filters.received) return true;
-                return false;
+                return (
+                    (isSentType && filters.sent) ||
+                    (isReceivedType && filters.received)
+                );
             }
 
             if (item.status === 'failed') {
-                if (isSentType && filters.sent && filters.failed) return true;
-                if (isReceivedType && filters.received && filters.failed)
-                    return true;
-                return false;
+                return (
+                    (isSentType && filters.sent && filters.failed) ||
+                    (isReceivedType && filters.received && filters.failed)
+                );
             }
 
             if (item.status === 'pending') {
-                if (isSentType && filters.sent && filters.pending) return true;
-                if (isReceivedType && filters.pending) return true;
-                return false;
+                return (
+                    (isSentType && filters.sent && filters.pending) ||
+                    (isReceivedType && filters.pending)
+                );
             }
+
             return false;
         });
     };
@@ -154,13 +207,87 @@ export default class NWCConnectionActivity extends React.Component<
         }
     };
 
-    getRightTitleTheme = (item: ConnectionActivity) => {
+    getAmountColor = (item: ConnectionActivity) => {
         if (item.status === 'success') {
             return item.type === 'make_invoice' ? 'success' : 'warning';
         }
         if (item.status === 'failed') return 'warning';
         if (item.status === 'pending') return 'highlight';
         return 'secondaryText';
+    };
+
+    getActivityTitle = (item: ConnectionActivity): string => {
+        if (item.type === 'pay_invoice' || item.type === 'pay_keysend') {
+            if (item.status === 'failed') {
+                return localeString('views.Payment.failedPayment');
+            }
+            if (item.status === 'pending') {
+                return localeString('views.Payment.inTransitPayment');
+            }
+            return localeString('views.Activity.youSent');
+        }
+
+        // make_invoice
+        if (item.isExpired) {
+            return localeString('views.Activity.expiredPayment');
+        }
+        if (item.status === 'success') {
+            return localeString('views.Activity.youReceived');
+        }
+        return localeString('views.Activity.requestedPayment');
+    };
+
+    getActivitySubtitle = (item: ConnectionActivity): string => {
+        if (item.type === 'make_invoice') {
+            return localeString('views.PaymentRequest.title');
+        }
+        return item.payment_source === 'lightning'
+            ? localeString('general.lightning')
+            : localeString('general.cashu');
+    };
+
+    navigateToPaymentDetails = (item: ConnectionActivity) => {
+        const { navigation } = this.props;
+        const payment = new Payment({
+            payment_request: item.id,
+            payment_hash: item.paymentHash,
+            payment_preimage: item.preimage,
+            value_sat: item.satAmount,
+            amount: item.satAmount,
+            status:
+                item.status === 'success'
+                    ? 'SUCCEEDED'
+                    : item.status === 'failed'
+                    ? 'FAILED'
+                    : 'IN_FLIGHT',
+            creation_date: item.lastprocessAt
+                ? Math.floor(new Date(item.lastprocessAt).getTime() / 1000)
+                : undefined,
+            invoice: item.id
+        });
+        navigation.navigate('Payment', { payment });
+    };
+
+    navigateToInvoiceDetails = async (item: ConnectionActivity) => {
+        const { navigation, NostrWalletConnectStore } = this.props;
+        try {
+            const invoice = await NostrWalletConnectStore.getDecodedInvoice(
+                item.id
+            );
+            if (invoice) {
+                navigation.navigate('Invoice', { invoice });
+            }
+        } catch (e) {
+            console.error('Navigation to invoice failed:', e);
+        }
+    };
+
+    handleActivityPress = (item: ConnectionActivity) => {
+        if (item.type === 'pay_invoice' || item.type === 'pay_keysend') {
+            this.navigateToPaymentDetails(item);
+        } else if (item.type === 'make_invoice') {
+            this.navigateToInvoiceDetails(item);
+        }
     };
 
     navigateToFilter = () => {
@@ -170,91 +297,22 @@ export default class NWCConnectionActivity extends React.Component<
         });
     };
 
+    isDefaultFilter = (filters: NWCFilterState): boolean => {
+        return (
+            filters.sent === NWC_DEFAULT_FILTERS.sent &&
+            filters.received === NWC_DEFAULT_FILTERS.received &&
+            filters.failed === NWC_DEFAULT_FILTERS.failed &&
+            filters.pending === NWC_DEFAULT_FILTERS.pending
+        );
+    };
+
     renderActivityListItem = ({ item }: { item: ConnectionActivity }) => {
-        let title = '';
-        let subtitle = '';
-        let onPress = () => {};
-
-        const { navigation, NostrWalletConnectStore } = this.props;
-
-        switch (item.type) {
-            case 'pay_invoice':
-            case 'pay_keysend':
-                onPress = () => {
-                    const payment = new Payment({
-                        payment_request: item.id,
-                        payment_hash: item.paymentHash,
-                        payment_preimage: item.preimage,
-                        value_sat: item.satAmount,
-                        amount: item.satAmount,
-                        status:
-                            item.status === 'success'
-                                ? 'SUCCEEDED'
-                                : item.status === 'failed'
-                                ? 'FAILED'
-                                : 'IN_FLIGHT',
-                        creation_date: item.lastprocessAt
-                            ? Math.floor(
-                                  new Date(item.lastprocessAt).getTime() / 1000
-                              )
-                            : undefined,
-                        invoice: item.id
-                    });
-                    navigation.navigate('Payment', { payment });
-                };
-                title =
-                    item.status === 'failed'
-                        ? localeString('views.Payment.failedPayment')
-                        : item.status === 'pending'
-                        ? localeString('views.Payment.inTransitPayment')
-                        : localeString('views.Activity.youSent');
-                break;
-            case 'make_invoice':
-                onPress = async () => {
-                    try {
-                        const invoice =
-                            await NostrWalletConnectStore.getDecodedInvoice(
-                                item.id
-                            );
-                        if (invoice)
-                            navigation.navigate('Invoice', { invoice });
-                    } catch (e) {
-                        console.log('Navigation failed:', e);
-                    }
-                };
-                title =
-                    item.status === 'success'
-                        ? localeString('views.Activity.youReceived')
-                        : localeString('views.Activity.requestedPayment');
-                break;
-        }
-
-        const source =
-            item.payment_source === 'lightning'
-                ? localeString('general.lightning')
-                : localeString('general.cashu');
-
-        const typeText =
-            item.type === 'pay_invoice'
-                ? localeString('views.Payment.title')
-                : item.type === 'make_invoice'
-                ? localeString('views.Invoice.title')
-                : 'Keysend';
-
-        subtitle = `${source} • ${typeText}`;
-
-        const time = item.lastprocessAt
-            ? new Date(item.lastprocessAt).toLocaleString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-              })
-            : '';
+        const title = this.getActivityTitle(item);
+        const subtitle = this.getActivitySubtitle(item);
 
         return (
             <ListItem
-                onPress={onPress}
+                onPress={() => this.handleActivityPress(item)}
                 containerStyle={{ backgroundColor: 'transparent' }}
             >
                 <ListItem.Content>
@@ -270,7 +328,7 @@ export default class NWCConnectionActivity extends React.Component<
                         <Amount
                             sats={item.satAmount}
                             sensitive
-                            color={this.getRightTitleTheme(item)}
+                            color={this.getAmountColor(item)}
                         />
                     </View>
 
@@ -289,61 +347,36 @@ export default class NWCConnectionActivity extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {time}
+                            {dateTimeUtils.listFormattedDate(
+                                new Date(item.lastprocessAt).getTime(),
+                                'mmm d, HH:MM'
+                            )}
                         </ListItem.Subtitle>
                     </View>
 
-                    {item.status && (
-                        <View style={styles.row}>
-                            <ListItem.Subtitle
-                                style={{
-                                    ...styles.leftCellSecondary,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('views.Channel.status')}
-                            </ListItem.Subtitle>
-                            <ListItem.Subtitle
-                                style={{
-                                    ...styles.rightCellSecondary,
-                                    color:
-                                        item.status === 'success'
-                                            ? themeColor('success')
-                                            : item.status === 'failed'
-                                            ? themeColor('warning')
-                                            : themeColor('highlight')
-                                }}
-                            >
-                                {item.status.charAt(0).toUpperCase() +
-                                    item.status.slice(1)}
-                            </ListItem.Subtitle>
-                        </View>
-                    )}
-
-                    {item.error && (
-                        <View style={styles.row}>
-                            <ListItem.Subtitle
-                                style={{
-                                    ...styles.leftCellSecondary,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('general.error')}
-                            </ListItem.Subtitle>
-                            <ListItem.Subtitle
-                                style={{
-                                    ...styles.rightCellSecondary,
-                                    color: themeColor('warning')
-                                }}
-                                ellipsizeMode="tail"
-                            >
-                                {PrivacyUtils.sensitiveValue({
-                                    input: item.error,
-                                    condenseAtLength: 100
-                                })?.toString()}
-                            </ListItem.Subtitle>
-                        </View>
-                    )}
+                    {item.type === 'make_invoice' &&
+                        item.status === 'pending' &&
+                        !item.isExpired &&
+                        item.expiryLabel && (
+                            <View style={styles.row}>
+                                <ListItem.Subtitle
+                                    style={{
+                                        ...styles.leftCellSecondary,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('views.Invoice.expiration')}
+                                </ListItem.Subtitle>
+                                <ListItem.Subtitle
+                                    style={{
+                                        ...styles.rightCellSecondary,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {item.expiryLabel}
+                                </ListItem.Subtitle>
+                            </View>
+                        )}
                 </ListItem.Content>
             </ListItem>
         );
@@ -354,15 +387,6 @@ export default class NWCConnectionActivity extends React.Component<
             style={{ height: 0.4, backgroundColor: themeColor('separator') }}
         />
     );
-
-    isDefaultFilter = (filters: NWCFilterState): boolean => {
-        return (
-            filters.sent === NWC_DEFAULT_FILTERS.sent &&
-            filters.received === NWC_DEFAULT_FILTERS.received &&
-            filters.failed === NWC_DEFAULT_FILTERS.failed &&
-            filters.pending === NWC_DEFAULT_FILTERS.pending
-        );
-    };
 
     render() {
         const {

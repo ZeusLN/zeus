@@ -1692,6 +1692,7 @@
     "views.Settings.NostrWalletConnect.validation.failedToCreateConnection": "Failed to create connection",
     "views.Settings.NostrWalletConnect.error.failedTodelete": "Failed to delete",
     "views.Settings.NostrWalletConnect.error.failedToProcessPayments": "Failed to process payments",
+    "views.Settings.NostrWalletConnect.error.failedToLoadActivity": "Failed to load activity",
     "views.Settings.NostrWalletConnect.confirmDeletePendingPayments": "Are you sure you want to delete all pending payments?",
     "views.Settings.NostrWalletConnect.totalSpent": "Total Spent",
     "views.Settings.NostrWalletConnect.remainingBudget": "Remaining Budget",
