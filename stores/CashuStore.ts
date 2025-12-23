@@ -19,7 +19,7 @@ import BigNumber from 'bignumber.js';
 import reject from 'lodash/reject';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
-import NDK, { NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
+import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 
 import Invoice from '../models/Invoice';
@@ -229,19 +229,39 @@ export default class CashuStore {
     };
     @action
     public fetchMints = async () => {
-        runInAction(() => {
-            this.loading = true;
-        });
-
-        this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
-        await this.ndk.connect(); // Ensure connection is established before fetching
-
-        const filter: NDKFilter = { kinds: [38000 as NDKKind], limit: 2000 };
-        const events = await this.ndk.fetchEvents(filter);
-
-        InteractionManager.runAfterInteractions(() => {
+        try {
+            runInAction(() => {
+                this.loading = true;
+            });
+            this.ndk = new NDK({
+                explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+            });
+            await this.ndk.connect();
+            const filter: NDKFilter = {
+                kinds: [38000 as NDKKind],
+                limit: 2000
+            };
+            const events = new Set<NDKEvent>();
+            let eoseCount = 0;
+            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
+            const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+            await new Promise<void>((resolve) => {
+                sub.on('event', (event: NDKEvent) => {
+                    events.add(event);
+                });
+                sub.on('eose', () => {
+                    eoseCount++;
+                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
+                        console.log('eose');
+                        resolve();
+                    }
+                });
+                setTimeout(() => {
+                    resolve();
+                }, 10000);
+            });
+            sub.stop();
             const mintCounts = new Map<string, number>();
-
             for (const event of events) {
                 if (event.tagValue('k') === '38172' && event.tagValue('u')) {
                     const mintUrl = event.tagValue('u');
@@ -256,7 +276,6 @@ export default class CashuStore {
                     }
                 }
             }
-
             const mintUrlsCounted = Array.from(mintCounts.entries())
                 .map(([url, count]) => ({ url, count }))
                 .sort((a, b) => b.count - a.count);
@@ -265,9 +284,12 @@ export default class CashuStore {
                 this.mintRecommendations = mintUrlsCounted;
                 this.loading = false;
             });
-
-            return mintUrlsCounted;
-        });
+        } catch (error) {
+            console.error('Error fetching mints:', error);
+            runInAction(() => {
+                this.loading = false;
+            });
+        }
     };
 
     @action
