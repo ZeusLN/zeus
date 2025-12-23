@@ -2120,18 +2120,6 @@ export default class NostrWalletConnectStore {
                     balance: currentLightningBalance.toString()
                 }
             );
-            const { paymentHash, paymentRequest } =
-                NostrConnectUtils.decodeInvoiceTags(request.invoice);
-            if (paymentHash || paymentRequest)
-                await this.recordFailedPayment(
-                    paymentHash || paymentRequest,
-                    connection,
-                    'pay_invoice',
-                    amountSats,
-                    'lightning',
-                    errorMessage,
-                    request.invoice
-                );
             return this.handleError(
                 errorMessage,
                 ErrorCodes.INSUFFICIENT_BALANCE
@@ -2158,15 +2146,19 @@ export default class NostrWalletConnectStore {
             const { paymentHash, paymentRequest } =
                 NostrConnectUtils.decodeInvoiceTags(request.invoice);
             if (paymentHash || paymentRequest)
-                await this.recordFailedPayment(
-                    paymentHash || paymentRequest,
-                    connection,
-                    'pay_invoice',
-                    amountSats,
-                    'lightning',
-                    paymentError.error?.message || 'Payment failed',
-                    request.invoice
-                );
+                if (
+                    !paymentError.error.message.includes('already paid') ||
+                    !paymentError.error.message.includes('expired')
+                )
+                    await this.recordFailedPayment(
+                        paymentHash || paymentRequest,
+                        connection,
+                        'pay_invoice',
+                        amountSats,
+                        'lightning',
+                        paymentError.error?.message || 'Payment failed',
+                        request.invoice
+                    );
             return paymentError;
         }
         const preimage = this.transactionsStore.payment_preimage;
@@ -2294,6 +2286,24 @@ export default class NostrWalletConnectStore {
         });
 
         if (!cashuInvoice || this.cashuStore.paymentError) {
+            const { paymentHash, paymentRequest } =
+                NostrConnectUtils.decodeInvoiceTags(request.invoice);
+            if (paymentHash || paymentRequest)
+                if (
+                    !this.cashuStore.paymentErrorMsg?.includes(
+                        'already paid'
+                    ) ||
+                    !this.cashuStore.paymentErrorMsg?.includes('expired')
+                )
+                    await this.recordFailedPayment(
+                        paymentHash || paymentRequest,
+                        connection,
+                        'pay_invoice',
+                        amount,
+                        'lightning',
+                        this.cashuStore.paymentErrorMsg || 'Payment failed',
+                        request.invoice
+                    );
             return this.handleError(
                 this.cashuStore.paymentErrorMsg ||
                     localeString(

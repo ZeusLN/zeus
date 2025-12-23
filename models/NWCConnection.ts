@@ -30,6 +30,8 @@ export interface ConnectionActivity {
     paymentHash?: string;
     lastprocessAt: Date;
     expiresAt?: Date;
+    isExpired?: boolean;
+    expiryLabel?: string;
     fees_paid?: number;
 }
 
