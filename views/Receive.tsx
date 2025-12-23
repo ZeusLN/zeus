@@ -401,7 +401,7 @@ export default class Receive extends React.Component<
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
-                getSatAmount(amount) != '0' &&
+                getSatAmount(amount) !== 0 &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -463,7 +463,7 @@ export default class Receive extends React.Component<
                 let needInbound = false;
                 if (
                     this.state.lspIsActive &&
-                    getSatAmount(amount) != '0' &&
+                    getSatAmount(amount) !== 0 &&
                     new BigNumber(getSatAmount(amount)).gt(
                         this.props.ChannelsStore.totalInbound
                     )

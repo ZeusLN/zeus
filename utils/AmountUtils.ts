@@ -338,14 +338,14 @@ export function millisatsToSats(millisats: number): number {
 export function getSatAmount(
     amount: string | number,
     forceUnit?: string
-): string | number {
+): number {
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
     const { fiat } = settings;
     const { units } = unitsStore;
     const effectiveUnits = forceUnit || units;
 
-    const value = amount ? amount.toString().replace(/,/g, '.') : '';
+    const value = amount ? amount.toString().replace(/,/g, '.') : 0;
 
     const fiatEntry =
         fiat && fiatRates
@@ -354,10 +354,10 @@ export function getSatAmount(
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
-    let satAmount: string | number = 0;
+    let satAmount: number = 0;
     switch (effectiveUnits) {
         case 'sats':
-            satAmount = value;
+            satAmount = Number(value);
             break;
         case 'BTC':
             satAmount = new BigNumber(value || 0)
@@ -367,11 +367,13 @@ export function getSatAmount(
         case 'fiat':
             satAmount =
                 rate && value
-                    ? new BigNumber(value.toString().replace(/,/g, '.'))
-                          .dividedBy(rate)
-                          .multipliedBy(SATS_PER_BTC)
-                          .toNumber()
-                          .toFixed(0)
+                    ? Number(
+                          new BigNumber(value)
+                              .dividedBy(rate)
+                              .multipliedBy(SATS_PER_BTC)
+                              .toNumber()
+                              .toFixed(0)
+                      )
                     : 0;
             break;
         default:
