@@ -38,9 +38,11 @@ jest.mock('../stores/Stores', () => ({
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('react-native-encrypted-storage', () => ({}));
 jest.mock('react-native-fs', () => ({}));
+const mockGetLnurlParamsFn = jest.fn();
 jest.mock('js-lnurl', () => ({
-    getParams: () => mockGetLnurlParams,
-    findlnurl: () => null
+    getParams: (...args: any[]) => mockGetLnurlParamsFn(...args),
+    findlnurl: () => null,
+    decodelnurl: () => null
 }));
 
 describe('handleAnything', () => {
@@ -166,10 +168,11 @@ describe('handleAnything', () => {
             });
             mockIsValidBitcoinAddress = true;
             mockSupportsOnchainSends = false;
-            mockGetLnurlParams = {
+            const lnurlParams = {
                 tag: 'payRequest',
                 domain: 'ts.dergigi.com'
             };
+            mockGetLnurlParamsFn.mockResolvedValue(lnurlParams);
 
             const result = await handleAnything(data);
 
@@ -238,6 +241,151 @@ describe('handleAnything', () => {
             });
             mockIsValidBitcoinAddress = true;
             mockSupportsOnchainSends = false;
+
+            const result = await handleAnything(data, undefined, true);
+
+            expect(result).toEqual(true);
+        });
+    });
+
+    describe('nested URI schemes - LIGHTNING:lnurlp://', () => {
+        beforeEach(() => {
+            mockGetLnurlParamsFn.mockReset();
+            mockGetLnurlParams = {
+                tag: 'payRequest',
+                domain: 'demo.lnbits.com',
+                callback:
+                    'https://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D',
+                minSendable: 1000,
+                maxSendable: 100000000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(mockGetLnurlParams);
+        });
+
+        it.each([
+            {
+                name: 'uppercase LIGHTNING',
+                data: 'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+            },
+            {
+                name: 'lowercase lightning',
+                data: 'lightning:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+            }
+        ])(
+            'should handle $name scheme and convert to https://',
+            async ({ data }) => {
+                mockProcessBIP21Uri.mockReturnValue({
+                    value: 'lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+                });
+
+                const result = await handleAnything(data);
+
+                expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
+                    'https://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+                );
+                expect(result).toEqual([
+                    'LnurlPay',
+                    {
+                        lnurlParams: mockGetLnurlParams,
+                        amount: undefined,
+                        ecash: false
+                    }
+                ]);
+            }
+        );
+
+        it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
+            const data =
+                'LIGHTNING:lnurlp://example.onion/api/v1/lnurl/test123';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://example.onion/api/v1/lnurl/test123'
+            });
+
+            const onionParams = {
+                tag: 'payRequest',
+                domain: 'example.onion',
+                callback: 'http://example.onion/api/v1/lnurl/test123',
+                minSendable: 1000,
+                maxSendable: 100000000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(onionParams);
+
+            const result = await handleAnything(data);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
+                'http://example.onion/api/v1/lnurl/test123'
+            );
+            expect(result).toEqual([
+                'LnurlPay',
+                {
+                    lnurlParams: onionParams,
+                    amount: undefined,
+                    ecash: false
+                }
+            ]);
+        });
+
+        it('should handle LIGHTNING:lnurlw:// (withdraw)', async () => {
+            const data = 'LIGHTNING:lnurlw://example.com/api/v1/lnurl/withdraw';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlw://example.com/api/v1/lnurl/withdraw'
+            });
+
+            const withdrawParams = {
+                tag: 'withdrawRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(withdrawParams);
+
+            const result = await handleAnything(data);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
+                'https://example.com/api/v1/lnurl/withdraw'
+            );
+            expect(result).toEqual([
+                'Receive',
+                {
+                    lnurlParams: withdrawParams
+                }
+            ]);
+        });
+
+        it('should handle LIGHTNING:lnurlc:// (channel)', async () => {
+            const data = 'LIGHTNING:lnurlc://example.com/api/v1/lnurl/channel';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlc://example.com/api/v1/lnurl/channel'
+            });
+
+            const channelParams = {
+                tag: 'channelRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                uri: 'node@example.com:9735'
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(channelParams);
+
+            const result = await handleAnything(data);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
+                'https://example.com/api/v1/lnurl/channel'
+            );
+            expect(result).toEqual([
+                'LnurlChannel',
+                {
+                    lnurlParams: channelParams
+                }
+            ]);
+        });
+
+        it('should return true if from clipboard', async () => {
+            const data =
+                'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+            });
 
             const result = await handleAnything(data, undefined, true);
 
