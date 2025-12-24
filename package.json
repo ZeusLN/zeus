@@ -25,7 +25,7 @@
     "start": "react-native start",
     "ra": "react-native run-android",
     "ri": "react-native run-ios",
-    "postinstall": "rn-nodeify --install --hack & node patches/patch-sifir_android.mjs & npx jetify & yarn run fetch-libraries & pod-install",
+    "postinstall": "node patches/patch-sifir_android.mjs && rn-nodeify --install --hack && npx jetify && yarn run fetch-libraries && pod-install",
     "verify": "concurrently \"yarn test\" \"yarn prettier\" \"yarn tsc\" \"yarn lint\"",
     "test": "jest",
     "tsc": "tsc",
