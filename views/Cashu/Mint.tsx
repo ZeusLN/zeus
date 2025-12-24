@@ -20,6 +20,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Pill from '../../components/Pill';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 
@@ -60,7 +61,9 @@ export default class Mint extends React.Component<MintProps, MintState> {
             restorationProgress,
             restorationKeyset,
             cashuWallets,
-            loading
+            loading,
+            error,
+            error_msg
         } = CashuStore;
         const mint = route.params?.mint;
         const lookup = route.params?.lookup;
@@ -94,6 +97,13 @@ export default class Mint extends React.Component<MintProps, MintState> {
                     }
                     navigation={navigation}
                 />
+                {error && (
+                    <View style={{ margin: 20, marginBottom: 0 }}>
+                        <ErrorMessage
+                            message={error_msg || localeString('general.error')}
+                        />
+                    </View>
+                )}
                 {restorationProgress !== undefined && (
                     <View
                         style={{
