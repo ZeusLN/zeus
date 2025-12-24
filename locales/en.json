@@ -825,6 +825,8 @@
     "views.Tools.cashu.deleteData": "Delete all Cashu data",
     "views.Tools.cashu.deleteData.confirmTitle": "Are you sure you want to delete all your Cashu data?",
     "views.Tools.cashu.deleteData.confirmMessage": "Funds can still be restored by re-adding your mints, but transaction history will be lost.",
+    "views.Tools.cashu.seed.bip39-12": "BIP-39 (12 words)",
+    "views.Tools.cashu.seed.bip39-24": "BIP-39 (24 words)",
     "stores.CashuStore.dataDeletedMessage": "Your Cashu data has been deleted.",
     "views.Tools.developerTools.title": "Developer Tools",
     "views.Tools.developerTools.noItemsExist": "No items exist",

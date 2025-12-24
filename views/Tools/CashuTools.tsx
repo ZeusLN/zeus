@@ -62,7 +62,8 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                         navigation={navigation}
                     />
                     <ScrollView>
-                        {seedVersion === 'v2-bip39' && (
+                        {(seedVersion === 'v2-bip39' ||
+                            seedVersion === 'v1') && (
                             <>
                                 <ListItem
                                     containerStyle={{
@@ -93,7 +94,11 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                                     'PPNeueMontreal-Book'
                                             }}
                                         >
-                                            BIP-39
+                                            {localeString(
+                                                seedVersion === 'v2-bip39'
+                                                    ? 'views.Tools.cashu.seed.bip39-12'
+                                                    : 'views.Tools.cashu.seed.bip39-24'
+                                            )}
                                         </ListItem.Title>
                                     </ListItem.Content>
                                     <Icon

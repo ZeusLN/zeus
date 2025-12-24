@@ -290,7 +290,7 @@ export default class CashuSeed extends React.PureComponent<
                             <View style={styles.column}>
                                 {seedPhrase &&
                                     seedPhrase
-                                        .slice(0, 6)
+                                        .slice(0, seedPhrase.length / 2)
                                         .map((word: string, index: number) => {
                                             return (
                                                 <MnemonicWord
@@ -304,11 +304,14 @@ export default class CashuSeed extends React.PureComponent<
                             <View style={styles.column}>
                                 {seedPhrase &&
                                     seedPhrase
-                                        .slice(6, 12)
+                                        .slice(seedPhrase.length / 2)
                                         .map((word: string, index: number) => {
                                             return (
                                                 <MnemonicWord
-                                                    index={index + 6}
+                                                    index={
+                                                        index +
+                                                        seedPhrase.length / 2
+                                                    }
                                                     word={word}
                                                     key={`mnemonic-${index}`}
                                                 />

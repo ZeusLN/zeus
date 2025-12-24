@@ -396,10 +396,25 @@ export default class CashuStore {
         }
 
         // v1
-        const seedPhrase = this.settingsStore.seedPhrase;
-        const mnemonic = seedPhrase.join(' ');
+        // Uses 32 bytes from LND seed, which maps to a 24-word BIP-39 mnemonic
+        const lndSeedPhrase = this.settingsStore.seedPhrase;
+        const mnemonic = lndSeedPhrase.join(' ');
         const seed = bip39.mnemonicToSeedSync(mnemonic);
         this.seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+
+        // Generate 24-word mnemonic from the 32-byte seed for display/backup
+        const cashuSeedPhrase = bip39scure.entropyToMnemonic(
+            this.seed,
+            BIP39_WORD_LIST
+        );
+        const seedPhraseArray = cashuSeedPhrase.split(' ');
+
+        Storage.setItem(
+            `${this.getLndDir()}-cashu-seed-phrase`,
+            seedPhraseArray
+        );
+        this.seedPhrase = seedPhraseArray;
+
         return this.seed;
     };
 
