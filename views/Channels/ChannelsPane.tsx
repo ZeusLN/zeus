@@ -401,7 +401,8 @@ export default class ChannelsPane extends React.PureComponent<
             showPeersSearch,
             setChannelsType,
             channelsType,
-            nodes
+            nodes,
+            aliasesByPubkey
         } = ChannelsStore!;
 
         const Theme = {
@@ -678,6 +679,12 @@ export default class ChannelsPane extends React.PureComponent<
                                     }
                                     renderItem={({ item }) => {
                                         const peer = new Peer(item);
+                                        const peerAlias =
+                                            aliasesByPubkey[peer.pubkey] ||
+                                            nodes[peer.pubkey]?.alias ||
+                                            peer.alias;
+                                        const peerDisplayName =
+                                            peerAlias || peer.pubkey;
 
                                         return (
                                             <TouchableOpacity
@@ -722,15 +729,10 @@ export default class ChannelsPane extends React.PureComponent<
                                                         ]}
                                                         numberOfLines={3}
                                                     >
-                                                        {nodes[peer.pubkey]
-                                                            ?.alias ||
-                                                            peer.alias ||
-                                                            peer.pubkey}
+                                                        {peerDisplayName}
                                                     </Text>
 
-                                                    {(nodes[peer.pubkey]
-                                                        ?.alias ||
-                                                        peer.alias) && (
+                                                    {peerAlias && (
                                                         <Text
                                                             style={[
                                                                 styles.text,
