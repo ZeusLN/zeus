@@ -471,7 +471,7 @@ const handleAnything = async (
                         'LnurlPay',
                         {
                             lnurlParams: response,
-                            amount: setAmount,
+                            satAmount: setAmount,
                             ecash
                         }
                     ];
@@ -532,7 +532,7 @@ const handleAnything = async (
                             'LnurlPay',
                             {
                                 lnurlParams: lnurlpData,
-                                amount: setAmount,
+                                satAmount: setAmount,
                                 ecash
                             }
                         ];
@@ -653,7 +653,7 @@ const handleAnything = async (
                             'LnurlPay',
                             {
                                 lnurlParams: params,
-                                amount: setAmount,
+                                satAmount: setAmount,
                                 ecash
                             }
                         ];

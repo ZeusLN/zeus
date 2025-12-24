@@ -3,7 +3,8 @@ import {
     shouldHideMillisatoshiAmounts,
     getUnformattedAmount,
     getAmountFromSats,
-    getFormattedAmount
+    getFormattedAmount,
+    getSatAmount
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -821,6 +822,176 @@ describe('AmountUtils', () => {
                 (unitsStore as any).units = 'sats';
                 const result = getFormattedAmount(1, 'BTC');
                 expect(result).toBe('₿1');
+            });
+        });
+    });
+
+    describe('getSatAmount', () => {
+        beforeEach(() => {
+            // Reset mocks before each test
+            (unitsStore as any).units = 'sats';
+            (settingsStore as any).settings = {
+                fiat: 'USD',
+                display: {
+                    removeDecimalSpaces: false,
+                    showAllDecimalPlaces: false
+                }
+            };
+            (fiatStore as any).fiatRates = [
+                {
+                    code: 'USD',
+                    rate: 50000,
+                    cryptoCode: 'BTC',
+                    currencyPair: 'USD/BTC'
+                },
+                {
+                    code: 'EUR',
+                    rate: 45000,
+                    cryptoCode: 'BTC',
+                    currencyPair: 'EUR/BTC'
+                }
+            ];
+        });
+
+        describe('sats unit', () => {
+            it('returns the same value for sats', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount('1000');
+                expect(result).toBe(1000);
+            });
+
+            it('handles numeric input', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount(1000);
+                expect(result).toBe(1000);
+            });
+
+            it('handles comma-separated input by converting to dots', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount('1,001');
+                expect(result).toBe(1.001);
+            });
+        });
+
+        describe('BTC unit', () => {
+            it('converts BTC to sats correctly', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getSatAmount('1');
+                expect(result).toBe(SATS_PER_BTC);
+            });
+
+            it('converts partial BTC to sats correctly', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getSatAmount('0.5');
+                expect(result).toBe(SATS_PER_BTC / 2);
+            });
+
+            it('converts small BTC amounts correctly', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getSatAmount('0.00001');
+                expect(result).toBe(1000);
+            });
+
+            it('handles zero', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getSatAmount('0');
+                expect(result).toBe(0);
+            });
+
+            it('handles empty string', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getSatAmount('');
+                expect(result).toBe(0);
+            });
+        });
+
+        describe('fiat unit', () => {
+            it('converts fiat to sats correctly', () => {
+                (unitsStore as any).units = 'fiat';
+                // $50,000 = 1 BTC = 100,000,000 sats at rate of 50000
+                const result = getSatAmount('50000');
+                expect(result).toBe(100000000);
+            });
+
+            it('converts partial fiat amounts correctly', () => {
+                (unitsStore as any).units = 'fiat';
+                // $25,000 = 0.5 BTC = 50,000,000 sats at rate of 50000
+                const result = getSatAmount('25000');
+                expect(result).toBe(50000000);
+            });
+
+            it('converts small fiat amounts correctly', () => {
+                (unitsStore as any).units = 'fiat';
+                // $0.50 = 0.00001 BTC = 1000 sats at rate of 50000
+                const result = getSatAmount('0.5');
+                expect(result).toBe(1000);
+            });
+
+            it('handles comma as decimal separator', () => {
+                (unitsStore as any).units = 'fiat';
+                // $0,50 (European notation) = $0.50 = 1000 sats
+                const result = getSatAmount('0,5');
+                expect(result).toBe(1000);
+            });
+
+            it('returns 0 when rate is not available', () => {
+                (unitsStore as any).units = 'fiat';
+                (fiatStore as any).fiatRates = [];
+                const result = getSatAmount('1000');
+                expect(result).toBe(0);
+            });
+
+            it('returns 0 when fiat is not set', () => {
+                (unitsStore as any).units = 'fiat';
+                (settingsStore as any).settings.fiat = undefined;
+                const result = getSatAmount('1000');
+                expect(result).toBe(0);
+            });
+
+            it('returns 0 for empty string', () => {
+                (unitsStore as any).units = 'fiat';
+                const result = getSatAmount('');
+                expect(result).toBe(0);
+            });
+        });
+
+        describe('forceUnit parameter', () => {
+            it('overrides store units when forceUnit is provided', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount('1', 'BTC');
+                expect(result).toBe(SATS_PER_BTC);
+            });
+
+            it('forces sats interpretation', () => {
+                (unitsStore as any).units = 'BTC';
+                const result = getSatAmount('1000', 'sats');
+                expect(result).toBe(1000);
+            });
+
+            it('forces fiat interpretation', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount('50000', 'fiat');
+                expect(result).toBe(100000000);
+            });
+        });
+
+        describe('edge cases', () => {
+            it('returns 0 for unknown unit', () => {
+                (unitsStore as any).units = 'unknown';
+                const result = getSatAmount('1000');
+                expect(result).toBe(0);
+            });
+
+            it('handles numeric zero', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount(0);
+                expect(result).toBe(0);
+            });
+
+            it('handles string zero', () => {
+                (unitsStore as any).units = 'sats';
+                const result = getSatAmount('0');
+                expect(result).toBe(0);
             });
         });
     });
