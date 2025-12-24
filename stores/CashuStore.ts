@@ -406,8 +406,14 @@ export default class CashuStore {
         // if selected mint is deleted, set the next in line
         if (this.selectedMintUrl === mintUrl) {
             let newSelectedMintUrl = '';
-            if (newMintUrls[0]) newSelectedMintUrl = newMintUrls[0];
-            await this.setSelectedMint(newSelectedMintUrl);
+            if (newMintUrls[0]) {
+                newSelectedMintUrl = newMintUrls[0];
+                await this.setSelectedMint(newSelectedMintUrl);
+            } else {
+                await Storage.removeItem(
+                    `${this.getLndDir()}-cashu-selectedMintUrl`
+                );
+            }
         }
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;
