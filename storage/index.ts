@@ -28,7 +28,9 @@ class Storage {
     };
 
     removeItem = async (key: string) => {
-        const response = await Keychain.resetInternetCredentials(key);
+        const response = await Keychain.resetInternetCredentials({
+            server: key
+        });
         return response;
     };
 }
