@@ -63,7 +63,8 @@ export default class ChannelsStore {
     @observable public errorListPeers: string | null;
     @observable public errorDisconnectPeer: string | null;
     @observable public nodes: any = {};
-    @observable public aliasesById: any = {};
+    @observable public aliasesByChannelId: aliases = {};
+    @observable public aliasesByPubkey: aliases = { ...fixedAliases };
     @observable public channels: Array<Channel> = [];
     @observable public pendingChannels: Array<Channel> = [];
     @observable public closedChannels: Array<Channel> = [];
@@ -392,7 +393,9 @@ export default class ChannelsStore {
         if (channels.length === 0) return [];
 
         const channelsWithMissingAliases = channels?.filter(
-            (c) => c.channelId != null && this.aliasesById[c.channelId] == null
+            (c) =>
+                c.channelId != null &&
+                this.aliasesByChannelId[c.channelId] == null
         );
         const channelsWithMissingNodeInfos = channels?.filter(
             (c) => this.nodes[c.remotePubkey] == null
@@ -422,7 +425,10 @@ export default class ChannelsStore {
                 const nodeInfo = this.nodes[channel.remotePubkey];
                 const alias =
                     nodeInfo?.alias || fixedAliases[channel.remotePubkey];
-                if (alias) this.aliasesById[channel.channelId!] = alias;
+                if (alias) {
+                    this.aliasesByChannelId[channel.channelId!] = alias;
+                    this.aliasesByPubkey[channel.remotePubkey] = alias;
+                }
             }
 
             if (setPendingHtlcs) this.pendingHTLCs = [];
@@ -439,7 +445,7 @@ export default class ChannelsStore {
                 if (channel.alias == null) {
                     channel.alias =
                         this.nodes[channel.remotePubkey]?.alias ||
-                        this.aliasesById[channel.channelId!];
+                        this.aliasesByChannelId[channel.channelId!];
                 }
                 channel.displayName =
                     channel.alias ||

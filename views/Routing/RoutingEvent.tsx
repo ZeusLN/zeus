@@ -131,7 +131,7 @@ export default class RoutingEvent extends React.Component<
     render() {
         const { navigation, ChannelsStore } = this.props;
         const { routingEvent } = this.state;
-        const { aliasesById, channels } = ChannelsStore;
+        const { aliasesByChannelId, channels } = ChannelsStore;
 
         const {
             fee,
@@ -164,8 +164,8 @@ export default class RoutingEvent extends React.Component<
             );
             chanOut = chanOutFilter[0];
         }
-        const chanInLabel = aliasesById[inChannelId] || inChannelId;
-        const chanOutLabel = aliasesById[outChannelId] || outChannelId;
+        const chanInLabel = aliasesByChannelId[inChannelId] || inChannelId;
+        const chanOutLabel = aliasesByChannelId[outChannelId] || outChannelId;
         const channelInPoint = chanIn && chanIn.channel_point;
         const channelOutPoint = chanOut && chanOut.channel_point;
 
