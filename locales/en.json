@@ -1867,6 +1867,8 @@
     "stores.CashuStore.feeExceedsAmt": "Melt fees match or exceed token amount",
     "stores.CashuStore.autoSweep": "Cashu auto-sweep",
     "stores.CashuStore.notProperlyConfigured": "Cashu wallet is not properly configured. Please add at least one mint.",
+    "stores.CashuStore.errorDiscoveringMints": "Failed to discover mints from Nostr relays",
+    "stores.CashuStore.errorAddingMint": "Failed to add mint",
     "cashu.upgradePrompt.title": "Upgrade to Self-Custody?",
     "cashu.upgradePrompt.messageGeneral": "Your ecash balance is growing! Consider upgrading to a self-custodial Lightning wallet for better security and control over your funds.",
     "cashu.upgradePrompt.message10k": "You now have enough sats to purchase your first Lightning channel! Upgrade to self-custody to truly own your bitcoin.",

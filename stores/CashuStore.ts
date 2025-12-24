@@ -19,7 +19,7 @@ import BigNumber from 'bignumber.js';
 import reject from 'lodash/reject';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
-import NDK, { NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
+import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 
 import Invoice from '../models/Invoice';
@@ -229,17 +229,49 @@ export default class CashuStore {
     };
     @action
     public fetchMints = async () => {
-        runInAction(() => {
-            this.loading = true;
-        });
+        try {
+            runInAction(() => {
+                this.loading = true;
+                this.error = false;
+                this.error_msg = undefined;
+            });
 
-        this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
-        await this.ndk.connect(); // Ensure connection is established before fetching
+            this.ndk = new NDK({
+                explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+            });
+            await this.ndk.connect();
 
-        const filter: NDKFilter = { kinds: [38000 as NDKKind], limit: 2000 };
-        const events = await this.ndk.fetchEvents(filter);
+            const filter: NDKFilter = {
+                kinds: [38000 as NDKKind],
+                limit: 2000
+            };
 
-        InteractionManager.runAfterInteractions(() => {
+            const events = new Set<NDKEvent>();
+            let eoseCount = 0;
+            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
+            const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+
+            await new Promise<void>((resolve) => {
+                sub.on('event', (event: NDKEvent) => {
+                    events.add(event);
+                });
+                sub.on('eose', () => {
+                    eoseCount++;
+                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
+                        console.log(
+                            'Mint discovery: EOSE received from majority of relays'
+                        );
+                        resolve();
+                    }
+                });
+                setTimeout(() => {
+                    console.log('Mint discovery: Timeout reached');
+                    resolve();
+                }, 10000);
+            });
+
+            sub.stop();
+
             const mintCounts = new Map<string, number>();
 
             for (const event of events) {
@@ -267,7 +299,16 @@ export default class CashuStore {
             });
 
             return mintUrlsCounted;
-        });
+        } catch (e: any) {
+            console.error('Error fetching mints:', e);
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorDiscoveringMints'
+                );
+            });
+        }
     };
 
     @action
@@ -292,44 +333,64 @@ export default class CashuStore {
     ) => {
         this.loading = true;
         this.errorAddingMint = false;
+        this.error = false;
+        this.error_msg = undefined;
 
-        if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
-            const seedVersion = 'v2-bip39';
+        try {
+            if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
+                const seedVersion = 'v2-bip39';
+                await Storage.setItem(
+                    `${this.getLndDir()}-cashu-seed-version`,
+                    seedVersion
+                );
+                this.seedVersion = seedVersion;
+            }
+
+            const wallet = await this.initializeWallet(mintUrl, true);
+            if (wallet.errorConnecting) {
+                runInAction(() => {
+                    this.loading = false;
+                    this.errorAddingMint = true;
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'stores.CashuStore.errorAddingMint'
+                    );
+                });
+                return;
+            }
+            if (checkForExistingProofs) {
+                await this.restoreMintProofs(mintUrl);
+                await this.calculateTotalBalance();
+            }
+
+            const newMintUrls = this.mintUrls;
+            newMintUrls.push(mintUrl);
             await Storage.setItem(
-                `${this.getLndDir()}-cashu-seed-version`,
-                seedVersion
+                `${this.getLndDir()}-cashu-mintUrls`,
+                this.mintUrls
             );
-            this.seedVersion = seedVersion;
-        }
 
-        const wallet = await this.initializeWallet(mintUrl, true);
-        if (wallet.errorConnecting) {
-            this.errorAddingMint = true;
-            this.loading = false;
-            return;
-        }
-        if (checkForExistingProofs) {
-            await this.restoreMintProofs(mintUrl);
-            await this.calculateTotalBalance();
-        }
+            // set mint as selected if it's the first one
+            if (newMintUrls.length === 1) {
+                await this.setSelectedMint(mintUrl);
+            }
 
-        const newMintUrls = this.mintUrls;
-        newMintUrls.push(mintUrl);
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-mintUrls`,
-            this.mintUrls
-        );
-
-        // set mint as selected if it's the first one
-        if (newMintUrls.length === 1) {
-            await this.setSelectedMint(mintUrl);
+            runInAction(() => {
+                this.mintUrls = newMintUrls;
+                this.loading = false;
+            });
+            return this.cashuWallets;
+        } catch (e) {
+            console.error('Error adding mint:', e);
+            runInAction(() => {
+                this.loading = false;
+                this.errorAddingMint = true;
+                this.error = true;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorAddingMint'
+                );
+            });
         }
-
-        runInAction(() => {
-            this.mintUrls = newMintUrls;
-            this.loading = false;
-        });
-        return this.cashuWallets;
     };
 
     @action
@@ -345,8 +406,14 @@ export default class CashuStore {
         // if selected mint is deleted, set the next in line
         if (this.selectedMintUrl === mintUrl) {
             let newSelectedMintUrl = '';
-            if (newMintUrls[0]) newSelectedMintUrl = newMintUrls[0];
-            await this.setSelectedMint(newSelectedMintUrl);
+            if (newMintUrls[0]) {
+                newSelectedMintUrl = newMintUrls[0];
+                await this.setSelectedMint(newSelectedMintUrl);
+            } else {
+                await Storage.removeItem(
+                    `${this.getLndDir()}-cashu-selectedMintUrl`
+                );
+            }
         }
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;

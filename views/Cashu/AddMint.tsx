@@ -110,9 +110,12 @@ export default class AddMint extends React.Component<
                 />
                 <View style={{ flex: 1 }}>
                     <View style={styles.content}>
-                        {error && (
+                        {(error || (showDiscoverMints && CashuStore.error)) && (
                             <ErrorMessage
-                                message={localeString('general.error')}
+                                message={
+                                    CashuStore.error_msg ||
+                                    localeString('general.error')
+                                }
                             />
                         )}
 
@@ -156,7 +159,7 @@ export default class AddMint extends React.Component<
                             />
                         </View>
 
-                        {!showDiscoverMints ? (
+                        {!showDiscoverMints || CashuStore.error ? (
                             <View
                                 style={{
                                     ...styles.button
@@ -282,35 +285,6 @@ export default class AddMint extends React.Component<
                                         }
                                         onEndReachedThreshold={50}
                                     />
-                                )}
-
-                                {!CashuStore.loading && (
-                                    <>
-                                        {!!mints && mints.length > 0 ? (
-                                            <View></View>
-                                        ) : (
-                                            <Button
-                                                title={localeString(
-                                                    'views.Mints.noMints'
-                                                )}
-                                                icon={{
-                                                    name: 'error-outline',
-                                                    size: 25,
-                                                    color: themeColor('text')
-                                                }}
-                                                buttonStyle={{
-                                                    backgroundColor:
-                                                        'transparent',
-                                                    borderRadius: 30
-                                                }}
-                                                titleStyle={{
-                                                    color: themeColor('text'),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            />
-                                        )}
-                                    </>
                                 )}
                             </>
                         )}
