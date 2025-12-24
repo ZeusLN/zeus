@@ -19,7 +19,7 @@ import BigNumber from 'bignumber.js';
 import reject from 'lodash/reject';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
-import NDK, { NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
+import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 
 import Invoice from '../models/Invoice';
@@ -229,16 +229,16 @@ export default class CashuStore {
     };
     @action
     public fetchMints = async () => {
-        runInAction(() => {
-            this.loading = true;
-            this.error = false;
-            this.error_msg = undefined;
-        });
+        try {
+            runInAction(() => {
+                this.loading = true;
+                this.error = false;
+                this.error_msg = undefined;
+            });
 
-        const MINT_DISCOVERY_TIMEOUT_MS = 90000;
-
-        const fetchMintsWithTimeout = async (): Promise<Set<any>> => {
-            this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
+            this.ndk = new NDK({
+                explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+            });
             await this.ndk.connect();
 
             const filter: NDKFilter = {
@@ -246,20 +246,31 @@ export default class CashuStore {
                 limit: 2000
             };
 
-            return await this.ndk.fetchEvents(filter);
-        };
+            const events = new Set<NDKEvent>();
+            let eoseCount = 0;
+            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
+            const sub = this.ndk.subscribe(filter, { closeOnEose: true });
 
-        const timeoutPromise = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-                reject(new Error('MINT_DISCOVERY_TIMEOUT'));
-            }, MINT_DISCOVERY_TIMEOUT_MS);
-        });
+            await new Promise<void>((resolve) => {
+                sub.on('event', (event: NDKEvent) => {
+                    events.add(event);
+                });
+                sub.on('eose', () => {
+                    eoseCount++;
+                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
+                        console.log(
+                            'Mint discovery: EOSE received from majority of relays'
+                        );
+                        resolve();
+                    }
+                });
+                setTimeout(() => {
+                    console.log('Mint discovery: Timeout reached');
+                    resolve();
+                }, 10000);
+            });
 
-        try {
-            const events = await Promise.race([
-                fetchMintsWithTimeout(),
-                timeoutPromise
-            ]);
+            sub.stop();
 
             const mintCounts = new Map<string, number>();
 
@@ -290,15 +301,12 @@ export default class CashuStore {
             return mintUrlsCounted;
         } catch (e: any) {
             console.error('Error fetching mints:', e);
-            const isTimeout = e?.message === 'MINT_DISCOVERY_TIMEOUT';
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
-                this.error_msg = isTimeout
-                    ? localeString(
-                          'stores.CashuStore.errorDiscoveringMintsTimeout'
-                      )
-                    : localeString('stores.CashuStore.errorDiscoveringMints');
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorDiscoveringMints'
+                );
             });
         }
     };
