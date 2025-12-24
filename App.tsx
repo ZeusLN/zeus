@@ -232,6 +232,7 @@ import SendEcash from './views/Cashu/SendEcash';
 import UnspentTokens from './views/Cashu/UnspentTokens';
 import CashuSeed from './views/Cashu/CashuSeed';
 import CashuLockSettings from './views/Cashu/CashuLockSettings';
+import LegacySeedRecovery from './views/Cashu/LegacySeedRecovery';
 
 // Cashu Lightning address
 import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
@@ -1206,6 +1207,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="CashuSeed" // @ts-ignore:next-line
                                                         component={CashuSeed}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LegacySeedRecovery" // @ts-ignore:next-line
+                                                        component={
+                                                            LegacySeedRecovery
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="CashuPaymentRequest" // @ts-ignore:next-line

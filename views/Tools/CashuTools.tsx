@@ -104,6 +104,42 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                             </>
                         )}
 
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() =>
+                                navigation.navigate('LegacySeedRecovery')
+                            }
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.LegacySeedRecovery.title'
+                                    )}
+                                </ListItem.Title>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.LegacySeedRecovery.subtitle'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+
                         <>
                             <View style={{ marginTop: 25 }}>
                                 <Button
