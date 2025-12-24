@@ -125,8 +125,6 @@ export default class LegacySeedRecovery extends React.Component<
                         unit: keyset.unit || 'sat'
                     });
 
-                    await wallet.loadMint();
-
                     let start = 0;
                     let emptyBatchCount = 0;
                     let restoreProofs: Proof[] = [];
