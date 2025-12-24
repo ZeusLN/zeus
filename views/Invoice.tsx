@@ -92,7 +92,7 @@ export default class InvoiceView extends React.Component<
 
                 const alias =
                     ChannelsStore?.nodes?.[pubkey]?.alias ||
-                    (chanId && ChannelsStore?.aliasesById?.[chanId]) ||
+                    (chanId && ChannelsStore?.aliasesByChannelId?.[chanId]) ||
                     ChannelsStore?.aliasMap.get(pubkey);
 
                 const nodeName = alias || hop.node || pubkey;
