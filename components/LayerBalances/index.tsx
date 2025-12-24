@@ -256,7 +256,6 @@ const Row = ({ item }: { item: DataRow }) => {
 
 const SwipeableRow = ({
     item,
-    index,
     navigation,
     value,
     satAmount,
@@ -266,7 +265,6 @@ const SwipeableRow = ({
     editMode
 }: {
     item: DataRow;
-    index: number;
     navigation: StackNavigationProp<any, any>;
     value?: string;
     satAmount?: string;
@@ -275,7 +273,20 @@ const SwipeableRow = ({
     locked?: boolean;
     editMode?: boolean;
 }) => {
-    if (index === 0) {
+    if (item.layer === 'Ecash') {
+        return (
+            <EcashSwipeableRow
+                navigation={navigation}
+                value={value}
+                locked={locked}
+                needsConfig={cashuStore.mintUrls.length === 0}
+            >
+                <Row item={item} />
+            </EcashSwipeableRow>
+        );
+    }
+
+    if (item.layer === 'Lightning') {
         return (
             <LightningSwipeableRow
                 navigation={navigation}
@@ -288,7 +299,7 @@ const SwipeableRow = ({
         );
     }
 
-    if (index === 1) {
+    if (item.layer === 'On-chain') {
         return (
             <OnchainSwipeableRow
                 navigation={navigation}
@@ -298,19 +309,6 @@ const SwipeableRow = ({
             >
                 <Row item={item} />
             </OnchainSwipeableRow>
-        );
-    }
-
-    if (item.layer === 'Ecash') {
-        return (
-            <EcashSwipeableRow
-                navigation={navigation}
-                value={value}
-                locked={locked}
-                needsConfig={cashuStore.mintUrls.length === 0}
-            >
-                <Row item={item} />
-            </EcashSwipeableRow>
         );
     }
 
@@ -395,22 +393,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                   (item: any) => !item.hidden
               );
 
-        let DATA: DataRow[] = [
-            {
-                layer: 'Lightning',
-                balance: Number(lightningBalance).toFixed(3)
-            }
-        ];
+        let DATA: DataRow[] = [];
 
-        // Only show on-chain balance for non-Lnbank accounts
-        if (BackendUtils.supportsOnchainReceiving()) {
-            DATA.push({
-                layer: 'On-chain',
-                balance: Number(totalBlockchainBalance).toFixed(3)
-            });
-        }
-
-        // Only show on-chain balance for non-Lnbank accounts
         if (
             BackendUtils.supportsCashuWallet() &&
             settings?.ecash?.enableCashu
@@ -420,6 +404,19 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 custodial: true,
                 needsConfig: mintUrls?.length === 0,
                 balance: Number(totalBalanceSats).toFixed(3)
+            });
+        }
+
+        DATA.push({
+            layer: 'Lightning',
+            balance: Number(lightningBalance).toFixed(3)
+        });
+
+        // Only show on-chain balance for non-Lnbank accounts
+        if (BackendUtils.supportsOnchainReceiving()) {
+            DATA.push({
+                layer: 'On-chain',
+                balance: Number(totalBlockchainBalance).toFixed(3)
             });
         }
 
@@ -476,10 +473,9 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     ItemSeparatorComponent={() => (
                         <View style={styles.separator} />
                     )}
-                    renderItem={({ item, index }) => (
+                    renderItem={({ item }) => (
                         <SwipeableRow
                             item={item}
-                            index={index}
                             navigation={navigation}
                             // select pay method vars
                             value={value}
