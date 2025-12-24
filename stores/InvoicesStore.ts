@@ -533,7 +533,9 @@ export default class InvoicesStore {
                                 (pubKey !== localeString('general.unknown') &&
                                     this.channelsStore?.nodes?.[pubKey]
                                         ?.alias) ||
-                                this.channelsStore?.aliasesById?.[chanId] ||
+                                this.channelsStore?.aliasesByChannelId?.[
+                                    chanId
+                                ] ||
                                 (pubKey !== localeString('general.unknown') &&
                                     this.channelsStore?.aliasMap?.get(pubKey));
 
