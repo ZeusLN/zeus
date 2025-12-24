@@ -62,21 +62,26 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                         navigation={navigation}
                     />
                     <ScrollView>
-                        {(seedVersion === 'v2-bip39' ||
-                            seedVersion === 'v1') && (
+                        {seedVersion && (
                             <>
                                 <ListItem
                                     containerStyle={{
                                         backgroundColor: 'transparent'
                                     }}
                                     onPress={() =>
-                                        navigation.navigate('CashuSeed')
+                                        navigation.navigate('CashuSeed', {
+                                            seedType: '12'
+                                        })
                                     }
                                 >
                                     <ListItem.Content>
                                         <ListItem.Title
                                             style={{
-                                                color: themeColor('text'),
+                                                color: themeColor(
+                                                    seedVersion === 'v2-bip39'
+                                                        ? 'highlight'
+                                                        : 'text'
+                                                ),
                                                 fontFamily:
                                                     'PPNeueMontreal-Book'
                                             }}
@@ -88,22 +93,77 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                         <ListItem.Title
                                             style={{
                                                 color: themeColor(
-                                                    'secondaryText'
+                                                    seedVersion === 'v2-bip39'
+                                                        ? 'highlight'
+                                                        : 'secondaryText'
                                                 ),
                                                 fontFamily:
                                                     'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
-                                                seedVersion === 'v2-bip39'
-                                                    ? 'views.Tools.cashu.seed.bip39-12'
-                                                    : 'views.Tools.cashu.seed.bip39-24'
+                                                'views.Tools.cashu.seed.bip39-12'
                                             )}
                                         </ListItem.Title>
                                     </ListItem.Content>
                                     <Icon
                                         name="keyboard-arrow-right"
-                                        color={themeColor('secondaryText')}
+                                        color={themeColor(
+                                            seedVersion === 'v2-bip39'
+                                                ? 'highlight'
+                                                : 'secondaryText'
+                                        )}
+                                    />
+                                </ListItem>
+                                <ListItem
+                                    containerStyle={{
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate('CashuSeed', {
+                                            seedType: '24'
+                                        })
+                                    }
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    seedVersion === 'v1'
+                                                        ? 'highlight'
+                                                        : 'text'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.Seed.title'
+                                            )}
+                                        </ListItem.Title>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    seedVersion === 'v1'
+                                                        ? 'highlight'
+                                                        : 'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Tools.cashu.seed.bip39-24'
+                                            )}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                    <Icon
+                                        name="keyboard-arrow-right"
+                                        color={themeColor(
+                                            seedVersion === 'v1'
+                                                ? 'highlight'
+                                                : 'secondaryText'
+                                        )}
                                     />
                                 </ListItem>
                             </>

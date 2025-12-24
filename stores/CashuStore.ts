@@ -45,8 +45,6 @@ import UrlUtils from '../utils/UrlUtils';
 
 import NavigationService from '../NavigationService';
 
-const bip39 = require('bip39');
-
 const BATCH_SIZE = 100;
 const MAX_GAP = 3;
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
@@ -90,7 +88,8 @@ export default class CashuStore {
     @observable public receivedTokens?: Array<CashuToken>;
     @observable public sentTokens?: Array<CashuToken>;
     @observable public seedVersion?: string;
-    @observable public seedPhrase?: Array<string>;
+    @observable public seedPhrase12?: Array<string>;
+    @observable public seedPhrase24?: Array<string>;
     @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
@@ -157,7 +156,8 @@ export default class CashuStore {
         this.receivedTokens = undefined;
         this.sentTokens = undefined;
         this.seedVersion = undefined;
-        this.seedPhrase = undefined;
+        this.seedPhrase12 = undefined;
+        this.seedPhrase24 = undefined;
         this.seed = undefined;
         this.clearInvoice();
         this.clearPayReq();
@@ -365,55 +365,49 @@ export default class CashuStore {
     private getSeed = () => {
         if (this.seed) return this.seed;
 
+        const lndSeedPhrase = this.settingsStore.seedPhrase;
+        const mnemonic = lndSeedPhrase.join(' ');
+        const seedFromMnemonic = bip39scure.mnemonicToSeedSync(mnemonic);
+
+        // Generate 24-word phrase from 32 bytes (bytes 32-64)
+        const entropy24 = seedFromMnemonic.slice(32, 64);
+        const cashuSeedPhrase24 = bip39scure.entropyToMnemonic(
+            entropy24,
+            BIP39_WORD_LIST
+        );
+        this.seedPhrase24 = cashuSeedPhrase24.split(' ');
+
+        // Generate 12-word phrase from 16 bytes (bytes 48-64)
+        const entropy12 = seedFromMnemonic.slice(48, 64);
+        const cashuSeedPhrase12 = bip39scure.entropyToMnemonic(
+            entropy12,
+            BIP39_WORD_LIST
+        );
+        this.seedPhrase12 = cashuSeedPhrase12.split(' ');
+
+        // Store both seed phrases
+        Storage.setItem(
+            `${this.getLndDir()}-cashu-seed-phrase-12`,
+            this.seedPhrase12
+        );
+        Storage.setItem(
+            `${this.getLndDir()}-cashu-seed-phrase-24`,
+            this.seedPhrase24
+        );
+
+        // The actual seed used depends on version
         if (this.seedVersion === 'v2-bip39') {
-            const lndSeedPhrase = this.settingsStore.seedPhrase;
-            const mnemonic = lndSeedPhrase.join(' ');
-
-            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(mnemonic);
-            // only need 16 bytes for a 12 word phrase
-            const entropy = seedFromMnemonic.slice(48, 64);
-
-            const cashuSeedPhrase = bip39scure.entropyToMnemonic(
-                entropy,
-                BIP39_WORD_LIST
-            );
-            const seedPhrase = cashuSeedPhrase.split(' ');
-
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-seed-phrase`,
-                seedPhrase
-            );
-            this.seedPhrase = seedPhrase;
-
-            const seed = bip39scure.mnemonicToSeedSync(cashuSeedPhrase);
-
+            // v2: use 64-byte seed derived from 12-word mnemonic
+            const seed = bip39scure.mnemonicToSeedSync(cashuSeedPhrase12);
             Storage.setItem(
                 `${this.getLndDir()}-cashu-seed`,
                 Base64Utils.bytesToBase64(seed)
             );
             this.seed = seed;
-            return this.seed;
+        } else {
+            // v1: use 32 bytes directly
+            this.seed = new Uint8Array(entropy24);
         }
-
-        // v1
-        // Uses 32 bytes from LND seed, which maps to a 24-word BIP-39 mnemonic
-        const lndSeedPhrase = this.settingsStore.seedPhrase;
-        const mnemonic = lndSeedPhrase.join(' ');
-        const seed = bip39.mnemonicToSeedSync(mnemonic);
-        this.seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
-
-        // Generate 24-word mnemonic from the 32-byte seed for display/backup
-        const cashuSeedPhrase = bip39scure.entropyToMnemonic(
-            this.seed,
-            BIP39_WORD_LIST
-        );
-        const seedPhraseArray = cashuSeedPhrase.split(' ');
-
-        Storage.setItem(
-            `${this.getLndDir()}-cashu-seed-phrase`,
-            seedPhraseArray
-        );
-        this.seedPhrase = seedPhraseArray;
 
         return this.seed;
     };
@@ -716,7 +710,8 @@ export default class CashuStore {
             storedReceivedTokens,
             storedSentTokens,
             storedSeedVersion,
-            storedSeedPhrase,
+            storedSeedPhrase12,
+            storedSeedPhrase24,
             storedSeed
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
@@ -727,7 +722,8 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-received-tokens`),
             Storage.getItem(`${lndDir}-cashu-sent-tokens`),
             Storage.getItem(`${lndDir}-cashu-seed-version`),
-            Storage.getItem(`${lndDir}-cashu-seed-phrase`),
+            Storage.getItem(`${lndDir}-cashu-seed-phrase-12`),
+            Storage.getItem(`${lndDir}-cashu-seed-phrase-24`),
             Storage.getItem(`${lndDir}-cashu-seed`)
         ]);
 
@@ -757,8 +753,11 @@ export default class CashuStore {
               )
             : [];
         this.seedVersion = storedSeedVersion ? storedSeedVersion : undefined;
-        this.seedPhrase = storedSeedPhrase
-            ? JSON.parse(storedSeedPhrase)
+        this.seedPhrase12 = storedSeedPhrase12
+            ? JSON.parse(storedSeedPhrase12)
+            : undefined;
+        this.seedPhrase24 = storedSeedPhrase24
+            ? JSON.parse(storedSeedPhrase24)
             : undefined;
         this.seed = storedSeed
             ? Base64Utils.base64ToBytes(storedSeed)

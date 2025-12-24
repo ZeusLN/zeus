@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 
 import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -27,6 +28,7 @@ import Skull from '../../assets/images/SVG/Skull.svg';
 
 interface CashuSeedProps {
     navigation: StackNavigationProp<any, any>;
+    route: RouteProp<{ params: { seedType: '12' | '24' } }, 'params'>;
     CashuStore: CashuStore;
 }
 
@@ -93,21 +95,27 @@ export default class CashuSeed extends React.PureComponent<
     state = {
         understood: false,
         showModal: false,
-        seedPhrase: []
+        seedPhrase: [] as string[]
     };
 
     componentDidMount() {
-        const { seedPhrase } = this.props.CashuStore;
-        if (seedPhrase) {
-            this.setState({
-                seedPhrase
-            });
-        }
+        const { seedPhrase12, seedPhrase24 } = this.props.CashuStore;
+        const seedType = this.props.route?.params?.seedType || '12';
+        const seedPhrase =
+            seedType === '24' ? seedPhrase24 || [] : seedPhrase12 || [];
+        this.setState({ seedPhrase });
     }
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
         const { understood, showModal, seedPhrase } = this.state;
+        const seedType = route?.params?.seedType || '12';
+
+        const seedTypeLabel = localeString(
+            seedType === '24'
+                ? 'views.Tools.cashu.seed.bip39-24'
+                : 'views.Tools.cashu.seed.bip39-12'
+        );
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
@@ -129,7 +137,7 @@ export default class CashuSeed extends React.PureComponent<
                         }
                     }}
                     rightComponent={
-                        understood && seedPhrase ? (
+                        understood && seedPhrase.length > 0 ? (
                             <Row>
                                 <DangerouslyCopySeed />
                             </Row>
@@ -179,9 +187,7 @@ export default class CashuSeed extends React.PureComponent<
                                     </Text>
                                     <View style={styles.button}>
                                         <CopyButton
-                                            title={localeString(
-                                                'views.Settings.Seed.dangerousButton'
-                                            )}
+                                            title={seedTypeLabel}
                                             copyValue={seedPhrase.join(' ')}
                                             icon={{
                                                 name: 'warning',
@@ -284,39 +290,46 @@ export default class CashuSeed extends React.PureComponent<
                         <ScrollView
                             contentContainerStyle={{
                                 flexGrow: 1,
-                                flexDirection: 'row'
+                                paddingHorizontal: 10
                             }}
                         >
-                            <View style={styles.column}>
-                                {seedPhrase &&
-                                    seedPhrase
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontSize: 18,
+                                    textAlign: 'center',
+                                    marginBottom: 10
+                                }}
+                            >
+                                {seedTypeLabel}
+                            </Text>
+                            <View style={{ flexDirection: 'row' }}>
+                                <View style={styles.column}>
+                                    {seedPhrase
                                         .slice(0, seedPhrase.length / 2)
-                                        .map((word: string, index: number) => {
-                                            return (
-                                                <MnemonicWord
-                                                    index={index}
-                                                    word={word}
-                                                    key={`mnemonic-${index}`}
-                                                />
-                                            );
-                                        })}
-                            </View>
-                            <View style={styles.column}>
-                                {seedPhrase &&
-                                    seedPhrase
+                                        .map((word: string, index: number) => (
+                                            <MnemonicWord
+                                                index={index}
+                                                word={word}
+                                                key={`mnemonic-${index}`}
+                                            />
+                                        ))}
+                                </View>
+                                <View style={styles.column}>
+                                    {seedPhrase
                                         .slice(seedPhrase.length / 2)
-                                        .map((word: string, index: number) => {
-                                            return (
-                                                <MnemonicWord
-                                                    index={
-                                                        index +
-                                                        seedPhrase.length / 2
-                                                    }
-                                                    word={word}
-                                                    key={`mnemonic-${index}`}
-                                                />
-                                            );
-                                        })}
+                                        .map((word: string, index: number) => (
+                                            <MnemonicWord
+                                                index={
+                                                    index +
+                                                    seedPhrase.length / 2
+                                                }
+                                                word={word}
+                                                key={`mnemonic-${index}`}
+                                            />
+                                        ))}
+                                </View>
                             </View>
                         </ScrollView>
                         <View
