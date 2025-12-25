@@ -113,6 +113,41 @@ export default class ChoosePaymentMethod extends React.Component<
             this.setState({ lnurlParams });
         }
     }
+    hasInsufficientFunds = () => {
+        const { BalanceStore, CashuStore, UTXOsStore } = this.props;
+        const { satAmount, lightning, lnurlParams } = this.state;
+
+        if (!satAmount) return false;
+
+        const amount = Number(satAmount);
+        const { accounts } = UTXOsStore!;
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBalanceSats } = CashuStore!;
+
+        if (lightning || lnurlParams) {
+            if (Number(lightningBalance) >= amount) return false;
+            if (
+                BackendUtils.supportsCashuWallet() &&
+                Number(totalBalanceSats) >= amount
+            ) {
+                return false;
+            }
+        }
+        if (Number(totalBlockchainBalance) >= amount) return false;
+
+        if (accounts && accounts.length > 0) {
+            for (const account of accounts) {
+                if (
+                    !account.hidden &&
+                    !account.watch_only &&
+                    account.balance >= amount
+                ) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
 
     render() {
         const { navigation, BalanceStore, CashuStore, UTXOsStore } = this.props;
@@ -128,6 +163,7 @@ export default class ChoosePaymentMethod extends React.Component<
         const { accounts } = UTXOsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
+        const hasInsufficientFunds = this.hasInsufficientFunds();
 
         return (
             <Screen>
@@ -159,6 +195,20 @@ export default class ChoosePaymentMethod extends React.Component<
                             jumboText
                             toggleable
                         />
+                        {hasInsufficientFunds && (
+                            <Text
+                                style={{
+                                    fontSize: 16,
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    color: themeColor('error'),
+                                    marginTop: 20
+                                }}
+                            >
+                                {localeString(
+                                    'stores.CashuStore.notEnoughFunds'
+                                )}
+                            </Text>
+                        )}
                     </View>
                 )}
                 <PaymentMethodList
