@@ -409,7 +409,14 @@ export default class NWCConnectionsList extends React.Component<
             this.props;
         const { connections, loading } = NostrWalletConnectStore;
         const { connectionsLoading, error, hasPendingPayments } = this.state;
-
+        const shouldReduceIconSize =
+            hasPendingPayments &&
+            !(
+                Platform.OS === 'ios' &&
+                (SettingsStore.implementation !== 'embedded-lnd' ||
+                    !SettingsStore.settings?.ecash?.enableCashu)
+            );
+        const HeaderIconSize = shouldReduceIconSize ? 24 : 30;
         return (
             <Screen>
                 <Header
@@ -448,8 +455,8 @@ export default class NWCConnectionsList extends React.Component<
                                 >
                                     <Add
                                         fill={themeColor('text')}
-                                        width={30}
-                                        height={30}
+                                        width={HeaderIconSize}
+                                        height={HeaderIconSize}
                                         style={{ alignSelf: 'center' }}
                                     />
                                 </TouchableOpacity>
@@ -463,8 +470,8 @@ export default class NWCConnectionsList extends React.Component<
                                     >
                                         <ClockIcon
                                             color={themeColor('bitcoin')}
-                                            width={30}
-                                            height={30}
+                                            width={HeaderIconSize}
+                                            height={HeaderIconSize}
                                         />
                                     </TouchableOpacity>
                                 )}
@@ -486,8 +493,8 @@ export default class NWCConnectionsList extends React.Component<
                                     >
                                         <Gear
                                             fill={themeColor('text')}
-                                            width={30}
-                                            height={30}
+                                            width={HeaderIconSize}
+                                            height={HeaderIconSize}
                                             style={{ alignSelf: 'center' }}
                                         />
                                     </TouchableOpacity>
