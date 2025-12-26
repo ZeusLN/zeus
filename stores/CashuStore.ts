@@ -47,7 +47,7 @@ import NavigationService from '../NavigationService';
 
 const bip39 = require('bip39');
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 200;
 const MAX_GAP = 3;
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
 
@@ -1225,6 +1225,9 @@ export default class CashuStore {
             const allKeysets = await mint.getKeySets();
             const keysets = allKeysets.keysets;
 
+            // Fetch mintInfo once for all keysets (optimization)
+            const mintInfo = await mint.getInfo();
+
             this.restorationProgress = 5;
 
             let highestCount = 0;
@@ -1247,7 +1250,8 @@ export default class CashuStore {
                 // Restore keyset proofs
                 const { restoredProofs, count } = await this.restoreKeyset(
                     mint,
-                    keyset
+                    keyset,
+                    mintInfo
                 );
                 console.log(`Keyset ${i + 1} of ${ksLen}`, {
                     restoredProofs,
@@ -1288,24 +1292,20 @@ export default class CashuStore {
     };
 
     // Separate function for restoring a single keyset
-    restoreKeyset = async (mint: CashuMint, keyset: any) => {
+    restoreKeyset = async (mint: CashuMint, keyset: any, mintInfo: any) => {
         try {
-            const keys = await mint.getKeys(keyset.id);
-            const mintInfo = await mint.getInfo();
-
+            // Simplified wallet creation - cashu-ts handles keyset loading internally
             const wallet = new CashuWallet(mint, {
                 bip39seed: this.getSeed(),
                 mintInfo,
-                unit: 'sat',
-                keys: keys.keysets,
-                keysets: [keyset]
+                unit: keyset.unit || 'sat'
             });
 
             this.restorationKeyset = keyset.id;
 
             console.log(
                 RESTORE_PROOFS_EVENT_NAME,
-                `Loading keys for keyset ${keyset.id}`
+                `Restoring keyset ${keyset.id}`
             );
 
             const { keysetProofs, count } = await this.restoreBatch(
