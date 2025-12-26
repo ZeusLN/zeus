@@ -37,7 +37,6 @@ import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
-import NotesStore from '../../stores/NotesStore';
 import SwapStore from '../../stores/SwapStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -57,7 +56,6 @@ interface ActivityProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
-    NotesStore: NotesStore;
     SwapStore: SwapStore;
     route: Route<'Activity', { order: any }>;
 }
@@ -449,7 +447,6 @@ const ActivityListItem = React.memo(
     'FiatStore',
     'PosStore',
     'SettingsStore',
-    'NotesStore',
     'InvoicesStore',
     'SwapStore'
 )

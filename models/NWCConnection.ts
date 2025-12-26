@@ -6,6 +6,11 @@ import BaseModel from './BaseModel';
 
 import { Implementations } from '../stores/SettingsStore';
 
+import Invoice from './Invoice';
+import CashuInvoice from './CashuInvoice';
+import Payment from './Payment';
+import CashuPayment from './CashuPayment';
+
 export type ConnectionActivityType =
     | 'pay_invoice'
     | 'make_invoice'
@@ -21,14 +26,15 @@ export enum PermissionType {
 export interface ConnectionActivity {
     id: string; // lightning invoice
     type: ConnectionActivityType;
-    satAmount: number;
     payment_source: ConnectionPaymentSourceType;
     status: 'success' | 'pending' | 'failed';
+    payment?: Payment | CashuPayment | null;
+    invoice?: Invoice | CashuInvoice | null;
     error?: string;
-    description?: string;
     preimage?: string;
     paymentHash?: string;
-    lastprocessAt: Date;
+    lastprocessAt?: Date;
+    satAmount?: number;
     expiresAt?: Date;
     isExpired?: boolean;
     expiryLabel?: string;
