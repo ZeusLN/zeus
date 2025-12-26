@@ -31,6 +31,7 @@ interface AddMintState {
     loading: boolean;
     showDiscoverMints: boolean;
     error: boolean;
+    error_msg: string;
 }
 
 @inject('CashuStore')
@@ -46,14 +47,37 @@ export default class AddMint extends React.Component<
             mintUrl: '',
             showDiscoverMints: false,
             loading: false,
-            error: false
+            error: false,
+            error_msg: ''
         };
     }
 
     getMintInfo = async () => {
         const { mintUrl } = this.state;
+        if (!mintUrl.trim()) {
+            return;
+        }
+        const { CashuStore } = this.props;
+        const existingMints = CashuStore.mintUrls || [];
+
+        const mintAlreadyAdded = existingMints.some(
+            (url) =>
+                url.trim().replace(/\/$/, '') ===
+                mintUrl.trim().replace(/\/$/, '')
+        );
+        if (mintAlreadyAdded) {
+            this.setState({
+                error: true,
+                error_msg: localeString(
+                    'views.Cashu.AddMint.errorMintAlreadyAdded'
+                )
+            });
+            return;
+        }
         this.setState({
-            loading: true
+            loading: true,
+            error: false,
+            error_msg: ''
         });
         try {
             const mint = new CashuMint(mintUrl);
@@ -84,7 +108,8 @@ export default class AddMint extends React.Component<
 
     render() {
         const { CashuStore, navigation } = this.props;
-        const { mintUrl, showDiscoverMints, loading, error } = this.state;
+        const { mintUrl, showDiscoverMints, loading, error, error_msg } =
+            this.state;
 
         const mints = CashuStore.mintRecommendations;
 
@@ -114,6 +139,7 @@ export default class AddMint extends React.Component<
                             <ErrorMessage
                                 message={
                                     CashuStore.error_msg ||
+                                    error_msg ||
                                     localeString('general.error')
                                 }
                             />
@@ -155,7 +181,7 @@ export default class AddMint extends React.Component<
                                 onPress={() => {
                                     this.getMintInfo();
                                 }}
-                                disabled={loading}
+                                disabled={loading || mintUrl.length === 0}
                             />
                         </View>
 
