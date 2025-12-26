@@ -2,13 +2,20 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
 import React from 'react';
-import { FlatList, View, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    FlatList,
+    View,
+    StyleSheet,
+    TouchableOpacity,
+    Text
+} from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import SettingsStore from '../../../stores/SettingsStore';
 
 import { ConnectionActivity } from '../../../models/NWCConnection';
-import Payment from '../../../models/Payment';
+import Invoice from '../../../models/Invoice';
+import CashuInvoice from '../../../models/CashuInvoice';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -17,9 +24,9 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import PrivacyUtils from '../../../utils/PrivacyUtils';
 
 import Filter from '../../../assets/images/SVG/Filter On.svg';
-import dateTimeUtils from '../../../utils/DateTimeUtils';
 
 export interface NWCFilterState {
     sent: boolean;
@@ -70,28 +77,25 @@ export default class NWCConnectionActivity extends React.Component<
     }
 
     async componentDidMount() {
-        const { route } = this.props;
-        const { connectionId } = route.params;
+        const { connectionId } = this.props.route.params;
         await this.loadActivities(connectionId);
     }
 
     loadActivities = async (connectionId: string) => {
         const { NostrWalletConnectStore } = this.props;
+
         try {
             this.setState({ loading: true, error: null });
+
             const { name, activity } =
                 await NostrWalletConnectStore.getActivities(connectionId);
-            const enrichedActivity = await this.enrichActivitiesWithInvoiceData(
-                activity
-            );
-
             const filteredActivity = this.applyFilters(
-                enrichedActivity,
+                activity,
                 this.state.activeFilters
             );
 
             this.setState({
-                activity: enrichedActivity,
+                activity,
                 filteredActivity,
                 connectionName: name,
                 loading: false
@@ -108,83 +112,42 @@ export default class NWCConnectionActivity extends React.Component<
         }
     };
 
-    enrichActivitiesWithInvoiceData = async (
-        activities: ConnectionActivity[]
-    ): Promise<ConnectionActivity[]> => {
-        const { NostrWalletConnectStore, SettingsStore } = this.props;
-
-        const enrichedActivities = await Promise.all(
-            activities.map(async (item) => {
-                // Only fetch invoice data for pending make_invoice items
-                if (item.type === 'make_invoice' && item.status === 'pending') {
-                    try {
-                        const invoice =
-                            await NostrWalletConnectStore.getDecodedInvoice(
-                                item.id
-                            );
-
-                        if (invoice) {
-                            const locale = SettingsStore?.settings.locale;
-                            invoice?.determineFormattedOriginalTimeUntilExpiry(
-                                locale
-                            );
-                            invoice?.determineFormattedRemainingTimeUntilExpiry(
-                                locale
-                            );
-                            return {
-                                ...item,
-                                isExpired: invoice.isExpired,
-                                expiryLabel: invoice.formattedTimeUntilExpiry
-                            };
-                        }
-                    } catch (e) {
-                        console.error('Failed to fetch invoice:', e);
-                    }
-                }
-                return item;
-            })
-        );
-
-        return enrichedActivities;
-    };
-
     applyFilters = (
         activities: ConnectionActivity[],
         filters: NWCFilterState
     ): ConnectionActivity[] => {
         const allFiltersActive = Object.values(filters).every(
-            (v) => v === true
+            (value) => value === true
         );
         if (allFiltersActive) return activities;
 
         const noFiltersActive = Object.values(filters).every(
-            (v) => v === false
+            (value) => value === false
         );
         if (noFiltersActive) return [];
 
         return activities.filter((item) => {
-            const isSentType =
+            const isSent =
                 item.type === 'pay_invoice' || item.type === 'pay_keysend';
-            const isReceivedType = item.type === 'make_invoice';
+            const isReceived = item.type === 'make_invoice';
 
             if (item.status === 'success') {
                 return (
-                    (isSentType && filters.sent) ||
-                    (isReceivedType && filters.received)
+                    (isSent && filters.sent) || (isReceived && filters.received)
                 );
             }
 
             if (item.status === 'failed') {
                 return (
-                    (isSentType && filters.sent && filters.failed) ||
-                    (isReceivedType && filters.received && filters.failed)
+                    (isSent && filters.sent && filters.failed) ||
+                    (isReceived && filters.received && filters.failed)
                 );
             }
 
             if (item.status === 'pending') {
                 return (
-                    (isSentType && filters.sent && filters.pending) ||
-                    (isReceivedType && filters.pending)
+                    (isSent && filters.sent && filters.pending) ||
+                    (isReceived && filters.pending)
                 );
             }
 
@@ -193,15 +156,14 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     handleFilterChange = (newFilters: NWCFilterState) => {
-        this.setState((prev) => ({
+        this.setState((prevState) => ({
             activeFilters: newFilters,
-            filteredActivity: this.applyFilters(prev.activity, newFilters)
+            filteredActivity: this.applyFilters(prevState.activity, newFilters)
         }));
     };
 
     handleRefresh = () => {
-        const { route } = this.props;
-        const connectionId = route.params?.connectionId;
+        const connectionId = this.props.route.params?.connectionId;
         if (connectionId) {
             this.loadActivities(connectionId);
         }
@@ -217,65 +179,63 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     getActivityTitle = (item: ConnectionActivity): string => {
-        if (item.type === 'pay_invoice' || item.type === 'pay_keysend') {
-            if (item.status === 'failed') {
+        const isSent =
+            item.type === 'pay_invoice' || item.type === 'pay_keysend';
+
+        if (isSent) {
+            if (item.status === 'failed')
                 return localeString('views.Payment.failedPayment');
-            }
-            if (item.status === 'pending') {
+            if (item.status === 'pending')
                 return localeString('views.Payment.inTransitPayment');
-            }
             return localeString('views.Activity.youSent');
         }
 
-        // make_invoice
-        if (item.isExpired) {
-            return localeString('views.Activity.expiredPayment');
-        }
-        if (item.status === 'success') {
+        if (item.isExpired)
+            return localeString('views.Activity.expiredRequested');
+        if (item.status === 'success')
             return localeString('views.Activity.youReceived');
-        }
         return localeString('views.Activity.requestedPayment');
     };
 
     getActivitySubtitle = (item: ConnectionActivity): string => {
-        if (item.type === 'make_invoice') {
-            return localeString('views.PaymentRequest.title');
+        if (item.type === 'make_invoice' || item.payment_source === 'cashu') {
+            return localeString('general.cashu');
         }
-        return item.payment_source === 'lightning'
-            ? localeString('general.lightning')
-            : localeString('general.cashu');
+        return localeString('views.PaymentRequest.title');
+    };
+
+    getAmount = (item: ConnectionActivity) => {
+        if (item.type === 'make_invoice' && item.invoice) {
+            return item.invoice.getAmount;
+        }
+
+        if (
+            (item.type === 'pay_invoice' || item.type === 'pay_keysend') &&
+            item.payment
+        ) {
+            return item.payment.getAmount;
+        }
+
+        return item.satAmount;
     };
 
     navigateToPaymentDetails = (item: ConnectionActivity) => {
-        const { navigation } = this.props;
-        const payment = new Payment({
-            payment_request: item.id,
-            payment_hash: item.paymentHash,
-            payment_preimage: item.preimage,
-            value_sat: item.satAmount,
-            amount: item.satAmount,
-            status:
-                item.status === 'success'
-                    ? 'SUCCEEDED'
-                    : item.status === 'failed'
-                    ? 'FAILED'
-                    : 'IN_FLIGHT',
-            creation_date: item.lastprocessAt
-                ? Math.floor(new Date(item.lastprocessAt).getTime() / 1000)
-                : undefined,
-            invoice: item.id
-        });
-        navigation.navigate('Payment', { payment });
+        this.props.navigation.navigate('Payment', { payment: item.payment });
     };
 
-    navigateToInvoiceDetails = async (item: ConnectionActivity) => {
-        const { navigation, NostrWalletConnectStore } = this.props;
+    navigateToInvoiceDetails = (item: ConnectionActivity) => {
+        const { navigation } = this.props;
+
         try {
-            const invoice = await NostrWalletConnectStore.getDecodedInvoice(
-                item.id
-            );
-            if (invoice) {
-                navigation.navigate('Invoice', { invoice });
+            if (!item.invoice) return;
+
+            if (
+                item.payment_source === 'cashu' &&
+                item.invoice instanceof CashuInvoice
+            ) {
+                navigation.navigate('CashuInvoice', { invoice: item.invoice });
+            } else if (item.invoice instanceof Invoice) {
+                navigation.navigate('Invoice', { invoice: item.invoice });
             }
         } catch (e) {
             console.error('Navigation to invoice failed:', e);
@@ -283,7 +243,10 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     handleActivityPress = (item: ConnectionActivity) => {
-        if (item.type === 'pay_invoice' || item.type === 'pay_keysend') {
+        const isSent =
+            item.type === 'pay_invoice' || item.type === 'pay_keysend';
+
+        if (isSent) {
             this.navigateToPaymentDetails(item);
         } else if (item.type === 'make_invoice') {
             this.navigateToInvoiceDetails(item);
@@ -309,6 +272,17 @@ export default class NWCConnectionActivity extends React.Component<
     renderActivityListItem = ({ item }: { item: ConnectionActivity }) => {
         const title = this.getActivityTitle(item);
         const subtitle = this.getActivitySubtitle(item);
+        const displayTime =
+            item.invoice?.getDisplayTime || item.payment?.getDisplayTime;
+        const displayTimeShort =
+            item.invoice?.getDisplayTimeShort ||
+            item.payment?.getDisplayTimeShort;
+        const note = item.payment?.getNote || item.invoice?.getNote;
+        const showExpiry =
+            item.type === 'make_invoice' &&
+            item.status === 'pending' &&
+            !item.isExpired &&
+            item.expiryLabel;
 
         return (
             <ListItem
@@ -318,65 +292,87 @@ export default class NWCConnectionActivity extends React.Component<
                 <ListItem.Content>
                     <View style={styles.row}>
                         <ListItem.Title
-                            style={{
-                                ...styles.leftCell,
-                                color: themeColor('text')
-                            }}
+                            style={[
+                                styles.leftCell,
+                                { color: themeColor('text') }
+                            ]}
                         >
                             {title}
                         </ListItem.Title>
                         <Amount
-                            sats={item.satAmount}
+                            sats={this.getAmount(item)}
                             sensitive
                             color={this.getAmountColor(item)}
                         />
                     </View>
 
-                    <View style={styles.row}>
-                        <ListItem.Subtitle
-                            style={{
-                                ...styles.leftCellSecondary,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {subtitle}
-                        </ListItem.Subtitle>
-                        <ListItem.Subtitle
-                            style={{
-                                ...styles.rightCellSecondary,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {dateTimeUtils.listFormattedDate(
-                                new Date(item.lastprocessAt).getTime(),
-                                'mmm d, HH:MM'
-                            )}
-                        </ListItem.Subtitle>
-                    </View>
+                    {displayTime && (
+                        <View style={styles.row}>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.leftCellSecondary,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {subtitle}
+                            </ListItem.Subtitle>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.rightCellSecondary,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                <Text>{displayTimeShort}</Text>
+                            </ListItem.Subtitle>
+                        </View>
+                    )}
 
-                    {item.type === 'make_invoice' &&
-                        item.status === 'pending' &&
-                        !item.isExpired &&
-                        item.expiryLabel && (
-                            <View style={styles.row}>
-                                <ListItem.Subtitle
-                                    style={{
-                                        ...styles.leftCellSecondary,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString('views.Invoice.expiration')}
-                                </ListItem.Subtitle>
-                                <ListItem.Subtitle
-                                    style={{
-                                        ...styles.rightCellSecondary,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {item.expiryLabel}
-                                </ListItem.Subtitle>
-                            </View>
-                        )}
+                    {showExpiry && (
+                        <View style={styles.row}>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.leftCellSecondary,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {localeString('views.Invoice.expiration')}
+                            </ListItem.Subtitle>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.rightCellSecondary,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {item.expiryLabel}
+                            </ListItem.Subtitle>
+                        </View>
+                    )}
+
+                    {note && (
+                        <View style={styles.row}>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.noteLabel,
+                                    { color: themeColor('text') }
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {localeString('general.note')}
+                            </ListItem.Subtitle>
+                            <ListItem.Subtitle
+                                style={[
+                                    styles.noteValue,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                                ellipsizeMode="tail"
+                            >
+                                {PrivacyUtils.sensitiveValue({
+                                    input: note,
+                                    condenseAtLength: 100
+                                })?.toString()}
+                            </ListItem.Subtitle>
+                        </View>
+                    )}
                 </ListItem.Content>
             </ListItem>
         );
@@ -384,20 +380,69 @@ export default class NWCConnectionActivity extends React.Component<
 
     renderSeparator = () => (
         <View
-            style={{ height: 0.4, backgroundColor: themeColor('separator') }}
+            style={{
+                ...styles.separator,
+                backgroundColor: themeColor('background')
+            }}
         />
     );
 
-    render() {
-        const {
-            loading,
-            filteredActivity,
-            error,
-            connectionName,
-            activeFilters
-        } = this.state;
-        const { navigation } = this.props;
+    renderEmptyState = () => (
+        <Button
+            title={localeString('views.Activity.noActivity')}
+            icon={{ name: 'error-outline', color: themeColor('text') }}
+            onPress={this.handleRefresh}
+            buttonStyle={{ backgroundColor: 'transparent' }}
+            titleStyle={{ color: themeColor('text') }}
+        />
+    );
 
+    renderError = () => (
+        <Button
+            title={this.state.error || ''}
+            icon={{ name: 'error-outline', color: themeColor('warning') }}
+            onPress={this.handleRefresh}
+            buttonStyle={{ backgroundColor: 'transparent' }}
+            titleStyle={{ color: themeColor('warning') }}
+        />
+    );
+
+    renderContent = () => {
+        const { loading, filteredActivity, error } = this.state;
+
+        if (loading) {
+            return (
+                <View style={styles.loadingContainer}>
+                    <LoadingIndicator />
+                </View>
+            );
+        }
+
+        if (error) {
+            return this.renderError();
+        }
+
+        if (filteredActivity.length === 0) {
+            return this.renderEmptyState();
+        }
+
+        return (
+            <FlatList
+                data={filteredActivity.slice().reverse()}
+                renderItem={this.renderActivityListItem}
+                keyExtractor={(item, index) =>
+                    `${item.type}-${item.lastprocessAt}-${index}`
+                }
+                ItemSeparatorComponent={this.renderSeparator}
+                refreshing={loading}
+                onRefresh={this.handleRefresh}
+            />
+        );
+    };
+
+    render() {
+        const { connectionName, activeFilters } = this.state;
+        const { navigation } = this.props;
         const isDefaultFilter = this.isDefaultFilter(activeFilters);
 
         return (
@@ -426,45 +471,7 @@ export default class NWCConnectionActivity extends React.Component<
                     }
                     navigation={navigation}
                 />
-
-                {loading ? (
-                    <View style={{ padding: 50 }}>
-                        <LoadingIndicator />
-                    </View>
-                ) : error ? (
-                    <Button
-                        title={error}
-                        icon={{
-                            name: 'error-outline',
-                            color: themeColor('warning')
-                        }}
-                        onPress={this.handleRefresh}
-                        buttonStyle={{ backgroundColor: 'transparent' }}
-                        titleStyle={{ color: themeColor('warning') }}
-                    />
-                ) : filteredActivity.length > 0 ? (
-                    <FlatList
-                        data={filteredActivity.slice().reverse()}
-                        renderItem={this.renderActivityListItem}
-                        keyExtractor={(item, index) =>
-                            `${item.type}-${item.lastprocessAt}-${index}`
-                        }
-                        ItemSeparatorComponent={this.renderSeparator}
-                        refreshing={loading}
-                        onRefresh={this.handleRefresh}
-                    />
-                ) : (
-                    <Button
-                        title={localeString('views.Activity.noActivity')}
-                        icon={{
-                            name: 'error-outline',
-                            color: themeColor('text')
-                        }}
-                        onPress={this.handleRefresh}
-                        buttonStyle={{ backgroundColor: 'transparent' }}
-                        titleStyle={{ color: themeColor('text') }}
-                    />
-                )}
+                {this.renderContent()}
             </Screen>
         );
     }
@@ -488,5 +495,22 @@ const styles = StyleSheet.create({
     rightCellSecondary: {
         fontFamily: 'PPNeueMontreal-Book',
         textAlign: 'right'
+    },
+    noteLabel: {
+        fontFamily: 'Lato-Regular',
+        flexShrink: 0,
+        flex: 0,
+        width: 'auto'
+    },
+    noteValue: {
+        fontFamily: 'Lato-Regular',
+        flexWrap: 'wrap',
+        flexShrink: 1
+    },
+    separator: {
+        height: 0.4
+    },
+    loadingContainer: {
+        padding: 50
     }
 });
