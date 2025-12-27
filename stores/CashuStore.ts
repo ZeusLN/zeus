@@ -21,6 +21,8 @@ import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
+import * as bitcoin from 'bitcoinjs-lib';
+import { Buffer } from 'buffer';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -2525,6 +2527,61 @@ export default class CashuStore {
                 localeString('stores.CashuStore.errorDeletingData') +
                     `: ${error.message}`
             );
+        }
+    };
+
+    @action
+    public signMessage = async (msg: string | Buffer): Promise<string> => {
+        try {
+            const bip39seed = this.getSeed();
+            const privkeyHex = Base64Utils.base64ToHex(
+                Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
+            );
+
+            const hash = bitcoin.crypto.sha256(
+                Buffer.isBuffer(msg) ? msg : Buffer.from(msg)
+            );
+
+            const signature = bytesToHex(
+                schnorr.sign(new Uint8Array(hash), privkeyHex)
+            );
+
+            return signature;
+        } catch (e) {
+            console.error('signing failed', e);
+            throw e;
+        }
+    };
+
+    @action
+    public verifyMessage = async (
+        msg: string | Buffer,
+        signature: string
+    ): Promise<boolean> => {
+        try {
+            const hash = bitcoin.crypto.sha256(
+                Buffer.isBuffer(msg) ? msg : Buffer.from(msg)
+            );
+
+            const pubkey = this.selectedMintPubkey;
+
+            if (!pubkey) {
+                console.error('No selected mint pubkey found');
+                return false;
+            }
+
+            const pubkeyXOnly = pubkey.length === 66 ? pubkey.slice(2) : pubkey;
+
+            const isValid = schnorr.verify(
+                signature,
+                new Uint8Array(hash),
+                pubkeyXOnly
+            );
+
+            return isValid;
+        } catch (e) {
+            console.error('Verification error', e);
+            return false;
         }
     };
 }
