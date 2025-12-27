@@ -1836,6 +1836,7 @@
     "cashu.contactNoCashuPubkey": "Vybraný kontakt nemá Cashu veřejný klíč",
     "cashu.selectCashuPubkey": "Vyberte Cashu veřejný klíč",
     "views.Cashu.AddMint.title": "Přidat mint",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint již byl přidán",
     "views.Cashu.AddMint.discover": "Objevit minty",
     "views.Cashu.AddMint.discover.explainer": "Tyto minty doporučili uživatelé Nostru. Přečtěte si recenze na webu bitcoinmints.com. Buďte opatrní a dříve, než použijete mint, se řádně informujte.",
     "views.Cashu.AddMint.reviews": "Přečíst si recenze mintu",

@@ -1836,6 +1836,7 @@
     "cashu.contactNoCashuPubkey": "O contato selecionado não possui uma chave pública Cashu",
     "cashu.selectCashuPubkey": "Selecione Cashu pubkey",
     "views.Cashu.AddMint.title": "Adicione casa da moeda",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
     "views.Cashu.AddMint.discover": "Descubra as casas da moedas",
     "views.Cashu.AddMint.discover.explainer": "Estas casas da moedas foram recomendadas por outros usuários do Nostr. Leia avaliações em bitcoinmints.com. Tenha cuidado e faça sua própria pesquisa antes de usar uma cunha.",
     "views.Cashu.AddMint.reviews": "Leia avaliações sobre casa da moeda",

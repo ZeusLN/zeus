@@ -1836,6 +1836,7 @@
     "cashu.contactNoCashuPubkey": "Selected contact does not have a Cashu pubkey",
     "cashu.selectCashuPubkey": "Select Cashu pubkey",
     "views.Cashu.AddMint.title": "Add mint",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
     "views.Cashu.AddMint.discover": "Discover mints",
     "views.Cashu.AddMint.discover.explainer": "These mints were recommended by other Nostr users. Read reviews at bitcoinmints.com. Be careful and do your own research before using a mint.",
     "views.Cashu.AddMint.reviews": "Read mint reviews",

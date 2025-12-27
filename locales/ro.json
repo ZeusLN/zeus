@@ -1836,6 +1836,7 @@
     "cashu.contactNoCashuPubkey": "Contactul selectat nu are o cheie publică Cashu.",
     "cashu.selectCashuPubkey": "Selectați cheia publică Cashu",
     "views.Cashu.AddMint.title": "Adaugă monetărie",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
     "views.Cashu.AddMint.discover": "Caută monetărie",
     "views.Cashu.AddMint.discover.explainer": "Aceste monetării au fost recomandate de alți utilizatori Nostr. Citiți recenziile pe bitcoinmints.com. Fiți atenți și faceți propriile cercetări înainte de a utiliza o monetărie.",
     "views.Cashu.AddMint.reviews": "Citește recenzii despre monetărie",
