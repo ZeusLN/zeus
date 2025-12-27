@@ -1836,6 +1836,7 @@
     "cashu.contactNoCashuPubkey": "El contacto seleccionado no tiene una clave pública de Cashu",
     "cashu.selectCashuPubkey": "Seleccione la clave pública de Cashu",
     "views.Cashu.AddMint.title": "Añade acuña",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
     "views.Cashu.AddMint.discover": "Descubre acuñas",
     "views.Cashu.AddMint.discover.explainer": "Otros usuarios de Nostr recomendaron estas acuñas. Lea reseñas en bitcoinmints.com. Tenga cuidado e investigue por su cuenta antes de usar una acuña.",
     "views.Cashu.AddMint.reviews": "Lea reseñas de acuña",
