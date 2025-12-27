@@ -1,4 +1,4 @@
-import * as Keychain from 'react-native-keychain'; // Import Keychain directly
+import * as Keychain from 'react-native-keychain';
 import { settingsStore } from '../stores/Stores';
 import {
     Settings,
@@ -77,6 +77,7 @@ const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
 const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration';
+const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
@@ -94,6 +95,59 @@ class MigrationsUtils {
             console.warn(`Failed to migrate key: ${key}`, e);
         }
         return null;
+    }
+
+    private async migrateCashuForNode(lndDir: string) {
+        console.log(`Migrating Cashu data for node: ${lndDir}`);
+
+        const cashuKeys = [
+            `${lndDir}-cashu-mintUrls`,
+            `${lndDir}-cashu-selectedMintUrl`,
+            `${lndDir}-cashu-totalBalanceSats`,
+            `${lndDir}-cashu-invoices`,
+            `${lndDir}-cashu-payments`,
+            `${lndDir}-cashu-received-tokens`,
+            `${lndDir}-cashu-sent-tokens`,
+            `${lndDir}-cashu-seed-version`,
+            `${lndDir}-cashu-seed-phrase`,
+            `${lndDir}-cashu-seed`
+        ];
+
+        for (const key of cashuKeys) {
+            await this.migrateKey(key);
+        }
+
+        let mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
+
+        if (!mintUrlsJson) {
+            const cloudCreds = await Keychain.getInternetCredentials(
+                `${lndDir}-cashu-mintUrls`
+            );
+            if (cloudCreds) mintUrlsJson = cloudCreds.password;
+        }
+
+        if (mintUrlsJson) {
+            try {
+                const mintUrls = JSON.parse(mintUrlsJson);
+                if (Array.isArray(mintUrls)) {
+                    for (const mintUrl of mintUrls) {
+                        const walletId = `${lndDir}==${mintUrl}`;
+                        const walletKeys = [
+                            `${walletId}-mintInfo`,
+                            `${walletId}-counter`,
+                            `${walletId}-proofs`,
+                            `${walletId}-balance`,
+                            `${walletId}-pubkey`
+                        ];
+                        for (const wKey of walletKeys) {
+                            await this.migrateKey(wKey);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn(`Failed to parse mintUrls for ${lndDir}`, e);
+            }
+        }
     }
 
     public async legacySettingsMigrations(settings: string) {
@@ -812,115 +866,94 @@ class MigrationsUtils {
             const hasMigrated = await EncryptedStorage.getItem(
                 KEYCHAIN_MIGRATION_KEY
             );
-            if (hasMigrated) {
-                return;
-            }
 
-            console.log('Attempting keychain cloud sync migration...');
+            if (hasMigrated !== 'true') {
+                console.log('Attempting keychain cloud sync migration...');
 
-            const settingsData = await this.migrateKey(STORAGE_KEY);
+                const settingsData = await this.migrateKey(STORAGE_KEY);
 
-            const migrationKeys = [
-                CONTACTS_KEY,
-                LAST_CHANNEL_BACKUP_STATUS,
-                LAST_CHANNEL_BACKUP_TIME,
-                ADDRESS_ACTIVATED_STRING,
-                HASHES_STORAGE_STRING,
-                POS_HIDDEN_KEY,
-                POS_STANDALONE_KEY,
-                CATEGORY_KEY,
-                PRODUCT_KEY,
-                UNIT_KEY,
-                HIDDEN_ACCOUNTS_KEY,
-                CURRENCY_CODES_KEY,
-                ACTIVITY_FILTERS_KEY,
-                IS_BACKED_UP_KEY,
-                LSPS_ORDERS_KEY,
-                SWAPS_KEY,
-                REVERSE_SWAPS_KEY,
-                SWAPS_RESCUE_KEY,
-                SWAPS_LAST_USED_KEY
-            ];
+                const migrationKeys = [
+                    CONTACTS_KEY,
+                    LAST_CHANNEL_BACKUP_STATUS,
+                    LAST_CHANNEL_BACKUP_TIME,
+                    ADDRESS_ACTIVATED_STRING,
+                    HASHES_STORAGE_STRING,
+                    POS_HIDDEN_KEY,
+                    POS_STANDALONE_KEY,
+                    CATEGORY_KEY,
+                    PRODUCT_KEY,
+                    UNIT_KEY,
+                    HIDDEN_ACCOUNTS_KEY,
+                    CURRENCY_CODES_KEY,
+                    ACTIVITY_FILTERS_KEY,
+                    IS_BACKED_UP_KEY,
+                    LSPS_ORDERS_KEY,
+                    SWAPS_KEY,
+                    REVERSE_SWAPS_KEY,
+                    SWAPS_RESCUE_KEY,
+                    SWAPS_LAST_USED_KEY
+                ];
 
-            for (const key of migrationKeys) {
-                await this.migrateKey(key);
-            }
-
-            const notesListJson = await this.migrateKey(NOTES_KEY);
-            if (notesListJson) {
-                const noteKeys = JSON.parse(notesListJson);
-                if (Array.isArray(noteKeys)) {
-                    for (const noteKey of noteKeys) {
-                        await this.migrateKey(noteKey);
-                    }
+                for (const key of migrationKeys) {
+                    await this.migrateKey(key);
                 }
-            }
 
-            if (settingsData) {
-                const settings = JSON.parse(settingsData);
-                if (settings.nodes && Array.isArray(settings.nodes)) {
-                    for (const node of settings.nodes) {
-                        if (
-                            node.implementation === 'lightning-node-connect' &&
-                            node.pairingPhrase
-                        ) {
-                            const baseKey = `${LNC_STORAGE_KEY}:${hash(
-                                node.pairingPhrase
-                            )}`;
-                            const hostKey = `${baseKey}:host`;
-
-                            await this.migrateKey(baseKey);
-                            await this.migrateKey(hostKey);
+                const notesListJson = await this.migrateKey(NOTES_KEY);
+                if (notesListJson) {
+                    const noteKeys = JSON.parse(notesListJson);
+                    if (Array.isArray(noteKeys)) {
+                        for (const noteKey of noteKeys) {
+                            await this.migrateKey(noteKey);
                         }
                     }
                 }
+
+                if (settingsData) {
+                    const settings = JSON.parse(settingsData);
+                    if (settings.nodes && Array.isArray(settings.nodes)) {
+                        for (const node of settings.nodes) {
+                            if (
+                                node.implementation ===
+                                    'lightning-node-connect' &&
+                                node.pairingPhrase
+                            ) {
+                                const baseKey = `${LNC_STORAGE_KEY}:${hash(
+                                    node.pairingPhrase
+                                )}`;
+                                const hostKey = `${baseKey}:host`;
+
+                                await this.migrateKey(baseKey);
+                                await this.migrateKey(hostKey);
+                            }
+                        }
+                    }
+                }
+
+                await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
             }
 
-            const lndDir = settingsStore.lndDir || 'lnd';
-
-            const cashuKeys = [
-                `${lndDir}-cashu-mintUrls`,
-                `${lndDir}-cashu-selectedMintUrl`,
-                `${lndDir}-cashu-totalBalanceSats`,
-                `${lndDir}-cashu-invoices`,
-                `${lndDir}-cashu-payments`,
-                `${lndDir}-cashu-received-tokens`,
-                `${lndDir}-cashu-sent-tokens`,
-                `${lndDir}-cashu-seed-version`,
-                `${lndDir}-cashu-seed-phrase`,
-                `${lndDir}-cashu-seed`
-            ];
-
-            for (const key of cashuKeys) {
-                await this.migrateKey(key);
-            }
-
-            const mintUrlsCreds = await Keychain.getInternetCredentials(
-                `${lndDir}-cashu-mintUrls`
+            const cashuMigration = await EncryptedStorage.getItem(
+                CASHU_MIGRATION_KEY
             );
 
-            if (mintUrlsCreds && mintUrlsCreds.password) {
-                const mintUrls = JSON.parse(mintUrlsCreds.password);
+            if (cashuMigration !== 'true') {
+                console.log('Running Cashu Multi-Node Migration...');
 
-                if (Array.isArray(mintUrls)) {
-                    for (const mintUrl of mintUrls) {
-                        const walletId = `${lndDir}==${mintUrl}`;
-                        const walletKeys = [
-                            `${walletId}-mintInfo`,
-                            `${walletId}-counter`,
-                            `${walletId}-proofs`,
-                            `${walletId}-balance`,
-                            `${walletId}-pubkey`
-                        ];
-                        for (const wKey of walletKeys) {
-                            await this.migrateKey(wKey);
+                const settingsJson = await Storage.getItem(STORAGE_KEY);
+                if (settingsJson) {
+                    const settings = JSON.parse(settingsJson);
+                    if (settings.nodes && Array.isArray(settings.nodes)) {
+                        for (const node of settings.nodes) {
+                            if (node.implementation === 'embedded-lnd') {
+                                const lndDir = node.lndDir || 'lnd';
+                                await this.migrateCashuForNode(lndDir);
+                            }
                         }
                     }
                 }
+                await EncryptedStorage.setItem(CASHU_MIGRATION_KEY, 'true');
+                console.log('Cashu Migration Completed.');
             }
-
-            await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
-            console.log('Keychain cloud sync migration completed.');
         } catch (error) {
             console.error('Error during keychain cloud sync migration:', error);
         }
