@@ -212,7 +212,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        if (this.htlcs) {
+        if (this.htlcs && this.htlcs.length > 0) {
             const succeeded = this.htlcs.filter(
                 (htlc: any) =>
                     htlc.status === 'SUCCEEDED' ||
@@ -220,26 +220,26 @@ export default class Payment extends BaseModel {
             );
 
             const totalMsat = succeeded.reduce((sum: number, htlc: any) => {
+                let htlcAmountMsat = 0;
+                const route = htlc.route;
+                const firstHop = route?.hops?.[0];
+
                 // Prefer total_amt_msat from the route when available
-                if (htlc.route?.total_amt_msat !== undefined) {
-                    return sum + Number(htlc.route.total_amt_msat);
+                if (route?.total_amt_msat !== undefined) {
+                    htlcAmountMsat = Number(route.total_amt_msat);
+                    // Fallback to total_amt (sats) on the route
+                } else if (route?.total_amt !== undefined) {
+                    htlcAmountMsat = Number(route.total_amt) * 1000;
+                    // Use hop-level amounts if route totals are missing
+                } else if (firstHop?.amt_msat !== undefined) {
+                    htlcAmountMsat = Number(firstHop.amt_msat);
+                } else if (firstHop?.amt_to_forward_msat !== undefined) {
+                    htlcAmountMsat = Number(firstHop.amt_to_forward_msat);
+                } else if (firstHop?.amt_to_forward !== undefined) {
+                    htlcAmountMsat = Number(firstHop.amt_to_forward) * 1000;
                 }
-                // Fallback to total_amt (sats) on the route
-                if (htlc.route?.total_amt !== undefined) {
-                    return sum + Number(htlc.route.total_amt) * 1000;
-                }
-                // Use hop-level amounts if route totals are missing
-                const firstHop = htlc.route?.hops?.[0];
-                if (firstHop?.amt_msat !== undefined) {
-                    return sum + Number(firstHop.amt_msat);
-                }
-                if (firstHop?.amt_to_forward_msat !== undefined) {
-                    return sum + Number(firstHop.amt_to_forward_msat);
-                }
-                if (firstHop?.amt_to_forward !== undefined) {
-                    return sum + Number(firstHop.amt_to_forward) * 1000;
-                }
-                return sum;
+
+                return sum + htlcAmountMsat;
             }, 0);
 
             return totalMsat ? totalMsat / 1000 : 0;
