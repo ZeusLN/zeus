@@ -673,6 +673,7 @@ export default class ReceiveEcash extends React.Component<
                                                         }}
                                                     >
                                                         <EcashMintPicker
+                                                            isReceiveView={true}
                                                             hideAmount
                                                             navigation={
                                                                 navigation
@@ -846,6 +847,7 @@ export default class ReceiveEcash extends React.Component<
                                                 }}
                                             >
                                                 <EcashMintPicker
+                                                    isReceiveView={true}
                                                     hideAmount
                                                     navigation={navigation}
                                                 />

@@ -2101,22 +2101,18 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        const preimage = cashuInvoice.getPreimage;
-        if (!preimage) {
-            return this.handleError(
-                localeString(
-                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
-                ),
-                ErrorCodes.FAILED_TO_PAY_INVOICE
-            );
-        }
+        const payment = Array.isArray(cashuInvoice)
+            ? cashuInvoice[0]
+            : cashuInvoice;
+
+        const preimage = payment.getPreimage;
 
         await this.finalizePayment(connection, amount, skipNotification);
 
         return {
             result: {
                 preimage,
-                fees_paid: satsToMillisats(cashuInvoice.fee || 0)
+                fees_paid: satsToMillisats(payment.fee || 0)
             },
             error: undefined
         };

@@ -7,6 +7,7 @@ import Amount from './Amount';
 import { Row } from './layout/Row';
 
 import CashuStore from '../stores/CashuStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -16,20 +17,45 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 interface EcashMintPickerProps {
     title?: string;
     CashuStore?: CashuStore;
+    SettingsStore?: SettingsStore;
     navigation: StackNavigationProp<any, any>;
     hideAmount?: boolean;
     disabled?: boolean;
+    setFromCashuSend?: (value: boolean) => void;
+    isReceiveView?: boolean;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class EcashMintPicker extends React.Component<
     EcashMintPickerProps,
     {}
 > {
+    componentDidMount(): void {
+        const { setFromCashuSend } = this.props;
+        if (setFromCashuSend) {
+            setFromCashuSend(true);
+        }
+    }
+
+    componentWillUnmount(): void {
+        const { setFromCashuSend } = this.props;
+        if (setFromCashuSend) {
+            setFromCashuSend(false);
+        }
+    }
+
     render() {
-        const { CashuStore, hideAmount, disabled, navigation } = this.props;
-        const { cashuWallets, mintUrls, selectedMintUrl } = CashuStore!!;
+        const { CashuStore, hideAmount, disabled, navigation, SettingsStore } =
+            this.props;
+        const {
+            cashuWallets,
+            mintUrls,
+            selectedMintUrl,
+            selectedMintUrls = []
+        } = CashuStore!!;
+
+        const multiMint = SettingsStore?.settings.ecash.enableMultiMint;
 
         let mints: any = {};
         mintUrls.forEach((mintUrl) => {
@@ -43,76 +69,229 @@ export default class EcashMintPicker extends React.Component<
             };
         });
 
+        const getRow = (mintUrl: string, key: string | number = mintUrl) => (
+            <Row
+                key={key}
+                style={{
+                    height: 42,
+                    alignItems: 'center',
+                    paddingRight: 34,
+                    marginBottom: 0,
+                    backgroundColor: 'transparent'
+                }}
+            >
+                {mints[mintUrl]?.icon_url && (
+                    <Image
+                        source={{ uri: mints[mintUrl]?.icon_url }}
+                        style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 68,
+                            marginRight: 10
+                        }}
+                    />
+                )}
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: mints[mintUrl]?.errorConnecting
+                            ? themeColor('warning')
+                            : themeColor('text'),
+                        marginRight: 10,
+                        flex: 1
+                    }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                >
+                    {mints[mintUrl]?.name
+                        ? mints[mintUrl].name
+                        : localeString('cashu.tapToConfigure.short')}
+                </Text>
+                {!hideAmount && (
+                    <Amount sats={mints[mintUrl]?.mintBalance} sensitive />
+                )}
+            </Row>
+        );
+
+        if (multiMint && !this.props.isReceiveView) {
+            if (selectedMintUrls.length === 0) {
+                return (
+                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Mints')}
+                            style={{
+                                opacity: disabled ? 0.25 : 1,
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field
+                            }}
+                        >
+                            <Row
+                                style={{
+                                    height: 42,
+                                    alignItems: 'center',
+                                    paddingRight: 34,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('warning'),
+                                        marginRight: 10,
+                                        flex: 1
+                                    }}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                >
+                                    {localeString(
+                                        'views.Cashu.MultimintPayment.noMintsSelected'
+                                    )}
+                                </Text>
+                                <CaretRight
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                    width={20}
+                                    height={20}
+                                />
+                            </Row>
+                        </TouchableOpacity>
+                    </View>
+                );
+            }
+
+            if (selectedMintUrls.length === 1) {
+                return (
+                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Mints')}
+                            style={{
+                                opacity: disabled ? 0.25 : 1,
+                                backgroundColor: themeColor('secondary'),
+                                ...styles.field
+                            }}
+                        >
+                            {getRow(selectedMintUrls[0], 'single')}
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    right: 5,
+                                    top: 0,
+                                    bottom: 0,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    width: 24,
+                                    pointerEvents: 'none'
+                                }}
+                            >
+                                <CaretRight
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                    width={20}
+                                    height={20}
+                                />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+                );
+            }
+
+            const shown = selectedMintUrls.slice(0, 2);
+            const more = selectedMintUrls.length - shown.length;
+            const totalRows = shown.length + (more > 0 ? 1 : 0);
+
+            return (
+                <View style={{ flex: 1, flexDirection: 'row' }}>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Mints')}
+                        style={{
+                            opacity: disabled ? 0.25 : 1,
+                            backgroundColor: themeColor('secondary'),
+                            ...styles.field,
+                            height: 42 * totalRows,
+                            marginBottom: 12
+                        }}
+                    >
+                        <View style={{ flex: 1, position: 'relative' }}>
+                            {shown.map((mintUrl) => getRow(mintUrl))}
+                            {more > 0 && (
+                                <Row
+                                    style={{
+                                        height: 42,
+                                        alignItems: 'center',
+                                        paddingRight: 34,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 15,
+                                            flex: 1
+                                        }}
+                                    >{`+${more} more`}</Text>
+                                </Row>
+                            )}
+                            <View
+                                style={{
+                                    position: 'absolute',
+                                    right: 5,
+                                    top: 0,
+                                    bottom: 0,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    width: 24
+                                }}
+                                pointerEvents="none"
+                            >
+                                <CaretRight
+                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
+                                    width={20}
+                                    height={20}
+                                />
+                            </View>
+                        </View>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
         return (
             <View style={{ flex: 1, flexDirection: 'row' }}>
                 <TouchableOpacity
-                    onPress={() => {
-                        navigation.navigate('Mints');
-                    }}
+                    onPress={() =>
+                        navigation.navigate('Mints', {
+                            forceSingleMint:
+                                multiMint && this.props.isReceiveView
+                        })
+                    }
                     style={{
                         opacity: disabled ? 0.25 : 1,
                         backgroundColor: themeColor('secondary'),
                         ...styles.field
                     }}
                 >
-                    <Row>
-                        {mints[selectedMintUrl]?.icon_url && (
-                            <Image
-                                source={{
-                                    uri: mints[selectedMintUrl]?.icon_url
-                                }}
-                                style={{
-                                    alignSelf: 'center',
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: 68,
-                                    marginRight: 10
-                                }}
-                            />
-                        )}
-                        <Text
-                            style={{
-                                ...styles.text,
-                                color: mints[selectedMintUrl]?.errorConnecting
-                                    ? themeColor('warning')
-                                    : themeColor('text'),
-                                marginRight: 10,
-                                flex: 1
-                            }}
-                            numberOfLines={1}
-                            ellipsizeMode="tail"
-                        >
-                            {mints[selectedMintUrl]?.name
-                                ? mints[selectedMintUrl].name
-                                : localeString('cashu.tapToConfigure.short')}
-                        </Text>
-                        {!hideAmount && (
-                            <View
-                                style={{
-                                    position: 'absolute',
-                                    right: 30
-                                }}
-                            >
-                                <Amount
-                                    sats={mints[selectedMintUrl]?.mintBalance}
-                                    sensitive
-                                />
-                            </View>
-                        )}
-                        <View
-                            style={{
-                                position: 'absolute',
-                                right: 5
-                            }}
-                        >
-                            <CaretRight
-                                stroke={themeColor('text')}
-                                fill={themeColor('text')}
-                                width={20}
-                                height={20}
-                            />
-                        </View>
-                    </Row>
+                    {getRow(selectedMintUrl, 'single')}
+                    <View
+                        style={{
+                            position: 'absolute',
+                            right: 5,
+                            top: 0,
+                            bottom: 0,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            width: 24,
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <CaretRight
+                            stroke={themeColor('text')}
+                            fill={themeColor('text')}
+                            width={20}
+                            height={20}
+                        />
+                    </View>
                 </TouchableOpacity>
             </View>
         );

@@ -136,6 +136,7 @@ interface LightningAddressSettings {
     nostrRelays: Array<string>;
     notifications: number;
     mintUrl: string; // Cashu
+    mintUrls: Array<string>; // Cashu MultiMint
     posEnabled?: boolean; // ZEUS Pay+
 }
 
@@ -145,6 +146,7 @@ interface Bolt12AddressSettings {
 
 interface EcashSettings {
     enableCashu: boolean;
+    enableMultiMint: boolean;
     automaticallySweep: boolean;
     sweepThresholdSats?: number;
 }
@@ -1470,6 +1472,7 @@ export default class SettingsStore {
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0,
             mintUrl: '',
+            mintUrls: [],
             posEnabled: false // ZEUS Pay+
         },
         bolt12Address: {
@@ -1477,6 +1480,7 @@ export default class SettingsStore {
         },
         ecash: {
             enableCashu: false,
+            enableMultiMint: false,
             automaticallySweep: false,
             sweepThresholdSats: 10000
         },
