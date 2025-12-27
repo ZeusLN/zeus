@@ -410,24 +410,27 @@ export default class NostrConnectUtils {
      * @throws Error if invoice decoding fails
      */
     static decodeInvoiceTags(
-        paymentRequest: string,
+        invoice: string,
         fallbackExpirySeconds: number = 3600
     ): {
         paymentHash: string;
         descriptionHash: string;
         expiryTime: number;
+        createdAt: number | undefined;
+        paymentRequest: string;
     } {
         let paymentHash = '';
         let descriptionHash = '';
         let expiryTime =
             dateTimeUtils.getCurrentTimestamp() + fallbackExpirySeconds;
-
+        let createdAt;
+        let paymentRequest: string = '';
         try {
-            const decoded = bolt11.decode(paymentRequest);
+            const decoded = bolt11.decode(invoice);
             if (!decoded || !decoded.tags) {
                 throw new Error('Invalid payment request structure');
             }
-
+            paymentRequest = decoded.paymentRequest!;
             for (const tag of decoded.tags) {
                 if (tag.tagName === 'payment_hash') {
                     paymentHash = String(tag.data || '');
@@ -437,6 +440,7 @@ export default class NostrConnectUtils {
                     const invoiceExpiry = Number(tag.data);
                     if (invoiceExpiry > 0 && decoded.timestamp) {
                         expiryTime = decoded.timestamp + invoiceExpiry;
+                        createdAt = decoded.timestamp;
                     }
                 }
             }
@@ -445,7 +449,13 @@ export default class NostrConnectUtils {
             throw decodeError;
         }
 
-        return { paymentHash, descriptionHash, expiryTime };
+        return {
+            paymentHash,
+            descriptionHash,
+            expiryTime,
+            createdAt,
+            paymentRequest
+        };
     }
 
     /**

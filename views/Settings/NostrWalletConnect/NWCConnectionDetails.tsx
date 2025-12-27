@@ -30,6 +30,7 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import NWCConnection from '../../../models/NWCConnection';
 import EditIcon from '../../../assets/images/SVG/Edit.svg';
 import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
+import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionDetailsProps {
     navigation: StackNavigationProp<any, any>;
@@ -293,6 +294,21 @@ export default class NWCConnectionDetails extends React.Component<
                             </View>
                         ) : (
                             <View style={styles.headerActions}>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'NWCConnectionActivity',
+                                            { connectionId: connection?.id }
+                                        )
+                                    }
+                                    style={styles.headerActionButton}
+                                >
+                                    <ClockIcon
+                                        color={themeColor('bitcoin')}
+                                        width={20}
+                                        height={20}
+                                    />
+                                </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={() =>
                                         this.editConnection(
