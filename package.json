@@ -23,6 +23,7 @@
   },
   "scripts": {
     "start": "react-native start",
+    "start:prod": "cross-env NODE_ENV=production react-native start",
     "ra": "react-native run-android",
     "ri": "react-native run-ios",
     "postinstall": "node patches/patch-sifir_android.mjs && rn-nodeify --install --hack && npx jetify && yarn run fetch-libraries && pod-install",
@@ -189,6 +190,7 @@
     "babel-jest": "29.7.0",
     "compressing": "1.10.0",
     "concurrently": "9.1.2",
+    "cross-env": "^7.0.3",
     "eslint": "8.45.0",
     "eslint-config-prettier": "8.5.0",
     "eslint-import-resolver-typescript": "3.6.1",
