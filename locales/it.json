@@ -1836,6 +1836,7 @@
     "cashu.contactNoCashuPubkey": "Il contatto selezionato non ha una chiave pubblica Cashu",
     "cashu.selectCashuPubkey": "Seleziona la chiave pubblica Cashu",
     "views.Cashu.AddMint.title": "Aggiungere la zecca",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
     "views.Cashu.AddMint.discover": "Scopri le zecca",
     "views.Cashu.AddMint.discover.explainer": "Queste zeccas sono state consigliate da altri utenti di Nostr. Leggi le recensioni su bitcoinmints.com. Fai attenzione e fai le tue ricerche prima di usare una zecca.",
     "views.Cashu.AddMint.reviews": "Leggi le recensioni di zecca",
