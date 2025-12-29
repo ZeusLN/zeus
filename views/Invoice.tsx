@@ -443,7 +443,7 @@ export default class InvoiceView extends React.Component<
                                 keyValue={localeString(
                                     'views.Payment.paymentPreimage'
                                 )}
-                                value={payment_hash}
+                                value={payment_preimage}
                                 sensitive
                             />
                         )}
