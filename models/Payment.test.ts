@@ -1,6 +1,4 @@
-jest.mock('../stores/Stores', () => ({
-    notesStore: { notes: {} }
-}));
+jest.mock('../stores/Stores', () => ({}));
 
 import Payment from './Payment';
 
