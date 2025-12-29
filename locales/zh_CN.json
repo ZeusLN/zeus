@@ -1836,7 +1836,7 @@
     "cashu.contactNoCashuPubkey": "所选联系人没有 Cashu 公钥",
     "cashu.selectCashuPubkey": "选择 Cashu 公钥",
     "views.Cashu.AddMint.title": "添加铸币厂",
-    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "铸造厂已添加",
     "views.Cashu.AddMint.discover": "发现铸币厂",
     "views.Cashu.AddMint.discover.explainer": "这些铸币厂是由其他 Nostr 用户所推荐的。请在 bitcoinmints.com 阅读评测。在使用铸币厂之前请谨慎并自行研究。",
     "views.Cashu.AddMint.reviews": "阅读铸币厂评测",
