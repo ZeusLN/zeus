@@ -269,11 +269,13 @@ export default class Payment extends BaseModel {
 
     @computed public get enhancedPath(): any[] {
         const enhancedPath: any[] = [];
+        const nodes = this.nodes || {};
+
         !this.htlcs &&
             this.path &&
             this.path.forEach((hop: string) => {
                 const pubKey = hop;
-                const alias = this.nodes[pubKey];
+                const alias = nodes[pubKey];
                 const enhancedHop = alias ? alias : pubKey;
                 enhancedPath.push(enhancedHop);
             });
@@ -288,9 +290,8 @@ export default class Payment extends BaseModel {
                     htlc.route.hops &&
                         htlc.route.hops.forEach((hop: any) => {
                             const pubKey = hop.pub_key;
-                            const alias =
-                                this.nodes[pubKey] && this.nodes[pubKey].alias;
-                            const nodeLabel = alias ? alias : pubKey;
+                            const alias = nodes[pubKey]?.alias;
+                            const nodeLabel = alias || pubKey;
                             const enhancedHop = {
                                 alias,
                                 pubKey,
