@@ -198,7 +198,10 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     getActivitySubtitle = (item: ConnectionActivity): string => {
-        if (item.type === 'make_invoice' && item.payment_source === 'cashu') {
+        if (
+            (item.type === 'make_invoice' || item.type === 'pay_invoice') &&
+            item.payment_source === 'cashu'
+        ) {
             return localeString('general.cashu');
         }
         return localeString('views.PaymentRequest.title');
