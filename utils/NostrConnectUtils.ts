@@ -419,6 +419,7 @@ export default class NostrConnectUtils {
         expiryTime: number;
         createdAt: number | undefined;
         paymentRequest: string;
+        isPaid: boolean;
     } {
         let paymentHash = '';
         let descriptionHash = '';
@@ -426,10 +427,15 @@ export default class NostrConnectUtils {
             dateTimeUtils.getCurrentTimestamp() + fallbackExpirySeconds;
         let createdAt;
         let paymentRequest: string = '';
+        let isPaid = false;
         try {
             const decoded = bolt11.decode(invoice);
+
             if (!decoded || !decoded.tags) {
                 throw new Error('Invalid payment request structure');
+            }
+            if (decoded.complete) {
+                isPaid = true;
             }
             paymentRequest = decoded.paymentRequest!;
             for (const tag of decoded.tags) {
@@ -455,7 +461,8 @@ export default class NostrConnectUtils {
             descriptionHash,
             expiryTime,
             createdAt,
-            paymentRequest
+            paymentRequest,
+            isPaid
         };
     }
 

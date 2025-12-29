@@ -951,11 +951,14 @@ export default class NostrWalletConnectStore {
                 activity.invoice.determineFormattedOriginalTimeUntilExpiry(
                     locale
                 );
+                const decodedInvoice = NostrConnectUtils.decodeInvoiceTags(
+                    activity.invoice.getPaymentRequest
+                );
                 if (
                     activity.type === 'make_invoice' &&
                     activity.status === 'pending'
                 ) {
-                    if (activity.invoice.isPaid) {
+                    if (decodedInvoice.isPaid || activity.invoice.isPaid) {
                         runInAction(() => {
                             activity.status = 'success';
                         });
@@ -1622,51 +1625,23 @@ export default class NostrWalletConnectStore {
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
-            let paymentHash = NostrConnectUtils.convertPaymentHashToHex(
-                request.payment_hash!
-            );
-            if (!paymentHash) {
-                return this.handleError(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.invalidPaymentRequest'
-                    ),
-                    ErrorCodes.INVALID_INVOICE
-                );
-            }
             if (this.isCashuConfigured) {
                 const cashuInvoices = this.cashuStore.invoices || [];
                 const matchingInvoice = cashuInvoices.find((inv) => {
-                    try {
-                        const decoded = bolt11.decode(inv.getPaymentRequest);
-                        const invPaymentHash = decoded.tags.find(
-                            (tag) => tag.tagName === 'payment_hash'
-                        )?.data;
-                        return String(invPaymentHash) === paymentHash;
-                    } catch {
-                        return false;
-                    }
+                    const decodedInvoice = NostrConnectUtils.decodeInvoiceTags(
+                        inv.getPaymentRequest
+                    );
+                    return (
+                        inv.getPaymentRequest === request.invoice ||
+                        decodedInvoice.paymentHash === request.payment_hash
+                    );
                 });
-                if (matchingInvoice) {
-                    if (
-                        this.cashuStore.selectedMintUrl !==
-                        matchingInvoice.mintUrl
-                    ) {
-                        await this.cashuStore.setSelectedMint(
-                            matchingInvoice.mintUrl
-                        );
-                    }
-                    let cashuInvoice;
-                    let isPaid = matchingInvoice.isPaid;
+                if (
+                    matchingInvoice &&
+                    matchingInvoice instanceof CashuInvoice
+                ) {
+                    let isPaid = matchingInvoice.decoded?.complete || false;
                     let amtSat = matchingInvoice.getAmount;
-
-                    if (!isPaid) {
-                        cashuInvoice = await this.cashuStore.checkInvoicePaid(
-                            matchingInvoice.quote
-                        );
-                        isPaid = cashuInvoice?.isPaid || false;
-                        amtSat =
-                            cashuInvoice?.amtSat || matchingInvoice.getAmount;
-                    }
 
                     const timestamp =
                         Number(matchingInvoice.getTimestamp) ||
@@ -1682,9 +1657,10 @@ export default class NostrWalletConnectStore {
                         payment_hash: request.payment_hash!,
                         amount: satsToMillisats(amtSat || 0),
                         ...(isPaid && {
-                            preimage: matchingInvoice.decoded.tags.find(
-                                (tag: any) => tag.tagName === 'payment_preimage'
-                            )?.data
+                            preimage:
+                                matchingInvoice.getPaymentRequest ||
+                                request.invoice ||
+                                request.payment_hash
                         }),
                         description: matchingInvoice.getMemo,
                         settled_at: isPaid
@@ -1693,6 +1669,7 @@ export default class NostrWalletConnectStore {
                         created_at: timestamp,
                         expires_at: expiresAt
                     });
+                    console.log(result);
                     return {
                         result,
                         error: undefined
@@ -1707,7 +1684,7 @@ export default class NostrWalletConnectStore {
                 }
             } else {
                 const rawInvoice = await BackendUtils.lookupInvoice({
-                    r_hash: paymentHash
+                    r_hash: request.payment_hash!
                 });
                 const invoice = new Invoice(rawInvoice);
                 const state = invoice.isPaid
@@ -3296,63 +3273,6 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private async validateAndParsePendingEvent(eventStr: string): Promise<{
-        request: NWCRequest;
-        connection: NWCConnection;
-        eventId: string;
-    }> {
-        let event: NostrEvent;
-        try {
-            event = JSON.parse(eventStr);
-            if (
-                event.kind !== 23194 ||
-                !event.content ||
-                !event.pubkey ||
-                !event.id
-            ) {
-                console.warn('NWC: Invalid event format, skipping', {
-                    event
-                });
-                throw new Error('Invalid event format');
-            }
-        } catch (error) {
-            throw new Error('Failed to parse event');
-        }
-        const connection = this.activeConnections.find(
-            (c) => c.pubkey === event.pubkey
-        );
-        if (!connection) {
-            console.warn('NWC: Connection not found for event', {
-                pubkey: event.pubkey
-            });
-            throw new Error('Connection not found for event');
-        }
-        let request: NWCRequest;
-        try {
-            const privateKey = this.walletServiceKeys!.privateKey;
-            if (!privateKey) {
-                throw new Error(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
-                    )
-                );
-            }
-            const decryptedContent = nip04.decrypt(
-                privateKey,
-                connection.pubkey,
-                event.content
-            );
-            request = JSON.parse(decryptedContent);
-        } catch (error) {
-            console.error('NWC: Failed to decrypt or parse event content', {
-                error,
-                eventStr
-            });
-            throw error;
-        }
-
-        return { request, connection, eventId: event.id };
-    }
     private async processPendingEvents(events: string[]): Promise<void> {
         if (!events || !Array.isArray(events) || events.length === 0) {
             console.info('NWC: No pending events to process');
@@ -3402,9 +3322,10 @@ export default class NostrWalletConnectStore {
                                 error
                             );
                         }
-                        const decodedInvoice = await this.getDecodedInvoice(
-                            invoice
-                        );
+
+                        const decodedInvoice =
+                            NostrConnectUtils.decodeInvoiceTags(invoice);
+
                         if (!decodedInvoice?.isPaid) {
                             return {
                                 type: 'pay_invoice',
@@ -3501,6 +3422,68 @@ export default class NostrWalletConnectStore {
                     totalAmount
                 });
         }
+    }
+
+    private async validateAndParsePendingEvent(eventStr: string): Promise<{
+        request: NWCRequest;
+        connection: NWCConnection;
+        eventId: string;
+    }> {
+        let event: NostrEvent;
+        try {
+            event = JSON.parse(eventStr);
+            if (
+                event.kind !== 23194 ||
+                !event.content ||
+                !event.pubkey ||
+                !event.id
+            ) {
+                console.warn('NWC: Invalid event format, skipping', {
+                    event
+                });
+                throw new Error('Invalid event format');
+            }
+        } catch (error) {
+            throw new Error('Failed to parse event');
+        }
+        const connection = this.activeConnections.find(
+            (c) => c.pubkey === event.pubkey
+        );
+        if (!connection) {
+            console.warn('NWC: Connection not found for event', {
+                pubkey: event.pubkey
+            });
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            );
+        }
+        let request: NWCRequest;
+        try {
+            const privateKey = this.walletServiceKeys!.privateKey;
+            if (!privateKey) {
+                throw new Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.walletServiceKeyNotFound'
+                    )
+                );
+            }
+            const decryptedContent = nip04.decrypt(
+                privateKey,
+                connection.pubkey,
+                event.content
+            );
+            request = JSON.parse(decryptedContent);
+        } catch (error) {
+            console.error('NWC: Failed to decrypt or parse event content', {
+                error,
+                eventStr
+            });
+            throw error;
+        }
+
+        return { request, connection, eventId: event.id };
     }
 
     @action
@@ -3967,7 +3950,6 @@ export default class NostrWalletConnectStore {
             )
         );
     }
-
     public async pingRelay(relayUrl: string): Promise<{
         status: boolean;
         error?: string | null;
@@ -3993,43 +3975,6 @@ export default class NostrWalletConnectStore {
             };
         }
     }
-    public async getDecodedInvoice(
-        invoice: string
-    ): Promise<Invoice | CashuInvoice | null> {
-        const decoded = NostrConnectUtils.decodeInvoiceTags(invoice);
-
-        if (this.isCashuConfigured) {
-            await this.cashuStore.getPayReq(decoded.paymentRequest);
-            const inv = this.cashuStore.payReq;
-            const error = this.cashuStore.getPayReqError;
-            if (error) return null;
-            return new CashuInvoice(inv) || null;
-        }
-        try {
-            const rawInvoice = await BackendUtils.lookupInvoice({
-                r_hash: decoded.paymentHash
-            });
-            return new Invoice(rawInvoice);
-        } catch (e) {
-            console.log(
-                'NWC: Failed to decoded with lookupInvoice method',
-                (e as Error).message
-            );
-        }
-        try {
-            const rawInvoice = await BackendUtils.decodePaymentRequest([
-                decoded.paymentRequest
-            ]);
-            return new Invoice(rawInvoice);
-        } catch (e) {
-            console.log(
-                'NWC: Failed to decoded with decodePaymentRequest method',
-                (e as Error).message
-            );
-        }
-        return null;
-    }
-
     public setisInNWCPendingPaymentsView(isInNWCPendingPaymentsView: boolean) {
         runInAction(() => {
             this.isInNWCPendingPaymentsView = isInNWCPendingPaymentsView;
