@@ -1071,6 +1071,41 @@ export default class ChannelView extends React.Component<
                             csv_delay={csv_delay}
                         />
                     )}
+                    {BackendUtils.supportsForwardingHistory() &&
+                        BackendUtils.supportsForwardingHistoryChannelFilter(
+                            NodeInfoStore.nodeInfo?.version
+                        ) &&
+                        channelId && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent',
+                                    marginLeft: -13,
+                                    marginRight: -20
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('Routing', {
+                                        filterChanIdIn: channelId
+                                    })
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Channel.routingHistory'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
                     {BackendUtils.supportsBumpFee() && pendingOpen && (
                         <View style={styles.button}>
                             <Button
