@@ -3326,7 +3326,7 @@ export default class NostrWalletConnectStore {
                         const decodedInvoice =
                             NostrConnectUtils.decodeInvoiceTags(invoice);
 
-                        if (!decodedInvoice?.isPaid) {
+                        if (decodedInvoice && decodedInvoice.isPaid) {
                             return {
                                 type: 'pay_invoice',
                                 eventStr,
