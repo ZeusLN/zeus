@@ -51,7 +51,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { v4 as uuidv4 } from 'uuid';
 
 import BackendUtils from '../utils/BackendUtils';
-import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import NostrConnectUtils from '../utils/NostrConnectUtils';
 import IOSBackgroundTaskUtils from '../utils/IOSBackgroundTaskUtils';
@@ -168,8 +167,8 @@ export interface CreateConnectionParams {
     customExpiryUnit?: TimeUnit;
     totalSpendSats?: number;
     lastBudgetReset?: Date;
+    activity?: ConnectionActivity[];
 }
-
 export default class NostrWalletConnectStore {
     @observable public loading = false;
     @observable public error = false;
@@ -587,7 +586,8 @@ export default class NostrWalletConnectStore {
                 customExpiryValue: params.customExpiryValue,
                 customExpiryUnit: params.customExpiryUnit,
                 nodePubkey,
-                implementation
+                implementation,
+                activity: params.activity || []
             };
 
             const connection = new NWCConnection(connectionData);
@@ -930,32 +930,43 @@ export default class NostrWalletConnectStore {
     ): Promise<{ name: string; activity: ConnectionActivity[] }> => {
         const connection = this.getConnection(connectionId);
         if (!connection) {
-            throw new Error('connection not found');
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.connectionNotFound'
+                )
+            );
         }
+        const locale = this.settingsStore.settings.locale;
         const promises = connection.activity.map(async (activity) => {
-            if (activity.invoice) {
-                if (
-                    activity.type === 'make_invoice' &&
-                    activity.status === 'pending'
-                ) {
-                    const decoded = bolt11.decode(
-                        activity.invoice.getPaymentRequest
-                    );
-                    if (decoded.complete) {
-                        runInAction(() => {
-                            activity.status = 'success';
-                        });
-                    }
-                }
+            if (activity?.invoice) {
                 runInAction(() => {
                     activity.invoice =
                         activity.payment_source == 'cashu'
                             ? new CashuInvoice(activity.invoice)
                             : new Invoice(activity.invoice);
                 });
+                activity.invoice.determineFormattedRemainingTimeUntilExpiry(
+                    locale
+                );
+                activity.invoice.determineFormattedOriginalTimeUntilExpiry(
+                    locale
+                );
+                if (
+                    activity.type === 'make_invoice' &&
+                    activity.status === 'pending'
+                ) {
+                    if (activity.invoice.isPaid) {
+                        runInAction(() => {
+                            activity.status = 'success';
+                        });
+                    } else if (activity.invoice.isExpired) {
+                        runInAction(() => {
+                            activity.status = 'failed';
+                        });
+                    }
+                }
             }
-
-            if (activity.payment) {
+            if (activity?.payment) {
                 runInAction(() => {
                     activity.payment =
                         activity.payment_source === 'cashu'
@@ -965,6 +976,14 @@ export default class NostrWalletConnectStore {
             }
         });
         await Promise.all(promises);
+        runInAction(() => {
+            connection.activity = connection.activity.filter((activity) => {
+                const isInvalidFailure =
+                    activity.status === 'failed' &&
+                    activity.error?.includes('already paid');
+                return !isInvalidFailure;
+            });
+        });
         this.saveConnections();
         return { name: connection.name, activity: connection.activity || [] };
     };
@@ -1603,7 +1622,7 @@ export default class NostrWalletConnectStore {
         request: Nip47LookupInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
         try {
-            let paymentHash = this.convertPaymentHashToHex(
+            let paymentHash = NostrConnectUtils.convertPaymentHashToHex(
                 request.payment_hash!
             );
             if (!paymentHash) {
@@ -1662,9 +1681,14 @@ export default class NostrWalletConnectStore {
                         invoice: matchingInvoice.getPaymentRequest,
                         payment_hash: request.payment_hash!,
                         amount: satsToMillisats(amtSat || 0),
+                        ...(isPaid && {
+                            preimage: matchingInvoice.decoded.tags.find(
+                                (tag: any) => tag.tagName === 'payment_preimage'
+                            )?.data
+                        }),
                         description: matchingInvoice.getMemo,
                         settled_at: isPaid
-                            ? dateTimeUtils.getCurrentTimestamp()
+                            ? matchingInvoice.settleDate.getTime() / 1000
                             : 0,
                         created_at: timestamp,
                         expires_at: expiresAt
@@ -1698,20 +1722,13 @@ export default class NostrWalletConnectStore {
                     payment_hash: invoice.getRHash || request.payment_hash!,
                     amount: satsToMillisats(invoice.getAmount), // Convert to msats
                     description: invoice.getMemo,
+                    ...(invoice.isPaid && {
+                        preimage: invoice.getRPreimage
+                    }),
                     description_hash: invoice.getDescriptionHash,
-                    preimage: invoice.getRPreimage,
-                    settled_at: invoice.isPaid
-                        ? Math.floor(invoice.settleDate.getTime() / 1000)
-                        : 0,
-                    created_at: Math.floor(
-                        invoice.getCreationDate.getTime() / 1000
-                    ),
-                    expires_at: invoice.isExpired
-                        ? dateTimeUtils.getCurrentTimestamp() +
-                          DEFAULT_INVOICE_EXPIRY_SECONDS
-                        : Math.floor(invoice.getCreationDate.getTime() / 1000) +
-                          (Number(invoice.expiry) ||
-                              DEFAULT_INVOICE_EXPIRY_SECONDS)
+                    settled_at: invoice.settleDate.getTime() / 1000,
+                    created_at: invoice.getCreationDate.getTime() / 1000,
+                    expires_at: invoice.getCreationDate.getTime() / 1000
                 });
                 return {
                     result,
@@ -1752,7 +1769,7 @@ export default class NostrWalletConnectStore {
                                 Number(payment.getAmount) || 0
                             ),
                             description: payment.getMemo,
-                            preimage: payment.getPreimage,
+
                             fees_paid: satsToMillisats(
                                 Number(payment.getFee) || 0
                             ),
@@ -2201,10 +2218,9 @@ export default class NostrWalletConnectStore {
 
         await this.paymentsStore.getPayments();
         const payment = this.paymentsStore.payments.find(
-            (payment) => payment.preimage === preimage
+            (payment) => payment.getPaymentRequest === request.invoice
         );
-
-        if (payment) {
+        if (payment)
             await this.finalizePayment({
                 id: request.invoice,
                 type: 'pay_invoice',
@@ -2213,7 +2229,7 @@ export default class NostrWalletConnectStore {
                 connection,
                 skipNotification
             });
-        }
+
         return {
             result: {
                 preimage: preimage || '',
@@ -2363,7 +2379,7 @@ export default class NostrWalletConnectStore {
             );
         }
         const payment = this.cashuStore.payments?.find(
-            (payment) => payment.preimage === preimage
+            (payment) => payment.getPaymentRequest === request.invoice
         );
         if (payment) {
             await this.finalizePayment({
@@ -3925,67 +3941,6 @@ export default class NostrWalletConnectStore {
                 message
             }
         };
-    }
-
-    private convertPaymentHashToHex(
-        paymentHash: string | number[] | Uint8Array
-    ): string | undefined {
-        try {
-            if (paymentHash instanceof Uint8Array) {
-                return Base64Utils.bytesToHex(Array.from(paymentHash));
-            }
-
-            if (Array.isArray(paymentHash)) {
-                return Base64Utils.bytesToHex(paymentHash);
-            }
-
-            if (!paymentHash || typeof paymentHash !== 'string') {
-                console.warn(
-                    'convertPaymentHashToHex: Invalid payment hash input:',
-                    paymentHash
-                );
-                return undefined;
-            }
-            if (paymentHash.startsWith('{')) {
-                let hashObj;
-                if (paymentHash.includes('=>')) {
-                    const jsonString = paymentHash
-                        .replace(/=>/g, ':')
-                        .replace(/"(\d+)":/g, '$1:')
-                        .replace(/(\d+):/g, '"$1":');
-                    hashObj = JSON.parse(jsonString);
-                } else {
-                    hashObj = JSON.parse(paymentHash);
-                }
-
-                const hashArray = Object.keys(hashObj)
-                    .sort((a, b) => parseInt(a) - parseInt(b))
-                    .map((key) => hashObj[key])
-                    .filter((value) => value !== undefined && value !== null); // Filter out undefined/null values
-
-                if (hashArray.length === 0) {
-                    console.warn(
-                        'convertPaymentHashToHex: Empty hash array after filtering'
-                    );
-                    return undefined;
-                }
-
-                return Base64Utils.bytesToHex(hashArray);
-            }
-
-            if (
-                paymentHash.includes('+') ||
-                paymentHash.includes('/') ||
-                paymentHash.includes('=')
-            ) {
-                return Base64Utils.base64ToHex(paymentHash);
-            }
-
-            return paymentHash;
-        } catch (error) {
-            console.warn('Failed to convert payment hash to hex:', error);
-            return undefined;
-        }
     }
 
     async retryWithBackoff<T>(

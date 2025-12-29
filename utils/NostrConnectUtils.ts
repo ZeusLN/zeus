@@ -13,6 +13,7 @@ import {
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
+import Base64Utils from './Base64Utils';
 
 export interface PermissionOption {
     key: PermissionType;
@@ -511,5 +512,66 @@ export default class NostrConnectUtils {
                 (params.created_at ?? now) + DEFAULT_EXPIRY_SECONDS,
             ...(params.metadata && { metadata: params.metadata })
         };
+    }
+
+    static convertPaymentHashToHex(
+        paymentHash: string | number[] | Uint8Array
+    ): string | undefined {
+        try {
+            if (paymentHash instanceof Uint8Array) {
+                return Base64Utils.bytesToHex(Array.from(paymentHash));
+            }
+
+            if (Array.isArray(paymentHash)) {
+                return Base64Utils.bytesToHex(paymentHash);
+            }
+
+            if (!paymentHash || typeof paymentHash !== 'string') {
+                console.warn(
+                    'convertPaymentHashToHex: Invalid payment hash input:',
+                    paymentHash
+                );
+                return undefined;
+            }
+            if (paymentHash.startsWith('{')) {
+                let hashObj;
+                if (paymentHash.includes('=>')) {
+                    const jsonString = paymentHash
+                        .replace(/=>/g, ':')
+                        .replace(/"(\d+)":/g, '$1:')
+                        .replace(/(\d+):/g, '"$1":');
+                    hashObj = JSON.parse(jsonString);
+                } else {
+                    hashObj = JSON.parse(paymentHash);
+                }
+
+                const hashArray = Object.keys(hashObj)
+                    .sort((a, b) => parseInt(a) - parseInt(b))
+                    .map((key) => hashObj[key])
+                    .filter((value) => value !== undefined && value !== null); // Filter out undefined/null values
+
+                if (hashArray.length === 0) {
+                    console.warn(
+                        'convertPaymentHashToHex: Empty hash array after filtering'
+                    );
+                    return undefined;
+                }
+
+                return Base64Utils.bytesToHex(hashArray);
+            }
+
+            if (
+                paymentHash.includes('+') ||
+                paymentHash.includes('/') ||
+                paymentHash.includes('=')
+            ) {
+                return Base64Utils.base64ToHex(paymentHash);
+            }
+
+            return paymentHash;
+        } catch (error) {
+            console.warn('Failed to convert payment hash to hex:', error);
+            return undefined;
+        }
     }
 }

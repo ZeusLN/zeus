@@ -198,7 +198,7 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     getActivitySubtitle = (item: ConnectionActivity): string => {
-        if (item.type === 'make_invoice' || item.payment_source === 'cashu') {
+        if (item.type === 'make_invoice' && item.payment_source === 'cashu') {
             return localeString('general.cashu');
         }
         return localeString('views.PaymentRequest.title');
@@ -281,8 +281,7 @@ export default class NWCConnectionActivity extends React.Component<
         const showExpiry =
             item.type === 'make_invoice' &&
             item.status === 'pending' &&
-            !item.isExpired &&
-            item.expiryLabel;
+            !item.isExpired;
 
         return (
             <ListItem
@@ -343,7 +342,7 @@ export default class NWCConnectionActivity extends React.Component<
                                     { color: themeColor('secondaryText') }
                                 ]}
                             >
-                                {item.expiryLabel}
+                                {item.invoice?.formattedTimeUntilExpiry}
                             </ListItem.Subtitle>
                         </View>
                     )}
