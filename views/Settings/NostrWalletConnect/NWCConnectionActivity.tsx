@@ -25,6 +25,7 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import PrivacyUtils from '../../../utils/PrivacyUtils';
+import dateTimeUtils from '../../../utils/DateTimeUtils';
 
 import Filter from '../../../assets/images/SVG/Filter On.svg';
 
@@ -257,9 +258,9 @@ export default class NWCConnectionActivity extends React.Component<
         const isSent =
             item.type === 'pay_invoice' || item.type === 'pay_keysend';
 
-        if (isSent) {
+        if (isSent && item.status !== 'failed') {
             this.navigateToPaymentDetails(item);
-        } else if (item.type === 'make_invoice') {
+        } else if (item.type === 'make_invoice' && item.status !== 'failed') {
             this.navigateToInvoiceDetails(item);
         }
     };
@@ -287,7 +288,11 @@ export default class NWCConnectionActivity extends React.Component<
             item.invoice?.getDisplayTime || item.payment?.getDisplayTime;
         const displayTimeShort =
             item.invoice?.getDisplayTimeShort ||
-            item.payment?.getDisplayTimeShort;
+            item.payment?.getDisplayTimeShort ||
+            dateTimeUtils.listFormattedDate(
+                item.lastprocessAt?.toString()!,
+                'HH:MM tt'
+            );
         const note = item.payment?.getNote || item.invoice?.getNote;
         const showExpiry =
             item.type === 'make_invoice' &&
