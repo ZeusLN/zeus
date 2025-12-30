@@ -985,12 +985,30 @@ export default class NostrWalletConnectStore {
                     activity.type === 'make_invoice' &&
                     activity.status === 'pending'
                 ) {
-                    const decodedInvoice =
-                        await NostrConnectUtils.decodeInvoiceTags(
-                            activity.invoice.getPaymentRequest,
-                            true
+                    let invoiceAlreadyPaid = false;
+                    if (activity.payment_source === 'cashu') {
+                        const cashuInvoices = this.cashuStore.invoices || [];
+                        const findCashuInvoice = cashuInvoices.find(
+                            async (inv) =>
+                                inv.getPaymentRequest ===
+                                activity.invoice?.getPaymentRequest
                         );
-                    if (decodedInvoice.isPaid || activity.invoice.isPaid) {
+                        if (
+                            findCashuInvoice &&
+                            findCashuInvoice instanceof CashuInvoice
+                        ) {
+                            invoiceAlreadyPaid = findCashuInvoice.isPaid;
+                        }
+                    } else {
+                        const decodedInvoice =
+                            await NostrConnectUtils.decodeInvoiceTags(
+                                activity.invoice.getPaymentRequest,
+                                true
+                            );
+                        invoiceAlreadyPaid =
+                            decodedInvoice.isPaid || activity.invoice.isPaid;
+                    }
+                    if (invoiceAlreadyPaid) {
                         runInAction(() => {
                             activity.status = 'success';
                         });
@@ -2353,7 +2371,6 @@ export default class NostrWalletConnectStore {
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
             amount: amount.toString()
         });
-
         if (!cashuInvoice || this.cashuStore.paymentError) {
             const { paymentHash, paymentRequest } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
@@ -2381,11 +2398,10 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        const preimage = cashuInvoice.getPreimage;
-        if (!preimage) {
+        if (cashuInvoice.isFailed) {
             return this.handleError(
                 localeString(
-                    'stores.NostrWalletConnectStore.error.noPreimageReceived'
+                    'stores.NostrWalletConnectStore.error.cashuPaymentFailed'
                 ),
                 ErrorCodes.FAILED_TO_PAY_INVOICE
             );
@@ -2405,7 +2421,10 @@ export default class NostrWalletConnectStore {
         }
         return {
             result: {
-                preimage,
+                preimage:
+                    cashuInvoice.getPreimage ||
+                    cashuInvoice.getPaymentRequest ||
+                    '',
                 fees_paid: satsToMillisats(cashuInvoice.fee || 0)
             },
             error: undefined
