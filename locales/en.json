@@ -1423,7 +1423,7 @@
     "stores.NostrWalletConnectStore.error.connectionInsufficientBalance": "Insufficient balance. You have {{balance}} sats remaining budget for this connection and you are trying to spend {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.cashuInsufficientBalance": "Insufficient balance. You have only {{balance}} sats remaining in Cashu wallet and you are trying to spend {{amount}} sats.",
     "stores.NostrWalletConnectStore.error.lightningInsufficientBalance": "Insufficient balance. You have only {{balance}} sats remaining in Lightning wallet and you are trying to spend {{amount}} sats.",
-    "stores.NostrWalletConnectStore.error.noPreimageReceived": "No preimage received",
+    "stores.NostrWalletConnectStore.error.cashuPaymentFailed": "Failed to pay with cashu",
     "stores.NostrWalletConnectStore.error.noCashuMintSelected": "No Cashu mint selected. Please select a mint first.",
     "stores.NostrWalletConnectStore.error.failedToDecodeInvoice": "Failed to decode invoice - payReq is undefined",
     "stores.NostrWalletConnectStore.error.invoiceAlreadyPaid": "Invoice already paid",
