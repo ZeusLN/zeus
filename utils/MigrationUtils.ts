@@ -83,8 +83,15 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
 class MigrationsUtils {
-    private async migrateKey(key: string) {
+    private async migrateKey(key: string, checkLocalFirst: boolean = false) {
         try {
+            if (checkLocalFirst) {
+                const localData = await Storage.getItem(key);
+                if (localData) {
+                    return localData;
+                }
+            }
+
             const credentials = await Keychain.getInternetCredentials(key);
 
             if (credentials && credentials.password) {
@@ -114,7 +121,7 @@ class MigrationsUtils {
         ];
 
         for (const key of cashuKeys) {
-            await this.migrateKey(key);
+            await this.migrateKey(key, true);
         }
 
         let mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
@@ -140,7 +147,7 @@ class MigrationsUtils {
                             `${walletId}-pubkey`
                         ];
                         for (const wKey of walletKeys) {
-                            await this.migrateKey(wKey);
+                            await this.migrateKey(wKey, true);
                         }
                     }
                 }
