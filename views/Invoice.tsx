@@ -63,64 +63,66 @@ export default class InvoiceView extends React.Component<
         const { navigation, ChannelsStore } = this.props;
         const { enhancedPath: path } = this.state;
 
-        if (!BackendUtils.isLNDBased() || !path.length || !path[0][0])
+        if (!BackendUtils.isLNDBased() || !path.length || !path[0][0]) {
             return null;
+        }
 
         const channels = path
-            .map((route) => {
-                const hop = route[0];
-                if (!hop) return null;
-
+            .map((route) => route[0])
+            .filter(
+                (
+                    hop
+                ): hop is {
+                    pubKey: string;
+                    chan_id: string;
+                    node: string;
+                    alias?: string;
+                } => !!hop && !!hop.chan_id
+            )
+            .map((hop) => {
                 const pubkey = hop.pubKey;
-                const chanId = hop.chan_id ? String(hop.chan_id) : undefined;
+                const chanId = String(hop.chan_id);
 
-                const channelByPub = ChannelsStore?.channels.find(
-                    (c) => c.remotePubkey === pubkey
+                const channel = ChannelsStore?.channels.find(
+                    (c) => String(c.chan_id) === chanId
                 );
 
-                const channelById =
-                    !channelByPub && chanId
-                        ? ChannelsStore?.channels.find(
-                              (c) =>
-                                  String(c.chan_id) === chanId ||
-                                  (c.channel_point &&
-                                      c.channel_point.split(':')[0] === chanId)
-                          )
-                        : null;
-
-                const finalChannel = channelByPub || channelById;
+                if (!channel) return null;
 
                 const alias =
+                    hop.alias ||
                     ChannelsStore?.nodes?.[pubkey]?.alias ||
-                    (chanId && ChannelsStore?.aliasesByChannelId?.[chanId]) ||
-                    ChannelsStore?.aliasMap.get(pubkey);
+                    ChannelsStore?.aliasMap.get(pubkey) ||
+                    hop.node ||
+                    localeString('general.unknown');
 
-                const nodeName = alias || hop.node || pubkey;
-                const displayName = PrivacyUtils.sensitiveValue(nodeName);
+                const displayName = PrivacyUtils.sensitiveValue({
+                    input: alias
+                });
+                const displayNameString = String(displayName || '');
                 const formattedName =
-                    typeof displayName === 'string' && displayName.length >= 66
-                        ? `${displayName.slice(0, 14)}...${displayName.slice(
-                              -14
-                          )}`
-                        : displayName || localeString('general.unknown');
+                    displayNameString.length >= 66
+                        ? `${displayNameString.slice(
+                              0,
+                              14
+                          )}...${displayNameString.slice(-14)}`
+                        : displayNameString;
 
                 const isOpen =
-                    finalChannel?.active ||
+                    channel.active ||
                     ChannelsStore?.peers?.some(
                         (p) => p.pubkey === pubkey && p.connected
                     );
 
                 return {
-                    channel: finalChannel,
+                    channel,
                     name: formattedName,
                     isOpen
                 };
             })
             .filter(
-                (
-                    item
-                ): item is { channel: any; name: string; isOpen: boolean } =>
-                    item !== null
+                (c): c is { channel: any; name: string; isOpen: boolean } =>
+                    c !== null
             );
 
         if (!channels.length) return null;
@@ -144,7 +146,6 @@ export default class InvoiceView extends React.Component<
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                     onPress={() =>
-                                        c.channel &&
                                         navigation.navigate('Channel', {
                                             channel: c.channel
                                         })
@@ -442,7 +443,7 @@ export default class InvoiceView extends React.Component<
                                 keyValue={localeString(
                                     'views.Payment.paymentPreimage'
                                 )}
-                                value={payment_hash}
+                                value={payment_preimage}
                                 sensitive
                             />
                         )}
