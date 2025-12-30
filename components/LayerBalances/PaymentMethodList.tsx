@@ -251,16 +251,6 @@ export default class PaymentMethodList extends Component<
 
         let DATA: DataRow[] = [];
 
-        if (lightning || lnurlParams) {
-            DATA.push({
-                layer: 'Lightning',
-                subtitle: lightning
-                    ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag,
-                balance: lightningBalance
-            });
-        }
-
         if (
             (lightning || lnurlParams) &&
             BackendUtils.supportsCashuWallet() &&
@@ -272,6 +262,16 @@ export default class PaymentMethodList extends Component<
                     ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
                     : lnurlParams?.tag,
                 balance: ecashBalance
+            });
+        }
+
+        if (lightning || lnurlParams) {
+            DATA.push({
+                layer: 'Lightning',
+                subtitle: lightning
+                    ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
+                    : lnurlParams?.tag,
+                balance: lightningBalance
             });
         }
 
