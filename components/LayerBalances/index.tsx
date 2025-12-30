@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import {
     FlatList,
+    Image,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -63,6 +64,12 @@ interface LayerBalancesProps {
 //  To toggle LTR/RTL change to `true`
 I18nManager.allowRTL(false);
 
+type MintInfo = {
+    url: string;
+    iconUrl?: string;
+    name?: string;
+};
+
 type DataRow = {
     layer: string;
     subtitle?: string;
@@ -73,6 +80,7 @@ type DataRow = {
     custodial?: boolean;
     needsConfig?: boolean;
     hidden?: boolean;
+    mints?: MintInfo[];
 };
 
 const getEcashRowColors = () => {
@@ -127,15 +135,62 @@ const getEcashRowColors = () => {
     }
 };
 
+const MintIcons = ({ mints }: { mints?: MintInfo[] }) => {
+    if (!mints || mints.length === 0) return null;
+
+    const displayMints = mints.slice(0, 3);
+    const remainingCount = mints.length - 3;
+
+    return (
+        <View style={styles.mintIconsContainer}>
+            {displayMints.map((mint, index) => (
+                <View
+                    key={mint.url}
+                    style={[
+                        styles.mintIconWrapper,
+                        { marginLeft: index > 0 ? -8 : 0, zIndex: 3 - index }
+                    ]}
+                >
+                    {mint.iconUrl ? (
+                        <Image
+                            source={{ uri: mint.iconUrl }}
+                            style={styles.mintIcon}
+                        />
+                    ) : (
+                        <View style={styles.mintIconPlaceholder}>
+                            <Text style={styles.mintIconPlaceholderText}>
+                                {mint.name?.[0]?.toUpperCase() || 'M'}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            ))}
+            {remainingCount > 0 && (
+                <Text
+                    style={{
+                        ...styles.layerText,
+                        color: themeColor('background'),
+                        marginLeft: 4
+                    }}
+                >
+                    +{remainingCount}
+                </Text>
+            )}
+        </View>
+    );
+};
+
 const Row = ({ item }: { item: DataRow }) => {
     const moreAccounts =
         item.layer === localeString('components.LayerBalances.moreAccounts');
     const ecashRowColors = getEcashRowColors();
+    const isEcash = item.layer === 'Ecash';
+
     return (
         <RectButton>
             <LinearGradient
                 colors={
-                    item.layer === 'Ecash' && ecashRowColors
+                    isEcash && ecashRowColors
                         ? ecashRowColors
                         : themeColor('buttonGradient')
                         ? themeColor('buttonGradient')
@@ -158,7 +213,7 @@ const Row = ({ item }: { item: DataRow }) => {
                 <View style={styles.left}>
                     {item.watchOnly ? (
                         <MatiSvg />
-                    ) : item.layer === 'Ecash' ? (
+                    ) : isEcash ? (
                         <EcashSvg />
                     ) : item.layer === 'On-chain' ? (
                         <OnChainSvg />
@@ -201,7 +256,12 @@ const Row = ({ item }: { item: DataRow }) => {
                                 {item.subtitle}
                             </Text>
                         )}
-                        {item.custodial && !item.needsConfig && (
+                        {/* Show mint icons for Ecash row */}
+                        {isEcash && !item.needsConfig && item.mints && (
+                            <MintIcons mints={item.mints} />
+                        )}
+                        {/* Show custodial pill for non-Ecash custodial rows */}
+                        {item.custodial && !isEcash && !item.needsConfig && (
                             <View style={styles.pill}>
                                 <Pill
                                     title={localeString(
@@ -232,11 +292,26 @@ const Row = ({ item }: { item: DataRow }) => {
                 {!moreAccounts ? (
                     <>
                         {!item.needsConfig && (
-                            <Amount
-                                sats={item.balance}
-                                sensitive
-                                colorOverride={themeColor('buttonText')}
-                            />
+                            <View style={styles.rightContent}>
+                                <Amount
+                                    sats={item.balance}
+                                    sensitive
+                                    colorOverride={themeColor('buttonText')}
+                                />
+                                {/* Show custodial pill below balance for Ecash */}
+                                {isEcash && item.custodial && (
+                                    <View style={styles.pillRight}>
+                                        <Pill
+                                            title={localeString(
+                                                'general.custodialWallet'
+                                            ).toUpperCase()}
+                                            textColor={themeColor('highlight')}
+                                            height={25}
+                                            scrollOnOverflow={true}
+                                        />
+                                    </View>
+                                )}
+                            </View>
                         )}
                     </>
                 ) : (
@@ -385,7 +460,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         const { settings } = SettingsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
-        const { totalBalanceSats, mintUrls } = CashuStore!;
+        const { totalBalanceSats, mintUrls, cashuWallets } = CashuStore!;
 
         const otherAccounts = editMode
             ? this.props.UTXOsStore?.accounts
@@ -399,11 +474,24 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             BackendUtils.supportsCashuWallet() &&
             settings?.ecash?.enableCashu
         ) {
+            // Build mints info for display
+            const mints: MintInfo[] =
+                mintUrls?.map((mintUrl: string) => {
+                    const wallet = cashuWallets?.[mintUrl];
+                    const mintInfo = wallet?.mintInfo;
+                    return {
+                        url: mintUrl,
+                        iconUrl: mintInfo?.icon_url,
+                        name: mintInfo?.name
+                    };
+                }) || [];
+
             DATA.push({
                 layer: 'Ecash',
                 custodial: true,
                 needsConfig: mintUrls?.length === 0,
-                balance: Number(totalBalanceSats).toFixed(3)
+                balance: Number(totalBalanceSats).toFixed(3),
+                mints
             });
         }
 
@@ -525,12 +613,20 @@ const styles = StyleSheet.create({
         marginTop: 5,
         alignSelf: 'flex-start'
     },
+    pillRight: {
+        marginTop: 4,
+        alignSelf: 'flex-end'
+    },
     left: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'flex-start',
         flex: 1,
         marginRight: 16
+    },
+    rightContent: {
+        alignItems: 'flex-end',
+        justifyContent: 'center'
     },
     separator: {
         backgroundColor: 'transparent',
@@ -541,5 +637,36 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontFamily: 'PPNeueMontreal-Medium'
     },
-    eyeIcon: { alignSelf: 'center', margin: 15, marginLeft: 25 }
+    eyeIcon: { alignSelf: 'center', margin: 15, marginLeft: 25 },
+    mintIconsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 5
+    },
+    mintIconWrapper: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)'
+    },
+    mintIcon: {
+        width: 24,
+        height: 24,
+        borderRadius: 12
+    },
+    mintIconPlaceholder: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    mintIconPlaceholderText: {
+        fontSize: 12,
+        fontFamily: 'PPNeueMontreal-Medium',
+        color: '#fff'
+    }
 });
