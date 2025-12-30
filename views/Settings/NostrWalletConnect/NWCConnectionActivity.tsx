@@ -223,7 +223,15 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     navigateToPaymentDetails = (item: ConnectionActivity) => {
-        this.props.navigation.navigate('Payment', { payment: item.payment });
+        if (item.payment_source === 'cashu') {
+            this.props.navigation.navigate('CashuPayment', {
+                payment: item.payment
+            });
+        } else {
+            this.props.navigation.navigate('Payment', {
+                payment: item.payment
+            });
+        }
     };
 
     navigateToInvoiceDetails = (item: ConnectionActivity) => {
