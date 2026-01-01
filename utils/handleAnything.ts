@@ -120,6 +120,15 @@ function getNetworkString(): 'mainnet' | 'signet' | 'regtest' {
     return 'mainnet';
 }
 
+export function strictUriEncode(
+    uriComponent: string | number | boolean
+): string {
+    return encodeURIComponent(uriComponent).replace(
+        /[!'()*]/g,
+        (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`
+    );
+}
+
 function convertMerchantQRToLightningAddress(
     qrContent: string,
     network: 'mainnet' | 'signet' | 'regtest'
@@ -130,7 +139,7 @@ function convertMerchantQRToLightningAddress(
         if (match?.groups?.identifier) {
             const domain =
                 merchant.domains[network] || merchant.domains['mainnet'];
-            return `${encodeURIComponent(match.groups.identifier)}@${domain}`;
+            return `${strictUriEncode(match.groups.identifier)}@${domain}`;
         }
     }
     return null;
@@ -907,5 +916,5 @@ const handleAnything = async (
     }
 };
 
-export { isClipboardValue };
+export { isClipboardValue, convertMerchantQRToLightningAddress };
 export default handleAnything;

@@ -3,7 +3,10 @@ jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('react-native-notifications', () => ({}));
 
 import { invoicesStore } from '../stores/Stores';
-import handleAnything from './handleAnything';
+import handleAnything, {
+    strictUriEncode,
+    convertMerchantQRToLightningAddress
+} from './handleAnything';
 
 let mockProcessBIP21Uri = jest.fn();
 let mockIsValidBitcoinAddress = false;
@@ -394,64 +397,205 @@ describe('handleAnything', () => {
         });
     });
 
-    describe('merchant legacy invoice conversion', () => {
-        beforeEach(() => {
-            mockProcessBIP21Uri.mockReset();
-            mockIsValidBitcoinAddress = false;
-            mockIsValidLightningPubKey = false;
-            mockIsValidLightningPaymentRequest = false;
-            mockSupportsOnchainSends = true;
-            mockGetLnurlParams = {};
+    describe('convertMerchantQRToLightningAddress', () => {
+        it('converts picknpay QR code to lightning address on mainnet', () => {
+            const qrContent =
+                'http://example.com/za.co.electrum.picknpay/confirm123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%2Fconfirm123@cryptoqr.net'
+            );
         });
 
-        it('should handle picknpay legacy invoice like an invalid lightning input', async () => {
-            const legacyInvoice =
-                '00020129530019za.co.electrum.picknpay0122RD2HAK3KTI53EC/confirm520458125303710540115802ZA5916cryptoqrtestscan6002CT63049BE2';
-
-            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
-
-            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        it('converts picknpay QR code to lightning address on signet', () => {
+            const qrContent =
+                'http://example.com/za.co.electrum.picknpay/confirm123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'signet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%2Fconfirm123@staging.cryptoqr.net'
+            );
         });
 
-        it('should handle ecentric legacy invoice like an invalid lightning input', async () => {
-            const legacyInvoice =
-                '00020129530019za.co.ecentric.payment0122RD2HAK3KTI53EC/confirm520458125303710540115802ZA5916cryptoqrtestscan6002CT63049BE2';
-
-            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
-
-            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        it('converts ecentric QR code to lightning address on mainnet', () => {
+            const qrContent =
+                'http://example.com/za.co.ecentric.payment/confirm456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%2Fconfirm456@cryptoqr.net'
+            );
         });
 
-        it('should respect signet network when handling legacy invoices', async () => {
-            require('../stores/Stores').nodeInfoStore.nodeInfo = {
-                isSigNet: true
-            };
-
-            const legacyInvoice =
-                '00020129530019za.co.electrum.picknpay0122RD2HAK3KTI53EC/confirm520458125303710540115802ZA5916cryptoqrtestscan6002CT63049BE2';
-
-            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
-
-            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        it('converts ecentric QR code to lightning address on regtest', () => {
+            const qrContent =
+                'http://example.com/za.co.ecentric.payment/confirm456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'regtest'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%2Fconfirm456@staging.cryptoqr.net'
+            );
         });
 
-        it('should return false for legacy invoice when pasted from clipboard', async () => {
-            const legacyInvoice =
-                '00020129530019za.co.ecentric.payment0122RD2HAK3KTI53EC/confirm6304ABCD';
-
-            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
-
-            const result = await handleAnything(legacyInvoice, undefined, true);
-            expect(result).toEqual(false);
+        it('encodes special characters in picknpay QR code correctly', () => {
+            const qrContent = `http://example.com/za.co.electrum.picknpay?t=4&i=rAT%)=o\\O'Bd2Cl!WXAE('"=7F>)`;
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%3Ft%3D4%26i%3DrAT%25%29%3Do%5CO%27Bd2Cl%21WXAE%28%27%22%3D7F%3E%29@cryptoqr.net'
+            );
         });
 
-        it('should treat non-matching legacy invoice as invalid input', async () => {
-            const legacyInvoice =
-                '00020129530019za.co.unrelated.merchant0122RD2HAK3KTI53EC/confirm6304ABCD';
+        it('encodes special characters in ecentric QR code correctly', () => {
+            const qrContent = `http://example.com/za.co.ecentric.payment?data=test!value*with(special)chars`;
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%3Fdata%3Dtest%21value%2Awith%28special%29chars@cryptoqr.net'
+            );
+        });
 
-            mockProcessBIP21Uri.mockReturnValue({ value: legacyInvoice });
+        it('returns null for QR code that does not match any merchant', () => {
+            const qrContent = 'http://example.com/unrelated/merchant';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBeNull();
+        });
 
-            await expect(handleAnything(legacyInvoice)).rejects.toThrow();
+        it('returns null for empty string', () => {
+            const result = convertMerchantQRToLightningAddress('', 'mainnet');
+            expect(result).toBeNull();
+        });
+
+        it('returns null for null input', () => {
+            const result = convertMerchantQRToLightningAddress(
+                null as any,
+                'mainnet'
+            );
+            expect(result).toBeNull();
+        });
+
+        it('handles picknpay QR code with complex URL parameters', () => {
+            const qrContent =
+                'http://2.zap.pe?t=6&i=40895:49955:7[34|0.00|3:10[39|ZAR,38|za.co.electrum.picknpay@cryptoqr.net';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2F2.zap.pe%3Ft%3D6%26i%3D40895%3A49955%3A7%5B34%7C0.00%7C3%3A10%5B39%7CZAR%2C38%7Cza.co.electrum.picknpay%40cryptoqr.net@cryptoqr.net'
+            );
+        });
+
+        it('handles case-insensitive matching for picknpay', () => {
+            const qrContent =
+                'HTTP://EXAMPLE.COM/ZA.CO.ELECTRUM.PICKNPAY/CONFIRM';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'HTTP%3A%2F%2FEXAMPLE.COM%2FZA.CO.ELECTRUM.PICKNPAY%2FCONFIRM@cryptoqr.net'
+            );
+        });
+
+        it('handles case-insensitive matching for ecentric', () => {
+            const qrContent = 'HTTPS://TEST.COM/ZA.CO.ECENTRIC.PAYMENT/ID123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'HTTPS%3A%2F%2FTEST.COM%2FZA.CO.ECENTRIC.PAYMENT%2FID123@cryptoqr.net'
+            );
+        });
+    });
+
+    describe('strictUriEncode', () => {
+        it('encodes exclamation mark', () => {
+            expect(strictUriEncode('unicorn!foobar')).toBe('unicorn%21foobar');
+        });
+
+        it('encodes single quote', () => {
+            expect(strictUriEncode("unicorn'foobar")).toBe('unicorn%27foobar');
+        });
+
+        it('encodes asterisk', () => {
+            expect(strictUriEncode('unicorn*foobar')).toBe('unicorn%2Afoobar');
+        });
+
+        it('encodes opening parenthesis', () => {
+            expect(strictUriEncode('unicorn(foobar')).toBe('unicorn%28foobar');
+        });
+
+        it('encodes closing parenthesis', () => {
+            expect(strictUriEncode('unicorn)foobar')).toBe('unicorn%29foobar');
+        });
+
+        it('encodes multiple special characters', () => {
+            expect(strictUriEncode("unicorn!'()*foobar")).toBe(
+                'unicorn%21%27%28%29%2Afoobar'
+            );
+        });
+
+        it('produces different result from encodeURIComponent for asterisk', () => {
+            const input = 'unicorn*foobar';
+            expect(strictUriEncode(input)).not.toBe(encodeURIComponent(input));
+            expect(strictUriEncode(input)).toBe('unicorn%2Afoobar');
+            expect(encodeURIComponent(input)).toBe('unicorn*foobar');
+        });
+
+        it('handles strings without special characters', () => {
+            expect(strictUriEncode('unicornfoobar')).toBe('unicornfoobar');
+        });
+
+        it('handles empty string', () => {
+            expect(strictUriEncode('')).toBe('');
+        });
+
+        it('handles numbers', () => {
+            expect(strictUriEncode(123)).toBe('123');
+        });
+
+        it('handles boolean values', () => {
+            expect(strictUriEncode(true)).toBe('true');
+            expect(strictUriEncode(false)).toBe('false');
+        });
+
+        it('encodes URL-unsafe characters along with RFC 3986 reserved characters', () => {
+            expect(strictUriEncode('hello world!')).toBe('hello%20world%21');
+            expect(strictUriEncode('test/path')).toBe('test%2Fpath');
+            expect(strictUriEncode('a=b&c=d')).toBe('a%3Db%26c%3Dd');
+            expect(strictUriEncode('test?query')).toBe('test%3Fquery');
+        });
+
+        it('handles Unicode characters', () => {
+            expect(strictUriEncode('测试')).toBe('%E6%B5%8B%E8%AF%95');
+            expect(strictUriEncode('hello!测试')).toBe(
+                'hello%21%E6%B5%8B%E8%AF%95'
+            );
+        });
+
+        it('encodes Zapper QR code with special characters correctly', () => {
+            const qrContent = `http://5.zap.pe?t=4&i=rAT%)=o\\O'Bd2Cl!WXAE('"=7F>)aN!<>?YJ-3ad!l+gR:Ms_d6t(?\`:Msuo(3!l"AoVg2Gq^paT]Z?Y"98E32\`WZS1,L\`f!!!'g('4I;"u.qo!!3-#/*^XK!!-%alYMQ:O@#?E!<<*"!!-5+`;
+            const expected =
+                'http%3A%2F%2F5.zap.pe%3Ft%3D4%26i%3DrAT%25%29%3Do%5CO%27Bd2Cl%21WXAE%28%27%22%3D7F%3E%29aN%21%3C%3E%3FYJ-3ad%21l%2BgR%3AMs_d6t%28%3F%60%3AMsuo%283%21l%22AoVg2Gq%5EpaT%5DZ%3FY%2298E32%60WZS1%2CL%60f%21%21%21%27g%28%274I%3B%22u.qo%21%213-%23%2F%2A%5EXK%21%21-%25alYMQ%3AO%40%23%3FE%21%3C%3C%2A%22%21%21-5%2B';
+            expect(strictUriEncode(qrContent)).toBe(expected);
         });
     });
 });
