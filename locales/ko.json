@@ -1836,7 +1836,7 @@
     "cashu.contactNoCashuPubkey": "선택한 연락처에 Cashu 공개키가 없습니다.",
     "cashu.selectCashuPubkey": "Cashu 공개키를 선택해 주세요.",
     "views.Cashu.AddMint.title": "Mint 추가",
-    "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
+    "views.Cashu.AddMint.errorMintAlreadyAdded": "이미 추가된 민트입니다.",
     "views.Cashu.AddMint.discover": "Mint 탐색",
     "views.Cashu.AddMint.discover.explainer": "이 Mint들은 다른 Nostr 사용자들이 추천한 것입니다. bitcoinmints.com에서 리뷰를 읽어보세요. 사용 전에는 스스로 충분히 조사하는 것을 권장합니다.",
     "views.Cashu.AddMint.reviews": "Mint 리뷰 읽기",
