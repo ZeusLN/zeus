@@ -524,6 +524,217 @@ describe('handleAnything', () => {
                 'HTTPS%3A%2F%2FTEST.COM%2FZA.CO.ECENTRIC.PAYMENT%2FID123@cryptoqr.net'
             );
         });
+
+        it('converts Zapper QR code with zapper.com domain', () => {
+            const qrContent = 'https://zapper.com/payment/12345';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fzapper.com%2Fpayment%2F12345@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with zap.pe domain', () => {
+            const qrContent =
+                "http://5.zap.pe?t=4&i=rAT%)=oO'Bd2Cl!WXAE('\"=7F>)";
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2F5.zap.pe%3Ft%3D4%26i%3DrAT%25%29%3DoO%27Bd2Cl%21WXAE%28%27%22%3D7F%3E%29@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with SK- format', () => {
+            const qrContent = 'SK-123-45678901234567890123456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('SK-123-45678901234567890123456@cryptoqr.net');
+        });
+
+        it('converts Zapper QR code with 20 digit format', () => {
+            const qrContent = '12345678901234567890';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('12345678901234567890@cryptoqr.net');
+        });
+
+        it('converts Zapper QR code with payat.io domain', () => {
+            const qrContent = 'https://payat.io/payment/abc123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpayat.io%2Fpayment%2Fabc123@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with transactionjunction.co.za domain', () => {
+            const qrContent = 'https://transactionjunction.co.za/pay/xyz';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Ftransactionjunction.co.za%2Fpay%2Fxyz@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with CRSTPC format', () => {
+            const qrContent = 'CRSTPC-1-2-3-4-5';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('CRSTPC-1-2-3-4-5@cryptoqr.net');
+        });
+
+        it('converts Yoyo QR code with wigroup.co domain', () => {
+            const qrContent = 'https://rad2.wigroup.co/bill/125468';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Frad2.wigroup.co%2Fbill%2F125468@cryptoqr.net'
+            );
+        });
+
+        it('converts Yoyo QR code with yoyogroup.co domain', () => {
+            const qrContent = 'https://rad2.yoyogroup.co/bill/125468';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Frad2.yoyogroup.co%2Fbill%2F125468@cryptoqr.net'
+            );
+        });
+
+        it('converts SnapScan QR code', () => {
+            const qrContent = 'https://pos-staging.snapscan.io/qr/N0utvgph';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpos-staging.snapscan.io%2Fqr%2FN0utvgph@cryptoqr.net'
+            );
+        });
+
+        it('converts Moneybadger QR code with cryptoqr.net domain', () => {
+            const qrContent = 'https://pay.cryptoqr.net/3458967';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@cryptoqr.net'
+            );
+        });
+
+        it('converts Checkers/Shoprite QR code with za.co.electrum (excluding picknpay)', () => {
+            const qrContent =
+                '00020126260008za.co.mp0110847268562627440014za.co.electrum0122+r3YIUYPRcuRzFeKDYRAvA';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                '00020126260008za.co.mp0110847268562627440014za.co.electrum0122%2Br3YIUYPRcuRzFeKDYRAvA@cryptoqr.net'
+            );
+        });
+
+        it('does not match za.co.electrum.picknpay for Checkers/Shoprite pattern', () => {
+            const qrContent =
+                '00020126260008za.co.mp0110248723666427530023za.co.electrum.picknpay0122ydgKJviKSomaVw0297RaZw5303710540571.406304CE9C';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                '00020126260008za.co.mp0110248723666427530023za.co.electrum.picknpay0122ydgKJviKSomaVw0297RaZw5303710540571.406304CE9C@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code on signet network', () => {
+            const qrContent = 'http://2.zap.pe?t=6&i=40895:49955:7';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'signet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2F2.zap.pe%3Ft%3D6%26i%3D40895%3A49955%3A7@staging.cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay scantopay.io QR code to lightning address on mainnet', () => {
+            const qrContent = 'https://app.scantopay.io/qr?qrcode=8784599487';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fapp.scantopay.io%2Fqr%3Fqrcode%3D8784599487@cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay 10-digit QR code to lightning address on mainnet', () => {
+            const qrContent = '0337704903';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('0337704903@cryptoqr.net');
+        });
+
+        it('converts ScanToPay payat.io QR code to lightning address on mainnet', () => {
+            const qrContent = 'https://payat.io/payment/12345';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpayat.io%2Fpayment%2F12345@cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay UMPQR code to lightning address on mainnet', () => {
+            const qrContent = 'UMPQR123456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('UMPQR123456@cryptoqr.net');
+        });
+
+        it('converts ScanToPay oltio.co.za QR code to lightning address on mainnet', () => {
+            const qrContent = 'https://example.oltio.co.za/pay';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fexample.oltio.co.za%2Fpay@cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay easypay QR code to lightning address on signet', () => {
+            const qrContent = 'easypay789';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'signet'
+            );
+            expect(result).toBe('easypay789@staging.cryptoqr.net');
+        });
     });
 
     describe('strictUriEncode', () => {
