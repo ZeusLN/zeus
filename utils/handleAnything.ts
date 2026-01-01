@@ -109,6 +109,56 @@ const merchantConfigs = [
             signet: 'staging.cryptoqr.net',
             regtest: 'staging.cryptoqr.net'
         }
+    },
+    {
+        identifierRegex:
+            /(?<identifier>^((.*zapper\.com.*)|(.*\.wigroup\..*)|(.{2}\/.{4}\/.{20})|(.*payat\.io.*)|(.*(paynow\.netcash|paynow\.sagepay)\.co\.za.*)|(SK-\d{1,}-\d{23})|(\d{20})|(.*\d+\.zap\.pe(.*\n?)*)|(.*transactionjunction\.co\.za.*)|(CRSTPC-\d+-\d+-\d+-\d+-\d+))$)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*yoyogroup\.co.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*snapscan.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*cryptoqr\.net.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*za\.co\.electrum(?!\.picknpay).*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex:
+            /(?<identifier>.*(?:scantopay\.io|\d{10}|payat\.io|UMPQR|\.oltio\.co\.za|easypay).*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
     }
 ];
 
