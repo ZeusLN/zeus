@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Platform, TouchableOpacity } from 'react-native';
 
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
 
 import Button from './../components/Button';

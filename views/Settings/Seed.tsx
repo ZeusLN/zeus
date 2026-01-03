@@ -10,7 +10,7 @@ import {
     View
 } from 'react-native';
 import RNFS from 'react-native-fs';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';

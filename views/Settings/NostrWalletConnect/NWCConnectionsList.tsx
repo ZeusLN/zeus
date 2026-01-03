@@ -8,7 +8,7 @@ import {
     RefreshControl,
     Platform
 } from 'react-native';
-import { Divider, SearchBar, ButtonGroup } from 'react-native-elements';
+import { Divider, SearchBar, ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -502,7 +502,7 @@ export default class NWCConnectionsList extends React.Component<
                                         autoCapitalize="none"
                                         autoCorrect={false}
                                         keyboardType="visible-password"
-                                        platform="default"
+                                        platform="ios"
                                         showLoading={false}
                                         onClear={() =>
                                             this.setState({
@@ -528,8 +528,6 @@ export default class NWCConnectionsList extends React.Component<
                                         onBlur={() => {}}
                                         onFocus={() => {}}
                                         loadingProps={{}}
-                                        lightTheme={false}
-                                        round={false}
                                     />
 
                                     {/* Filter Buttons */}

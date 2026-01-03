@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { ButtonGroup, Icon } from 'react-native-elements';
+import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 import NfcManager, {
@@ -3223,10 +3223,10 @@ export default class Receive extends React.Component<
                                                     {BackendUtils.isLNDBased() &&
                                                         routeHints && (
                                                             <HopPicker
-                                                                ref={(ref) =>
-                                                                    (this.hopPickerRef =
-                                                                        ref)
-                                                                }
+                                                                ref={(ref) => {
+                                                                    this.hopPickerRef =
+                                                                        ref;
+                                                                }}
                                                                 onValueChange={(
                                                                     channels
                                                                 ) => {

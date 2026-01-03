@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { SearchBar, Icon, Divider } from 'react-native-elements';
+import { SearchBar, Icon, Divider } from '@rneui/themed';
 
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';

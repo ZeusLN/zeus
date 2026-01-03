@@ -10,7 +10,7 @@ import {
     Easing
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { CheckBox, Icon } from 'react-native-elements';
+import { CheckBox, Icon } from '@rneui/themed';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';

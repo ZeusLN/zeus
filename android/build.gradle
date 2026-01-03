@@ -4,8 +4,8 @@ buildscript {
         minSdkVersion = 28
         compileSdkVersion = 35
         targetSdkVersion = 35
-        ndkVersion = "26.2.11394342"
-        kotlinVersion = "1.9.22"
+        ndkVersion = "27.1.12297006"
+        kotlinVersion = "2.0.21"
     }
     subprojects { subproject ->
         afterEvaluate {
@@ -23,9 +23,9 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.3.2")
+        classpath("com.android.tools.build:gradle:8.12.0")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
         classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.4")
 
         // LN address notifications

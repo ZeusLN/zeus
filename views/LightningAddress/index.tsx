@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';

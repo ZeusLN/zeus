@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Tab } from 'react-native-elements';
+import { Tab } from '@rneui/themed';
 
 import BIP32Factory from 'bip32';
 import ecc from '../../zeus_modules/noble_ecc';

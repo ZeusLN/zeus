@@ -7,7 +7,7 @@ import {
     Alert,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup } from 'react-native-elements';
+import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';

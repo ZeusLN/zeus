@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
+import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 // @ts-ignore:next-line
 import Ping from 'react-native-ping';

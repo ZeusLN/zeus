@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { ButtonGroup } from 'react-native-elements';
+import { ButtonGroup } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { CryptoPSBT } from '@keystonehq/bc-ur-registry';

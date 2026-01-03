@@ -9,7 +9,7 @@ import {
     Dimensions,
     ImageSourcePropType
 } from 'react-native';
-import { Avatar } from 'react-native-elements';
+import { Avatar } from '@rneui/themed';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';

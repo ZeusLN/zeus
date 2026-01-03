@@ -2,7 +2,7 @@ import { inject, observer } from 'mobx-react';
 import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';

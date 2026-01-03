@@ -8,7 +8,7 @@ import {
     ScrollView,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup, Icon } from 'react-native-elements';
+import { ButtonGroup, Icon } from '@rneui/themed';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
 

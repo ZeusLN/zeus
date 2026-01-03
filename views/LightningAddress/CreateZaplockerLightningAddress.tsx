@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 // @ts-ignore:next-line
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';

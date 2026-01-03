@@ -4,7 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { Chip, Icon, ButtonGroup } from 'react-native-elements';
+import { Chip, Icon, ButtonGroup } from '@rneui/themed';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';

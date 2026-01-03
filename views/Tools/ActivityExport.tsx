@@ -11,7 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 import DatePicker from 'react-native-date-picker';
-import { CheckBox } from 'react-native-elements';
+import { CheckBox } from '@rneui/themed';
 
 import Header from '../../components/Header';
 import Button from '../../components/Button';

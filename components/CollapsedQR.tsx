@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import { ButtonGroup } from 'react-native-elements';
+import { ButtonGroup } from '@rneui/themed';
 
 import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
 
@@ -133,7 +133,7 @@ interface CollapsedQRProps {
 interface CollapsedQRState {
     collapsed: boolean;
     enlargeQR: boolean;
-    tempQRRef: React.RefObject<QRCodeElement> | null;
+    tempQRRef: React.RefObject<QRCodeElement | null> | null;
     qrReady: boolean;
     showSpeedOptions: boolean;
 }

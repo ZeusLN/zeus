@@ -3,7 +3,7 @@ import { StyleSheet, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { ButtonGroup } from 'react-native-elements';
+import { ButtonGroup } from '@rneui/themed';
 import { UR, UREncoder } from '@ngraveio/bc-ur';
 
 import CashuStore from '../../stores/CashuStore';

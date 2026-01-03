@@ -9,7 +9,7 @@ import {
     StyleSheet,
     EmitterSubscription
 } from 'react-native';
-import { Button, Icon, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';

@@ -18,7 +18,7 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import Screen from '../../components/Screen';
 
-import { Divider } from 'react-native-elements';
+import { Divider } from '@rneui/themed';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
