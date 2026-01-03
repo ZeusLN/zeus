@@ -209,13 +209,21 @@ export default class FeeStore {
     };
 
     @action
-    public getForwardingHistory = (params?: number) => {
+    public getForwardingHistory = (
+        params?: number,
+        chanIdIn?: string,
+        chanIdOut?: string
+    ) => {
         if (this.loading) return;
         this.loading = true;
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        const response = BackendUtils.getForwardingHistory(params);
+        const response = BackendUtils.getForwardingHistory(
+            params,
+            chanIdIn,
+            chanIdOut
+        );
 
         response
             .then((data: any) => {
@@ -252,6 +260,40 @@ export default class FeeStore {
                 }
             })
             .catch((e: any) => {
+                let errorMessage = e?.message || e?.toString() || '';
+
+                try {
+                    if (
+                        typeof errorMessage === 'string' &&
+                        errorMessage.includes('{')
+                    ) {
+                        const parsed = JSON.parse(errorMessage);
+                        if (parsed.message) {
+                            errorMessage = parsed.message;
+                        }
+                    }
+                } catch (parseError) {
+                    console.debug(
+                        'Could not parse error message as JSON:',
+                        parseError
+                    );
+                }
+
+                const isUnsupportedFieldError =
+                    errorMessage.includes('unknown field') &&
+                    (errorMessage.includes('incoming_chan_ids') ||
+                        errorMessage.includes('outgoing_chan_ids'));
+
+                if (isUnsupportedFieldError && (chanIdIn || chanIdOut)) {
+                    console.warn(
+                        'Server does not support channel ID filtering, retrying without filter'
+                    );
+                    runInAction(() => {
+                        this.forwardingHistoryError = false;
+                    });
+                    return this.getForwardingHistory(params);
+                }
+
                 console.error('Fetching forwarding history failed:', e);
                 this.forwardingError();
             });
