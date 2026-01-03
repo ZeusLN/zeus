@@ -37,6 +37,7 @@ const {
     pendingChannels,
     closedChannels,
     closeChannel,
+    abandonChannel,
     openChannel,
     openChannelSync,
     decodeOpenStatusUpdate
@@ -271,6 +272,29 @@ export default class EmbeddedLND extends LND {
             force,
             sat_per_vbyte,
             delivery_address
+        );
+    };
+    abandonChannel = async (
+        urlParams?: Array<string | boolean | undefined>
+    ) => {
+        const fundingTxId =
+            (urlParams && typeof urlParams[0] === 'string'
+                ? urlParams[0]
+                : '') || '';
+        const outputIndex =
+            urlParams && typeof urlParams[1] === 'string'
+                ? Number(urlParams[1])
+                : 0;
+        const pendingFundingShimOnly =
+            urlParams && urlParams[2] ? Boolean(urlParams[2]) : undefined;
+        const iKnowWhatIAmDoing =
+            urlParams && urlParams[3] ? Boolean(urlParams[3]) : undefined;
+
+        return await abandonChannel(
+            fundingTxId,
+            outputIndex,
+            pendingFundingShimOnly,
+            iKnowWhatIAmDoing
         );
     };
 
