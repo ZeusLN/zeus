@@ -92,6 +92,8 @@
 	<string>ZEUS would like permission to load QR codes from your photo library</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Not Used</string>
+	<key>RCTNewArchEnabled</key>
+	<true/>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Marlide-Display.ttf</string>

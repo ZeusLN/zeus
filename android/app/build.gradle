@@ -227,9 +227,9 @@ dependencies {
     }
 }
 
-configurations {
+configurations.configureEach {
     // https://stackoverflow.com/questions/54717283/program-type-already-present-com-google-common-util-concurrent-listenablefuture
-    all*.exclude group: "com.google.guava", module: "listenablefuture"
+    exclude group: "com.google.guava", module: "listenablefuture"
 }
 
 // Run this once to be able to run the application with BUCK
