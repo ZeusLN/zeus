@@ -11,7 +11,7 @@ import InventoryStore from '../../stores/InventoryStore';
 import UnitsStore from '../../stores/UnitsStore';
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Divider, ListItem } from 'react-native-elements';
+import { Divider, ListItem } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 

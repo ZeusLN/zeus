@@ -4,7 +4,7 @@ import { Platform, TouchableOpacity, ViewStyle } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
 import Share from 'react-native-share';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 
 import Button from '../components/Button';
 

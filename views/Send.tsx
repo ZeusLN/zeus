@@ -13,7 +13,7 @@ import {
     BackHandler,
     NativeEventSubscription
 } from 'react-native';
-import { Chip, Icon } from 'react-native-elements';
+import { Chip, Icon } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, {

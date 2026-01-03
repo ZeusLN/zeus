@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, View } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';

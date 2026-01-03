@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { FlatList, View, Text } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';

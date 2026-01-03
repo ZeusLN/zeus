@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { LinearProgress } from 'react-native-elements';
+import { LinearProgress } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';

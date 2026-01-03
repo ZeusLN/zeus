@@ -5,7 +5,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { ListItem, SearchBar } from 'react-native-elements';
+import { ListItem, SearchBar } from '@rneui/themed';
 import Button from '../components/Button';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';

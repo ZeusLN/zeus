@@ -11,10 +11,15 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
-import { CheckBox } from 'react-native-elements';
+import { CheckBox } from '@rneui/themed';
 import { StackNavigationProp } from '@react-navigation/stack';
 import RNFS from 'react-native-fs';
-import DocumentPicker from 'react-native-document-picker';
+import {
+    pick,
+    types,
+    isErrorWithCode,
+    errorCodes
+} from '@react-native-documents/picker';
 
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -510,19 +515,21 @@ export default class NodeConfigExportImport extends React.Component<
     private handleImport = async () => {
         try {
             this.setState({ isLoading: true });
-            const result = await DocumentPicker.pick({
-                type: [DocumentPicker.types.allFiles],
-                copyTo: 'cachesDirectory'
+            const [result] = await pick({
+                type: [types.allFiles]
             });
 
-            const filePath = result[0].fileCopyUri;
+            const filePath = result.uri;
             if (!filePath) {
                 throw new Error('No file selected');
             }
 
             await this.handleImportFile(filePath);
         } catch (error) {
-            if (DocumentPicker.isCancel(error)) {
+            if (
+                isErrorWithCode(error) &&
+                error.code === errorCodes.OPERATION_CANCELED
+            ) {
                 // not really an error, user just canceled picking a file
                 this.setState({ isLoading: false });
             } else {

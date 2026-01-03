@@ -5,7 +5,7 @@ interface TouchableProps {
     touch: () => void;
     onLongPress?: () => void;
     highlight: boolean;
-    children: JSX.Element;
+    children: React.ReactNode;
     style?: any;
 }
 

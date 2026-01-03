@@ -1,6 +1,6 @@
 import React from 'react';
 import { ScrollView, View, TouchableOpacity } from 'react-native';
-import { LinearProgress } from 'react-native-elements';
+import { LinearProgress } from '@rneui/themed';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';

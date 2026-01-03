@@ -25,13 +25,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import androidx.work.ListenableWorker;
 import androidx.work.WorkerParameters;
 
-import com.facebook.react.bridge.ReactApplicationContext;
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReadableMap;
 
+import app.zeusln.zeus.WorkerReactContext;
 import com.oblador.keychain.KeychainModule;
 import com.google.protobuf.ByteString;
 // import com.hypertrack.Hyperlog.Hyperlog;
@@ -93,7 +93,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
         return null;
       }
 
-      KeychainModule keychain = new KeychainModule(new ReactApplicationContext(getApplicationContext()));
+      KeychainModule keychain = new KeychainModule(new WorkerReactContext(getApplicationContext()));
 
       WritableMap keychainOptions = Arguments.createMap();
       WritableMap keychainOptionsAuthenticationPrompt = Arguments.createMap();

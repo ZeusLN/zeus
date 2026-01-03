@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
-import { Header, TextProps } from 'react-native-elements';
-import { IconObject } from 'react-native-elements/dist/icons/Icon';
+import { Header, TextProps } from '@rneui/themed';
+import type { IconObject } from '@rneui/base/dist/Icon/Icon';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';

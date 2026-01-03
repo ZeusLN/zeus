@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Divider, ListItem } from 'react-native-elements';
+import { Divider, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 

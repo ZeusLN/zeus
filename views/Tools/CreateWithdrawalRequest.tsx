@@ -21,7 +21,7 @@ import UnitsStore from '../../stores/UnitsStore';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 
 interface CreateWithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;

@@ -146,6 +146,7 @@ export default class ModalBox extends React.PureComponent<
     };
 
     subscriptions: any[] = [];
+    backHandlerSubscription: { remove: () => void } | null = null;
     onViewLayoutCalculated: (() => void) | null; // Can be either a function or null
 
     constructor(props: ModalBoxProps) {
@@ -221,11 +222,10 @@ export default class ModalBox extends React.PureComponent<
     componentWillUnmount() {
         if (this.subscriptions)
             this.subscriptions.forEach((sub) => sub.remove());
-        if (this.props.backButtonClose && Platform.OS === 'android')
-            BackHandler.removeEventListener(
-                'hardwareBackPress',
-                this.onBackPress
-            );
+        if (this.backHandlerSubscription) {
+            this.backHandlerSubscription.remove();
+            this.backHandlerSubscription = null;
+        }
     }
 
     onBackPress() {
@@ -705,11 +705,12 @@ export default class ModalBox extends React.PureComponent<
         ) {
             this.onViewLayoutCalculated = () => {
                 this.animateOpen();
-                if (this.props.backButtonClose && Platform.OS === 'android')
-                    BackHandler.addEventListener(
+                if (this.props.backButtonClose && Platform.OS === 'android') {
+                    this.backHandlerSubscription = BackHandler.addEventListener(
                         'hardwareBackPress',
                         this.onBackPress
                     );
+                }
                 this.onViewLayoutCalculated = null;
             };
             this.setState({ isAnimateOpen: true });
@@ -723,11 +724,10 @@ export default class ModalBox extends React.PureComponent<
             (this.state.isOpen || this.state.isAnimateOpen)
         ) {
             this.animateClose();
-            if (this.props.backButtonClose && Platform.OS === 'android')
-                BackHandler.removeEventListener(
-                    'hardwareBackPress',
-                    this.onBackPress
-                );
+            if (this.backHandlerSubscription) {
+                this.backHandlerSubscription.remove();
+                this.backHandlerSubscription = null;
+            }
         }
     }
 }
