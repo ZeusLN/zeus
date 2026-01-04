@@ -252,6 +252,8 @@ export default class Lockscreen extends React.Component<
             error: false
         });
 
+        const shareIntentData = route.params?.shareIntentData;
+
         if (
             (passphraseAttempt && passphraseAttempt === passphrase) ||
             (pinAttempt && pinAttempt === pin)
@@ -288,7 +290,8 @@ export default class Lockscreen extends React.Component<
                 !(
                     SettingsStore.settings.selectNodeOnStartup &&
                     SettingsStore.initialStart
-                )
+                ) &&
+                !shareIntentData
             ) {
                 LinkingUtils.handleInitialUrl(navigation);
             }
