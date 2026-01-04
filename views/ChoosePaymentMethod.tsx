@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
+import { Text, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
@@ -8,6 +9,7 @@ import Button from '../components/Button';
 import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
+import Amount from '../components/Amount';
 
 import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
@@ -15,6 +17,9 @@ import UTXOsStore from '../stores/UTXOsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import BackendUtils from '../utils/BackendUtils';
+
+import Invoice from '../models/Invoice';
 
 interface ChoosePaymentMethodProps {
     navigation: StackNavigationProp<any, any>;
@@ -58,7 +63,7 @@ export default class ChoosePaymentMethod extends React.Component<
         lnurlParams: undefined
     };
 
-    componentDidMount() {
+    async componentDidMount() {
         const { route } = this.props;
         const {
             value,
@@ -73,8 +78,23 @@ export default class ChoosePaymentMethod extends React.Component<
             this.setState({ value });
         }
 
+        // If satAmount is provided, use it directly
         if (satAmount) {
             this.setState({ satAmount });
+        } else if (lightning) {
+            try {
+                const decodedInvoice = await BackendUtils.decodePaymentRequest([
+                    lightning
+                ]);
+                const invoice = new Invoice(decodedInvoice);
+                if (invoice && invoice.getRequestAmount) {
+                    this.setState({
+                        satAmount: invoice.getRequestAmount.toString()
+                    });
+                }
+            } catch (error) {
+                console.log('Error decoding invoice for amount:', error);
+            }
         }
 
         if (lightning) {
@@ -93,6 +113,41 @@ export default class ChoosePaymentMethod extends React.Component<
             this.setState({ lnurlParams });
         }
     }
+    hasInsufficientFunds = () => {
+        const { BalanceStore, CashuStore, UTXOsStore } = this.props;
+        const { satAmount, lightning, lnurlParams } = this.state;
+
+        if (!satAmount) return false;
+
+        const amount = Number(satAmount);
+        const { accounts } = UTXOsStore!;
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBalanceSats } = CashuStore!;
+
+        if (lightning || lnurlParams) {
+            if (Number(lightningBalance) >= amount) return false;
+            if (
+                BackendUtils.supportsCashuWallet() &&
+                Number(totalBalanceSats) >= amount
+            ) {
+                return false;
+            }
+        }
+        if (Number(totalBlockchainBalance) >= amount) return false;
+
+        if (accounts && accounts.length > 0) {
+            for (const account of accounts) {
+                if (
+                    !account.hidden &&
+                    !account.watch_only &&
+                    account.balance >= amount
+                ) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    };
 
     render() {
         const { navigation, BalanceStore, CashuStore, UTXOsStore } = this.props;
@@ -108,6 +163,8 @@ export default class ChoosePaymentMethod extends React.Component<
         const { accounts } = UTXOsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
+        const hasInsufficientFunds = this.hasInsufficientFunds();
+
         return (
             <Screen>
                 <Header
@@ -118,11 +175,47 @@ export default class ChoosePaymentMethod extends React.Component<
                     }}
                     navigation={navigation}
                 />
+                {!!satAmount && (
+                    <View style={{ paddingVertical: 15, alignItems: 'center' }}>
+                        <Text
+                            style={{
+                                fontSize: 12,
+                                fontFamily: 'PPNeueMontreal-Medium',
+                                color: themeColor('secondaryText'),
+                                textTransform: 'uppercase',
+                                letterSpacing: 1,
+                                marginBottom: 8
+                            }}
+                        >
+                            {localeString('views.Payment.paymentAmount')}
+                        </Text>
+                        <Amount
+                            sats={satAmount}
+                            sensitive
+                            jumboText
+                            toggleable
+                        />
+                        {hasInsufficientFunds && (
+                            <Text
+                                style={{
+                                    fontSize: 16,
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    color: themeColor('error'),
+                                    marginTop: 20
+                                }}
+                            >
+                                {localeString(
+                                    'stores.CashuStore.notEnoughFunds'
+                                )}
+                            </Text>
+                        )}
+                    </View>
+                )}
                 <PaymentMethodList
                     navigation={navigation}
                     // for payment method selection
                     value={value}
-                    satAmount={satAmount}
+                    satAmount={Number(satAmount)}
                     lightning={lightning}
                     lightningAddress={lightningAddress}
                     offer={offer}

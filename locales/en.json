@@ -664,6 +664,7 @@
     "views.OpenChannel.closeAddress": "Close address (Optional)",
     "views.OpenChannel.closeAddressExplainer": "An optional address where funds will be sent during a cooperative close. Can only be set when opening the channel and only if the peer supports it. If set, the channel can only be closed to this address.",
     "views.Payment.title": "Payment",
+    "views.Payment.paymentAmount": "Payment Amount",
     "views.Payment.inTransitPayment": "In Transit Payment",
     "views.Payment.failedPayment": "Failed Payment",
     "views.Payment.fee": "Fee",
