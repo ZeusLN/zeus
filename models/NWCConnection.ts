@@ -6,10 +6,39 @@ import BaseModel from './BaseModel';
 
 import { Implementations } from '../stores/SettingsStore';
 
+import Invoice from './Invoice';
+import CashuInvoice from './CashuInvoice';
+import Payment from './Payment';
+import CashuPayment from './CashuPayment';
+
+export type ConnectionActivityType =
+    | 'pay_invoice'
+    | 'make_invoice'
+    | 'pay_keysend';
+
+export type ConnectionPaymentSourceType = 'lightning' | 'cashu';
+
 export enum PermissionType {
     FullAccess = 'full_access',
     ReadOnly = 'read_only',
     Custom = 'custom'
+}
+export interface ConnectionActivity {
+    id: string; // lightning invoice
+    type: ConnectionActivityType;
+    payment_source: ConnectionPaymentSourceType;
+    status: 'success' | 'pending' | 'failed';
+    payment?: Payment | CashuPayment | null;
+    invoice?: Invoice | CashuInvoice | null;
+    error?: string;
+    preimage?: string;
+    paymentHash?: string;
+    lastprocessAt?: Date;
+    satAmount?: number;
+    expiresAt?: Date;
+    isExpired?: boolean;
+    expiryLabel?: string;
+    fees_paid?: number;
 }
 
 export enum BudgetRenewalType {
@@ -43,6 +72,7 @@ export interface NWCConnectionData {
     customExpiryUnit?: TimeUnit;
     nodePubkey: string;
     implementation: string;
+    activity?: ConnectionActivity[];
     metadata?: any;
 }
 export interface ConnectionWarning {
@@ -96,6 +126,7 @@ export default class NWCConnection extends BaseModel {
     @observable nodePubkey: string;
     @observable implementation: Implementations;
     @observable metadata?: any;
+    @observable activity: ConnectionActivity[] = [];
     @observable private _warningTypes: ConnectionWarningType[] = [];
 
     constructor(data?: NWCConnectionData) {

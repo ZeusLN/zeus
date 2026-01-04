@@ -162,7 +162,7 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                 </Text>
                                 <View style={styles.scrollContainer}>
                                     <ScrollView
-                                        showsVerticalScrollIndicator={true}
+                                        showsVerticalScrollIndicator={false}
                                         nestedScrollEnabled={true}
                                         scrollEventThrottle={16}
                                     >
@@ -331,32 +331,19 @@ export default class NWCPendingPaymentsModal extends React.Component<
                                             ? localeString('general.retry')
                                             : localeString('general.pay')
                                     }
-                                    onPress={() => {
-                                        if (isProcessingPendingPayInvoices) {
-                                            return;
-                                        }
-                                        const eventsToProcess = hasFailures
-                                            ? pendingEvents.filter((e: any) =>
-                                                  failedPendingPayInvoiceEventIds.includes(
-                                                      e.eventId
-                                                  )
-                                              )
-                                            : pendingEvents;
-                                        if (eventsToProcess.length === 0) {
-                                            return;
-                                        }
-                                        NostrWalletConnectStore.processPendingPaymentsEvents(
-                                            eventsToProcess
+                                    onPress={async () => {
+                                        await NostrWalletConnectStore.processPendingPaymentsEvents(
+                                            pendingEvents
                                         );
                                     }}
                                 />
                             </View>
                             <View style={styles.button}>
                                 <Button
-                                    title={localeString('general.cancel')}
+                                    title={localeString('general.payLater')}
                                     onPress={() => {
-                                        toggleNWCPendingPaymentsModal({});
                                         NostrWalletConnectStore.resetPendingPayInvoiceState();
+                                        toggleNWCPendingPaymentsModal({});
                                     }}
                                     secondary
                                 />

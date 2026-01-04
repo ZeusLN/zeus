@@ -9,10 +9,14 @@ import {
     PermissionType,
     TimeUnit
 } from '../models/NWCConnection';
+import Invoice from '../models/Invoice';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
+import Base64Utils from './Base64Utils';
+import BackendUtils from './BackendUtils';
+import { millisatsToSats } from './AmountUtils';
 
 export interface PermissionOption {
     key: PermissionType;
@@ -409,43 +413,71 @@ export default class NostrConnectUtils {
      * @returns Object containing payment hash, description hash, and expiry time
      * @throws Error if invoice decoding fails
      */
-    static decodeInvoiceTags(
-        paymentRequest: string,
-        fallbackExpirySeconds: number = 3600
-    ): {
+    static async decodeInvoiceTags(
+        invoice: string,
+        checkForPaidStatus: boolean = false
+    ): Promise<{
         paymentHash: string;
         descriptionHash: string;
+        description: string;
+        amount: number;
         expiryTime: number;
-    } {
-        let paymentHash = '';
-        let descriptionHash = '';
-        let expiryTime =
-            dateTimeUtils.getCurrentTimestamp() + fallbackExpirySeconds;
-
+        createdAt: number;
+        isExpired: boolean;
+        paymentRequest: string;
+        network: string;
+        isPaid?: boolean;
+    }> {
         try {
-            const decoded = bolt11.decode(paymentRequest);
+            const decoded = bolt11.decode(invoice);
             if (!decoded || !decoded.tags) {
                 throw new Error('Invalid payment request structure');
             }
+            let paymentHash = '';
+            let descriptionHash = '';
+            let description = '';
 
             for (const tag of decoded.tags) {
                 if (tag.tagName === 'payment_hash') {
                     paymentHash = String(tag.data || '');
                 } else if (tag.tagName === 'purpose_commit_hash') {
                     descriptionHash = String(tag.data || '');
-                } else if (tag.tagName === 'expire_time') {
-                    const invoiceExpiry = Number(tag.data);
-                    if (invoiceExpiry > 0 && decoded.timestamp) {
-                        expiryTime = decoded.timestamp + invoiceExpiry;
-                    }
+                } else if (tag.tagName === 'description') {
+                    description = String(tag.data || '');
                 }
             }
+            const createdAt = decoded.timestamp || 0;
+            const expireTime = decoded.timeExpireDate || 0;
+            const currentTime = Math.floor(Date.now() / 1000);
+            const isExpired = expireTime > 0 && currentTime > expireTime;
+            let isPaid = false;
+            if (paymentHash && checkForPaidStatus) {
+                try {
+                    const result = await BackendUtils.lookupInvoice({
+                        r_hash: paymentHash
+                    });
+                    isPaid = new Invoice(result).isPaid;
+                } catch (e) {}
+            }
+            return {
+                paymentHash,
+                descriptionHash,
+                description,
+                amount:
+                    decoded.satoshis ||
+                    millisatsToSats(Number(decoded?.millisatoshis)) ||
+                    0,
+                expiryTime: expireTime,
+                createdAt,
+                isExpired,
+                paymentRequest: decoded.paymentRequest!,
+                network: decoded.network?.toString() || 'bitcoin',
+                isPaid
+            };
         } catch (decodeError) {
             console.error('Failed to decode invoice:', decodeError);
             throw decodeError;
         }
-
-        return { paymentHash, descriptionHash, expiryTime };
     }
 
     /**
@@ -501,5 +533,78 @@ export default class NostrConnectUtils {
                 (params.created_at ?? now) + DEFAULT_EXPIRY_SECONDS,
             ...(params.metadata && { metadata: params.metadata })
         };
+    }
+
+    static convertPaymentHashToHex(
+        paymentHash: string | number[] | Uint8Array
+    ): string | undefined {
+        try {
+            if (paymentHash instanceof Uint8Array) {
+                return Base64Utils.bytesToHex(Array.from(paymentHash));
+            }
+
+            if (Array.isArray(paymentHash)) {
+                return Base64Utils.bytesToHex(paymentHash);
+            }
+
+            if (!paymentHash || typeof paymentHash !== 'string') {
+                console.warn(
+                    'convertPaymentHashToHex: Invalid payment hash input:',
+                    paymentHash
+                );
+                return undefined;
+            }
+            if (paymentHash.startsWith('{')) {
+                let hashObj;
+                if (paymentHash.includes('=>')) {
+                    const jsonString = paymentHash
+                        .replace(/=>/g, ':')
+                        .replace(/"(\d+)":/g, '$1:')
+                        .replace(/(\d+):/g, '"$1":');
+                    hashObj = JSON.parse(jsonString);
+                } else {
+                    hashObj = JSON.parse(paymentHash);
+                }
+
+                const hashArray = Object.keys(hashObj)
+                    .sort((a, b) => parseInt(a) - parseInt(b))
+                    .map((key) => hashObj[key])
+                    .filter((value) => value !== undefined && value !== null); // Filter out undefined/null values
+
+                if (hashArray.length === 0) {
+                    console.warn(
+                        'convertPaymentHashToHex: Empty hash array after filtering'
+                    );
+                    return undefined;
+                }
+
+                return Base64Utils.bytesToHex(hashArray);
+            }
+
+            if (
+                paymentHash.includes('+') ||
+                paymentHash.includes('/') ||
+                paymentHash.includes('=')
+            ) {
+                return Base64Utils.base64ToHex(paymentHash);
+            }
+
+            return paymentHash;
+        } catch (error) {
+            console.warn('Failed to convert payment hash to hex:', error);
+            return undefined;
+        }
+    }
+    static isIgnorableError(error: string): boolean {
+        const msg = error.toLowerCase();
+        return (
+            msg.includes('already paid') ||
+            msg.includes('already been settled') ||
+            msg.includes('invoice expired') ||
+            msg.includes('has expired') ||
+            msg.includes('not payable') ||
+            msg.includes('invoice canceled') ||
+            msg.includes('invoice cancelled')
+        );
     }
 }
