@@ -3,6 +3,8 @@ import BackendUtils from './../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import addressUtils from '../utils/AddressUtils';
 
+import CashuStore from './CashuStore';
+
 interface VerificationRequest {
     msg: string;
     signature: string;
@@ -17,7 +19,8 @@ export default class MessageSignStore {
     @observable public verification: string | null;
     @observable public pubkey: string | null;
     @observable public valid: boolean | null;
-    @observable public signingMode: 'lightning' | 'onchain' = 'lightning';
+    @observable public signingMode: 'lightning' | 'cashu' | 'onchain' =
+        'lightning';
     @observable public selectedAddress: string = '';
     @observable public addresses: {
         address: string;
@@ -25,6 +28,12 @@ export default class MessageSignStore {
         accountName?: string;
         addressType?: string;
     }[] = [];
+
+    cashuStore: CashuStore;
+
+    constructor(cashuStore: CashuStore) {
+        this.cashuStore = cashuStore;
+    }
 
     private parseErrorMessage(error: any, fallbackMessage: string): string {
         if (error && typeof error === 'object') {
@@ -84,7 +93,7 @@ export default class MessageSignStore {
     }
 
     @action
-    public setSigningMode(mode: 'lightning' | 'onchain') {
+    public setSigningMode(mode: 'lightning' | 'cashu' | 'onchain') {
         this.signingMode = mode;
         this.reset();
     }
@@ -168,6 +177,23 @@ export default class MessageSignStore {
         this.loading = true;
 
         try {
+            if (this.signingMode === 'cashu') {
+                this.cashuStore
+                    .signMessage(text)
+                    .then((signature: string) => {
+                        this.signature = signature;
+                        this.error = false;
+                        this.errorMessage = '';
+                    })
+                    .catch((error: any) => {
+                        this.handleError(error, 'Cashu signing error', true);
+                    })
+                    .finally(() => {
+                        this.loading = false;
+                    });
+                return;
+            }
+
             const signOperation =
                 this.signingMode === 'lightning'
                     ? BackendUtils.signMessage(text)
@@ -229,6 +255,30 @@ export default class MessageSignStore {
         }
 
         try {
+            if (this.signingMode === 'cashu') {
+                this.cashuStore
+                    .verifyMessage(data.msg, data.signature)
+                    .then((isValid: boolean) => {
+                        this.valid = isValid;
+                        if (isValid) {
+                            const pubkey = this.cashuStore.selectedMintPubkey;
+                            this.pubkey = pubkey || null;
+                        } else {
+                            this.pubkey = null;
+                        }
+                        this.error = false;
+                        this.errorMessage = '';
+                    })
+                    .catch((error: any) => {
+                        this.valid = false;
+                        this.handleError(error, 'Cashu verification error');
+                    })
+                    .finally(() => {
+                        this.loading = false;
+                    });
+                return;
+            }
+
             const verifyOperation =
                 this.signingMode === 'lightning'
                     ? BackendUtils.verifyMessage({

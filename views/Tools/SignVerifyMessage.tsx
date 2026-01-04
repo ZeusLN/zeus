@@ -28,11 +28,13 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 
 import MessageSignStore from '../../stores/MessageSignStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface SignVerifyMessageProps {
     navigation: StackNavigationProp<any, any>;
     route: RouteProp<any, any>;
     MessageSignStore: MessageSignStore;
+    SettingsStore: SettingsStore;
 }
 
 interface SignVerifyMessageState {
@@ -42,12 +44,12 @@ interface SignVerifyMessageState {
     selectedIndex: number;
     signingMethodIndex: number;
     selectedAddress: string;
-    signingMode: string;
+    signingMode: 'lightning' | 'cashu' | 'onchain';
     supportsAddressMessageSigning: boolean;
     loading: boolean;
 }
 
-@inject('SettingsStore', 'MessageSignStore')
+@inject('SettingsStore', 'MessageSignStore', 'CashuStore')
 @observer
 export default class SignVerifyMessage extends React.Component<
     SignVerifyMessageProps,
@@ -55,7 +57,7 @@ export default class SignVerifyMessage extends React.Component<
 > {
     navigationFocusListener: any;
 
-    state = {
+    state: SignVerifyMessageState = {
         messageToSign: '',
         messageToVerify: '',
         signatureToVerify: '',
@@ -134,7 +136,8 @@ export default class SignVerifyMessage extends React.Component<
             if (mode === 'sign') {
                 this.setState({
                     selectedAddress,
-                    signingMethodIndex: 1
+                    signingMethodIndex:
+                        this.getSigningModes().indexOf('onchain')
                 });
                 MessageSignStore.setSigningMode('onchain');
                 MessageSignStore.setSelectedAddress(selectedAddress);
@@ -209,6 +212,26 @@ export default class SignVerifyMessage extends React.Component<
         }
     }
 
+    getSigningModes = (): ('lightning' | 'cashu' | 'onchain')[] => {
+        const { SettingsStore } = this.props;
+        const { supportsAddressMessageSigning } = this.state;
+
+        const modes: ('lightning' | 'cashu' | 'onchain')[] = ['lightning'];
+
+        if (
+            SettingsStore.settings?.ecash.enableCashu &&
+            SettingsStore.implementation === 'embedded-lnd'
+        ) {
+            modes.push('cashu');
+        }
+
+        if (supportsAddressMessageSigning) {
+            modes.push('onchain');
+        }
+
+        return modes;
+    };
+
     reset = () => {
         const { MessageSignStore } = this.props;
         const { signingMode } = this.state;
@@ -223,7 +246,7 @@ export default class SignVerifyMessage extends React.Component<
 
         // Reset the store but preserve the signing mode and address for onchain
         MessageSignStore.reset();
-        MessageSignStore.setSigningMode(signingMode as 'lightning' | 'onchain');
+        MessageSignStore.setSigningMode(signingMode);
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -236,13 +259,14 @@ export default class SignVerifyMessage extends React.Component<
         });
 
         MessageSignStore.reset();
-        MessageSignStore.setSigningMode(signingMode as 'lightning' | 'onchain');
+        MessageSignStore.setSigningMode(signingMode);
         MessageSignStore.setSelectedAddress('');
     };
 
     updateSigningMethod = (signingMethodIndex: number) => {
         const { MessageSignStore } = this.props;
-        const signingMode = signingMethodIndex === 0 ? 'lightning' : 'onchain';
+        const modes = this.getSigningModes();
+        const signingMode = modes[signingMethodIndex];
 
         // Clear message field and set the appropriate signing mode
         this.reset();
@@ -254,8 +278,10 @@ export default class SignVerifyMessage extends React.Component<
         // Update the store with the new signing mode
         MessageSignStore.setSigningMode(signingMode);
 
-        // Clear the selected address in the store only when switching to lightning mode
-        MessageSignStore.setSelectedAddress('');
+        // Clear the selected address in the store only when switching to lightning or cashu mode
+        if (signingMode !== 'onchain') {
+            MessageSignStore.setSelectedAddress('');
+        }
     };
 
     setSelectedAddress = (mode: 'sign' | 'verify', address: string) => {
@@ -269,8 +295,9 @@ export default class SignVerifyMessage extends React.Component<
         MessageSignStore.setSelectedAddress(address);
 
         if (mode === 'sign') {
+            const modes = this.getSigningModes();
             this.setState({
-                signingMethodIndex: 1
+                signingMethodIndex: modes.indexOf('onchain')
             });
         }
     };
@@ -328,9 +355,7 @@ export default class SignVerifyMessage extends React.Component<
                             if (MessageSignStore.error) {
                                 MessageSignStore.reset();
                                 MessageSignStore.setSigningMode(
-                                    this.state.signingMode as
-                                        | 'lightning'
-                                        | 'onchain'
+                                    this.state.signingMode
                                 );
                                 MessageSignStore.setSelectedAddress(text);
                             }
@@ -488,47 +513,32 @@ export default class SignVerifyMessage extends React.Component<
 
     renderSigningMethodSelector = () => {
         const { signingMethodIndex } = this.state;
-        const { supportsAddressMessageSigning } = this.state;
+        const modes = this.getSigningModes();
 
-        if (!supportsAddressMessageSigning) {
+        if (modes.length <= 1) {
             return null;
         }
 
-        const lightningButton = () => (
-            <React.Fragment>
-                <Text
-                    style={{
-                        color:
-                            signingMethodIndex === 0
-                                ? themeColor('background')
-                                : themeColor('text')
-                    }}
-                >
-                    {localeString('general.defaultNodeNickname')}
-                </Text>
-            </React.Fragment>
-        );
+        const buttonElements = modes.map((mode, index) => {
+            let label = localeString('general.lightning');
+            if (mode === 'cashu') label = localeString('general.cashu');
+            if (mode === 'onchain') label = localeString('general.onchain');
 
-        const onchainButton = () => (
-            <React.Fragment>
-                <Text
-                    style={{
-                        color:
-                            signingMethodIndex === 1
-                                ? themeColor('background')
-                                : themeColor('text')
-                    }}
-                >
-                    {localeString('general.onchain')}
-                </Text>
-            </React.Fragment>
-        );
-
-        const buttons = [
-            { element: lightningButton },
-            { element: onchainButton }
-        ];
-        const buttonElements = buttons.map((btn) => btn.element());
+            return (
+                <React.Fragment key={mode}>
+                    <Text
+                        style={{
+                            color:
+                                signingMethodIndex === index
+                                    ? themeColor('background')
+                                    : themeColor('text')
+                        }}
+                    >
+                        {label}
+                    </Text>
+                </React.Fragment>
+            );
+        });
 
         return (
             <View style={styles.form}>
@@ -562,9 +572,7 @@ export default class SignVerifyMessage extends React.Component<
 
         if (this.props.MessageSignStore.error) {
             this.props.MessageSignStore.reset();
-            this.props.MessageSignStore.setSigningMode(
-                this.state.signingMode as 'lightning' | 'onchain'
-            );
+            this.props.MessageSignStore.setSigningMode(this.state.signingMode);
         }
     };
 
@@ -689,11 +697,11 @@ export default class SignVerifyMessage extends React.Component<
             signatureToVerify,
             selectedIndex,
             signingMode,
-            loading
+            loading,
+            supportsAddressMessageSigning
         } = this.state;
         const { signMessage, pubkey, valid, signature } = MessageSignStore;
 
-        const { supportsAddressMessageSigning } = this.state;
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -727,6 +735,8 @@ export default class SignVerifyMessage extends React.Component<
         const buttons = [{ element: signButton }, { element: verifyButton }];
 
         const buttonElements = buttons.map((btn) => btn.element());
+
+        const showMethodSelector = this.getSigningModes().length > 1;
 
         return (
             <Screen>
@@ -777,7 +787,7 @@ export default class SignVerifyMessage extends React.Component<
                         }}
                     />
 
-                    {supportsAddressMessageSigning && (
+                    {showMethodSelector && (
                         <Text
                             style={{
                                 ...styles.text,
@@ -795,7 +805,7 @@ export default class SignVerifyMessage extends React.Component<
                         </Text>
                     )}
                     <View style={styles.form}>
-                        {supportsAddressMessageSigning ? (
+                        {showMethodSelector ? (
                             <View style={{ marginBottom: 15 }}>
                                 {this.renderSigningMethodSelector()}
                             </View>
