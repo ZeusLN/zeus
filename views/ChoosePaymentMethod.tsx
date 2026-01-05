@@ -11,6 +11,7 @@ import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
 import Amount from '../components/Amount';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
@@ -204,18 +205,13 @@ export default class ChoosePaymentMethod extends React.Component<
                             toggleable
                         />
                         {hasInsufficientFunds && (
-                            <Text
-                                style={{
-                                    fontSize: 16,
-                                    fontFamily: 'PPNeueMontreal-Medium',
-                                    color: themeColor('error'),
-                                    marginTop: 20
-                                }}
-                            >
-                                {localeString(
-                                    'stores.CashuStore.notEnoughFunds'
-                                )}
-                            </Text>
+                            <View>
+                                <ErrorMessage
+                                    message={localeString(
+                                        'stores.CashuStore.notEnoughFunds'
+                                    )}
+                                />
+                            </View>
                         )}
                     </View>
                 )}
