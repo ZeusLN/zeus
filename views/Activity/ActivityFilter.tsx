@@ -5,7 +5,8 @@ import {
     View,
     KeyboardAvoidingView,
     Platform,
-    TouchableOpacity
+    TouchableOpacity,
+    Modal
 } from 'react-native';
 import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
@@ -294,7 +295,7 @@ export default class ActivityFilter extends React.Component<
             workingEndDate,
             expandedSections
         } = this.state;
-        const locale = SettingsStore.settings.locale;
+        const locale = SettingsStore?.settings?.locale;
         const {
             filters,
             setAmountFilter,
@@ -355,6 +356,7 @@ export default class ActivityFilter extends React.Component<
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
             <View
                 style={{
+                    flex: 1,
                     flexDirection: 'row',
                     justifyContent: 'flex-end',
                     alignItems: 'center'
@@ -364,7 +366,7 @@ export default class ActivityFilter extends React.Component<
                     style={{
                         fontFamily: 'PPNeueMontreal-Book',
                         color: themeColor('text'),
-                        marginRight: 30
+                        marginRight: 15
                     }}
                 >
                     {(props.type === 'startDate'
@@ -392,7 +394,8 @@ export default class ActivityFilter extends React.Component<
                         backgroundColor: themeColor('secondary'),
                         paddingLeft: 15,
                         paddingRight: 15,
-                        height: 40
+                        height: 40,
+                        borderRadius: 6
                     }}
                     titleStyle={{
                         color: themeColor('text'),
@@ -409,9 +412,10 @@ export default class ActivityFilter extends React.Component<
                     (props.type === 'endDate' && endDate)) && (
                     <Button
                         buttonStyle={{
-                            backgroundColor: themeColor('secondary'),
+                            backgroundColor: themeColor('error'),
                             marginLeft: 15,
-                            height: 40
+                            height: 40,
+                            borderRadius: 6
                         }}
                         icon={{
                             name: 'delete',
@@ -1426,14 +1430,10 @@ export default class ActivityFilter extends React.Component<
                                             </View>
                                         )}
                                         {item.type === 'StartDate' && (
-                                            <View style={{ flex: 1 }}>
-                                                <DateFilter type="startDate" />
-                                            </View>
+                                            <DateFilter type="startDate" />
                                         )}
                                         {item.type === 'EndDate' && (
-                                            <View style={{ flex: 1 }}>
-                                                <DateFilter type="endDate" />
-                                            </View>
+                                            <DateFilter type="endDate" />
                                         )}
                                     </ListItem>
                                     {index < FILTERS.length - 1 &&
@@ -1443,15 +1443,13 @@ export default class ActivityFilter extends React.Component<
                         })}
                     </ScrollView>
 
-                    {(setStartDate || setEndDate) && (
+                    {(setStartDate || setEndDate) && Platform.OS === 'android' && (
                         <DateTimePicker
                             value={
                                 setStartDate ? workingStartDate : workingEndDate
                             }
                             mode="date"
-                            display={
-                                Platform.OS === 'ios' ? 'spinner' : 'default'
-                            }
+                            display="default"
                             minimumDate={
                                 setStartDate
                                     ? undefined
@@ -1491,6 +1489,153 @@ export default class ActivityFilter extends React.Component<
                                 }
                             }}
                         />
+                    )}
+
+                    {(setStartDate || setEndDate) && Platform.OS === 'ios' && (
+                        <Modal
+                            transparent
+                            animationType="slide"
+                            visible={setStartDate || setEndDate}
+                            onRequestClose={() =>
+                                this.setState({
+                                    setStartDate: false,
+                                    setEndDate: false
+                                })
+                            }
+                        >
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: 'flex-end',
+                                    backgroundColor: 'rgba(0,0,0,0.5)'
+                                }}
+                            >
+                                <View
+                                    style={{
+                                        backgroundColor:
+                                            themeColor('background'),
+                                        borderTopLeftRadius: 20,
+                                        borderTopRightRadius: 20,
+                                        padding: 20
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            marginBottom: 10
+                                        }}
+                                    >
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                this.setState({
+                                                    setStartDate: false,
+                                                    setEndDate: false
+                                                })
+                                            }
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontSize: 16,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {localeString('general.cancel')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 16,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Medium'
+                                            }}
+                                        >
+                                            {setStartDate
+                                                ? localeString(
+                                                      'views.ActivityFilter.startDate'
+                                                  )
+                                                : localeString(
+                                                      'views.ActivityFilter.endDate'
+                                                  )}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                if (setStartDate) {
+                                                    setStartDateFilter(
+                                                        workingStartDate
+                                                    );
+                                                    this.setState({
+                                                        setStartDate: false
+                                                    });
+                                                } else {
+                                                    setEndDateFilter(
+                                                        workingEndDate
+                                                    );
+                                                    this.setState({
+                                                        setEndDate: false
+                                                    });
+                                                }
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'highlight'
+                                                    ),
+                                                    fontSize: 16,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium'
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.ActivityFilter.set'
+                                                )}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <DateTimePicker
+                                        value={
+                                            setStartDate
+                                                ? workingStartDate
+                                                : workingEndDate
+                                        }
+                                        mode="date"
+                                        display="spinner"
+                                        textColor={themeColor('text')}
+                                        minimumDate={
+                                            setStartDate
+                                                ? undefined
+                                                : startDate
+                                                ? startDate
+                                                : undefined
+                                        }
+                                        maximumDate={
+                                            setStartDate
+                                                ? endDate
+                                                    ? endDate
+                                                    : new Date()
+                                                : new Date()
+                                        }
+                                        onChange={(_, date) => {
+                                            if (date) {
+                                                if (setStartDate) {
+                                                    this.setState({
+                                                        workingStartDate: date
+                                                    });
+                                                } else {
+                                                    this.setState({
+                                                        workingEndDate: date
+                                                    });
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </View>
+                            </View>
+                        </Modal>
                     )}
                 </KeyboardAvoidingView>
             </Screen>
