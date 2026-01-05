@@ -76,7 +76,7 @@ import {
 const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
-const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration';
+const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
 const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -91,8 +91,19 @@ class MigrationsUtils {
                     return localData;
                 }
             }
+            let credentials;
 
-            const credentials = await Keychain.getInternetCredentials(key);
+            credentials = await Keychain.getInternetCredentials(key);
+
+            if (!credentials) {
+                try {
+                    credentials = await Keychain.getInternetCredentials(key, {
+                        cloudSync: true
+                    });
+                } catch (e) {
+                    console.warn(`Cloud fetch failed for ${key}`, e);
+                }
+            }
 
             if (credentials && credentials.password) {
                 await Storage.setItem(key, credentials.password);
@@ -127,9 +138,15 @@ class MigrationsUtils {
         let mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
 
         if (!mintUrlsJson) {
-            const cloudCreds = await Keychain.getInternetCredentials(
+            let cloudCreds = await Keychain.getInternetCredentials(
                 `${lndDir}-cashu-mintUrls`
             );
+            if (!cloudCreds) {
+                cloudCreds = await Keychain.getInternetCredentials(
+                    `${lndDir}-cashu-mintUrls`,
+                    { cloudSync: true }
+                );
+            }
             if (cloudCreds) mintUrlsJson = cloudCreds.password;
         }
 
@@ -877,7 +894,7 @@ class MigrationsUtils {
             if (hasMigrated !== 'true') {
                 console.log('Attempting keychain cloud sync migration...');
 
-                const settingsData = await this.migrateKey(STORAGE_KEY);
+                const settingsData = await this.migrateKey(STORAGE_KEY, true);
 
                 const migrationKeys = [
                     CONTACTS_KEY,
@@ -902,15 +919,15 @@ class MigrationsUtils {
                 ];
 
                 for (const key of migrationKeys) {
-                    await this.migrateKey(key);
+                    await this.migrateKey(key, true);
                 }
 
-                const notesListJson = await this.migrateKey(NOTES_KEY);
+                const notesListJson = await this.migrateKey(NOTES_KEY, true);
                 if (notesListJson) {
                     const noteKeys = JSON.parse(notesListJson);
                     if (Array.isArray(noteKeys)) {
                         for (const noteKey of noteKeys) {
-                            await this.migrateKey(noteKey);
+                            await this.migrateKey(noteKey, true);
                         }
                     }
                 }
@@ -929,8 +946,8 @@ class MigrationsUtils {
                                 )}`;
                                 const hostKey = `${baseKey}:host`;
 
-                                await this.migrateKey(baseKey);
-                                await this.migrateKey(hostKey);
+                                await this.migrateKey(baseKey, true);
+                                await this.migrateKey(hostKey, true);
                             }
                         }
                     }
