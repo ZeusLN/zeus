@@ -138,7 +138,7 @@ const Row = ({ item }: { item: DataRow }) => {
                             sensitive
                             colorOverride={
                                 hasInsufficientBalance
-                                    ? themeColor('error')
+                                    ? '#FF2800'
                                     : themeColor('buttonText')
                             }
                         />
