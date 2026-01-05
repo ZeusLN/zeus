@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
-import { ListItem, SearchBar } from 'react-native-elements';
+import { ListItem, SearchBar } from '@rneui/themed';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
