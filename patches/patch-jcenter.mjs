@@ -9,9 +9,7 @@ export function patchJcenter() {
     const packagesWithJcenter = [
         'react-native-hce',
         'react-native-securerandom',
-        'react-native-system-navigation-bar',
-        'react-native-tor',
-        'react-native-vector-icons'
+        'react-native-tor'
     ];
 
     for (const pkg of packagesWithJcenter) {
