@@ -521,7 +521,9 @@ export default class ChannelsPane extends React.PureComponent<
                                             tabBarStyle: {
                                                 borderTopWidth: 0.2,
                                                 borderTopColor:
-                                                    themeColor('secondaryText')
+                                                    themeColor('secondaryText'),
+                                                paddingTop: 10,
+                                                height: 60
                                             },
                                             tabBarItemStyle: {
                                                 justifyContent: 'center'
@@ -588,7 +590,9 @@ export default class ChannelsPane extends React.PureComponent<
                                             tabBarStyle: {
                                                 borderTopWidth: 0.2,
                                                 borderTopColor:
-                                                    themeColor('secondaryText')
+                                                    themeColor('secondaryText'),
+                                                paddingTop: 10,
+                                                height: 60
                                             },
                                             tabBarItemStyle: {
                                                 justifyContent: 'center'
