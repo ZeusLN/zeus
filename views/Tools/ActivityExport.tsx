@@ -313,6 +313,11 @@ export default class ActivityExport extends React.Component<
                                             </Text>
                                             <DateTimePicker
                                                 mode="date"
+                                                display={
+                                                    Platform.OS === 'ios'
+                                                        ? 'spinner'
+                                                        : 'default'
+                                                }
                                                 value={fromDate || new Date()}
                                                 onChange={(_event, date) => {
                                                     if (date) {
@@ -336,6 +341,7 @@ export default class ActivityExport extends React.Component<
                                                     alignSelf: 'center'
                                                 }}
                                                 maximumDate={new Date()}
+                                                textColor={themeColor('text')}
                                             />
                                             <Text
                                                 style={{
@@ -351,6 +357,11 @@ export default class ActivityExport extends React.Component<
                                             </Text>
                                             <DateTimePicker
                                                 mode="date"
+                                                display={
+                                                    Platform.OS === 'ios'
+                                                        ? 'spinner'
+                                                        : 'default'
+                                                }
                                                 value={toDate || new Date()}
                                                 onChange={(_event, date) => {
                                                     if (date) {
@@ -375,6 +386,7 @@ export default class ActivityExport extends React.Component<
                                                     alignSelf: 'center'
                                                 }}
                                                 maximumDate={new Date()}
+                                                textColor={themeColor('text')}
                                             />
                                         </>
                                     )}
