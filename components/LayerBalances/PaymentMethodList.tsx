@@ -62,7 +62,7 @@ const Row = ({ item }: { item: DataRow }) => {
         Number(item.balance) < item.satAmount;
 
     return (
-        <RectButton style={{ opacity: item.disabled ? 0.5 : 1 }}>
+        <RectButton>
             <LinearGradient
                 colors={
                     themeColor('buttonGradient')
