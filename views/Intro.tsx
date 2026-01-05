@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Dimensions, Image, Text, View, SafeAreaView } from 'react-native';
-import Animated, {
-    Extrapolate,
-    SharedValue,
-    interpolate,
-    useAnimatedStyle,
-    useSharedValue
-} from 'react-native-reanimated';
-import Carousel from 'react-native-reanimated-carousel';
+import { useSharedValue } from 'react-native-reanimated';
+import Carousel, {
+    Pagination,
+    ICarouselInstance
+} from 'react-native-reanimated-carousel';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -42,10 +39,10 @@ const Intro: React.FC<IntroProps> = (props) => {
     const [choosingPeers, setChoosingPeers] = useState(false);
     const [error, setError] = useState(false);
 
-    let screenWidth: number;
-    const progressValue = useSharedValue<number>(0);
+    const ref = useRef<ICarouselInstance>(null);
+    const progress = useSharedValue<number>(0);
 
-    screenWidth = Dimensions.get('window').width;
+    const screenWidth = Dimensions.get('window').width;
     const carouselItems = [
         {
             title: localeString('views.Intro.carousel1.title'),
@@ -74,28 +71,34 @@ const Intro: React.FC<IntroProps> = (props) => {
 
     const { navigation } = props;
 
+    const onPressPagination = (index: number) => {
+        ref.current?.scrollTo({
+            count: index - progress.value,
+            animated: true
+        });
+    };
+
     const renderItem = ({ item }: { item: any }) => (
         <View
             style={{
                 borderRadius: 5,
-                height: '100%'
+                flex: 1
             }}
         >
             <Image
                 source={item.illustration}
                 style={{
                     width: screenWidth,
-                    height: '60%'
+                    height: '50%'
                 }}
+                resizeMode="contain"
             />
             <View
                 style={{
                     backgroundColor: themeColor('background'),
                     width: '100%',
-                    bottom: 0,
-                    zIndex: 2,
-                    minHeight: 250,
-                    position: 'absolute'
+                    flex: 1,
+                    paddingHorizontal: 20
                 }}
             >
                 <Text
@@ -298,61 +301,6 @@ const Intro: React.FC<IntroProps> = (props) => {
         </View>
     );
 
-    const PaginationItem: React.FC<{
-        index: number;
-        backgroundColor: string;
-        length: number;
-        animValue: SharedValue<number>;
-    }> = (props) => {
-        const { animValue, index, length, backgroundColor } = props;
-        const width = 10;
-
-        const animStyle = useAnimatedStyle(() => {
-            let inputRange = [index - 1, index, index + 1];
-            let outputRange = [-width, 0, width];
-
-            if (index === 0 && animValue?.value > length - 1) {
-                inputRange = [length - 1, length, length + 1];
-                outputRange = [-width, 0, width];
-            }
-
-            return {
-                transform: [
-                    {
-                        translateX: interpolate(
-                            animValue?.value ?? 0,
-                            inputRange,
-                            outputRange,
-                            Extrapolate.CLAMP
-                        )
-                    }
-                ]
-            };
-        }, [animValue, index, length]);
-        return (
-            <View
-                style={{
-                    backgroundColor: themeColor('secondaryText'),
-                    width,
-                    height: width,
-                    borderRadius: 50,
-                    overflow: 'hidden'
-                }}
-            >
-                <Animated.View
-                    style={[
-                        {
-                            borderRadius: 50,
-                            backgroundColor,
-                            flex: 1
-                        },
-                        animStyle
-                    ]}
-                />
-            </View>
-        );
-    };
-
     if (choosingPeers || creatingWallet) {
         return (
             <Screen>
@@ -419,47 +367,36 @@ const Intro: React.FC<IntroProps> = (props) => {
                 }}
             >
                 <Carousel
-                    withAnimation={{
-                        type: 'spring',
-                        config: {
-                            damping: 13
-                        }
-                    }}
+                    ref={ref}
                     data={carouselItems}
                     width={screenWidth}
+                    height={Dimensions.get('window').height * 0.75}
                     renderItem={renderItem}
-                    onProgressChange={(_, absoluteProgress) =>
-                        (progressValue.value = absoluteProgress)
-                    }
+                    onProgressChange={progress}
                     loop={false}
-                    mode="parallax"
-                    modeConfig={{
-                        parallaxScrollingScale: 0.9,
-                        parallaxScrollingOffset: 0
+                    scrollAnimationDuration={500}
+                    snapEnabled={true}
+                    pagingEnabled={false}
+                    overscrollEnabled={false}
+                    onConfigurePanGesture={(gesture) => {
+                        'worklet';
+                        gesture.activeOffsetX([-10, 10]);
                     }}
                 />
             </View>
-            <View
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    width: 100,
-                    marginBottom: 10,
-                    alignSelf: 'center'
+            <Pagination.Basic
+                progress={progress}
+                data={carouselItems}
+                dotStyle={{
+                    backgroundColor: themeColor('secondaryText'),
+                    borderRadius: 50
                 }}
-            >
-                {carouselItems.map((_, index) => {
-                    return (
-                        <PaginationItem
-                            backgroundColor={themeColor('highlight')}
-                            animValue={progressValue}
-                            index={index}
-                            key={index}
-                            length={carouselItems.length}
-                        />
-                    );
-                })}
-            </View>
+                activeDotStyle={{
+                    backgroundColor: themeColor('highlight')
+                }}
+                containerStyle={{ gap: 5, marginBottom: 10 }}
+                onPress={onPressPagination}
+            />
         </SafeAreaView>
     );
 };

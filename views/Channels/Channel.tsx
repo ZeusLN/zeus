@@ -14,7 +14,7 @@ import {
     Divider,
     Icon,
     ListItem
-} from 'react-native-elements';
+} from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -634,7 +634,7 @@ export default class ChannelView extends React.Component<
                                                 renewalInfo.expirationBlock
                                         });
                                     }}
-                                    ViewComponent={LinearGradient}
+                                    ViewComponent={LinearGradient as any}
                                     linearGradientProps={{
                                         colors: [
                                             'rgb(180, 26, 20)',

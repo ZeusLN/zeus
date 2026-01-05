@@ -7,10 +7,10 @@ import {
     Platform,
     TouchableOpacity
 } from 'react-native';
-import { Button, Icon, ListItem } from 'react-native-elements';
+import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import isEqual from 'lodash/isEqual';
-import DatePicker from 'react-native-date-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -1443,54 +1443,55 @@ export default class ActivityFilter extends React.Component<
                         })}
                     </ScrollView>
 
-                    <DatePicker
-                        onConfirm={(date) => {
-                            if (setStartDate) {
-                                this.setState({
-                                    workingStartDate: date,
-                                    setStartDate: false
-                                });
-                                setStartDateFilter(date);
-                            } else {
-                                this.setState({
-                                    workingEndDate: date,
-                                    setEndDate: false
-                                });
-                                setEndDateFilter(date);
+                    {(setStartDate || setEndDate) && (
+                        <DateTimePicker
+                            value={
+                                setStartDate ? workingStartDate : workingEndDate
                             }
-                        }}
-                        onCancel={() =>
-                            this.setState({
-                                setStartDate: false,
-                                setEndDate: false
-                            })
-                        }
-                        date={setStartDate ? workingStartDate : workingEndDate}
-                        minimumDate={
-                            setStartDate
-                                ? undefined
-                                : startDate
-                                ? startDate
-                                : undefined
-                        }
-                        maximumDate={
-                            setStartDate
-                                ? endDate
+                            mode="date"
+                            display={
+                                Platform.OS === 'ios' ? 'spinner' : 'default'
+                            }
+                            minimumDate={
+                                setStartDate
+                                    ? undefined
+                                    : startDate
+                                    ? startDate
+                                    : undefined
+                            }
+                            maximumDate={
+                                setStartDate
                                     ? endDate
+                                        ? endDate
+                                        : new Date()
                                     : new Date()
-                                : new Date()
-                        }
-                        mode="date"
-                        style={{
-                            height: 100,
-                            marginTop: 10,
-                            marginBottom: 20,
-                            alignSelf: 'center'
-                        }}
-                        modal
-                        open={setStartDate || setEndDate}
-                        locale={locale}
-                    />
+                            }
+                            onChange={(event, date) => {
+                                if (event.type === 'dismissed') {
+                                    this.setState({
+                                        setStartDate: false,
+                                        setEndDate: false
+                                    });
+                                    return;
+                                }
+                                if (date) {
+                                    if (setStartDate) {
+                                        this.setState({
+                                            workingStartDate: date,
+                                            setStartDate: false
+                                        });
+                                        setStartDateFilter(date);
+                                    } else {
+                                        this.setState({
+                                            workingEndDate: date,
+                                            setEndDate: false
+                                        });
+                                        setEndDateFilter(date);
+                                    }
+                                }
+                            }}
+                        />
+                    )}
                 </KeyboardAvoidingView>
             </Screen>
         );

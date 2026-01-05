@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Dimensions, View, SafeAreaView } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Animated, {
-    Extrapolate,
-    SharedValue,
-    interpolate,
-    useAnimatedStyle,
-    useSharedValue
-} from 'react-native-reanimated';
-import Carousel from 'react-native-reanimated-carousel';
+import { useSharedValue } from 'react-native-reanimated';
+import Carousel, {
+    Pagination,
+    ICarouselInstance
+} from 'react-native-reanimated-carousel';
 
 import Header from '../components/Header';
 import { themeColor } from '../utils/ThemeUtils';
@@ -31,6 +28,10 @@ interface MultiQRProps {
 const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
     const [addressData, setAddressData] = useState(['']);
     const { navigation, route } = props;
+
+    const ref = useRef<ICarouselInstance>(null);
+    const progress = useSharedValue<number>(0);
+
     useEffect(() => {
         const { contactData, addressData } = route.params ?? {};
         let parsedContact: any = null;
@@ -71,10 +72,15 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
         }
     }, [route]);
 
-    let screenWidth: number;
-    const progressValue = useSharedValue<number>(0);
+    const screenWidth = Dimensions.get('window').width;
 
-    screenWidth = Dimensions.get('window').width;
+    const onPressPagination = (index: number) => {
+        ref.current?.scrollTo({
+            count: index - progress.value,
+            animated: true
+        });
+    };
+
     const renderItem = ({ item, index }: { item: any; index: number }) => (
         <CollapsedQR
             showShare={true}
@@ -84,60 +90,7 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
             iconOnly={true}
         />
     );
-    const PaginationItem: React.FC<{
-        index: number;
-        backgroundColor: string;
-        length: number;
-        animValue: SharedValue<number>;
-    }> = (props) => {
-        const { animValue, index, length, backgroundColor } = props;
-        const width = 10;
 
-        const animStyle = useAnimatedStyle(() => {
-            let inputRange = [index - 1, index, index + 1];
-            let outputRange = [-width, 0, width];
-
-            if (index === 0 && animValue?.value > length - 1) {
-                inputRange = [length - 1, length, length + 1];
-                outputRange = [-width, 0, width];
-            }
-
-            return {
-                transform: [
-                    {
-                        translateX: interpolate(
-                            animValue?.value ?? 0,
-                            inputRange,
-                            outputRange,
-                            Extrapolate.CLAMP
-                        )
-                    }
-                ]
-            };
-        }, [animValue, index, length]);
-        return (
-            <View
-                style={{
-                    backgroundColor: themeColor('secondaryText'),
-                    width,
-                    height: width,
-                    borderRadius: 50,
-                    overflow: 'hidden'
-                }}
-            >
-                <Animated.View
-                    style={[
-                        {
-                            borderRadius: 50,
-                            backgroundColor,
-                            flex: 1
-                        },
-                        animStyle
-                    ]}
-                />
-            </View>
-        );
-    };
     return (
         <SafeAreaView
             style={{
@@ -160,6 +113,7 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                 }}
             >
                 <Carousel
+                    ref={ref}
                     withAnimation={{
                         type: 'spring',
                         config: {
@@ -169,39 +123,37 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                     data={addressData}
                     width={screenWidth}
                     renderItem={renderItem}
-                    onProgressChange={(_, absoluteProgress) =>
-                        (progressValue.value = absoluteProgress)
-                    }
+                    onProgressChange={progress}
                     loop={false}
+                    scrollAnimationDuration={500}
+                    snapEnabled={true}
+                    pagingEnabled={false}
+                    overscrollEnabled={false}
                     mode="parallax"
                     modeConfig={{
                         parallaxScrollingScale: 0.9,
                         parallaxScrollingOffset: 0
                     }}
+                    onConfigurePanGesture={(gesture) => {
+                        'worklet';
+                        gesture.activeOffsetX([-10, 10]);
+                    }}
                 />
             </View>
             {addressData.length > 1 && (
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        width: 100,
-                        marginBottom: 10,
-                        alignSelf: 'center'
+                <Pagination.Basic
+                    progress={progress}
+                    data={addressData}
+                    dotStyle={{
+                        backgroundColor: themeColor('secondaryText'),
+                        borderRadius: 50
                     }}
-                >
-                    {addressData.map((_, index) => {
-                        return (
-                            <PaginationItem
-                                backgroundColor={themeColor('highlight')}
-                                animValue={progressValue}
-                                index={index}
-                                key={index}
-                                length={addressData.length}
-                            />
-                        );
-                    })}
-                </View>
+                    activeDotStyle={{
+                        backgroundColor: themeColor('highlight')
+                    }}
+                    containerStyle={{ gap: 5, marginBottom: 10 }}
+                    onPress={onPressPagination}
+                />
             )}
         </SafeAreaView>
     );

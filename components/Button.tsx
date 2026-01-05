@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button as ElementsButton } from 'react-native-elements';
+import { Button as ElementsButton } from '@rneui/themed';
 import { themeColor } from './../utils/ThemeUtils';
 import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
@@ -77,7 +77,7 @@ function Button(props: ButtonProps) {
                       }
                     : null
             }
-            title={title}
+            title={title as string | React.ReactElement<{}>}
             buttonStyle={{
                 backgroundColor: iconOnly
                     ? 'transparent'
