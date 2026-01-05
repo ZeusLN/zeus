@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import LinearGradient from '../LinearGradient';
 import { RectButton } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';

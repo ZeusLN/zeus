@@ -9052,11 +9052,6 @@ react-native-level-fs@3.0.1:
     level-filesystem "^1.0.1"
     levelup "^0.18.2"
 
-react-native-linear-gradient@3.0.0-beta.0:
-  version "3.0.0-beta.0"
-  resolved "https://registry.yarnpkg.com/react-native-linear-gradient/-/react-native-linear-gradient-3.0.0-beta.0.tgz#a18517bb7e7eb9b860314b6eaadf5edf1c54603f"
-  integrity sha512-G2WvZd8vn1Ar1v/geMqOP+bFcP6B5kGLvLg/YCsFz44lr1BTIwgW/3Aws9lUGFiwq1WkUvxIfO09rZkfqTO4kw==
-
 react-native-nfc-manager@3.17.2:
   version "3.17.2"
   resolved "https://registry.yarnpkg.com/react-native-nfc-manager/-/react-native-nfc-manager-3.17.2.tgz#81924946b7fe381bbf85bfb16af90cb05cac4944"

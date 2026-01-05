@@ -18,7 +18,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import LinearGradient from 'react-native-linear-gradient';
+import LinearGradient from '../../components/LinearGradient';
 import BigNumber from 'bignumber.js';
 
 import Channel from '../../models/Channel';

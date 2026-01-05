@@ -131,7 +131,6 @@
     "react-native-image-picker": "8.2.1",
     "react-native-keychain": "10.0.0",
     "react-native-level-fs": "3.0.1",
-    "react-native-linear-gradient": "3.0.0-beta.0",
     "react-native-nfc-manager": "3.17.2",
     "react-native-notifications": "5.2.2",
     "react-native-os": "aprock/react-native-os#5/head",
