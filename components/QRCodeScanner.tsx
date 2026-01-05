@@ -17,7 +17,7 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import RNQRGenerator from 'rn-qr-generator';
+import QRKit from 'react-native-qr-kit';
 
 import Header from './Header';
 import Button from '../components/Button';
@@ -96,11 +96,9 @@ export default function QRCodeScanner({
                 if (!response.didCancel) {
                     const asset = response.assets?.[0];
                     if (asset?.base64) {
-                        const result = await RNQRGenerator.detect({
-                            base64: asset.base64
-                        });
-                        if (result?.values.length > 0) {
-                            handleRead(result.values[0]);
+                        const result = await QRKit.decodeBase64(asset.base64);
+                        if (result?.success && result.data) {
+                            handleRead(result.data);
                         } else {
                             Alert.alert(
                                 localeString('general.error'),

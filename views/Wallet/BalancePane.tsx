@@ -7,7 +7,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { LinearProgress } from 'react-native-elements';
+import { LinearProgress } from '@rneui/themed';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
 

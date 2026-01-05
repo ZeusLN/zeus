@@ -8,10 +8,10 @@ import {
     Modal,
     Platform
 } from 'react-native';
-import Icon from 'react-native-vector-icons/Feather';
+import Feather from '@react-native-vector-icons/feather';
 import { inject, observer } from 'mobx-react';
-import DatePicker from 'react-native-date-picker';
-import { CheckBox } from 'react-native-elements';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { CheckBox } from '@rneui/themed';
 
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -311,20 +311,22 @@ export default class ActivityExport extends React.Component<
                                                     'views.ActivityExport.fromDate'
                                                 )}
                                             </Text>
-                                            <DatePicker
+                                            <DateTimePicker
                                                 mode="date"
-                                                date={fromDate || new Date()}
-                                                onDateChange={(date) => {
-                                                    this.setState({
-                                                        fromDate: date
-                                                    });
-                                                    if (
-                                                        toDate &&
-                                                        date > toDate
-                                                    ) {
+                                                value={fromDate || new Date()}
+                                                onChange={(_event, date) => {
+                                                    if (date) {
                                                         this.setState({
-                                                            toDate: date
+                                                            fromDate: date
                                                         });
+                                                        if (
+                                                            toDate &&
+                                                            date > toDate
+                                                        ) {
+                                                            this.setState({
+                                                                toDate: date
+                                                            });
+                                                        }
                                                     }
                                                 }}
                                                 style={{
@@ -334,8 +336,6 @@ export default class ActivityExport extends React.Component<
                                                     alignSelf: 'center'
                                                 }}
                                                 maximumDate={new Date()}
-                                                textColor={themeColor('text')}
-                                                androidVariant="nativeAndroid"
                                             />
                                             <Text
                                                 style={{
@@ -349,21 +349,23 @@ export default class ActivityExport extends React.Component<
                                                     'views.ActivityExport.toDate'
                                                 )}
                                             </Text>
-                                            <DatePicker
+                                            <DateTimePicker
                                                 mode="date"
-                                                date={toDate || new Date()}
-                                                onDateChange={(date) => {
-                                                    if (
-                                                        fromDate &&
-                                                        date < fromDate
-                                                    ) {
-                                                        Alert.alert(
-                                                            'Invalid Date'
-                                                        );
-                                                    } else {
-                                                        this.setState({
-                                                            toDate: date
-                                                        });
+                                                value={toDate || new Date()}
+                                                onChange={(_event, date) => {
+                                                    if (date) {
+                                                        if (
+                                                            fromDate &&
+                                                            date < fromDate
+                                                        ) {
+                                                            Alert.alert(
+                                                                'Invalid Date'
+                                                            );
+                                                        } else {
+                                                            this.setState({
+                                                                toDate: date
+                                                            });
+                                                        }
                                                     }
                                                 }}
                                                 style={{
@@ -373,8 +375,6 @@ export default class ActivityExport extends React.Component<
                                                     alignSelf: 'center'
                                                 }}
                                                 maximumDate={new Date()}
-                                                textColor={themeColor('text')}
-                                                androidVariant="nativeAndroid"
                                             />
                                         </>
                                     )}
@@ -523,7 +523,7 @@ export default class ActivityExport extends React.Component<
                                 }}
                                 onPress={() => this.openModal('invoice')}
                             >
-                                <Icon
+                                <Feather
                                     name="upload"
                                     size={24}
                                     color={themeColor('text')}
@@ -547,7 +547,7 @@ export default class ActivityExport extends React.Component<
                                 }}
                                 onPress={() => this.openModal('payment')}
                             >
-                                <Icon
+                                <Feather
                                     name="upload"
                                     size={24}
                                     color={themeColor('text')}
@@ -571,7 +571,7 @@ export default class ActivityExport extends React.Component<
                                 }}
                                 onPress={() => this.openModal('transaction')}
                             >
-                                <Icon
+                                <Feather
                                     name="upload"
                                     size={24}
                                     color={themeColor('text')}

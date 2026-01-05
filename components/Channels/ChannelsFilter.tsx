@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dimensions, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { SearchBar } from 'react-native-elements';
+import { SearchBar } from '@rneui/themed';
 
 import { Row } from '../../components/layout/Row';
 import { FilterOptions } from '../../components/Channels/FilterOptions';
@@ -175,10 +175,8 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                         autoCapitalize="none"
                         autoCorrect={false}
                         keyboardType="visible-password"
-                        platform="default"
+                        platform="ios"
                         showLoading={false}
-                        round={false}
-                        lightTheme={false}
                         loadingProps={{}}
                         onClear={() => ChannelsStore!.setSearch('')}
                         onFocus={() => {}}
