@@ -152,7 +152,7 @@ const ContactInputField = ({
                 </TouchableOpacity>
             )}
         </View>
-        <Divider style={styles.divider} />
+        <Divider style={styles.divider} color={themeColor('separator')} />
     </>
 );
 
@@ -889,9 +889,12 @@ export default class AddContact extends React.Component<
                                 autoCapitalize="none"
                             />
                         </View>
-                        <Divider
-                            orientation="horizontal"
-                            style={styles.divider}
+                        <View
+                            style={{
+                                height: 1,
+                                backgroundColor: themeColor('separator'),
+                                marginVertical: 16
+                            }}
                         />
 
                         {/* Description Field */}
@@ -912,9 +915,12 @@ export default class AddContact extends React.Component<
                                 autoCapitalize="none"
                             />
                         </View>
-                        <Divider
-                            orientation="horizontal"
-                            style={styles.divider}
+                        <View
+                            style={{
+                                height: 1,
+                                backgroundColor: themeColor('separator'),
+                                marginVertical: 16
+                            }}
                         />
 
                         {/* Mandatory Fields */}
@@ -979,9 +985,25 @@ export default class AddContact extends React.Component<
                                             />
                                         </TouchableOpacity>
                                     </View>
+                                    <Divider
+                                        orientation="horizontal"
+                                        color={themeColor('separator')}
+                                    />
                                     <ScrollView style={styles.modalList}>
                                         {dropdownValues.map((value, index) => (
                                             <View key={index}>
+                                                {index > 0 && (
+                                                    <View
+                                                        style={{
+                                                            height: 1,
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'separator'
+                                                                ),
+                                                            marginVertical: 8
+                                                        }}
+                                                    />
+                                                )}
                                                 <TouchableOpacity
                                                     style={styles.modalItem}
                                                     onPress={() =>
@@ -1005,12 +1027,6 @@ export default class AddContact extends React.Component<
                                                         {value.key}
                                                     </Text>
                                                 </TouchableOpacity>
-                                                <Divider
-                                                    orientation="horizontal"
-                                                    style={{
-                                                        marginVertical: 0
-                                                    }}
-                                                />
                                             </View>
                                         ))}
                                     </ScrollView>

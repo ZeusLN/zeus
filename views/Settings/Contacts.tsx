@@ -412,6 +412,7 @@ export default class Contacts extends React.Component<
                                         <Divider
                                             orientation="horizontal"
                                             style={{ marginTop: 14 }}
+                                            color={themeColor('separator')}
                                         />
                                         <SearchBar
                                             placeholder={localeString(
@@ -457,7 +458,10 @@ export default class Contacts extends React.Component<
                                             }}
                                             multiline={true}
                                         />
-                                        <Divider orientation="horizontal" />
+                                        <Divider
+                                            orientation="horizontal"
+                                            color={themeColor('separator')}
+                                        />
                                     </>
                                 )}
                             </View>
