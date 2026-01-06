@@ -205,7 +205,6 @@ dependencies {
     implementation project(":lndmobile")
     implementation "androidx.concurrent:concurrent-futures:1.1.0"
     implementation "androidx.work:work-runtime:2.8.1"
-    implementation "androidx.concurrent:concurrent-futures:1.1.0"
     implementation "com.google.guava:guava:31.0.1-android"
     implementation "io.grpc:grpc-protobuf-lite:1.45.1"
 
