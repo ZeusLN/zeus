@@ -30,6 +30,7 @@ ios/.xcode.env.local
 build/
 .idea
 .gradle
+.gradle-cache/
 local.properties
 *.iml
 android/app/.cxx/

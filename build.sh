@@ -23,10 +23,11 @@ done
 # Run the Docker command with SOURCE_DATE_EPOCH for reproducible builds
 docker run --rm $TTY_FLAG --name $CONTAINER_NAME \
     -e SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH \
+    -e GRADLE_USER_HOME=/olympus/zeus/.gradle-cache \
     -v "$(pwd):$ZEUS_PATH" $BUILDER_IMAGE bash -c \
      'echo -e "\n\n********************************\n*** Building ZEUS...\n********************************\n" && \
       cd /olympus/zeus ; yarn install --frozen-lockfile && \
-      cd /olympus/zeus/android ; ./gradlew app:assembleRelease && \
+      cd /olympus/zeus/android ; ./gradlew generateCodegenArtifactsFromSchema && ./gradlew app:assembleRelease && \
 
       echo -e "\n\n********************************\n**** APKs and SHA256 Hashes\n********************************\n" && \
       cd /olympus/zeus && \
