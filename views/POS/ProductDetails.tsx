@@ -174,12 +174,11 @@ export default class ProductDetails extends React.Component<
                     break;
 
                 case 'price':
-                    if (value === null || isNaN(parseFloat(value))) {
+                    if (isNaN(parseFloat(String(value)))) {
                         value = '';
                     } else {
-                        value = value.replace(/^0+(?=\d)/, '');
+                        value = value.toString().replace(/^0+(?=\d)/, '');
                     }
-                    value = value;
                     break;
 
                 case 'taxPercentage':
