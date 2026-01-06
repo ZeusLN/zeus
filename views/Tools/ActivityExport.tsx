@@ -313,11 +313,7 @@ export default class ActivityExport extends React.Component<
                                             </Text>
                                             <DateTimePicker
                                                 mode="date"
-                                                display={
-                                                    Platform.OS === 'ios'
-                                                        ? 'spinner'
-                                                        : 'default'
-                                                }
+                                                display="compact"
                                                 value={fromDate || new Date()}
                                                 onChange={(_event, date) => {
                                                     if (date) {
@@ -335,13 +331,17 @@ export default class ActivityExport extends React.Component<
                                                     }
                                                 }}
                                                 style={{
-                                                    height: 100,
                                                     marginTop: 10,
-                                                    marginBottom: 20,
+                                                    marginBottom: 10,
                                                     alignSelf: 'center'
                                                 }}
                                                 maximumDate={new Date()}
-                                                textColor={themeColor('text')}
+                                                accentColor={themeColor(
+                                                    'highlight'
+                                                )}
+                                                themeVariant={themeColor(
+                                                    'generalStyle'
+                                                )}
                                             />
                                             <Text
                                                 style={{
@@ -357,11 +357,7 @@ export default class ActivityExport extends React.Component<
                                             </Text>
                                             <DateTimePicker
                                                 mode="date"
-                                                display={
-                                                    Platform.OS === 'ios'
-                                                        ? 'spinner'
-                                                        : 'default'
-                                                }
+                                                display="compact"
                                                 value={toDate || new Date()}
                                                 onChange={(_event, date) => {
                                                     if (date) {
@@ -380,13 +376,17 @@ export default class ActivityExport extends React.Component<
                                                     }
                                                 }}
                                                 style={{
-                                                    height: 100,
                                                     marginTop: 10,
-                                                    marginBottom: 20,
+                                                    marginBottom: 10,
                                                     alignSelf: 'center'
                                                 }}
                                                 maximumDate={new Date()}
-                                                textColor={themeColor('text')}
+                                                accentColor={themeColor(
+                                                    'highlight'
+                                                )}
+                                                themeVariant={themeColor(
+                                                    'generalStyle'
+                                                )}
                                             />
                                         </>
                                     )}
