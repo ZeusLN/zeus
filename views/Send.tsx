@@ -786,6 +786,13 @@ export default class Send extends React.Component<SendProps, SendState> {
         const favoriteContacts = contacts.filter(
             (contact: Contact) => contact.isFavourite
         );
+        const isSendDisabled: boolean =
+            lightningBalance === 0 ||
+            !satAmount ||
+            satAmount === '0' ||
+            Number(satAmount) <= 0 ||
+            !amount ||
+            amount === '0';
 
         return (
             <Screen>
@@ -1604,17 +1611,14 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         icon={{
                                             name: 'send',
                                             size: 25,
-                                            color:
-                                                lightningBalance === 0
-                                                    ? themeColor(
-                                                          'secondaryText'
-                                                      )
-                                                    : themeColor('background')
+                                            color: isSendDisabled
+                                                ? themeColor('secondaryText')
+                                                : themeColor('background')
                                         }}
                                         onPress={() =>
                                             this.sendKeySendPayment(satAmount)
                                         }
-                                        disabled={lightningBalance === 0}
+                                        disabled={isSendDisabled}
                                     />
                                 </View>
                             </React.Fragment>
