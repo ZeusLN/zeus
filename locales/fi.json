@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Lopeta NFC-lähetys",
     "components.CopyButton.copied": "Kopioitu!",
     "components.CopyButton.copy": "Kopioi leikepöydälle",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Suljettu nyt",
     "components.HopPicker.defaultTitle": "Käytettävä kanava",
     "components.HopPicker.selectChannel": "Valitse käytettävä kanava",
