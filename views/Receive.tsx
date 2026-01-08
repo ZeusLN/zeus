@@ -435,7 +435,8 @@ export default class Receive extends React.Component<
                 routeHints,
                 ampInvoice,
                 blindedPaths,
-                addressType
+                addressType,
+                lspIsActive
             );
         }
 
@@ -526,11 +527,13 @@ export default class Receive extends React.Component<
         routeHints?: boolean,
         ampInvoice?: boolean,
         blindedPaths?: boolean,
-        addressType?: string
+        addressType?: string,
+        lspIsActive?: boolean
     ) => {
         const { InvoicesStore, PosStore, SettingsStore } = this.props;
-        const { lspIsActive, receiverName, orderId, orderTip, exchangeRate } =
-            this.state;
+        const { receiverName, orderId, orderTip, exchangeRate } = this.state;
+        // Use passed lspIsActive parameter, fall back to state if not provided
+        const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
         const { settings } = SettingsStore;
         const skipOnchain =
@@ -570,22 +573,24 @@ export default class Receive extends React.Component<
             if (canReuseInvoice) return;
 
             createUnifiedInvoice({
-                memo: lspIsActive
+                memo: effectiveLspIsActive
                     ? ''
                     : receiverName
                     ? `${receiverName}:  ${memo}`
                     : memo || '',
                 value: amount || '0',
-                expirySeconds: lspIsActive
+                expirySeconds: effectiveLspIsActive
                     ? LOCKED_EXPIRY_SECONDS
                     : expirySeconds || '3600',
-                ampInvoice: lspIsActive ? false : ampInvoice || false,
-                blindedPaths: lspIsActive ? false : blindedPaths || false,
+                ampInvoice: effectiveLspIsActive ? false : ampInvoice || false,
+                blindedPaths: effectiveLspIsActive
+                    ? false
+                    : blindedPaths || false,
                 routeHints,
                 addressType: BackendUtils.supportsAddressTypeSelection()
                     ? addressType || '1'
                     : undefined,
-                noLsp: !lspIsActive,
+                noLsp: !effectiveLspIsActive,
                 skipOnchain
             }).then(
                 ({
