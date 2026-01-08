@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Stoppa NFC-sändning",
     "components.CopyButton.copied": "Kopierad!",
     "components.CopyButton.copy": "Kopiera till urklipp",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Nu stängd",
     "components.HopPicker.defaultTitle": "Kanal att använda",
     "components.HopPicker.selectChannel": "Välj kanal att använda",
