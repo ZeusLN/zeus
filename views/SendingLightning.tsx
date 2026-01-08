@@ -148,7 +148,7 @@ export default class SendingLightning extends React.Component<
         const { donationIsPaid } = TransactionsStore;
 
         const wasSuccessful = this.successfullySent(TransactionsStore);
-        const { donationAmount, enableDonations } = route.params;
+        const { donationAmount, enableDonations } = route.params || {};
 
         if (wasSuccessful && !this.state.wasSuccessful) {
             this.setState({ wasSuccessful: true }, () => {
