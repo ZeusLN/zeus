@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "एनएफसी प्रसारण बंद करें",
     "components.CopyButton.copied": "कॉपी हो गया!",
     "components.CopyButton.copy": "क्लिपबोर्ड पर कॉपी करें",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "अब बंद हो गया",
     "components.HopPicker.defaultTitle": "उपयोग करने के लिए चैनल",
     "components.HopPicker.selectChannel": "उपयोग करने के लिए चैनल चुनें",
