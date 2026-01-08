@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "הפסקת שידור NFC",
     "components.CopyButton.copied": "הועתק!",
     "components.CopyButton.copy": "העתקה ללוח",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "כעט סגור",
     "components.HopPicker.defaultTitle": "ערוץ לשימוש",
     "components.HopPicker.selectChannel": "בחירת ערוץ לשימוש",
