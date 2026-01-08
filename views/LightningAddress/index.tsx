@@ -230,7 +230,7 @@ export default class LightningAddress extends React.Component<
                             copyValue: address,
                             label: address,
                             hideText: true,
-                            jumboLabel: true,
+                            labelBottom: true,
                             logo: themeColor('invertQrIcons')
                                 ? require('../../assets/images/pay-z-white.png')
                                 : require('../../assets/images/pay-z-black.png')
