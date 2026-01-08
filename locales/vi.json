@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Dừng truyền tải NFC",
     "components.CopyButton.copied": "Đã sao chép!",
     "components.CopyButton.copy": "Sao chép tới clipboard",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Đã đóng",
     "components.HopPicker.defaultTitle": "Kênh để dùng",
     "components.HopPicker.selectChannel": "Chọn kênh để dùng",
