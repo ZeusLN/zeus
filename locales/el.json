@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Διακοπή μετάδοσης NFC",
     "components.CopyButton.copied": "Αντιγράφηκε!",
     "components.CopyButton.copy": "Αντιγραφή στο πρόχειρο",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Έκλεισε",
     "components.HopPicker.defaultTitle": "Κανάλι που θα χρησιμοποιηθεί",
     "components.HopPicker.selectChannel": "Επιλέξτε το κανάλι που θα χρησιμοποιηθεί",
