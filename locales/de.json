@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "NFC-Übertragung stoppen",
     "components.CopyButton.copied": "Kopiert!",
     "components.CopyButton.copy": "In die Zwischenablage kopieren",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Jetzt geschlossen",
     "components.HopPicker.defaultTitle": "Zu verwendender Kanal",
     "components.HopPicker.selectChannel": "Zu verwendenden Kanal wählen",
