@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Oprește transmisia NFC",
     "components.CopyButton.copied": "Copiat!",
     "components.CopyButton.copy": "Copiază în memorie",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Acum închis",
     "components.HopPicker.defaultTitle": "Canal de folosit",
     "components.HopPicker.selectChannel": "Selectează un canal de folosit",
