@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Stop NFC broadcast",
     "components.CopyButton.copied": "Copied!",
     "components.CopyButton.copy": "Copy to Clipboard",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Now closed",
     "components.HopPicker.defaultTitle": "Channel to use",
     "components.HopPicker.selectChannel": "Select channel to use",

@@ -14,6 +14,7 @@ import { RouteProp } from '@react-navigation/native';
 
 import Button from '../../components/Button';
 import CopyButton from '../../components/CopyButton';
+import CopyBox from '../../components/CopyBox';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
@@ -590,17 +591,38 @@ export default class SignVerifyMessage extends React.Component<
 
     renderVerificationResult = () => {
         const { MessageSignStore } = this.props;
-        const { valid, error, errorMessage } = MessageSignStore;
+        const { valid, error, errorMessage, pubkey } = MessageSignStore;
 
         if (valid !== null || error) {
             return (
                 <View style={styles.result}>
                     {valid ? (
-                        <SuccessMessage
-                            message={localeString(
-                                'views.Settings.SignMessage.success'
+                        <>
+                            <SuccessMessage
+                                message={localeString(
+                                    'views.Settings.SignMessage.success'
+                                )}
+                            />
+                            {pubkey && (
+                                <View style={styles.copyBoxContainer}>
+                                    <CopyBox
+                                        heading={localeString(
+                                            'views.NodeInfo.pubkey'
+                                        )}
+                                        headingCopied={localeString(
+                                            'components.CopyButton.itemCopied',
+                                            {
+                                                item: localeString(
+                                                    'views.NodeInfo.pubkey'
+                                                )
+                                            }
+                                        )}
+                                        theme="dark"
+                                        URL={pubkey}
+                                    />
+                                </View>
                             )}
-                        />
+                        </>
                     ) : (
                         <ErrorMessage
                             message={
@@ -691,7 +713,7 @@ export default class SignVerifyMessage extends React.Component<
             signingMode,
             loading
         } = this.state;
-        const { signMessage, pubkey, valid, signature } = MessageSignStore;
+        const { signMessage, signature } = MessageSignStore;
 
         const { supportsAddressMessageSigning } = this.state;
         const signButton = () => (
@@ -860,32 +882,22 @@ export default class SignVerifyMessage extends React.Component<
 
                             {signature && (
                                 <View>
-                                    <View style={styles.form}>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.SignMessage.generatedSignature'
+                                    <View style={styles.copyBoxContainer}>
+                                        <CopyBox
+                                            heading={localeString(
+                                                'general.signature'
                                             )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text'),
-                                                borderColor:
-                                                    themeColor('secondary'),
-                                                backgroundColor:
-                                                    themeColor('secondary')
-                                            }}
-                                        >
-                                            {signature}
-                                        </Text>
-                                    </View>
-
-                                    <View style={styles.button}>
-                                        <CopyButton copyValue={signature} />
+                                            headingCopied={localeString(
+                                                'components.CopyButton.itemCopied',
+                                                {
+                                                    item: localeString(
+                                                        'general.signature'
+                                                    )
+                                                }
+                                            )}
+                                            theme="dark"
+                                            URL={signature}
+                                        />
                                     </View>
                                 </View>
                             )}
@@ -964,17 +976,6 @@ export default class SignVerifyMessage extends React.Component<
                                     onPress={this.verifyMessage}
                                 />
                             </View>
-
-                            {valid && pubkey && (
-                                <View style={styles.button}>
-                                    <CopyButton
-                                        title={localeString(
-                                            'views.Settings.SignMessage.copyPubkey'
-                                        )}
-                                        copyValue={pubkey}
-                                    />
-                                </View>
-                            )}
                         </View>
                     )}
 
@@ -1062,5 +1063,8 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 6,
         marginTop: 10
+    },
+    copyBoxContainer: {
+        marginTop: 15
     }
 });
