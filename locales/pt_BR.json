@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Parar transmissão NFC",
     "components.CopyButton.copied": "Copiado!",
     "components.CopyButton.copy": "Copiar para Área de Transferência",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Fechado agora",
     "components.HopPicker.defaultTitle": "Canal para usar",
     "components.HopPicker.selectChannel": "Selecione canal para usar",
