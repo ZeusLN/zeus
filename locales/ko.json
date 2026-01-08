@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "NFC 종료",
     "components.CopyButton.copied": "복사완료!",
     "components.CopyButton.copy": "클립보드에 복사",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "닫힘",
     "components.HopPicker.defaultTitle": "가용 채널 ",
     "components.HopPicker.selectChannel": "가용 채널 선택",
