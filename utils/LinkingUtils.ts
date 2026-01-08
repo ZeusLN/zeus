@@ -17,6 +17,34 @@ class LinkingUtils {
         Linking.getInitialURL().then(async (url) => {
             this.shareIntentProcessed = false;
 
+            if (
+                Platform.OS === 'ios' &&
+                url &&
+                url.startsWith('zeusln://share')
+            ) {
+                const shareIntentResult = await processSharedQRImageFast();
+
+                if (shareIntentResult && shareIntentResult.success) {
+                    this.shareIntentProcessed = true;
+
+                    const requiresAuth = settingsStore.loginRequired();
+                    const requiresWalletSelection =
+                        settingsStore.settings?.selectNodeOnStartup;
+                    try {
+                        await NativeModules.MobileTools.clearSharedIntent();
+                    } catch (e) {
+                        console.warn('Failed to clear intent', e);
+                    }
+
+                    navigation.navigate('ShareIntentProcessing', {
+                        ...shareIntentResult.params,
+                        requiresAuth,
+                        requiresWalletSelection
+                    });
+                    return;
+                }
+            }
+
             if (url) {
                 this.handleDeepLink(url, navigation);
                 return;
