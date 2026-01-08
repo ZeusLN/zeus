@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Завершить трансляцию NFC",
     "components.CopyButton.copied": "Скопировано!",
     "components.CopyButton.copy": "Скопировать в Буфер Обмена",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Теперь закрыт",
     "components.HopPicker.defaultTitle": "Канал для использования",
     "components.HopPicker.selectChannel": "Выберите канал для использования",
