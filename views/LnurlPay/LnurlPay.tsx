@@ -206,57 +206,56 @@ export default class LnurlPay extends React.Component<
                 const relays_sig = data.relays_sig;
 
                 if (ecash) {
-                    // load up both the payment routes
-                    InvoicesStore.getPayReq(pr);
-                    CashuStore.getPayReq(pr).then(() => {
+                    try {
+                        // load up both the payment routes
+                        InvoicesStore.getPayReq(pr);
+                        CashuStore.getPayReq(pr)
+                            .then(() => {
+                                this.setState({ loading: false });
+
+                                const payment_hash: string =
+                                    (CashuStore.payReq &&
+                                        CashuStore.payReq.payment_hash) ||
+                                    '';
+                                const description_hash: string =
+                                    (CashuStore.payReq &&
+                                        CashuStore.payReq.description_hash) ||
+                                    '';
+
+                                LnurlPayStore.keep(
+                                    payment_hash,
+                                    domain,
+                                    lnurl.lnurlText,
+                                    lnurl.metadata,
+                                    description_hash,
+                                    successAction,
+                                    // Zaplocker
+                                    pmthash_sig,
+                                    user_pubkey,
+                                    relays,
+                                    relays_sig,
+                                    pr
+                                );
+
+                                navigation.navigate('ChoosePaymentMethod', {
+                                    lightning: CashuStore.paymentRequest,
+                                    locked: true
+                                });
+                            })
+                            .catch(() => {
+                                this.setState({ loading: false });
+                                navigation.navigate('ChoosePaymentMethod', {
+                                    lightning: pr,
+                                    locked: true
+                                });
+                            });
+                    } catch (err) {
                         this.setState({ loading: false });
-
-                        if (CashuStore.getPayReqError) {
-                            Alert.alert(
-                                localeString(
-                                    'views.LnurlPay.LnurlPay.invalidInvoice'
-                                ),
-                                CashuStore.getPayReqError,
-                                [
-                                    {
-                                        text: localeString('general.ok'),
-                                        onPress: () => void 0
-                                    }
-                                ],
-                                { cancelable: false }
-                            );
-                            return;
-                        }
-
-                        const payment_hash: string =
-                            (CashuStore.payReq &&
-                                CashuStore.payReq.payment_hash) ||
-                            '';
-                        const description_hash: string =
-                            (CashuStore.payReq &&
-                                CashuStore.payReq.description_hash) ||
-                            '';
-
-                        LnurlPayStore.keep(
-                            payment_hash,
-                            domain,
-                            lnurl.lnurlText,
-                            lnurl.metadata,
-                            description_hash,
-                            successAction,
-                            // Zaplocker
-                            pmthash_sig,
-                            user_pubkey,
-                            relays,
-                            relays_sig,
-                            pr
-                        );
-
                         navigation.navigate('ChoosePaymentMethod', {
-                            lightning: CashuStore.paymentRequest,
+                            lightning: pr,
                             locked: true
                         });
-                    });
+                    }
                 } else {
                     InvoicesStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });

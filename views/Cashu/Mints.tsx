@@ -15,26 +15,29 @@ import cloneDeep from 'lodash/cloneDeep';
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
+import ButtonComponent from '../../components/Button';
 import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CashuStore from '../../stores/CashuStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 
 interface MintsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    route: Route<'Mints'>;
+    SettingsStore: SettingsStore;
+    route: Route<'Mints', { forceSingleMint: boolean }>;
 }
 
 interface MintsState {
-    mints: any;
+    mints: any[];
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class Mints extends React.Component<MintsProps, MintsState> {
     state = {
@@ -56,38 +59,71 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     }
 
     handleFocus = () => {
-        const { CashuStore } = this.props;
+        const { CashuStore, SettingsStore } = this.props;
         const { cashuWallets, mintUrls } = CashuStore;
-        let mints: any = [];
-        mintUrls.forEach((mintUrl) => {
-            const wallet = cashuWallets[mintUrl];
-            const mintInfo = wallet.mintInfo;
-            mints.push({
-                ...mintInfo,
-                mintUrl,
-                mintBalance: wallet.balanceSats,
-                errorConnecting: wallet.errorConnecting
-            });
+
+        const allMints = mintUrls.map((mintUrl) => ({
+            ...(cashuWallets[mintUrl]?.mintInfo || {}),
+            mintUrl,
+            mintBalance: cashuWallets[mintUrl]?.balanceSats ?? 0,
+            errorConnecting: cashuWallets[mintUrl]?.errorConnecting ?? false
+        }));
+
+        this.setState({ mints: allMints });
+
+        if (SettingsStore.settings.ecash.enableMultiMint) {
+            this.syncMultiMintSelection(allMints);
+        }
+    };
+
+    syncMultiMintSelection = async (allMints: any[]) => {
+        const { CashuStore, SettingsStore } = this.props;
+
+        const nut15MintUrls = allMints
+            .filter((m) => m.nuts && m.nuts[15])
+            .map((m) => m.mintUrl);
+
+        const selectedFromSettings =
+            SettingsStore.settings.lightningAddress.mintUrls || [];
+
+        let validSelection = selectedFromSettings.filter((url) =>
+            nut15MintUrls.includes(url)
+        );
+
+        if (validSelection.length === 0 && nut15MintUrls.length > 0) {
+            validSelection = nut15MintUrls;
+        }
+
+        await SettingsStore.updateSettings({
+            lightningAddress: {
+                mintUrls: validSelection
+            }
         });
 
-        this.setState({
-            mints
-        });
+        await CashuStore.setSelectedMintUrls(validSelection);
     };
 
     renderSeparator = () => (
         <View
-            style={{
-                height: 0.4,
-                backgroundColor: themeColor('separator')
-            }}
+            style={{ height: 0.4, backgroundColor: themeColor('separator') }}
         />
     );
 
     render() {
-        const { navigation, CashuStore } = this.props;
+        const { navigation, CashuStore, SettingsStore } = this.props;
         const { mints } = this.state;
-        const { selectedMintUrl, clearInvoice, setSelectedMint } = CashuStore;
+        const {
+            selectedMintUrl,
+            selectedMintUrls = [],
+            clearInvoice,
+            setSelectedMint,
+            toggleMintSelection
+        } = CashuStore;
+
+        const { settings } = SettingsStore;
+        const forceSingleMint = this.props.route.params?.forceSingleMint;
+
+        const multiMint = settings.ecash.enableMultiMint && !forceSingleMint;
 
         const AddMintButton = () => (
             <TouchableOpacity
@@ -121,10 +157,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     }}
                     rightComponent={<AddMintButton />}
                     navigation={navigation}
-                    onBack={() => {
-                        clearInvoice();
-                    }}
+                    onBack={clearInvoice}
                 />
+
                 {!!mints && mints.length > 0 ? (
                     <FlatList
                         data={mints}
@@ -136,10 +171,12 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             index: number;
                         }) => {
                             const mintInfo = item._mintInfo || item;
-                            const isSelectedMint =
-                                selectedMintUrl &&
-                                mintInfo?.mintUrl &&
-                                selectedMintUrl === mintInfo?.mintUrl;
+                            const supportsMultinut =
+                                mintInfo?.nuts && mintInfo.nuts[15];
+                            const isDisabled = multiMint && !supportsMultinut;
+                            const isSelectedMint = multiMint
+                                ? selectedMintUrls.includes(mintInfo?.mintUrl)
+                                : selectedMintUrl === mintInfo?.mintUrl;
                             const errorConnecting = item.errorConnecting;
 
                             let subTitle = isSelectedMint
@@ -153,22 +190,61 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                     'general.errorConnecting'
                                 )} | ${subTitle}`;
                             }
+
                             return (
-                                <React.Fragment>
+                                <React.Fragment key={`mint-${index}`}>
                                     <ListItem
-                                        key={`mint-${index}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
+                                            backgroundColor: 'transparent',
+                                            opacity: isDisabled ? 0.4 : 1
                                         }}
+                                        disabled={isDisabled}
                                         onPress={async () => {
-                                            await setSelectedMint(
-                                                mintInfo?.mintUrl
-                                            ).then(() => {
+                                            if (isDisabled) {
+                                                return;
+                                            }
+                                            const forceSingleMint =
+                                                this.props.route.params
+                                                    ?.forceSingleMint;
+
+                                            if (multiMint && !forceSingleMint) {
+                                                await toggleMintSelection(
+                                                    mintInfo?.mintUrl
+                                                );
+                                            } else if (forceSingleMint) {
+                                                await CashuStore.setReceiveMint(
+                                                    mintInfo?.mintUrl
+                                                );
                                                 navigation.goBack();
-                                            });
+                                            } else {
+                                                await setSelectedMint(
+                                                    mintInfo?.mintUrl
+                                                );
+                                                navigation.goBack();
+                                            }
                                         }}
                                     >
+                                        {multiMint && supportsMultinut && (
+                                            <Icon
+                                                name={
+                                                    isSelectedMint
+                                                        ? 'check-box'
+                                                        : 'check-box-outline-blank'
+                                                }
+                                                color={
+                                                    isSelectedMint
+                                                        ? themeColor(
+                                                              'highlight'
+                                                          )
+                                                        : themeColor(
+                                                              'secondaryText'
+                                                          )
+                                                }
+                                                size={24}
+                                                style={{ marginRight: 10 }}
+                                            />
+                                        )}
                                         {mintInfo?.icon_url && (
                                             <Image
                                                 source={{
@@ -178,7 +254,10 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                     alignSelf: 'center',
                                                     width: 42,
                                                     height: 42,
-                                                    borderRadius: 68
+                                                    borderRadius: 68,
+                                                    opacity: isDisabled
+                                                        ? 0.4
+                                                        : 1
                                                 }}
                                             />
                                         )}
@@ -191,6 +270,10 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                             color: errorConnecting
                                                                 ? themeColor(
                                                                       'error'
+                                                                  )
+                                                                : isDisabled
+                                                                ? themeColor(
+                                                                      'secondaryText'
                                                                   )
                                                                 : isSelectedMint
                                                                 ? themeColor(
@@ -275,6 +358,26 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
                     />
+                )}
+                {multiMint && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            bottom: 15,
+                            paddingHorizontal: 16,
+                            backgroundColor: 'transparent',
+                            zIndex: 20
+                        }}
+                    >
+                        <ButtonComponent
+                            title={localeString('general.confirm')}
+                            onPress={() => navigation.goBack()}
+                            containerStyle={{ marginTop: 15 }}
+                            noUppercase
+                        />
+                    </View>
                 )}
             </Screen>
         );

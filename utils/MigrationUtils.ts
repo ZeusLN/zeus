@@ -194,7 +194,8 @@ class MigrationsUtils {
                 nostrPrivateKey: '',
                 nostrRelays: DEFAULT_NOSTR_RELAYS,
                 notifications: 0,
-                mintUrl: '' // Cashu
+                mintUrl: '', // Cashu
+                mintUrls: [] // Cashu MultiMint
             };
         }
 
