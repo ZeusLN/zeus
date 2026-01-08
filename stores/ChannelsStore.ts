@@ -584,6 +584,51 @@ export default class ChannelsStore {
             .catch(() => this.getChannelsError());
     };
 
+    // For embedded LND: polls getChannels until at least one channel is online
+    // This is useful because channels may take time to come online after node startup
+    @action
+    public getChannelsWithPolling = async (
+        pollingIntervalMs: number = 3000,
+        maxAttempts: number = 20
+    ): Promise<void> => {
+        let attempts = 0;
+
+        const pollChannels = async (): Promise<void> => {
+            attempts++;
+            await this.getChannels();
+
+            // If no open channels, no need to poll
+            if (this.channels.length === 0) {
+                return;
+            }
+
+            // Check if at least one channel is active (online)
+            const hasActiveChannel = this.channels.some(
+                (channel) => channel.isActive
+            );
+
+            if (hasActiveChannel) {
+                return;
+            }
+
+            // If we've exceeded max attempts, stop polling
+            if (attempts >= maxAttempts) {
+                console.log(
+                    'ChannelsStore: Max polling attempts reached, stopping poll'
+                );
+                return;
+            }
+
+            // Wait and try again
+            await new Promise((resolve) =>
+                setTimeout(resolve, pollingIntervalMs)
+            );
+            return pollChannels();
+        };
+
+        return pollChannels();
+    };
+
     @action
     public closeChannel = async (
         channelPoint?: CloseChannelRequest,
