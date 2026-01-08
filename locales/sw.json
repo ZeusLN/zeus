@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Acha matangazo ya NFC",
     "components.CopyButton.copied": "Imenakiliwa!",
     "components.CopyButton.copy": "Nakili kwenye Ubao wa Kunakili",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Sasa imefungwa",
     "components.HopPicker.defaultTitle": "Chaneli ya kutumia",
     "components.HopPicker.selectChannel": "Chagua chaneli ya kutumia",
