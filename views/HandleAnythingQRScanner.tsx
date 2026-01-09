@@ -2,7 +2,7 @@ import * as React from 'react';
 // @ts-ignore:next-line
 import b58 from 'bs58check';
 import { Alert, View } from 'react-native';
-import { Header } from 'react-native-elements';
+import { Header } from '@rneui/themed';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';

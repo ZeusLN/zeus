@@ -7,7 +7,7 @@ import {
     Platform,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup, Icon } from 'react-native-elements';
+import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
@@ -110,39 +110,32 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     private unsubscribeFocus?: () => void;
 
-    async componentDidMount() {
-        const { route, navigation, NostrWalletConnectStore } = this.props;
+    loadData = async () => {
+        const { route, NostrWalletConnectStore } = this.props;
         const connectionId = route.params?.connectionId;
         await NostrWalletConnectStore.loadMaxBudget();
-        await this.updateMaxBudgetLimit();
         if (connectionId) {
             await this.loadConnectionForEdit(connectionId);
+        } else {
             await this.updateMaxBudgetLimit();
         }
+    };
+
+    async componentDidMount() {
+        const { navigation } = this.props;
+        await this.loadData();
         this.unsubscribeFocus = navigation.addListener('focus', async () => {
-            await this.updateMaxBudgetLimit();
-            const currentConnectionId = route.params?.connectionId;
-            if (currentConnectionId) {
-                await this.loadConnectionForEdit(currentConnectionId);
-                await this.updateMaxBudgetLimit();
-            }
+            await this.loadData();
         });
     }
 
     updateMaxBudgetLimit = async () => {
         const { NostrWalletConnectStore } = this.props;
         const maxLimit = NostrWalletConnectStore.maxBudgetLimit;
-        const clampedMaxLimit = Math.max(0, maxLimit);
-
         const existingBudgetValue = this.state.budgetValue || 0;
-        const currentBudgetValue = Math.min(
-            existingBudgetValue,
-            clampedMaxLimit
-        );
-
         this.setState({
-            maxBudgetLimit: clampedMaxLimit,
-            budgetValue: currentBudgetValue
+            maxBudgetLimit: Math.max(0, maxLimit),
+            budgetValue: existingBudgetValue
         });
     };
 
@@ -180,6 +173,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             const isCustomRelay = !DEFAULT_NOSTR_RELAYS.find(
                 (relay) => relay === connection.relayUrl
             );
+            const maxBudgetLimit = NostrWalletConnectStore.maxBudgetLimit;
             this.setState({
                 connectionName: connection.name,
                 selectedRelayUrl: isCustomRelay
@@ -197,6 +191,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customExpiryValue,
                 customExpiryUnit,
                 budgetValue,
+                maxBudgetLimit: Math.max(0, maxBudgetLimit),
                 showAdvancedSettings: false,
                 showCustomPermissions: false
             });
@@ -496,15 +491,9 @@ export default class AddOrEditNWCConnection extends React.Component<
             return;
         }
         const clampedValue = Math.min(value, this.state.maxBudgetLimit);
-        const wasClamped = value > this.state.maxBudgetLimit;
-
         this.updateStateWithChangeTracking({
             budgetValue: clampedValue,
-            error: wasClamped
-                ? localeString(
-                      'views.Settings.NostrWalletConnect.validation.budgetAmountInvalid'
-                  )
-                : ''
+            error: ''
         });
     };
 

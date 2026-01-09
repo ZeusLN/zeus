@@ -34,9 +34,9 @@ RCT_EXPORT_METHOD(startBackgroundTask:(RCTPromiseResolveBlock)resolve
     formatter.timeZone = [NSTimeZone timeZoneWithAbbreviation:@"UTC"];
     NSString *startTimeString = [formatter stringFromDate:self.taskStartTime];
     
-    __weak typeof(self) weakSelf = self;
+    __weak __typeof__(self) weakSelf = self;
     self.backgroundTaskIdentifier = [[UIApplication sharedApplication] beginBackgroundTaskWithName:@"NWCConnectionSetup" expirationHandler:^{
-        __strong typeof(weakSelf) strongSelf = weakSelf;
+        __strong __typeof__(weakSelf) strongSelf = weakSelf;
         if (strongSelf) {
             NSTimeInterval elapsed = [[NSDate date] timeIntervalSinceDate:strongSelf.taskStartTime];
             NSLog(@"iOS: Background task expiring after %.2f seconds", elapsed);
@@ -80,9 +80,9 @@ RCT_EXPORT_METHOD(cleanup) {
 
 - (void)startRemainingTimeLogger {
     [self.remainingTimeTimer invalidate];
-    __weak typeof(self) weakSelf = self;
+    __weak __typeof__(self) weakSelf = self;
     self.remainingTimeTimer = [NSTimer scheduledTimerWithTimeInterval:5.0 repeats:YES block:^(NSTimer * _Nonnull timer) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
+        __strong __typeof__(weakSelf) strongSelf = weakSelf;
         if (strongSelf && strongSelf.backgroundTaskIdentifier != UIBackgroundTaskInvalid) {
             NSTimeInterval remainingTime = [[UIApplication sharedApplication] backgroundTimeRemaining];
             NSTimeInterval elapsed = [[NSDate date] timeIntervalSinceDate:strongSelf.taskStartTime];

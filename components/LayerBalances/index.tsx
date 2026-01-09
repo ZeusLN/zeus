@@ -8,8 +8,7 @@ import {
     View,
     I18nManager
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import { RectButton } from 'react-native-gesture-handler';
+import LinearGradient from '../LinearGradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BigNumber from 'bignumber.js';
 
@@ -186,146 +185,134 @@ const Row = ({ item }: { item: DataRow }) => {
     const ecashRowColors = getEcashRowColors();
     const isEcash = item.layer === 'Ecash';
 
+    const gradientColors =
+        isEcash && ecashRowColors
+            ? ecashRowColors
+            : themeColor('buttonGradient')
+            ? themeColor('buttonGradient')
+            : themeColor('buttonBackground')
+            ? [themeColor('buttonBackground'), themeColor('buttonBackground')]
+            : [themeColor('secondary'), themeColor('secondary')];
+
     return (
-        <RectButton>
-            <LinearGradient
-                colors={
-                    isEcash && ecashRowColors
-                        ? ecashRowColors
-                        : themeColor('buttonGradient')
-                        ? themeColor('buttonGradient')
-                        : themeColor('buttonBackground')
-                        ? [
-                              themeColor('buttonBackground'),
-                              themeColor('buttonBackground')
-                          ]
-                        : [themeColor('secondary'), themeColor('secondary')]
-                }
-                style={
-                    moreAccounts
-                        ? {
-                              ...styles.rectButton,
-                              height: 40
-                          }
-                        : styles.rectButton
-                }
-            >
-                <View style={styles.left}>
-                    {item.watchOnly ? (
-                        <MatiSvg />
-                    ) : isEcash ? (
-                        <EcashSvg />
-                    ) : item.layer === 'On-chain' ? (
-                        <OnChainSvg />
-                    ) : item.layer === 'Lightning' ? (
-                        <LightningSvg />
-                    ) : moreAccounts ? null : (
-                        <OnChainSvg />
-                    )}
-                    <Spacer width={5} />
-                    <View
+        <LinearGradient
+            colors={gradientColors}
+            style={[styles.rectButton, moreAccounts && { height: 40 }]}
+        >
+            <View style={styles.left}>
+                {item.watchOnly ? (
+                    <MatiSvg />
+                ) : isEcash ? (
+                    <EcashSvg />
+                ) : item.layer === 'On-chain' ? (
+                    <OnChainSvg />
+                ) : item.layer === 'Lightning' ? (
+                    <LightningSvg />
+                ) : moreAccounts ? null : (
+                    <OnChainSvg />
+                )}
+                <Spacer width={5} />
+                <View
+                    style={{
+                        flexDirection: 'column',
+                        left: moreAccounts ? 5 : 0,
+                        flex: 1
+                    }}
+                >
+                    <Text
                         style={{
-                            flexDirection: 'column',
-                            left: moreAccounts ? 5 : 0,
-                            flex: 1
+                            ...styles.layerText,
+                            color:
+                                themeColor('buttonText') || themeColor('text')
                         }}
                     >
+                        {item.layer === 'Lightning'
+                            ? localeString('general.lightning')
+                            : item.layer === 'On-chain'
+                            ? localeString('general.onchain')
+                            : item.layer}
+                    </Text>
+                    {item.subtitle && (
                         <Text
                             style={{
                                 ...styles.layerText,
                                 color:
-                                    themeColor('buttonText') ||
-                                    themeColor('text')
+                                    themeColor('buttonTextSecondary') ||
+                                    themeColor('secondaryText')
                             }}
                         >
-                            {item.layer === 'Lightning'
-                                ? localeString('general.lightning')
-                                : item.layer === 'On-chain'
-                                ? localeString('general.onchain')
-                                : item.layer}
+                            {item.subtitle}
                         </Text>
-                        {item.subtitle && (
-                            <Text
-                                style={{
-                                    ...styles.layerText,
-                                    color:
-                                        themeColor('buttonTextSecondary') ||
-                                        themeColor('secondaryText')
-                                }}
-                            >
-                                {item.subtitle}
-                            </Text>
-                        )}
-                        {/* Show mint icons for Ecash row */}
-                        {isEcash && !item.needsConfig && item.mints && (
-                            <MintIcons mints={item.mints} />
-                        )}
-                        {/* Show custodial pill for non-Ecash custodial rows */}
-                        {item.custodial && !isEcash && !item.needsConfig && (
-                            <View style={styles.pill}>
-                                <Pill
-                                    title={localeString(
-                                        'general.custodialWallet'
-                                    ).toUpperCase()}
-                                    textColor={themeColor('highlight')}
-                                    height={25}
-                                    scrollOnOverflow={true}
-                                />
-                            </View>
-                        )}
-                        {item.needsConfig && (
-                            <View style={styles.pill}>
-                                <Pill
-                                    title={localeString(
-                                        'cashu.tapToConfigure'
-                                    ).toUpperCase()}
-                                    textColor={themeColor('highlight')}
-                                    borderColor={themeColor('highlight')}
-                                    scrollOnOverflow={true}
-                                    height={25}
-                                />
-                            </View>
-                        )}
-                    </View>
+                    )}
+                    {/* Show mint icons for Ecash row */}
+                    {isEcash && !item.needsConfig && item.mints && (
+                        <MintIcons mints={item.mints} />
+                    )}
+                    {/* Show custodial pill for non-Ecash custodial rows */}
+                    {item.custodial && !isEcash && !item.needsConfig && (
+                        <View style={styles.pill}>
+                            <Pill
+                                title={localeString(
+                                    'general.custodialWallet'
+                                ).toUpperCase()}
+                                textColor={themeColor('highlight')}
+                                height={25}
+                                scrollOnOverflow={true}
+                            />
+                        </View>
+                    )}
+                    {item.needsConfig && (
+                        <View style={styles.pill}>
+                            <Pill
+                                title={localeString(
+                                    'cashu.tapToConfigure'
+                                ).toUpperCase()}
+                                textColor={themeColor('highlight')}
+                                borderColor={themeColor('highlight')}
+                                scrollOnOverflow={true}
+                                height={25}
+                            />
+                        </View>
+                    )}
                 </View>
+            </View>
 
-                {!moreAccounts ? (
-                    <>
-                        {!item.needsConfig && (
-                            <View style={styles.rightContent}>
-                                <Amount
-                                    sats={item.balance}
-                                    sensitive
-                                    colorOverride={themeColor('buttonText')}
-                                />
-                                {/* Show custodial pill below balance for Ecash */}
-                                {isEcash && item.custodial && (
-                                    <View style={styles.pillRight}>
-                                        <Pill
-                                            title={localeString(
-                                                'general.custodialWallet'
-                                            ).toUpperCase()}
-                                            textColor={themeColor('highlight')}
-                                            height={25}
-                                            scrollOnOverflow={true}
-                                        />
-                                    </View>
-                                )}
-                            </View>
-                        )}
-                    </>
-                ) : (
-                    <Text
-                        style={{
-                            ...styles.layerText,
-                            color: themeColor('buttonText')
-                        }}
-                    >
-                        {item.count && `+${item.count - 1}`}
-                    </Text>
-                )}
-            </LinearGradient>
-        </RectButton>
+            {!moreAccounts ? (
+                <>
+                    {!item.needsConfig && (
+                        <View style={styles.rightContent}>
+                            <Amount
+                                sats={item.balance}
+                                sensitive
+                                colorOverride={themeColor('buttonText')}
+                            />
+                            {/* Show custodial pill below balance for Ecash */}
+                            {isEcash && item.custodial && (
+                                <View style={styles.pillRight}>
+                                    <Pill
+                                        title={localeString(
+                                            'general.custodialWallet'
+                                        ).toUpperCase()}
+                                        textColor={themeColor('highlight')}
+                                        height={25}
+                                        scrollOnOverflow={true}
+                                    />
+                                </View>
+                            )}
+                        </View>
+                    )}
+                </>
+            ) : (
+                <Text
+                    style={{
+                        ...styles.layerText,
+                        color: themeColor('buttonText')
+                    }}
+                >
+                    {item.count && `+${item.count - 1}`}
+                </Text>
+            )}
+        </LinearGradient>
     );
 };
 
@@ -585,17 +572,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
 const styles = StyleSheet.create({
     rectButton: {
-        flex: 1,
         height: 80,
+        marginHorizontal: 15,
+        borderRadius: 50,
         paddingVertical: 10,
         paddingLeft: 6,
         paddingRight: 20,
         justifyContent: 'space-between',
         alignItems: 'center',
-        flexDirection: 'row',
-        marginLeft: 15,
-        marginRight: 15,
-        borderRadius: 50
+        flexDirection: 'row'
     },
     pill: {
         marginTop: 5,

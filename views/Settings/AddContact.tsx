@@ -12,7 +12,7 @@ import {
     TextInput
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Icon, Divider } from 'react-native-elements';
+import { Icon, Divider } from '@rneui/themed';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';
@@ -115,7 +115,7 @@ const ContactInputField = ({
     isAdditionalField = false,
     onDelete
 }: ContactInputFieldProps) => (
-    <>
+    <View>
         <View style={styles.inputContainer}>
             <View style={styles.icons}>{icon}</View>
             <TextInput
@@ -152,8 +152,13 @@ const ContactInputField = ({
                 </TouchableOpacity>
             )}
         </View>
-        <Divider style={styles.divider} />
-    </>
+        <View
+            style={[
+                styles.divider,
+                { backgroundColor: themeColor('separator') }
+            ]}
+        />
+    </View>
 );
 
 @inject('ContactStore')
@@ -469,7 +474,7 @@ export default class AddContact extends React.Component<
         }
     };
     renderAddedFields = () => {
-        const allFields: JSX.Element[] = [];
+        const allFields: React.ReactElement[] = [];
         allFields.push(
             <ContactInputField
                 key="default-ln-address"
@@ -889,9 +894,11 @@ export default class AddContact extends React.Component<
                                 autoCapitalize="none"
                             />
                         </View>
-                        <Divider
-                            orientation="horizontal"
-                            style={styles.divider}
+                        <View
+                            style={[
+                                styles.divider,
+                                { backgroundColor: themeColor('separator') }
+                            ]}
                         />
 
                         {/* Description Field */}
@@ -912,9 +919,11 @@ export default class AddContact extends React.Component<
                                 autoCapitalize="none"
                             />
                         </View>
-                        <Divider
-                            orientation="horizontal"
-                            style={styles.divider}
+                        <View
+                            style={[
+                                styles.divider,
+                                { backgroundColor: themeColor('separator') }
+                            ]}
                         />
 
                         {/* Mandatory Fields */}
@@ -979,9 +988,26 @@ export default class AddContact extends React.Component<
                                             />
                                         </TouchableOpacity>
                                     </View>
+                                    <Divider
+                                        orientation="horizontal"
+                                        color={themeColor('separator')}
+                                        width={1}
+                                    />
                                     <ScrollView style={styles.modalList}>
                                         {dropdownValues.map((value, index) => (
                                             <View key={index}>
+                                                {index > 0 && (
+                                                    <View
+                                                        style={{
+                                                            height: 1,
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'separator'
+                                                                ),
+                                                            marginVertical: 8
+                                                        }}
+                                                    />
+                                                )}
                                                 <TouchableOpacity
                                                     style={styles.modalItem}
                                                     onPress={() =>
@@ -1005,12 +1031,6 @@ export default class AddContact extends React.Component<
                                                         {value.key}
                                                     </Text>
                                                 </TouchableOpacity>
-                                                <Divider
-                                                    orientation="horizontal"
-                                                    style={{
-                                                        marginVertical: 0
-                                                    }}
-                                                />
                                             </View>
                                         ))}
                                     </ScrollView>
@@ -1123,7 +1143,9 @@ const styles = StyleSheet.create({
         textAlign: 'center'
     },
     divider: {
-        marginVertical: Platform.OS === 'ios' ? 16 : 10
+        marginVertical: Platform.OS === 'ios' ? 16 : 10,
+        height: 1,
+        width: '100%'
     },
     addFieldButton: {
         alignSelf: 'center',

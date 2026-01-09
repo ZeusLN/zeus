@@ -18,7 +18,7 @@ import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
-import Icon from 'react-native-vector-icons/Feather';
+import Feather from '@react-native-vector-icons/feather';
 
 import NavigationService from '../NavigationService';
 
@@ -206,7 +206,7 @@ export default class AmountInput extends React.Component<
                                     >
                                         {`${flag ? `${flag} ` : ''}${fiat}`}
                                     </Text>
-                                    <Icon
+                                    <Feather
                                         name="chevron-right"
                                         size={12}
                                         color={themeColor('text')}

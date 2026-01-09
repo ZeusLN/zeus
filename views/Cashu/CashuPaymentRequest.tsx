@@ -10,7 +10,7 @@ import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Slider from '@react-native-community/slider';
-import { ButtonGroup } from 'react-native-elements';
+import { ButtonGroup } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
 import AmountInput from '../../components/AmountInput';

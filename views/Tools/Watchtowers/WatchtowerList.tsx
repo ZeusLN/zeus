@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { SearchBar, Icon, Divider } from 'react-native-elements';
+import { SearchBar, Icon, Divider } from '@rneui/themed';
 
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
@@ -152,7 +152,7 @@ export default class Watchtowers extends React.Component<
                 <View style={styles.watchtowerContainer}>
                     <Icon
                         name="radio-tower"
-                        type="octicon"
+                        type="material-community"
                         size={30}
                         color={
                             item.active_session_candidate
@@ -197,7 +197,7 @@ export default class Watchtowers extends React.Component<
             <View style={styles.emptyContainer}>
                 <Icon
                     name="radio-tower"
-                    type="octicon"
+                    type="material-community"
                     size={50}
                     color={themeColor('secondaryText')}
                     containerStyle={styles.emptyIcon}
@@ -269,7 +269,7 @@ export default class Watchtowers extends React.Component<
                         <View style={styles.emptyContainer}>
                             <Icon
                                 name="radio-tower"
-                                type="octicon"
+                                type="material-community"
                                 size={50}
                                 color={themeColor('error')}
                                 containerStyle={styles.emptyIcon}

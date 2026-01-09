@@ -16,6 +16,7 @@ import com.android.build.OutputFile
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
+    autolinkLibrariesWithApp()
     /* Folders */
     //   The root of your project, i.e. where "package.json" lives. Default is '..'
     // root = file("../")
@@ -76,7 +77,7 @@ def enableProguardInReleaseBuilds = true
  * give correct results when using with locales other than en-US. Note that
  * this variant is about 6MiB larger per architecture than default.
  */
-def jscFlavor = 'org.webkit:android-jsc:+'
+def jscFlavor = 'io.github.nickmartens:jsc-android:2026004.+'
 
 /**
  * Set this to true to create two separate APKs instead of one:
@@ -204,7 +205,6 @@ dependencies {
     implementation project(":lndmobile")
     implementation "androidx.concurrent:concurrent-futures:1.1.0"
     implementation "androidx.work:work-runtime:2.8.1"
-    implementation "androidx.concurrent:concurrent-futures:1.1.0"
     implementation "com.google.guava:guava:31.0.1-android"
     implementation "io.grpc:grpc-protobuf-lite:1.45.1"
 
@@ -226,9 +226,9 @@ dependencies {
     }
 }
 
-configurations {
+configurations.configureEach {
     // https://stackoverflow.com/questions/54717283/program-type-already-present-com-google-common-util-concurrent-listenablefuture
-    all*.exclude group: "com.google.guava", module: "listenablefuture"
+    exclude group: "com.google.guava", module: "listenablefuture"
 }
 
 // Run this once to be able to run the application with BUCK
@@ -238,7 +238,6 @@ tasks.register('copyDownloadableDepsToLibs', Copy) {
     into 'libs'
 }
 
-apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 
 protobuf {
     protoc {

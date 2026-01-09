@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import cloneDeep from 'lodash/cloneDeep';

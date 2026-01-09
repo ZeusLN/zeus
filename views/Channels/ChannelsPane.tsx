@@ -13,7 +13,7 @@ import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
-import Icon from 'react-native-vector-icons/Feather';
+import Feather from '@react-native-vector-icons/feather';
 import BigNumber from 'bignumber.js';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
@@ -521,7 +521,9 @@ export default class ChannelsPane extends React.PureComponent<
                                             tabBarStyle: {
                                                 borderTopWidth: 0.2,
                                                 borderTopColor:
-                                                    themeColor('secondaryText')
+                                                    themeColor('secondaryText'),
+                                                paddingTop: 10,
+                                                height: 60
                                             },
                                             tabBarItemStyle: {
                                                 justifyContent: 'center'
@@ -588,7 +590,9 @@ export default class ChannelsPane extends React.PureComponent<
                                             tabBarStyle: {
                                                 borderTopWidth: 0.2,
                                                 borderTopColor:
-                                                    themeColor('secondaryText')
+                                                    themeColor('secondaryText'),
+                                                paddingTop: 10,
+                                                height: 60
                                             },
                                             tabBarItemStyle: {
                                                 justifyContent: 'center'
@@ -951,7 +955,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                             styles.peerIconContainer
                                                         }
                                                     >
-                                                        <Icon
+                                                        <Feather
                                                             name="minus-circle"
                                                             size={20}
                                                             color={themeColor(

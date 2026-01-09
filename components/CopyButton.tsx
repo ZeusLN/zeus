@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Platform, TouchableOpacity, ViewStyle } from 'react-native';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import Button from './../components/Button';
 import { localeString } from './../utils/LocaleUtils';

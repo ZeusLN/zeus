@@ -23,14 +23,17 @@ DerivedData
 *.hmap
 *.ipa
 *.xcuserstate
+ios/.xcode.env.local
 
 # Android/IntelliJ
 #
 build/
 .idea
 .gradle
+.gradle-cache/
 local.properties
 *.iml
+android/app/.cxx/
 
 # Visual Studio Code
 #

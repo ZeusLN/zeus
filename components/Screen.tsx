@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react';
 import { PureComponent, ReactNode } from 'react';
 import { SafeAreaView, ViewStyle } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import LinearGradient from './LinearGradient';
 
 import { themeColor } from '../utils/ThemeUtils';
 
