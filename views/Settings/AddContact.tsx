@@ -115,7 +115,7 @@ const ContactInputField = ({
     isAdditionalField = false,
     onDelete
 }: ContactInputFieldProps) => (
-    <>
+    <View>
         <View style={styles.inputContainer}>
             <View style={styles.icons}>{icon}</View>
             <TextInput
@@ -152,8 +152,13 @@ const ContactInputField = ({
                 </TouchableOpacity>
             )}
         </View>
-        <Divider style={styles.divider} color={themeColor('separator')} />
-    </>
+        <View
+            style={[
+                styles.divider,
+                { backgroundColor: themeColor('separator') }
+            ]}
+        />
+    </View>
 );
 
 @inject('ContactStore')
@@ -890,11 +895,10 @@ export default class AddContact extends React.Component<
                             />
                         </View>
                         <View
-                            style={{
-                                height: 1,
-                                backgroundColor: themeColor('separator'),
-                                marginVertical: 16
-                            }}
+                            style={[
+                                styles.divider,
+                                { backgroundColor: themeColor('separator') }
+                            ]}
                         />
 
                         {/* Description Field */}
@@ -916,11 +920,10 @@ export default class AddContact extends React.Component<
                             />
                         </View>
                         <View
-                            style={{
-                                height: 1,
-                                backgroundColor: themeColor('separator'),
-                                marginVertical: 16
-                            }}
+                            style={[
+                                styles.divider,
+                                { backgroundColor: themeColor('separator') }
+                            ]}
                         />
 
                         {/* Mandatory Fields */}
@@ -988,6 +991,7 @@ export default class AddContact extends React.Component<
                                     <Divider
                                         orientation="horizontal"
                                         color={themeColor('separator')}
+                                        width={1}
                                     />
                                     <ScrollView style={styles.modalList}>
                                         {dropdownValues.map((value, index) => (
@@ -1139,7 +1143,9 @@ const styles = StyleSheet.create({
         textAlign: 'center'
     },
     divider: {
-        marginVertical: Platform.OS === 'ios' ? 16 : 10
+        marginVertical: Platform.OS === 'ios' ? 16 : 10,
+        height: 1,
+        width: '100%'
     },
     addFieldButton: {
         alignSelf: 'center',
