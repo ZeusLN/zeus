@@ -214,7 +214,7 @@ class BackendUtils {
     supportsForwardingHistoryChannelFilter = (nodeInfoVersion?: string) => {
         const VersionUtils = require('./VersionUtils').default;
         return (
-            !this.isLNDBased() ||
+            this.isLNDBased() &&
             VersionUtils.isSupportedVersion(nodeInfoVersion, 'v0.20.0')
         );
     };
