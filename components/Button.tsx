@@ -1,7 +1,13 @@
 import * as React from 'react';
-import { Button as ElementsButton } from 'react-native-elements';
+import { Component } from 'react';
+import { Button as ElementsButton } from '@rneui/themed';
 import { themeColor } from './../utils/ThemeUtils';
-import { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import {
+    StyleProp,
+    TextStyle,
+    ViewStyle,
+    TouchableOpacity
+} from 'react-native';
 
 interface ButtonProps {
     title?: string | React.ReactElement;
@@ -63,6 +69,7 @@ function Button(props: ButtonProps) {
 
     return (
         <ElementsButton
+            TouchableComponent={TouchableOpacity as unknown as typeof Component}
             icon={
                 icon
                     ? {
@@ -77,7 +84,7 @@ function Button(props: ButtonProps) {
                       }
                     : null
             }
-            title={title}
+            title={title as string | React.ReactElement<{}>}
             buttonStyle={{
                 backgroundColor: iconOnly
                     ? 'transparent'

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 
 import { Body } from './text/Body';
 import { Row } from './layout/Row';

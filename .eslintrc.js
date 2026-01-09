@@ -5,7 +5,7 @@ module.exports = {
   },
   root: true,
   extends: ['@react-native', 'plugin:import/recommended', 'plugin:import/typescript'],
-  plugins: ['import'],
+  plugins: ['import', 'prettier'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: true,

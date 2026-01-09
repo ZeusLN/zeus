@@ -12,7 +12,7 @@ import {
 import { observer, inject } from 'mobx-react';
 import Svg, { Text } from 'react-native-svg';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
-import { Icon } from 'react-native-elements';
+import { Icon } from '@rneui/themed';
 import isEmpty from 'lodash/isEmpty';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';

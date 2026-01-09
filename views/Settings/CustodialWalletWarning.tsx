@@ -2,7 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { CheckBox } from 'react-native-elements';
+import { CheckBox } from '@rneui/themed';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -245,7 +245,10 @@ export default class CustodialWalletWarning extends React.Component<
                                 <CheckBox
                                     key={index}
                                     title={title}
-                                    checked={this.state[`checkbox${index + 1}`]}
+                                    checked={
+                                        this.state[`checkbox${index + 1}`] ??
+                                        false
+                                    }
                                     onPress={() =>
                                         this.setState((prevState) => ({
                                             [`checkbox${index + 1}`]:

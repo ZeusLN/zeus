@@ -8,7 +8,7 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { SearchBar, Divider } from 'react-native-elements';
+import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -412,6 +412,7 @@ export default class Contacts extends React.Component<
                                         <Divider
                                             orientation="horizontal"
                                             style={{ marginTop: 14 }}
+                                            color={themeColor('separator')}
                                         />
                                         <SearchBar
                                             placeholder={localeString(
@@ -457,7 +458,10 @@ export default class Contacts extends React.Component<
                                             }}
                                             multiline={true}
                                         />
-                                        <Divider orientation="horizontal" />
+                                        <Divider
+                                            orientation="horizontal"
+                                            color={themeColor('separator')}
+                                        />
                                     </>
                                 )}
                             </View>
