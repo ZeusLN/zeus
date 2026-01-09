@@ -502,20 +502,11 @@ export default class NWCConnectionsList extends React.Component<
                                         autoCapitalize="none"
                                         autoCorrect={false}
                                         keyboardType="visible-password"
-                                        platform="ios"
-                                        showLoading={false}
                                         onClear={() =>
                                             this.setState({
                                                 searchQuery: ''
                                             })
                                         }
-                                        onCancel={() => {
-                                            this.setState({
-                                                searchQuery: ''
-                                            });
-                                        }}
-                                        cancelButtonTitle="Cancel"
-                                        cancelButtonProps={{}}
                                         searchIcon={{
                                             name: 'search',
                                             type: 'font-awesome'
@@ -524,10 +515,6 @@ export default class NWCConnectionsList extends React.Component<
                                             name: 'close',
                                             type: 'font-awesome'
                                         }}
-                                        showCancel={true}
-                                        onBlur={() => {}}
-                                        onFocus={() => {}}
-                                        loadingProps={{}}
                                     />
 
                                     {/* Filter Buttons */}

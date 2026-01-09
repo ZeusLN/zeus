@@ -175,20 +175,9 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                         autoCapitalize="none"
                         autoCorrect={false}
                         keyboardType="visible-password"
-                        platform="ios"
-                        showLoading={false}
-                        loadingProps={{}}
                         onClear={() => ChannelsStore!.setSearch('')}
-                        onFocus={() => {}}
-                        onBlur={() => {}}
-                        onCancel={() => {
-                            ChannelsStore!.setSearch('');
-                        }}
-                        cancelButtonTitle="Cancel"
-                        cancelButtonProps={{}}
                         searchIcon={{ name: 'search', type: 'font-awesome' }}
                         clearIcon={{ name: 'close', type: 'font-awesome' }}
-                        showCancel={true}
                     />
                     {channelsView === ChannelsView.Channels && (
                         <SortButton
