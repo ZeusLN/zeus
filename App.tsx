@@ -123,7 +123,9 @@ import AddOrEditNWCConnection from './views/Settings/NostrWalletConnect/AddOrEdi
 import NWCConnectionDetails from './views/Settings/NostrWalletConnect/NWCConnectionDetails';
 import NWCConnectionQR from './views/Settings/NostrWalletConnect/NWCConnectionQR';
 import NWCSettings from './views/Settings/NostrWalletConnect/NWCSettings';
-
+import NWCConnectionActivity from './views/Settings/NostrWalletConnect/NWCConnectionActivity';
+import NWCConnectionActivityFilter from './views/Settings/NostrWalletConnect/NWCConnectionActivityFilter';
+import NWCPendingPayments from './views/Settings/NostrWalletConnect/NWCPendingPayments';
 // Lightning address
 import LightningAddress from './views/LightningAddress';
 import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
@@ -798,6 +800,24 @@ export default class App extends React.PureComponent {
                                                         name="NWCConnectionQR" // @ts-ignore:next-line
                                                         component={
                                                             NWCConnectionQR
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCConnectionActivity" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionActivity
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCConnectionActivityFilter" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionActivityFilter
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCPendingPayments" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCPendingPayments
                                                         }
                                                     />
                                                     <Stack.Screen
