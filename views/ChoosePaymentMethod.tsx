@@ -12,15 +12,255 @@ import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
 import Amount from '../components/Amount';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
+import OnchainFeeInput from '../components/OnchainFeeInput';
 
 import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
+import InvoicesStore from '../stores/InvoicesStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Invoice from '../models/Invoice';
+
+interface FeeDisplayProps {
+    satAmount: string;
+    lightning?: string;
+    lnurlParams?: any;
+    value?: string;
+    lightningEstimateFee?: number;
+    ecashEstimateFee?: number;
+    feeRate?: string;
+}
+
+const FeeDisplay: React.FC<FeeDisplayProps> = observer(
+    ({
+        satAmount,
+        lightning,
+        lnurlParams,
+        value,
+        lightningEstimateFee,
+        ecashEstimateFee,
+        feeRate
+    }) => {
+        const calculateOnchainFee = (feeRateSatPerVbyte: number): number => {
+            const estimatedVbytes = 140;
+            return Math.ceil(feeRateSatPerVbyte * estimatedVbytes);
+        };
+        if (!satAmount) return null;
+        const onchainFeeRate = feeRate ? Number(feeRate) : 10;
+        const onchainFee = value ? calculateOnchainFee(onchainFeeRate) : 0;
+        return (
+            <View style={{ paddingTop: 15 }}>
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        paddingHorizontal: 10,
+                        paddingBottom: 8
+                    }}
+                >
+                    <View style={{ flex: 1 }} />
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 12,
+                                textTransform: 'uppercase'
+                            }}
+                        >
+                            {localeString('views.PaymentRequest.feeEstimate')}
+                        </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 12,
+                                textTransform: 'uppercase'
+                            }}
+                        >
+                            {localeString(
+                                'components.NWCPendingPayInvoiceModal.totalAmount'
+                            )}
+                        </Text>
+                    </View>
+                </View>
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 8,
+                        paddingHorizontal: 10
+                    }}
+                >
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 14
+                            }}
+                        >
+                            {localeString('general.lightning')}
+                        </Text>
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        {lightningEstimateFee !== undefined ? (
+                            <Amount
+                                sats={lightningEstimateFee}
+                                sensitive={false}
+                                colorOverride={themeColor('bitcoin')}
+                            />
+                        ) : (
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 12
+                                }}
+                            >
+                                -
+                            </Text>
+                        )}
+                    </View>
+                    <View style={{ flex: 1, alignItems: 'center' }}>
+                        {lightningEstimateFee !== undefined ? (
+                            <Amount
+                                sats={
+                                    Number(satAmount) +
+                                    (lightningEstimateFee || 0)
+                                }
+                                sensitive={false}
+                            />
+                        ) : (
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 12
+                                }}
+                            >
+                                -
+                            </Text>
+                        )}
+                    </View>
+                </View>
+                {BackendUtils.supportsCashuWallet() &&
+                    (lightning || lnurlParams) && (
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                paddingVertical: 8,
+                                paddingHorizontal: 10
+                            }}
+                        >
+                            <View style={{ flex: 1, alignItems: 'center' }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 14
+                                    }}
+                                >
+                                    {localeString('general.ecash')}
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                {ecashEstimateFee !== undefined ? (
+                                    <Amount
+                                        sats={ecashEstimateFee}
+                                        sensitive={false}
+                                        colorOverride={themeColor('bitcoin')}
+                                    />
+                                ) : (
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 12
+                                        }}
+                                    >
+                                        -
+                                    </Text>
+                                )}
+                            </View>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                {ecashEstimateFee ? (
+                                    <Amount
+                                        sats={
+                                            Number(satAmount) +
+                                            (ecashEstimateFee || 0)
+                                        }
+                                        sensitive={false}
+                                    />
+                                ) : (
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 12
+                                        }}
+                                    >
+                                        -
+                                    </Text>
+                                )}
+                            </View>
+                        </View>
+                    )}
+                {value && BackendUtils.supportsOnchainReceiving() && (
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingVertical: 8,
+                            paddingHorizontal: 10
+                        }}
+                    >
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 14
+                                }}
+                            >
+                                {localeString('general.onchain')}
+                            </Text>
+                        </View>
+
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                            <Amount
+                                sats={onchainFee}
+                                sensitive={false}
+                                colorOverride={themeColor('bitcoin')}
+                            />
+                        </View>
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                            <Amount
+                                sats={Number(satAmount) + onchainFee}
+                                sensitive={false}
+                            />
+                        </View>
+                    </View>
+                )}
+            </View>
+        );
+    }
+);
 
 interface ChoosePaymentMethodProps {
     navigation: StackNavigationProp<any, any>;
@@ -38,6 +278,7 @@ interface ChoosePaymentMethodProps {
     BalanceStore?: BalanceStore;
     CashuStore?: CashuStore;
     UTXOsStore?: UTXOsStore;
+    InvoicesStore?: InvoicesStore;
 }
 
 interface ChoosePaymentMethodState {
@@ -47,9 +288,11 @@ interface ChoosePaymentMethodState {
     lightningAddress: string;
     offer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
+    feeRate: string;
+    feeLoadingError: boolean;
 }
 
-@inject('BalanceStore', 'CashuStore', 'UTXOsStore')
+@inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'InvoicesStore')
 @observer
 export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
@@ -61,7 +304,9 @@ export default class ChoosePaymentMethod extends React.Component<
         lightning: '',
         lightningAddress: '',
         offer: '',
-        lnurlParams: undefined
+        lnurlParams: undefined,
+        feeRate: '10',
+        feeLoadingError: false
     };
 
     async componentDidMount() {
@@ -112,7 +357,37 @@ export default class ChoosePaymentMethod extends React.Component<
         if (lnurlParams) {
             this.setState({ lnurlParams });
         }
+
+        // Fetch fee estimates using stores (same as PaymentRequest)
+        this.fetchFeeEstimates();
     }
+
+    fetchFeeEstimates = async () => {
+        const { lightning, lnurlParams } = this.state;
+        const { InvoicesStore, CashuStore } = this.props;
+
+        if (lightning && InvoicesStore) {
+            try {
+                await InvoicesStore.getPayReq(lightning);
+                // InvoicesStore automatically calls getRoutes via reaction when pay_req is set
+            } catch (error) {
+                console.log('Error fetching Lightning payment request:', error);
+            }
+        }
+        if (
+            (lightning || lnurlParams) &&
+            BackendUtils.supportsCashuWallet() &&
+            CashuStore
+        ) {
+            try {
+                await CashuStore.getPayReq(lightning || '');
+                // CashuStore.feeEstimate is set automatically
+            } catch (error) {
+                console.log('Error fetching eCash payment request:', error);
+            }
+        }
+    };
+
     hasInsufficientFunds = () => {
         const { BalanceStore, CashuStore, UTXOsStore } = this.props;
         const { satAmount, lightning, lnurlParams, lightningAddress, offer } =
@@ -159,20 +434,36 @@ export default class ChoosePaymentMethod extends React.Component<
     };
 
     render() {
-        const { navigation, BalanceStore, CashuStore, UTXOsStore } = this.props;
+        const {
+            navigation,
+            BalanceStore,
+            CashuStore,
+            UTXOsStore,
+            InvoicesStore
+        } = this.props;
         const {
             value,
             satAmount,
             lightning,
             lightningAddress,
             offer,
-            lnurlParams
+            lnurlParams,
+            feeRate
         } = this.state;
 
         const { accounts } = UTXOsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
+        const { feeEstimate: lightningEstimateFee } = InvoicesStore!;
+        const { feeEstimate: ecashEstimateFee } = CashuStore!;
         const hasInsufficientFunds = this.hasInsufficientFunds();
+
+        const isLightningPayment =
+            lightning || lnurlParams || lightningAddress || offer;
+        const isOnchainPayment =
+            !!value && BackendUtils.supportsOnchainReceiving();
+        const showFees =
+            !!satAmount && (isLightningPayment || isOnchainPayment);
 
         return (
             <Screen>
@@ -215,6 +506,7 @@ export default class ChoosePaymentMethod extends React.Component<
                         )}
                     </View>
                 )}
+
                 <PaymentMethodList
                     navigation={navigation}
                     // for payment method selection
@@ -234,6 +526,50 @@ export default class ChoosePaymentMethod extends React.Component<
                     ecashBalance={totalBalanceSats}
                     accounts={accounts}
                 />
+
+                {showFees && !hasInsufficientFunds && (
+                    <FeeDisplay
+                        satAmount={satAmount}
+                        lightning={lightning}
+                        lnurlParams={lnurlParams}
+                        value={value}
+                        lightningEstimateFee={lightningEstimateFee ?? 0}
+                        ecashEstimateFee={ecashEstimateFee ?? 0}
+                        feeRate={feeRate}
+                    />
+                )}
+
+                {!!value &&
+                    BackendUtils.supportsOnchainReceiving() &&
+                    !hasInsufficientFunds &&
+                    showFees && (
+                        <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 14,
+                                    marginBottom: 5
+                                }}
+                            >
+                                {localeString('views.Send.feeSatsVbyte')}
+                            </Text>
+                            <OnchainFeeInput
+                                fee={feeRate}
+                                onChangeFee={(text: string) =>
+                                    this.setState({
+                                        feeRate: text,
+                                        feeLoadingError: false
+                                    })
+                                }
+                                onFeeError={(error: boolean) =>
+                                    this.setState({ feeLoadingError: error })
+                                }
+                                navigation={navigation}
+                            />
+                        </View>
+                    )}
+
                 {!!value && !!lightning && (
                     <Button
                         title={localeString('views.Accounts.fetchTxFees')}
