@@ -1293,35 +1293,30 @@ export default class ActivityFilter extends React.Component<
                                     <ListItem
                                         containerStyle={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
+                                            backgroundColor: 'transparent',
+                                            paddingRight: 0
                                         }}
                                     >
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {item.label}
-                                        </ListItem.Title>
-                                        {item.type === 'Toggle' && (
-                                            <View
+                                        <ListItem.Content>
+                                            <ListItem.Title
                                                 style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'flex-end'
+                                                    color: themeColor('text'),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                <Switch
-                                                    value={item.value}
-                                                    onValueChange={() =>
-                                                        this.handleToggle(
-                                                            item.var as string
-                                                        )
-                                                    }
-                                                />
-                                            </View>
+                                                {item.label}
+                                            </ListItem.Title>
+                                        </ListItem.Content>
+                                        {item.type === 'Toggle' && (
+                                            <Switch
+                                                value={item.value}
+                                                onValueChange={() =>
+                                                    this.handleToggle(
+                                                        item.var as string
+                                                    )
+                                                }
+                                            />
                                         )}
                                         {item.type === 'Amount' && (
                                             <View style={{ flex: 1 }}>
