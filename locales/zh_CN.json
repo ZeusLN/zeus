@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "停止 NFC 广播",
     "components.CopyButton.copied": "已复制",
     "components.CopyButton.copy": "复制到剪贴板",
+    "components.CopyButton.itemCopied": "{{item}} 已复制",
     "components.FeeBreakdown.nowClosed": "现已关闭",
     "components.HopPicker.defaultTitle": "使用的通道",
     "components.HopPicker.selectChannel": "选择要使用的通道",

@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Wyłącz rozgłaszanie NFC",
     "components.CopyButton.copied": "Skopiowano!",
     "components.CopyButton.copy": "Skopiuj do schowka!",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Teraz zamknięty",
     "components.HopPicker.defaultTitle": "Kanał do użycia",
     "components.HopPicker.selectChannel": "Wybierz który kanał użyć",

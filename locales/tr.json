@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "NFC yayını durdur",
     "components.CopyButton.copied": "Kopyalandı!",
     "components.CopyButton.copy": "Panoya kopyala",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Şimdi kapatıldı",
     "components.HopPicker.defaultTitle": "Kullanılacak kanal",
     "components.HopPicker.selectChannel": "Kullanılacak kanalı seç",
