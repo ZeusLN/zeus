@@ -611,15 +611,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }, 60000); // 60 seconds
                 }
             }
-            if (implementation === 'embedded-lnd')
-                SyncStore.checkRecoveryStatus();
+
+            SyncStore.checkRecoveryStatus();
             await NodeInfoStore.getNodeInfo();
             NodeInfoStore.getNetworkInfo();
-            if (BackendUtils.supportsAccounts())
-                await UTXOsStore.listAccounts();
+            await UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
-            if (BackendUtils.supportsChannelManagement())
-                await ChannelsStore.getChannels();
+            ChannelsStore.getChannelsWithPolling();
+
             if (rescan) {
                 await updateSettings({
                     rescan: false
