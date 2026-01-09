@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "توقف انتشار NFC ",
     "components.CopyButton.copied": "رونویسی شد!",
     "components.CopyButton.copy": "رونویسی در بریده‌دان",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "اکنون بسته است",
     "components.HopPicker.defaultTitle": "کانال باری استفاده",
     "components.HopPicker.selectChannel": "انتخاب کانال برای استفاده",

@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Zaustavi NFC emitiranje",
     "components.CopyButton.copied": "Kopirano!",
     "components.CopyButton.copy": "Zalijepi u međuspremnik",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Sada zatvoreno",
     "components.HopPicker.defaultTitle": "Kanal za korištenje",
     "components.HopPicker.selectChannel": "Odaberi kanal za korištenje",

@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Спри излъчване на NFC",
     "components.CopyButton.copied": "Копиран!",
     "components.CopyButton.copy": "Копирй в Клипборда",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Вече затворен",
     "components.HopPicker.defaultTitle": "Канал за използване",
     "components.HopPicker.selectChannel": "Избери кой канал да се използва",

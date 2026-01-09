@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "Zastavit vysílání NFC",
     "components.CopyButton.copied": "Zkopírováno!",
     "components.CopyButton.copy": "Zkopírovat do schránky",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "Nyní uzavřeno",
     "components.HopPicker.defaultTitle": "Kanál k použití",
     "components.HopPicker.selectChannel": "Vyberte kanál, který chcete použít",

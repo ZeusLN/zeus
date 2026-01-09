@@ -213,6 +213,7 @@
     "components.CollapsedQr.stopNfc": "หยุดเผยแพร่ NFC",
     "components.CopyButton.copied": "คัดลอกแล้ว!",
     "components.CopyButton.copy": "คัดลอกไปยังคลิปบอร์ด",
+    "components.CopyButton.itemCopied": "{{item}} copied",
     "components.FeeBreakdown.nowClosed": "ถูกปิดแล้ว",
     "components.HopPicker.defaultTitle": "แชลแนลที่จะใช้งาน",
     "components.HopPicker.selectChannel": "เลือกแชลแนลที่จะใช้งาน",
