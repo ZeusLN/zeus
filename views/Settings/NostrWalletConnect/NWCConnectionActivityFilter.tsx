@@ -1,7 +1,7 @@
 import React from 'react';
 import { observer } from 'mobx-react';
 import { View, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Icon, ListItem } from '@rneui/themed';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import { themeColor } from '../../../utils/ThemeUtils';
