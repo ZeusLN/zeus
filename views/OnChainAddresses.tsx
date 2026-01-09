@@ -109,7 +109,8 @@ const AddressGroup = (props: any) => {
                                         autoGenerateOnChain: true,
                                         autoGenerateChange:
                                             !!addressGroup.changeAddresses,
-                                        hideRightHeaderComponent: true
+                                        hideRightHeaderComponent: true,
+                                        forceOnChain: true
                                     })
                                 }
                                 accessibilityLabel={localeString(
@@ -550,7 +551,8 @@ export default class OnChainAddresses extends React.Component<
                                         account: 'default',
                                         selectedIndex: 2,
                                         autoGenerateOnChain: true,
-                                        hideRightHeaderComponent: true
+                                        hideRightHeaderComponent: true,
+                                        forceOnChain: true
                                     })
                                 }
                                 accessibilityLabel={localeString(
