@@ -3,7 +3,10 @@ jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('react-native-notifications', () => ({}));
 
 import { invoicesStore } from '../stores/Stores';
-import handleAnything from './handleAnything';
+import handleAnything, {
+    strictUriEncode,
+    convertMerchantQRToLightningAddress
+} from './handleAnything';
 
 let mockProcessBIP21Uri = jest.fn();
 let mockIsValidBitcoinAddress = false;
@@ -28,7 +31,8 @@ jest.mock('./TorUtils', () => ({}));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => false,
-    supportsCashuWallet: () => false
+    supportsCashuWallet: () => false,
+    supportsWithdrawalRequests: () => false
 }));
 jest.mock('../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
@@ -390,6 +394,419 @@ describe('handleAnything', () => {
             const result = await handleAnything(data, undefined, true);
 
             expect(result).toEqual(true);
+        });
+    });
+
+    describe('convertMerchantQRToLightningAddress', () => {
+        it('converts picknpay QR code to lightning address on mainnet', () => {
+            const qrContent =
+                'http://example.com/za.co.electrum.picknpay/confirm123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%2Fconfirm123@cryptoqr.net'
+            );
+        });
+
+        it('converts picknpay QR code to lightning address on signet', () => {
+            const qrContent =
+                'http://example.com/za.co.electrum.picknpay/confirm123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'signet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%2Fconfirm123@staging.cryptoqr.net'
+            );
+        });
+
+        it('converts ecentric QR code to lightning address on mainnet', () => {
+            const qrContent =
+                'http://example.com/za.co.ecentric.payment/confirm456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%2Fconfirm456@cryptoqr.net'
+            );
+        });
+
+        it('converts ecentric QR code to lightning address on regtest', () => {
+            const qrContent =
+                'http://example.com/za.co.ecentric.payment/confirm456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'regtest'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%2Fconfirm456@staging.cryptoqr.net'
+            );
+        });
+
+        it('encodes special characters in picknpay QR code correctly', () => {
+            const qrContent = `http://example.com/za.co.electrum.picknpay?t=4&i=rAT%)=o\\O'Bd2Cl!WXAE('"=7F>)`;
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%3Ft%3D4%26i%3DrAT%25%29%3Do%5CO%27Bd2Cl%21WXAE%28%27%22%3D7F%3E%29@cryptoqr.net'
+            );
+        });
+
+        it('encodes special characters in ecentric QR code correctly', () => {
+            const qrContent = `http://example.com/za.co.ecentric.payment?data=test!value*with(special)chars`;
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%3Fdata%3Dtest%21value%2Awith%28special%29chars@cryptoqr.net'
+            );
+        });
+
+        it('returns null for QR code that does not match any merchant', () => {
+            const qrContent = 'http://example.com/unrelated/merchant';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBeNull();
+        });
+
+        it('returns null for empty string', () => {
+            const result = convertMerchantQRToLightningAddress('', 'mainnet');
+            expect(result).toBeNull();
+        });
+
+        it('returns null for null input', () => {
+            const result = convertMerchantQRToLightningAddress(
+                null as any,
+                'mainnet'
+            );
+            expect(result).toBeNull();
+        });
+
+        it('handles picknpay QR code with complex URL parameters', () => {
+            const qrContent =
+                'http://2.zap.pe?t=6&i=40895:49955:7[34|0.00|3:10[39|ZAR,38|za.co.electrum.picknpay@cryptoqr.net';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2F2.zap.pe%3Ft%3D6%26i%3D40895%3A49955%3A7%5B34%7C0.00%7C3%3A10%5B39%7CZAR%2C38%7Cza.co.electrum.picknpay%40cryptoqr.net@cryptoqr.net'
+            );
+        });
+
+        it('handles case-insensitive matching for picknpay', () => {
+            const qrContent =
+                'HTTP://EXAMPLE.COM/ZA.CO.ELECTRUM.PICKNPAY/CONFIRM';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'HTTP%3A%2F%2FEXAMPLE.COM%2FZA.CO.ELECTRUM.PICKNPAY%2FCONFIRM@cryptoqr.net'
+            );
+        });
+
+        it('handles case-insensitive matching for ecentric', () => {
+            const qrContent = 'HTTPS://TEST.COM/ZA.CO.ECENTRIC.PAYMENT/ID123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'HTTPS%3A%2F%2FTEST.COM%2FZA.CO.ECENTRIC.PAYMENT%2FID123@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with zapper.com domain', () => {
+            const qrContent = 'https://zapper.com/payment/12345';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fzapper.com%2Fpayment%2F12345@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with zap.pe domain', () => {
+            const qrContent =
+                "http://5.zap.pe?t=4&i=rAT%)=oO'Bd2Cl!WXAE('\"=7F>)";
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2F5.zap.pe%3Ft%3D4%26i%3DrAT%25%29%3DoO%27Bd2Cl%21WXAE%28%27%22%3D7F%3E%29@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with SK- format', () => {
+            const qrContent = 'SK-123-45678901234567890123456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('SK-123-45678901234567890123456@cryptoqr.net');
+        });
+
+        it('converts Zapper QR code with 20 digit format', () => {
+            const qrContent = '12345678901234567890';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('12345678901234567890@cryptoqr.net');
+        });
+
+        it('converts Zapper QR code with payat.io domain', () => {
+            const qrContent = 'https://payat.io/payment/abc123';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpayat.io%2Fpayment%2Fabc123@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with transactionjunction.co.za domain', () => {
+            const qrContent = 'https://transactionjunction.co.za/pay/xyz';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Ftransactionjunction.co.za%2Fpay%2Fxyz@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code with CRSTPC format', () => {
+            const qrContent = 'CRSTPC-1-2-3-4-5';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('CRSTPC-1-2-3-4-5@cryptoqr.net');
+        });
+
+        it('converts Yoyo QR code with wigroup.co domain', () => {
+            const qrContent = 'https://rad2.wigroup.co/bill/125468';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Frad2.wigroup.co%2Fbill%2F125468@cryptoqr.net'
+            );
+        });
+
+        it('converts Yoyo QR code with yoyogroup.co domain', () => {
+            const qrContent = 'https://rad2.yoyogroup.co/bill/125468';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Frad2.yoyogroup.co%2Fbill%2F125468@cryptoqr.net'
+            );
+        });
+
+        it('converts SnapScan QR code', () => {
+            const qrContent = 'https://pos-staging.snapscan.io/qr/N0utvgph';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpos-staging.snapscan.io%2Fqr%2FN0utvgph@cryptoqr.net'
+            );
+        });
+
+        it('converts Moneybadger QR code with cryptoqr.net domain', () => {
+            const qrContent = 'https://pay.cryptoqr.net/3458967';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@cryptoqr.net'
+            );
+        });
+
+        it('converts Checkers/Shoprite QR code with za.co.electrum (excluding picknpay)', () => {
+            const qrContent =
+                '00020126260008za.co.mp0110847268562627440014za.co.electrum0122+r3YIUYPRcuRzFeKDYRAvA';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                '00020126260008za.co.mp0110847268562627440014za.co.electrum0122%2Br3YIUYPRcuRzFeKDYRAvA@cryptoqr.net'
+            );
+        });
+
+        it('does not match za.co.electrum.picknpay for Checkers/Shoprite pattern', () => {
+            const qrContent =
+                '00020126260008za.co.mp0110248723666427530023za.co.electrum.picknpay0122ydgKJviKSomaVw0297RaZw5303710540571.406304CE9C';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                '00020126260008za.co.mp0110248723666427530023za.co.electrum.picknpay0122ydgKJviKSomaVw0297RaZw5303710540571.406304CE9C@cryptoqr.net'
+            );
+        });
+
+        it('converts Zapper QR code on signet network', () => {
+            const qrContent = 'http://2.zap.pe?t=6&i=40895:49955:7';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'signet'
+            );
+            expect(result).toBe(
+                'http%3A%2F%2F2.zap.pe%3Ft%3D6%26i%3D40895%3A49955%3A7@staging.cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay scantopay.io QR code to lightning address on mainnet', () => {
+            const qrContent = 'https://app.scantopay.io/qr?qrcode=8784599487';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fapp.scantopay.io%2Fqr%3Fqrcode%3D8784599487@cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay 10-digit QR code to lightning address on mainnet', () => {
+            const qrContent = '0337704903';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('0337704903@cryptoqr.net');
+        });
+
+        it('converts ScanToPay payat.io QR code to lightning address on mainnet', () => {
+            const qrContent = 'https://payat.io/payment/12345';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fpayat.io%2Fpayment%2F12345@cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay UMPQR code to lightning address on mainnet', () => {
+            const qrContent = 'UMPQR123456';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe('UMPQR123456@cryptoqr.net');
+        });
+
+        it('converts ScanToPay oltio.co.za QR code to lightning address on mainnet', () => {
+            const qrContent = 'https://example.oltio.co.za/pay';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'mainnet'
+            );
+            expect(result).toBe(
+                'https%3A%2F%2Fexample.oltio.co.za%2Fpay@cryptoqr.net'
+            );
+        });
+
+        it('converts ScanToPay easypay QR code to lightning address on signet', () => {
+            const qrContent = 'easypay789';
+            const result = convertMerchantQRToLightningAddress(
+                qrContent,
+                'signet'
+            );
+            expect(result).toBe('easypay789@staging.cryptoqr.net');
+        });
+    });
+
+    describe('strictUriEncode', () => {
+        it('encodes exclamation mark', () => {
+            expect(strictUriEncode('unicorn!foobar')).toBe('unicorn%21foobar');
+        });
+
+        it('encodes single quote', () => {
+            expect(strictUriEncode("unicorn'foobar")).toBe('unicorn%27foobar');
+        });
+
+        it('encodes asterisk', () => {
+            expect(strictUriEncode('unicorn*foobar')).toBe('unicorn%2Afoobar');
+        });
+
+        it('encodes opening parenthesis', () => {
+            expect(strictUriEncode('unicorn(foobar')).toBe('unicorn%28foobar');
+        });
+
+        it('encodes closing parenthesis', () => {
+            expect(strictUriEncode('unicorn)foobar')).toBe('unicorn%29foobar');
+        });
+
+        it('encodes multiple special characters', () => {
+            expect(strictUriEncode("unicorn!'()*foobar")).toBe(
+                'unicorn%21%27%28%29%2Afoobar'
+            );
+        });
+
+        it('produces different result from encodeURIComponent for asterisk', () => {
+            const input = 'unicorn*foobar';
+            expect(strictUriEncode(input)).not.toBe(encodeURIComponent(input));
+            expect(strictUriEncode(input)).toBe('unicorn%2Afoobar');
+            expect(encodeURIComponent(input)).toBe('unicorn*foobar');
+        });
+
+        it('handles strings without special characters', () => {
+            expect(strictUriEncode('unicornfoobar')).toBe('unicornfoobar');
+        });
+
+        it('handles empty string', () => {
+            expect(strictUriEncode('')).toBe('');
+        });
+
+        it('handles numbers', () => {
+            expect(strictUriEncode(123)).toBe('123');
+        });
+
+        it('handles boolean values', () => {
+            expect(strictUriEncode(true)).toBe('true');
+            expect(strictUriEncode(false)).toBe('false');
+        });
+
+        it('encodes URL-unsafe characters along with RFC 3986 reserved characters', () => {
+            expect(strictUriEncode('hello world!')).toBe('hello%20world%21');
+            expect(strictUriEncode('test/path')).toBe('test%2Fpath');
+            expect(strictUriEncode('a=b&c=d')).toBe('a%3Db%26c%3Dd');
+            expect(strictUriEncode('test?query')).toBe('test%3Fquery');
+        });
+
+        it('handles Unicode characters', () => {
+            expect(strictUriEncode('测试')).toBe('%E6%B5%8B%E8%AF%95');
+            expect(strictUriEncode('hello!测试')).toBe(
+                'hello%21%E6%B5%8B%E8%AF%95'
+            );
+        });
+
+        it('encodes Zapper QR code with special characters correctly', () => {
+            const qrContent = `http://5.zap.pe?t=4&i=rAT%)=o\\O'Bd2Cl!WXAE('"=7F>)aN!<>?YJ-3ad!l+gR:Ms_d6t(?\`:Msuo(3!l"AoVg2Gq^paT]Z?Y"98E32\`WZS1,L\`f!!!'g('4I;"u.qo!!3-#/*^XK!!-%alYMQ:O@#?E!<<*"!!-5+`;
+            const expected =
+                'http%3A%2F%2F5.zap.pe%3Ft%3D4%26i%3DrAT%25%29%3Do%5CO%27Bd2Cl%21WXAE%28%27%22%3D7F%3E%29aN%21%3C%3E%3FYJ-3ad%21l%2BgR%3AMs_d6t%28%3F%60%3AMsuo%283%21l%22AoVg2Gq%5EpaT%5DZ%3FY%2298E32%60WZS1%2CL%60f%21%21%21%27g%28%274I%3B%22u.qo%21%213-%23%2F%2A%5EXK%21%21-%25alYMQ%3AO%40%23%3FE%21%3C%3C%2A%22%21%21-5%2B';
+            expect(strictUriEncode(qrContent)).toBe(expected);
         });
     });
 });

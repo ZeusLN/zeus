@@ -93,12 +93,119 @@ const nostrProfileLookup = async (data: string) => {
     ];
 };
 
+const merchantConfigs = [
+    {
+        identifierRegex: /(?<identifier>.*za\.co\.electrum\.picknpay.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*za\.co\.ecentric.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex:
+            /(?<identifier>^((.*zapper\.com.*)|(.*\.wigroup\..*)|(.{2}\/.{4}\/.{20})|(.*payat\.io.*)|(.*(paynow\.netcash|paynow\.sagepay)\.co\.za.*)|(SK-\d{1,}-\d{23})|(\d{20})|(.*\d+\.zap\.pe(.*\n?)*)|(.*transactionjunction\.co\.za.*)|(CRSTPC-\d+-\d+-\d+-\d+-\d+))$)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*yoyogroup\.co.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*snapscan.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*cryptoqr\.net.*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex: /(?<identifier>.*za\.co\.electrum(?!\.picknpay).*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    },
+    {
+        identifierRegex:
+            /(?<identifier>.*(?:scantopay\.io|\d{10}|payat\.io|UMPQR|\.oltio\.co\.za|easypay).*)/iu,
+        domains: {
+            mainnet: 'cryptoqr.net',
+            signet: 'staging.cryptoqr.net',
+            regtest: 'staging.cryptoqr.net'
+        }
+    }
+];
+
+function getNetworkString(): 'mainnet' | 'signet' | 'regtest' {
+    const { nodeInfo } = nodeInfoStore;
+    if (!nodeInfo) return 'mainnet';
+    if (nodeInfo.isTestNet || nodeInfo.isSigNet) return 'signet';
+    if (nodeInfo.isRegTest) return 'regtest';
+    return 'mainnet';
+}
+
+export function strictUriEncode(
+    uriComponent: string | number | boolean
+): string {
+    return encodeURIComponent(uriComponent).replace(
+        /[!'()*]/g,
+        (value) => `%${value.charCodeAt(0).toString(16).toUpperCase()}`
+    );
+}
+
+function convertMerchantQRToLightningAddress(
+    qrContent: string,
+    network: 'mainnet' | 'signet' | 'regtest'
+): string | null {
+    if (!qrContent) return null;
+    for (const merchant of merchantConfigs) {
+        const match = qrContent.match(merchant.identifierRegex);
+        if (match?.groups?.identifier) {
+            const domain =
+                merchant.domains[network] || merchant.domains['mainnet'];
+            return `${strictUriEncode(match.groups.identifier)}@${domain}`;
+        }
+    }
+    return null;
+}
+
 const handleAnything = async (
     data: string,
     setAmount?: string,
     isClipboardValue?: boolean
 ): Promise<any> => {
     data = data.trim();
+    const network = getNetworkString();
+    const merchantLnAddr = convertMerchantQRToLightningAddress(data, network);
+    if (merchantLnAddr) {
+        data = merchantLnAddr;
+    }
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     let { value, satAmount, lightning, offer }: any =
@@ -859,5 +966,5 @@ const handleAnything = async (
     }
 };
 
-export { isClipboardValue };
+export { isClipboardValue, convertMerchantQRToLightningAddress };
 export default handleAnything;
