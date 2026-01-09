@@ -9,7 +9,7 @@ import {
     TouchableOpacity,
     Text
 } from 'react-native';
-import { Button, ListItem } from 'react-native-elements';
+import { Button, ListItem } from '@rneui/themed';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import SettingsStore from '../../../stores/SettingsStore';
 
