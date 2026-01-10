@@ -981,7 +981,9 @@ class MigrationsUtils {
             console.log(`Deleted ${key} from iCloud`);
         } catch (e) {
             // Item may not exist in iCloud, which is fine
-            console.log(`No iCloud entry found for ${key} (or already deleted)`);
+            console.log(
+                `No iCloud entry found for ${key} (or already deleted)`
+            );
         }
     }
 
