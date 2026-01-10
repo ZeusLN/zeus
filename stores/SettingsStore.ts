@@ -46,6 +46,7 @@ export interface Node {
     adminMacaroon?: string;
     embeddedLndNetwork?: string;
     lndDir?: string;
+    isSqlite?: boolean;
 }
 
 interface PrivacySettings {
@@ -1529,6 +1530,7 @@ export default class SettingsStore {
     @observable public adminMacaroon: string;
     @observable public embeddedLndNetwork: string;
     @observable public lndDir?: string;
+    @observable public isSqlite?: boolean;
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
     @observable public lndFolderMissing: boolean = false;
@@ -1694,6 +1696,7 @@ export default class SettingsStore {
             this.adminMacaroon = node.adminMacaroon;
             this.embeddedLndNetwork = node.embeddedLndNetwork;
             this.lndDir = node.lndDir || 'lnd';
+            this.isSqlite = node.isSqlite;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }

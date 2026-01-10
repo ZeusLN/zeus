@@ -92,12 +92,14 @@ const writeLndConfig = async ({
     lndDir = 'lnd',
     isTestnet,
     rescan,
-    compactDb
+    compactDb,
+    isSqlite
 }: {
     lndDir: string;
     isTestnet?: boolean;
     rescan?: boolean;
     compactDb?: boolean;
+    isSqlite?: boolean;
 }) => {
     const { writeConfig } = lndMobile.index;
 
@@ -112,6 +114,20 @@ const writeLndConfig = async ({
 
     console.log('persistFilters', persistFilters);
 
+    const dbConfig = isSqlite
+        ? `[db]
+    db.backend=sqlite
+    db.use-native-sql=true
+    db.no-graph-cache=false`
+        : `[db]
+    db.backend=bolt
+    db.use-native-sql=false
+    db.no-graph-cache=false
+
+    [bolt]
+    db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
+    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}`;
+
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -124,13 +140,8 @@ const writeLndConfig = async ({
     payments-expiration-grace-period=168h
     ${rescan ? 'reset-wallet-transactions=true' : ''}
 
-    [db]
-    db.no-graph-cache=false
-
-    [bolt]
-    db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
-    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}
-
+    ${dbConfig}
+    
     [Routing]
     routing.assumechanvalid=1
     routing.strictgraphpruning=false
@@ -253,15 +264,17 @@ export async function initializeLnd({
     lndDir = 'lnd',
     isTestnet,
     rescan,
-    compactDb
+    compactDb,
+    isSqlite
 }: {
     lndDir: string;
     isTestnet?: boolean;
     rescan?: boolean;
     compactDb?: boolean;
+    isSqlite?: boolean;
 }) {
     const { initialize } = lndMobile.index;
-    await writeLndConfig({ lndDir, isTestnet, rescan, compactDb });
+    await writeLndConfig({ lndDir, isTestnet, rescan, compactDb, isSqlite });
     await initialize();
 }
 
@@ -608,7 +621,8 @@ export async function createLndWallet({
         await excludeLndICloudBackup(lndDir);
     }
 
-    await writeLndConfig({ lndDir, isTestnet });
+    // New wallets always use SQLite
+    await writeLndConfig({ lndDir, isTestnet, isSqlite: true });
     await initialize();
 
     let status = await checkStatus();

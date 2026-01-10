@@ -426,6 +426,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             walletPassword,
             lndDir,
             embeddedLndNetwork,
+            isSqlite,
             updateSettings,
             fetchLock
         } = SettingsStore;
@@ -551,7 +552,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         lndDir: lndDir || 'lnd',
                         isTestnet: embeddedLndNetwork === 'Testnet',
                         rescan,
-                        compactDb
+                        compactDb,
+                        isSqlite
                     });
                 } catch (error: any) {
                     console.log(
