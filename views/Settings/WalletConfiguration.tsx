@@ -126,6 +126,7 @@ interface WalletConfigurationState {
     adminMacaroon?: string;
     embeddedLndNetwork?: string;
     lndDir?: string;
+    isSqlite?: boolean;
     recoveryCipherSeed?: string;
     channelBackupsBase64?: string;
     creatingWallet: boolean;
@@ -193,6 +194,7 @@ export default class WalletConfiguration extends React.Component<
         adminMacaroon: '',
         embeddedLndNetwork: 'mainnet',
         lndDir: '',
+        isSqlite: false,
         interfaceKeys: INTERFACE_KEYS,
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
@@ -380,6 +382,7 @@ export default class WalletConfiguration extends React.Component<
                 adminMacaroon,
                 embeddedLndNetwork,
                 lndDir,
+                isSqlite,
                 // NWC
                 nostrWalletConnectUrl
             } = node as any;
@@ -415,6 +418,7 @@ export default class WalletConfiguration extends React.Component<
                 adminMacaroon,
                 embeddedLndNetwork,
                 lndDir,
+                isSqlite,
                 // NWC
                 nostrWalletConnectUrl
             });
@@ -456,6 +460,7 @@ export default class WalletConfiguration extends React.Component<
             adminMacaroon,
             embeddedLndNetwork,
             lndDir,
+            isSqlite,
             nostrWalletConnectUrl,
             photo
         } = this.state;
@@ -490,6 +495,7 @@ export default class WalletConfiguration extends React.Component<
             adminMacaroon,
             embeddedLndNetwork,
             lndDir,
+            isSqlite,
             nostrWalletConnectUrl,
             photo
         };
@@ -735,6 +741,7 @@ export default class WalletConfiguration extends React.Component<
                     walletPassword: randomBase64,
                     embeddedLndNetwork: network,
                     lndDir,
+                    isSqlite: true,
                     creatingWallet: false
                 },
                 () => {
