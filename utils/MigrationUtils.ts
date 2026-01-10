@@ -137,20 +137,10 @@ class MigrationsUtils {
             await this.migrateKey(key, true);
         }
 
-        let mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
-
-        if (!mintUrlsJson) {
-            let cloudCreds = await Keychain.getInternetCredentials(
-                `${lndDir}-cashu-mintUrls`
-            );
-            if (!cloudCreds) {
-                cloudCreds = await Keychain.getInternetCredentials(
-                    `${lndDir}-cashu-mintUrls`,
-                    { cloudSync: true }
-                );
-            }
-            if (cloudCreds) mintUrlsJson = cloudCreds.password;
-        }
+        const mintUrlsJson = await this.migrateKey(
+            `${lndDir}-cashu-mintUrls`,
+            true
+        );
 
         if (mintUrlsJson) {
             try {
