@@ -47,6 +47,9 @@ export default class HandleAnythingQRScanner extends React.Component<
     HandleAnythingQRState
 > {
     decoder: any;
+    // Flag to prevent duplicate navigation after QR scan
+    private hasNavigated: boolean = false;
+
     constructor(props: any) {
         super(props);
 
@@ -62,6 +65,15 @@ export default class HandleAnythingQRScanner extends React.Component<
         this.decoder = null;
         this.setState({ parts: [], totalParts: 0 });
     };
+
+    // Helper to prevent duplicate navigation - returns true if already navigated
+    private checkAndSetNavigated(): boolean {
+        if (this.hasNavigated) {
+            return true;
+        }
+        this.hasNavigated = true;
+        return false;
+    }
 
     handleAnythingScanned = async (data: string) => {
         const { navigation, route } = this.props;
@@ -82,6 +94,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                         isTestNet || isRegTest || isSigNet
                     )
                 ) {
+                    if (this.checkAndSetNavigated()) return;
                     navigation.goBack();
                     navigation.navigate('Swaps', {
                         initialInvoice: value,
@@ -105,6 +118,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                     const invoiceModel = new Invoice(decodedInvoice);
                     const amount = invoiceModel.getRequestAmount;
 
+                    if (this.checkAndSetNavigated()) return;
                     navigation.goBack();
                     navigation.navigate('Swaps', {
                         initialInvoice: value,
@@ -149,6 +163,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                         isTestNet || isRegTest || isSigNet
                     )
                 ) {
+                    if (this.checkAndSetNavigated()) return;
                     navigation.goBack();
                     navigation.navigate('RefundSwap', {
                         scannedAddress: value
@@ -358,6 +373,8 @@ export default class HandleAnythingQRScanner extends React.Component<
                 this.setState({
                     loading: false
                 });
+                if (this.checkAndSetNavigated()) return;
+
                 if (response) {
                     const [route, props] = response;
                     navigation.goBack();
@@ -383,6 +400,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                     loading: false
                 });
 
+                if (this.checkAndSetNavigated()) return;
                 navigation.goBack();
             });
     };

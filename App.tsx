@@ -8,7 +8,8 @@ import {
     BackHandler,
     NativeEventSubscription,
     StatusBar,
-    AppState
+    AppState,
+    AppStateStatus
 } from 'react-native';
 
 import {
@@ -281,10 +282,17 @@ import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
+// Debounce delay for app state change handling to prevent rapid successive calls
+const APP_STATE_DEBOUNCE_MS = 1000;
+
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription;
     private navigation: any = null;
+    // Track previous app state to distinguish real background->active transitions
+    private previousAppState: AppStateStatus = 'active';
+    // Debounce timestamp to prevent rapid successive handleInitialUrl calls
+    private lastInitialUrlTime: number = 0;
 
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
@@ -319,13 +327,27 @@ export default class App extends React.PureComponent {
         }
     }
 
-    handleAppStateChange = (nextAppState: string) => {
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        const prevState = this.previousAppState;
+        this.previousAppState = nextAppState;
+
         if (nextAppState === 'active' && this.navigation) {
             LinkingUtils.resetShareIntentFlag();
 
-            setTimeout(() => {
-                LinkingUtils.handleInitialUrl(this.navigation);
-            }, 100);
+            // Only process initial URL when coming from actual background state,
+            // not from brief 'inactive' state (e.g., returning from camera/QR scanner).
+            // Also debounce to prevent rapid successive calls.
+            const now = Date.now();
+            const timeSinceLastCall = now - this.lastInitialUrlTime;
+            if (
+                prevState === 'background' &&
+                timeSinceLastCall > APP_STATE_DEBOUNCE_MS
+            ) {
+                this.lastInitialUrlTime = now;
+                setTimeout(() => {
+                    LinkingUtils.handleInitialUrl(this.navigation);
+                }, 100);
+            }
         }
     };
 

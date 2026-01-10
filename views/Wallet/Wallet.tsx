@@ -96,6 +96,9 @@ import { version } from '../../package.json';
 
 const Tab = createBottomTabNavigator();
 
+// Debounce delay for app state change handling to prevent rapid successive calls
+const APP_STATE_DEBOUNCE_MS = 1000;
+
 interface WalletProps {
     enterSetup: any;
     exitTransaction: any;
@@ -162,6 +165,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private handleAppStateChangeSubscription: NativeEventSubscription;
     private backPressSubscription: NativeEventSubscription;
     private startupTimeoutId?: ReturnType<typeof setTimeout>;
+    // Track previous app state to distinguish real background->active transitions
+    // from brief inactive->active transitions (e.g., returning from camera)
+    private previousAppState: AppStateStatus = 'active';
+    // Debounce timestamp to prevent rapid successive getSettingsAndNavigate calls
+    private lastSettingsNavigateTime: number = 0;
 
     constructor(props: WalletProps) {
         super(props);
@@ -281,6 +289,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { SettingsStore, NostrWalletConnectStore } = this.props;
         const { settings } = SettingsStore;
         const { loginBackground } = settings;
+        const prevState = this.previousAppState;
+        this.previousAppState = nextAppState;
+
         if (
             nextAppState === 'background' &&
             SettingsStore.loginMethodConfigured() &&
@@ -294,7 +305,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 this.props.navigation.navigate('Lockscreen');
             } else {
                 NostrWalletConnectStore.initializeService();
-                this.getSettingsAndNavigate();
+                // Only trigger full refresh when coming from actual background state,
+                // not from brief 'inactive' state (e.g., returning from camera/QR scanner).
+                // Also debounce to prevent rapid successive calls.
+                const now = Date.now();
+                const timeSinceLastCall = now - this.lastSettingsNavigateTime;
+                if (
+                    prevState === 'background' &&
+                    timeSinceLastCall > APP_STATE_DEBOUNCE_MS
+                ) {
+                    this.lastSettingsNavigateTime = now;
+                    this.getSettingsAndNavigate();
+                }
             }
         }
     };
