@@ -838,8 +838,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
                                                         if (
                                                             !satAmount ||
-                                                            satAmount === '0' ||
-                                                            satAmount === 0
+                                                            satAmount === '0'
                                                         ) {
                                                             this.setState({
                                                                 serviceFeeSats: 0,
@@ -1039,8 +1038,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             if (
                                                                 !satAmount ||
                                                                 satAmount ===
-                                                                    '0' ||
-                                                                satAmount === 0
+                                                                    '0'
                                                             ) {
                                                                 this.setState({
                                                                     serviceFeeSats: 0,
