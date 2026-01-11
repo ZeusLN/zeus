@@ -46,7 +46,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
 
     render() {
         const { navigation, CashuStore } = this.props;
-        const { setMintCounter, seedVersion } = CashuStore; // Keep if needed elsewhere, otherwise remove if only used for bump
+        const { setMintCounter } = CashuStore;
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -62,48 +62,6 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                         navigation={navigation}
                     />
                     <ScrollView>
-                        {seedVersion === 'v2-bip39' && (
-                            <>
-                                <ListItem
-                                    containerStyle={{
-                                        backgroundColor: 'transparent'
-                                    }}
-                                    onPress={() =>
-                                        navigation.navigate('CashuSeed')
-                                    }
-                                >
-                                    <ListItem.Content>
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.Seed.title'
-                                            )}
-                                        </ListItem.Title>
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            BIP-39
-                                        </ListItem.Title>
-                                    </ListItem.Content>
-                                    <Icon
-                                        name="keyboard-arrow-right"
-                                        color={themeColor('secondaryText')}
-                                    />
-                                </ListItem>
-                            </>
-                        )}
-
                         <ListItem
                             containerStyle={{
                                 backgroundColor: 'transparent'

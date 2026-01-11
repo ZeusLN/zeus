@@ -847,21 +847,25 @@ class MigrationsUtils {
     }
 
     public async migrateCashuSeedVersion(cashuStore: any) {
-        // cashuStore is passed as 'any' to avoid circular dependency issues
-        // but it's an instance of CashuStore
-        // TODO fix circular dependency
-        if (cashuStore.seedVersion === undefined) {
-            console.log('Migrating Cashu seed version to v1');
-            cashuStore.seedVersion = 'v1';
+        if (cashuStore.seedVersion === 'v2-bip39') {
+            console.log('Removing deprecated v2-bip39 seed version');
+            cashuStore.seedVersion = undefined;
+            cashuStore.seedPhrase = undefined;
+            cashuStore.seed = undefined;
             try {
-                await Storage.setItem(
-                    `${cashuStore.getLndDir()}-cashu-seed-version`,
-                    'v1'
+                await Storage.removeItem(
+                    `${cashuStore.getLndDir()}-cashu-seed-version`
                 );
-                console.log('Cashu seed version migrated and saved as v1.');
+                await Storage.removeItem(
+                    `${cashuStore.getLndDir()}-cashu-seed-phrase`
+                );
+                await Storage.removeItem(
+                    `${cashuStore.getLndDir()}-cashu-seed`
+                );
+                console.log('Deprecated v2-bip39 seed version removed.');
             } catch (error) {
                 console.error(
-                    'Error saving migrated Cashu seed version:',
+                    'Error removing deprecated Cashu seed version:',
                     error
                 );
             }

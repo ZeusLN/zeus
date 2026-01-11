@@ -243,19 +243,17 @@ describe('MigrationUtils', () => {
 
     describe('migrateCashuSeedVersion', () => {
         beforeEach(() => {
-            // Clear mock history before each test
-            require('../storage').setItem.mockClear();
+            require('../storage').removeItem.mockClear();
             mockConsoleLog.mockClear();
             mockConsoleError.mockClear();
         });
 
         afterAll(() => {
-            // Restore original console functions
             mockConsoleLog.mockRestore();
             mockConsoleError.mockRestore();
         });
 
-        it('should set seedVersion to "v1" and save to Storage if undefined', async () => {
+        it('should not change seedVersion if undefined', async () => {
             const mockCashuStore: any = {
                 seedVersion: undefined,
                 getLndDir: jest.fn().mockReturnValue('testLndDir')
@@ -263,21 +261,11 @@ describe('MigrationUtils', () => {
 
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
 
-            expect(mockCashuStore.seedVersion).toBe('v1');
-            expect(require('../storage').setItem).toHaveBeenCalledTimes(1);
-            expect(require('../storage').setItem).toHaveBeenCalledWith(
-                'testLndDir-cashu-seed-version',
-                'v1'
-            );
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                'Migrating Cashu seed version to v1'
-            );
-            expect(mockConsoleLog).toHaveBeenCalledWith(
-                'Cashu seed version migrated and saved as v1.'
-            );
+            expect(mockCashuStore.seedVersion).toBeUndefined();
+            expect(require('../storage').removeItem).not.toHaveBeenCalled();
         });
 
-        it('should not change seedVersion or call Storage.setItem if seedVersion is already "v1"', async () => {
+        it('should not change seedVersion if already "v1"', async () => {
             const mockCashuStore: any = {
                 seedVersion: 'v1',
                 getLndDir: jest.fn().mockReturnValue('testLndDir')
@@ -286,13 +274,44 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
 
             expect(mockCashuStore.seedVersion).toBe('v1');
-            expect(require('../storage').setItem).not.toHaveBeenCalled();
-            expect(mockConsoleLog).not.toHaveBeenCalledWith(
-                'Migrating Cashu seed version to v1'
+            expect(require('../storage').removeItem).not.toHaveBeenCalled();
+        });
+
+        it('should remove v2-bip39 seedVersion and clean up storage', async () => {
+            const mockCashuStore: any = {
+                seedVersion: 'v2-bip39',
+                seedPhrase: ['some', 'words'],
+                seed: new Uint8Array([1, 2, 3]),
+                getLndDir: jest.fn().mockReturnValue('testLndDir')
+            };
+
+            await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
+
+            expect(mockCashuStore.seedVersion).toBeUndefined();
+            expect(mockCashuStore.seedPhrase).toBeUndefined();
+            expect(mockCashuStore.seed).toBeUndefined();
+            expect(require('../storage').removeItem).toHaveBeenCalledTimes(3);
+            expect(require('../storage').removeItem).toHaveBeenCalledWith(
+                'testLndDir-cashu-seed-version'
+            );
+            expect(require('../storage').removeItem).toHaveBeenCalledWith(
+                'testLndDir-cashu-seed-phrase'
+            );
+            expect(require('../storage').removeItem).toHaveBeenCalledWith(
+                'testLndDir-cashu-seed'
+            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(
+                'Removing deprecated v2-bip39 seed version'
+            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(
+                'Deprecated v2-bip39 seed version removed.'
             );
         });
 
-        it('should not change seedVersion or call Storage.setItem if seedVersion is already defined with another value', async () => {
+        it('should handle errors during Storage.removeItem gracefully', async () => {
+            require('../storage').removeItem.mockRejectedValueOnce(
+                new Error('Storage failed')
+            );
             const mockCashuStore: any = {
                 seedVersion: 'v2-bip39',
                 getLndDir: jest.fn().mockReturnValue('testLndDir')
@@ -300,29 +319,10 @@ describe('MigrationUtils', () => {
 
             await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
 
-            expect(mockCashuStore.seedVersion).toBe('v2-bip39');
-            expect(require('../storage').setItem).not.toHaveBeenCalled();
-        });
-
-        it('should handle errors during Storage.setItem gracefully', async () => {
-            require('../storage').setItem.mockRejectedValueOnce(
-                new Error('Storage failed')
-            );
-            const mockCashuStore: any = {
-                seedVersion: undefined,
-                getLndDir: jest.fn().mockReturnValue('testLndDir')
-            };
-
-            await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
-
-            expect(mockCashuStore.seedVersion).toBe('v1'); // Version is set before storage attempt
-            expect(require('../storage').setItem).toHaveBeenCalledTimes(1);
-            expect(require('../storage').setItem).toHaveBeenCalledWith(
-                'testLndDir-cashu-seed-version',
-                'v1'
-            );
+            expect(mockCashuStore.seedVersion).toBeUndefined();
+            expect(require('../storage').removeItem).toHaveBeenCalled();
             expect(mockConsoleError).toHaveBeenCalledWith(
-                'Error saving migrated Cashu seed version:',
+                'Error removing deprecated Cashu seed version:',
                 expect.any(Error)
             );
         });
