@@ -1142,7 +1142,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         tabBarStyle: {
                                             paddingBottom: 12
                                         },
-                                        animation: 'shift'
+                                        // TODO re-enable for iOS once ZEUS-3514 is resolved
+                                        animation:
+                                            Platform.OS === 'android'
+                                                ? 'shift'
+                                                : undefined
                                     })}
                                 >
                                     {posEnabled !== PosEnabled.Disabled &&
