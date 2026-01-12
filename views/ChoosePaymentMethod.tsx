@@ -6,16 +6,15 @@ import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
 import bolt11 from 'bolt11';
 
-import CaretDown from '../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../assets/images/SVG/Caret Right.svg';
-
-import Button from '../components/Button';
 import Header from '../components/Header';
 import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
 import Amount from '../components/Amount';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 import OnchainFeeInput from '../components/OnchainFeeInput';
+import ModalBox from '../components/ModalBox';
+
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
 
 import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
@@ -27,7 +26,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Invoice from '../models/Invoice';
 
-interface FeeDisplayProps {
+interface EstimateFeesDisplayProps {
     satAmount: string;
     lightning?: string;
     lnurlParams?: any;
@@ -37,7 +36,7 @@ interface FeeDisplayProps {
     feeRate?: string;
 }
 
-const FeeDisplay: React.FC<FeeDisplayProps> = observer(
+const EstimateFeesDisplay: React.FC<EstimateFeesDisplayProps> = observer(
     ({
         satAmount,
         lightning,
@@ -134,7 +133,7 @@ const FeeDisplay: React.FC<FeeDisplayProps> = observer(
                             <Amount
                                 sats={
                                     Number(satAmount) +
-                                    (lightningEstimateFee || 0)
+                                    (Number(lightningEstimateFee) || 0)
                                 }
                                 sensitive={false}
                             />
@@ -206,7 +205,7 @@ const FeeDisplay: React.FC<FeeDisplayProps> = observer(
                                     <Amount
                                         sats={
                                             Number(satAmount) +
-                                            (ecashEstimateFee || 0)
+                                            (Number(ecashEstimateFee) || 0)
                                         }
                                         sensitive={false}
                                     />
@@ -293,7 +292,7 @@ interface ChoosePaymentMethodState {
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
     feeLoadingError: boolean;
-    feesCollapsed: boolean;
+    showFeeModal: boolean;
 }
 
 @inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'InvoicesStore')
@@ -302,6 +301,8 @@ export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
     ChoosePaymentMethodState
 > {
+    private focusUnsubscribe?: () => void;
+
     state = {
         value: '',
         satAmount: '',
@@ -311,11 +312,11 @@ export default class ChoosePaymentMethod extends React.Component<
         lnurlParams: undefined,
         feeRate: '10',
         feeLoadingError: false,
-        feesCollapsed: true
+        showFeeModal: false
     };
 
     async componentDidMount() {
-        const { route } = this.props;
+        const { route, navigation } = this.props;
         const {
             value,
             satAmount,
@@ -362,9 +363,17 @@ export default class ChoosePaymentMethod extends React.Component<
         if (lnurlParams) {
             this.setState({ lnurlParams });
         }
-
-        // Fetch fee estimates using stores (same as PaymentRequest)
         this.fetchFeeEstimates();
+
+        this.focusUnsubscribe = navigation.addListener('focus', () => {
+            this.fetchFeeEstimates();
+        });
+    }
+
+    componentWillUnmount() {
+        if (this.focusUnsubscribe) {
+            this.focusUnsubscribe();
+        }
     }
 
     fetchFeeEstimates = async () => {
@@ -454,7 +463,7 @@ export default class ChoosePaymentMethod extends React.Component<
             offer,
             lnurlParams,
             feeRate,
-            feesCollapsed
+            showFeeModal
         } = this.state;
 
         const { accounts } = UTXOsStore!;
@@ -534,129 +543,131 @@ export default class ChoosePaymentMethod extends React.Component<
                 />
 
                 {showFees && !hasInsufficientFunds && (
-                    <View>
-                        <View
+                    <View
+                        style={{
+                            paddingHorizontal: 20,
+                            paddingVertical: 15
+                        }}
+                    >
+                        <TouchableOpacity
+                            onPress={() =>
+                                this.setState({
+                                    showFeeModal: true
+                                })
+                            }
                             style={{
+                                flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                paddingVertical: 10
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 8,
+                                paddingVertical: 14,
+                                paddingHorizontal: 20
                             }}
                         >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.setState({
-                                        feesCollapsed: !feesCollapsed
-                                    })
-                                }
+                            <Text
                                 style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    fontSize: 16,
+                                    marginRight: 8
                                 }}
                             >
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Medium',
-                                        fontSize: 16
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.PaymentRequest.feeEstimate'
-                                    )}
-                                </Text>
-                                {feesCollapsed ? (
-                                    <CaretDown
-                                        fill={themeColor('text')}
-                                        width="20"
-                                        height="20"
-                                        style={{ marginLeft: 8 }}
-                                    />
-                                ) : (
-                                    <CaretRight
-                                        fill={themeColor('secondaryText')}
-                                        width="20"
-                                        height="20"
-                                        style={{
-                                            marginLeft: 8
-                                        }}
-                                    />
+                                {localeString(
+                                    'views.PaymentRequest.feeEstimate'
                                 )}
-                            </TouchableOpacity>
-                        </View>
-                        {!feesCollapsed && (
-                            <>
-                                <FeeDisplay
-                                    satAmount={satAmount}
-                                    lightning={lightning}
-                                    lnurlParams={lnurlParams}
-                                    value={value}
-                                    lightningEstimateFee={
-                                        lightningEstimateFee ?? 0
-                                    }
-                                    ecashEstimateFee={ecashEstimateFee ?? 0}
-                                    feeRate={feeRate}
-                                />
-                                {!!value &&
-                                    BackendUtils.supportsOnchainReceiving() &&
-                                    !hasInsufficientFunds &&
-                                    showFees && (
-                                        <View
-                                            style={{
-                                                paddingHorizontal: 20,
-                                                paddingTop: 10
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    fontSize: 14,
-                                                    marginBottom: 5
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Send.feeSatsVbyte'
-                                                )}
-                                            </Text>
-                                            <OnchainFeeInput
-                                                fee={feeRate}
-                                                onChangeFee={(text: string) =>
-                                                    this.setState({
-                                                        feeRate: text,
-                                                        feeLoadingError: false
-                                                    })
-                                                }
-                                                onFeeError={(error: boolean) =>
-                                                    this.setState({
-                                                        feeLoadingError: error
-                                                    })
-                                                }
-                                                navigation={navigation}
-                                            />
-                                        </View>
-                                    )}
-                            </>
-                        )}
+                            </Text>
+                            <CaretDown
+                                fill={themeColor('text')}
+                                width="16"
+                                height="16"
+                            />
+                        </TouchableOpacity>
                     </View>
                 )}
 
-                {!!value && !!lightning && (
-                    <Button
-                        title={localeString('views.Accounts.fetchTxFees')}
-                        containerStyle={{
-                            margin: 20
-                        }}
-                        onPress={() =>
-                            navigation.navigate('EditFee', {
-                                displayOnly: true
-                            })
-                        }
-                    />
-                )}
+                <ModalBox
+                    style={{
+                        borderTopLeftRadius: 20,
+                        borderTopRightRadius: 20,
+                        backgroundColor: themeColor('background'),
+                        paddingHorizontal: 20,
+                        paddingTop: 24,
+                        paddingBottom: 40,
+                        maxHeight:
+                            !!value && BackendUtils.supportsOnchainReceiving()
+                                ? '45%'
+                                : '30%'
+                    }}
+                    swipeToClose={true}
+                    backButtonClose={true}
+                    backdropPressToClose={true}
+                    backdrop={true}
+                    position="bottom"
+                    isOpen={showFeeModal}
+                    onClosed={() => this.setState({ showFeeModal: false })}
+                >
+                    <View>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Medium',
+                                color: themeColor('text'),
+                                fontSize: 18,
+                                marginBottom: 20,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.PaymentRequest.feeEstimate')}
+                        </Text>
+                        <EstimateFeesDisplay
+                            satAmount={satAmount}
+                            lightning={lightning}
+                            lnurlParams={lnurlParams}
+                            value={value}
+                            lightningEstimateFee={lightningEstimateFee ?? 0}
+                            ecashEstimateFee={ecashEstimateFee ?? 0}
+                            feeRate={feeRate}
+                        />
+                        {!!value &&
+                            BackendUtils.supportsOnchainReceiving() &&
+                            !hasInsufficientFunds &&
+                            showFees && (
+                                <View
+                                    style={{
+                                        paddingTop: 20
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 14,
+                                            marginBottom: 5
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Send.feeSatsVbyte'
+                                        )}
+                                    </Text>
+                                    <OnchainFeeInput
+                                        fee={feeRate}
+                                        onChangeFee={(text: string) =>
+                                            this.setState({
+                                                feeRate: text,
+                                                feeLoadingError: false
+                                            })
+                                        }
+                                        onFeeError={(error: boolean) =>
+                                            this.setState({
+                                                feeLoadingError: error
+                                            })
+                                        }
+                                        navigation={navigation}
+                                    />
+                                </View>
+                            )}
+                    </View>
+                </ModalBox>
             </Screen>
         );
     }
