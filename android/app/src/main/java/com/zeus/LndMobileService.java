@@ -556,30 +556,45 @@ public class LndMobileService extends Service {
         stopLnd(messenger, -1);
         return START_NOT_STICKY;
       } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.UPDATE_NOTIFICATION")) {
-        if (notificationManager == null) {
-          notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (getPersistentServicesEnabled(this)) {
+          if (notificationManager == null) {
+            notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+          }
+          notificationManager.notify(ONGOING_NOTIFICATION_ID, buildNotification());
         }
-        notificationManager.notify(ONGOING_NOTIFICATION_ID, buildNotification());
         return START_NOT_STICKY;
       }
     }
+    
+    if (notificationManager == null) {
+      notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    }
+    
     boolean persistentServicesEnabled = getPersistentServicesEnabled(this);
     // persistent services on, start service as foreground-svc
     if (persistentServicesEnabled) {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "ZEUS", NotificationManager.IMPORTANCE_NONE);
         chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
-        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        assert notificationManager != null;
         notificationManager.createNotificationChannel(chan);
       }
-
       Notification notification = buildNotification();
-
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
         startForeground(ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
       } else {
         startForeground(ONGOING_NOTIFICATION_ID, notification);
+      }
+    } else {
+      try {
+        stopForeground(true);
+      } catch (Exception e) {
+        Log.e(TAG, "Error stopping foreground service", e);
+        if (notificationManager != null) {
+          notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+        }
+      }
+      if (notificationManager != null) {
+        notificationManager.cancel(ONGOING_NOTIFICATION_ID);
       }
     }
 
@@ -630,6 +645,44 @@ public class LndMobileService extends Service {
   @Override
   public void onRebind(Intent intent) {
     super.onRebind(intent);
+  }
+
+  @Override
+  public void onCreate() {
+    super.onCreate();
+    notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    if (!getPersistentServicesEnabled(this)) {
+      if (notificationManager != null) {
+        notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+      }
+    }
+  }
+
+  @Override
+  public void onDestroy() {
+    if (notificationManager != null) {
+      notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+    }
+    super.onDestroy();
+  }
+
+  @Override
+  public void onTaskRemoved(Intent rootIntent) {
+    if (!getPersistentServicesEnabled(this)) {
+      try {
+        stopForeground(true);
+      } catch (Exception e) {
+        Log.e(TAG, "Error stopping foreground service", e);
+        if (notificationManager != null) {
+          notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+        }
+      }
+      if (notificationManager != null) {
+        notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+      }
+      stopSelf();
+    }
+    super.onTaskRemoved(rootIntent);
   }
 
   public LndMobileService() {
