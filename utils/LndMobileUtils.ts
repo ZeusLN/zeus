@@ -327,6 +327,85 @@ export async function initializeLnd({
     await initialize();
 }
 
+export async function migrateBboltToSqlite({
+    lndDir = 'lnd',
+    isTestnet,
+    walletPassword
+}: {
+    lndDir: string;
+    isTestnet?: boolean;
+    walletPassword: string;
+}): Promise<boolean> {
+    try {
+        console.log(`Starting bbolt to SQLite migration for wallet: ${lndDir}`);
+
+        await stopLnd();
+
+        await sleep(1000);
+
+        await writeLndConfig({
+            lndDir,
+            isTestnet,
+            isSqlite: true
+        });
+
+        const { initialize, checkStatus } = lndMobile.index;
+        await initialize();
+
+        await sleep(1000);
+
+        const status = await checkStatus();
+        if (
+            (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
+            ELndMobileStatusCodes.STATUS_PROCESS_STARTED
+        ) {
+            await startLnd({
+                lndDir,
+                walletPassword,
+                isTorEnabled: false,
+                isTestnet: isTestnet || false
+            });
+        }
+
+        await sleep(2000);
+
+        const finalStatus = await checkStatus();
+        const isRunning =
+            (finalStatus & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+            ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
+
+        if (isRunning) {
+            console.log(`Migration successful for wallet: ${lndDir}`);
+            return true;
+        } else {
+            console.error(
+                `Migration failed - LND did not start for wallet: ${lndDir}`
+            );
+            await writeLndConfig({
+                lndDir,
+                isTestnet,
+                isSqlite: false
+            });
+            return false;
+        }
+    } catch (error) {
+        console.error(
+            `Error during bbolt to SQLite migration for wallet ${lndDir}:`,
+            error
+        );
+        try {
+            await writeLndConfig({
+                lndDir,
+                isTestnet,
+                isSqlite: false
+            });
+        } catch (rollbackError) {
+            console.error('Error rolling back config:', rollbackError);
+        }
+        return false;
+    }
+}
+
 /**
  * Stops the LND process gracefully with retry mechanism
  * @param maxRetries - Maximum number of polling attempts to verify shutdown (default: 10)
