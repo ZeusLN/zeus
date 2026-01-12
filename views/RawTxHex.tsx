@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -13,7 +13,6 @@ import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
-import Text from '../components/Text';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -29,9 +28,7 @@ interface RawTxHexProps {
         'RawTxHex',
         {
             value: string;
-            label: string;
             hideText: boolean;
-            jumboLabel: boolean;
             logo: any;
         }
     >;
@@ -39,9 +36,7 @@ interface RawTxHexProps {
 
 interface RawTxHexState {
     value: string;
-    label: string;
     hideText: boolean;
-    jumboLabel: boolean;
     logo: any;
 }
 
@@ -55,29 +50,24 @@ export default class RawTxHex extends React.PureComponent<
         super(props);
 
         const value = props.route.params?.value ?? '';
-        const label = props.route.params?.label ?? '';
-        const { hideText, jumboLabel, logo } = props.route.params ?? {};
+        const { hideText, logo } = props.route.params ?? {};
 
         this.state = {
             value,
-            label,
             hideText,
-            jumboLabel,
             logo
         };
     }
 
     render() {
         const { navigation, TransactionsStore } = this.props;
-        const { value, label, hideText, jumboLabel, logo } = this.state;
+        const { value, hideText, logo } = this.state;
         const {
             broadcastRawTxToMempoolSpace,
             broadcast_txid,
             broadcast_err,
             loading
         } = TransactionsStore;
-
-        const { fontScale } = Dimensions.get('window');
 
         return (
             <Screen>
@@ -102,18 +92,6 @@ export default class RawTxHex extends React.PureComponent<
                         alignItems: 'center'
                     }}
                 >
-                    {jumboLabel && (
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 26 / fontScale,
-                                marginBottom: 20
-                            }}
-                        >
-                            {label || value}
-                        </Text>
-                    )}
                     <CollapsedQR
                         value={value}
                         textBottom

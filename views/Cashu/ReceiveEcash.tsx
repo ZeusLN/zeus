@@ -36,7 +36,6 @@ import Header from '../../components/Header';
 import HopPicker from '../../components/HopPicker';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import PaidIndicator from '../../components/PaidIndicator';
-import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import SuccessAnimation from '../../components/SuccessAnimation';
 import {
@@ -703,37 +702,13 @@ export default class ReceiveEcash extends React.Component<
                                                 )}
 
                                             {selectedIndex == 1 &&
-                                                !lightningAddressLoading && (
-                                                    <Row
-                                                        style={{
-                                                            alignSelf: 'center',
-                                                            marginBottom: 15
-                                                        }}
-                                                    >
-                                                        <Text
-                                                            style={{
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book',
-                                                                fontSize:
-                                                                    26 /
-                                                                    fontScale,
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                textAlign:
-                                                                    'center'
-                                                            }}
-                                                        >
-                                                            {lightningAddress}
-                                                        </Text>
-                                                    </Row>
-                                                )}
-
-                                            {selectedIndex == 1 &&
                                                 !lightningAddressLoading &&
                                                 lightningAddress && (
                                                     <CollapsedQR
                                                         value={`lightning:${lightningAddress}`}
+                                                        copyValue={
+                                                            lightningAddress
+                                                        }
                                                         iconOnly={true}
                                                         iconContainerStyle={{
                                                             marginRight: 40
@@ -742,6 +717,9 @@ export default class ReceiveEcash extends React.Component<
                                                         expanded
                                                         textBottom
                                                         hideText
+                                                        labelBottom={
+                                                            lightningAddress
+                                                        }
                                                         logo={
                                                             themeColor(
                                                                 'invertQrIcons'

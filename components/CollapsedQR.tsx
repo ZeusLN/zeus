@@ -125,6 +125,7 @@ interface CollapsedQRProps {
     nfcSupported?: boolean;
     satAmount?: string | number;
     displayAmount?: boolean;
+    labelBottom?: string;
     qrAnimationSpeed?: QRAnimationSpeed;
     onQRAnimationSpeedChange?: (speed: QRAnimationSpeed) => void;
 }
@@ -181,12 +182,14 @@ export default class CollapsedQR extends React.Component<
             truncateLongValue,
             logo,
             satAmount,
+            labelBottom,
             qrAnimationSpeed,
             onQRAnimationSpeedChange,
             showSpeed
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
+        const qrSize = height > width ? width * 0.75 : height * 0.6;
 
         const QR_ANIMATION_SPEED_OPTIONS = [
             {
@@ -314,9 +317,7 @@ export default class CollapsedQR extends React.Component<
                             )}
                             <QRCode
                                 value={value}
-                                size={
-                                    height > width ? width * 0.75 : height * 0.6
-                                }
+                                size={qrSize}
                                 logo={
                                     logo
                                         ? logo
@@ -346,10 +347,7 @@ export default class CollapsedQR extends React.Component<
                                         backgroundColor:
                                             themeColor('buttonBackground') ||
                                             themeColor('secondary'),
-                                        width:
-                                            height > width
-                                                ? width * 0.75
-                                                : height * 0.6,
+                                        width: qrSize,
                                         borderBottomLeftRadius: 12,
                                         borderBottomRightRadius: 12,
                                         marginTop: -10,
@@ -373,6 +371,28 @@ export default class CollapsedQR extends React.Component<
                                     </View>
                                 </View>
                             )}
+                        {labelBottom && (
+                            <View
+                                style={[
+                                    styles.labelBottomContainer,
+                                    {
+                                        backgroundColor:
+                                            themeColor('buttonBackground') ||
+                                            themeColor('secondary'),
+                                        width: qrSize
+                                    }
+                                ]}
+                            >
+                                <Text
+                                    style={[
+                                        styles.labelBottomText,
+                                        { color: themeColor('buttonText') }
+                                    ]}
+                                >
+                                    {labelBottom}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 )}
                 {!hideText && textBottom && (
@@ -540,5 +560,22 @@ const styles = StyleSheet.create({
     },
     speedOptions: {
         marginTop: 10
+    },
+    labelBottomContainer: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        alignSelf: 'center',
+        borderBottomLeftRadius: 12,
+        borderBottomRightRadius: 12,
+        marginTop: -10,
+        margin: 15,
+        paddingHorizontal: 15,
+        paddingVertical: 18
+    },
+    labelBottomText: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        fontSize: 20,
+        textAlign: 'center'
     }
 });
