@@ -41,6 +41,13 @@ class MainActivity : ReactActivity() {
         started = true
     }
 
+    override fun onDestroy() {
+        // When activity is destroyed, mark as not started
+        // The service's onTaskRemoved will handle stopping services if persistent mode is off
+        started = false
+        super.onDestroy()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
