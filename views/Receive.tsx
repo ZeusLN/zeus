@@ -1329,8 +1329,6 @@ export default class Receive extends React.Component<
             showAdvanced
         } = this.state;
 
-        const { fontScale } = Dimensions.get('window');
-
         const { zeroConfFee, showLspSettings } = LSPStore;
 
         const {
@@ -2186,31 +2184,6 @@ export default class Receive extends React.Component<
                                             )}
 
                                         {selectedIndex == 3 &&
-                                            !lightningAddressLoading && (
-                                                <Row
-                                                    style={{
-                                                        alignSelf: 'center',
-                                                        marginBottom: 15
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book',
-                                                            fontSize:
-                                                                26 / fontScale,
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            textAlign: 'center'
-                                                        }}
-                                                    >
-                                                        {lightningAddress}
-                                                    </Text>
-                                                </Row>
-                                            )}
-
-                                        {selectedIndex == 3 &&
                                             !lightningAddressLoading &&
                                             lightningAddress &&
                                             !creatingInvoice && (
@@ -2225,6 +2198,9 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     hideText
+                                                    labelBottom={
+                                                        lightningAddress
+                                                    }
                                                     logo={
                                                         themeColor(
                                                             'invertQrIcons'
