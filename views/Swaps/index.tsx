@@ -1294,6 +1294,30 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                                 8
                                                                             );
                                                                 }
+                                                            } else if (
+                                                                newUnit ===
+                                                                'sats'
+                                                            ) {
+                                                                if (
+                                                                    currentInputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newInputDisplayAmount =
+                                                                        currentInputSats.toFixed(
+                                                                            0
+                                                                        );
+                                                                }
+                                                                if (
+                                                                    currentOutputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newOutputDisplayAmount =
+                                                                        currentOutputSats.toFixed(
+                                                                            0
+                                                                        );
+                                                                }
                                                             }
 
                                                             return {
