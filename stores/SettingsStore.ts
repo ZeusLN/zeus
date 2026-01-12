@@ -1419,7 +1419,7 @@ export default class SettingsStore {
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         // embedded node
         automaticDisasterRecoveryBackup: true,
-        expressGraphSync: true,
+        expressGraphSync: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
         graphSyncPromptNeverAsk: false,
