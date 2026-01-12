@@ -10,6 +10,7 @@ import Header from '../components/Header';
 
 import SyncStore from '../stores/SyncStore';
 
+import { formatProgressPercentage } from '../utils/FormatUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -68,14 +69,7 @@ export default class SyncRecovery extends React.PureComponent<
                                 'secondaryBackground'
                             )}
                             duration={500}
-                            dashedStrokeConfig={{
-                                count: 50,
-                                width: 4
-                            }}
-                            progressFormatter={(value: number) => {
-                                'worklet';
-                                return value.toFixed && value.toFixed(1); // 1 decimal place
-                            }}
+                            progressFormatter={formatProgressPercentage}
                             valueSuffix="%"
                         />
                     </View>
