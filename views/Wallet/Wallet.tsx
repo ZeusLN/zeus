@@ -54,12 +54,13 @@ import {
     isTransientRpcError,
     LndErrorCode,
     matchesLndErrorCode,
+    migrateBboltToSqlite,
     retryOnTransientError,
     waitForRpcReady
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
-import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
+import MigrationsUtils, { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
@@ -141,6 +142,7 @@ interface WalletState {
     initialLoad: boolean;
     loading: boolean;
     pendingShareIntent?: { qrData?: string; base64Image?: string };
+    migratingDatabase: boolean;
 }
 
 @inject(
@@ -182,7 +184,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             unlocked: false,
             initialLoad: true,
             loading: false,
-            pendingShareIntent: undefined
+            pendingShareIntent: undefined,
+            migratingDatabase: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -621,6 +624,75 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             console.log(
                                 '[Performance] Express Graph Sync skipped (disabled) - faster startup'
                             );
+                        }
+                    }
+
+                    const currLndDir = lndDir || 'lnd';
+                    console.log(
+                        '[Migration] Checking migration requirements:',
+                        {
+                            lndDir: currLndDir,
+                            isSqlite,
+                            implementation: 'embedded-lnd'
+                        }
+                    );
+                    const hasBboltWallet =
+                        await MigrationsUtils.checkBboltWalletExists(
+                            currLndDir,
+                            isSqlite
+                        );
+                    const migrationAttempted =
+                        await MigrationsUtils.hasDatabaseMigrationBeenAttempted(
+                            currLndDir
+                        );
+                    console.log('[Migration] Check results:', {
+                        hasBboltWallet,
+                        migrationAttempted,
+                        isSqlite
+                    });
+                    const needsMigration =
+                        !isSqlite && hasBboltWallet && !migrationAttempted;
+                    console.log('[Migration] needsMigration:', needsMigration);
+
+                    let migrationSucceeded = false;
+                    if (needsMigration) {
+                        this.setState({ migratingDatabase: true });
+                        try {
+                            const success = await migrateBboltToSqlite({
+                                lndDir: currLndDir,
+                                isTestnet: embeddedLndNetwork === 'Testnet',
+                                walletPassword: walletPassword || ''
+                            });
+
+                            if (success) {
+                                migrationSucceeded = true;
+                                await MigrationsUtils.markDatabaseMigrationAttempted(
+                                    currLndDir
+                                );
+                                const nodes = settings?.nodes || [];
+                                const nodeIndex = nodes.findIndex(
+                                    (n: any) =>
+                                        n.implementation === 'embedded-lnd' &&
+                                        (n.lndDir || 'lnd') === currLndDir
+                                );
+                                if (nodeIndex !== -1) {
+                                    const updatedNodes = [...nodes];
+                                    updatedNodes[nodeIndex] = {
+                                        ...updatedNodes[nodeIndex],
+                                        isSqlite: true
+                                    };
+                                    await updateSettings({
+                                        nodes: updatedNodes
+                                    });
+                                }
+                            }
+                        } catch (error) {
+                            console.error(
+                                'Error during database migration:',
+                                error
+                            );
+                        } finally {
+                            this.setState({ migratingDatabase: false });
                         }
                     }
 
@@ -1528,7 +1600,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             padding: 8
                                         }}
                                     >
-                                        {isMigrating
+                                        {isMigrating ||
+                                        this.state.migratingDatabase
                                             ? localeString(
                                                   'views.Wallet.Wallet.migrating'
                                               ).replace('Zeus', 'ZEUS')
