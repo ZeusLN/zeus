@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
 import { settingsStore } from '../stores/Stores';
 import {
@@ -78,43 +77,84 @@ const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
 const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
-const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix';
-const ICLOUD_CLEANUP_MIGRATION_KEY = 'ios-icloud-cleanup-migration';
+const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
 class MigrationsUtils {
-    private async migrateKey(key: string, checkLocalFirst: boolean = false) {
+    private async migrateKey(key: string): Promise<string | null> {
         try {
-            if (checkLocalFirst) {
-                const localData = await Storage.getItem(key);
-                if (localData) {
-                    return localData;
-                }
-            }
-            let credentials;
+            const localData = await Storage.getItem(key);
+            if (localData) return localData;
 
-            credentials = await Keychain.getInternetCredentials(key);
+            let credentials = await this.readCredentials(key);
 
-            if (!credentials) {
-                try {
-                    credentials = await Keychain.getInternetCredentials(key, {
-                        cloudSync: true
-                    });
-                } catch (e) {
-                    console.warn(`Cloud fetch failed for ${key}`, e);
-                }
+            if (!credentials) return null;
+
+            console.log(`[Migration] Moving ${key} to Local Storage...`);
+
+            await this.deleteFromKeychain(key);
+
+            const writeSuccess = await Storage.setItem(
+                key,
+                credentials.password
+            );
+
+            if (!writeSuccess) {
+                throw new Error(
+                    `Write failed for ${key}. Storage.setItem returned false.`
+                );
             }
 
-            if (credentials && credentials.password) {
-                await Storage.setItem(key, credentials.password);
-                return credentials.password;
-            }
-        } catch (e) {
-            console.warn(`Failed to migrate key: ${key}`, e);
+            return credentials.password;
+        } catch (error) {
+            console.error(`[Migration] Failed to migrate ${key}:`, error);
+            throw error;
         }
-        return null;
+    }
+
+    /**
+     * Helper to find credentials in either standard or cloud keychain.
+     */
+    private async readCredentials(key: string) {
+        try {
+            const creds = await Keychain.getInternetCredentials(key);
+            if (creds) return creds;
+
+            return await Keychain.getInternetCredentials(key, {
+                cloudSync: true
+            });
+        } catch (e) {
+            console.warn(`[Migration] Read error for ${key}`, e);
+            return null;
+        }
+    }
+
+    /**
+     * Helper to delete keys from both Cloud and Local keychain
+     * to clear the path for the new Local Storage item.
+     */
+    private async deleteFromKeychain(key: string) {
+        try {
+            await Keychain.resetInternetCredentials({
+                server: key,
+                cloudSync: true
+            });
+        } catch (e) {
+            console.warn(
+                `[Migration] error deleting key from cloud keychain: ${key}`,
+                e
+            );
+        }
+        try {
+            await Keychain.resetInternetCredentials({ server: key });
+        } catch (e) {
+            console.warn(
+                `[Migration] error deleting key from local keychain: ${key}`,
+                e
+            );
+        }
     }
 
     private async migrateCashuForNode(lndDir: string) {
@@ -134,13 +174,10 @@ class MigrationsUtils {
         ];
 
         for (const key of cashuKeys) {
-            await this.migrateKey(key, true);
+            await this.migrateKey(key);
         }
 
-        const mintUrlsJson = await this.migrateKey(
-            `${lndDir}-cashu-mintUrls`,
-            true
-        );
+        const mintUrlsJson = await this.migrateKey(`${lndDir}-cashu-mintUrls`);
 
         if (mintUrlsJson) {
             try {
@@ -156,7 +193,7 @@ class MigrationsUtils {
                             `${walletId}-pubkey`
                         ];
                         for (const wKey of walletKeys) {
-                            await this.migrateKey(wKey, true);
+                            await this.migrateKey(wKey);
                         }
                     }
                 }
@@ -886,7 +923,7 @@ class MigrationsUtils {
             if (hasMigrated !== 'true') {
                 console.log('Attempting keychain cloud sync migration...');
 
-                const settingsData = await this.migrateKey(STORAGE_KEY, true);
+                const settingsData = await this.migrateKey(STORAGE_KEY);
 
                 const migrationKeys = [
                     CONTACTS_KEY,
@@ -911,15 +948,15 @@ class MigrationsUtils {
                 ];
 
                 for (const key of migrationKeys) {
-                    await this.migrateKey(key, true);
+                    await this.migrateKey(key);
                 }
 
-                const notesListJson = await this.migrateKey(NOTES_KEY, true);
+                const notesListJson = await this.migrateKey(NOTES_KEY);
                 if (notesListJson) {
                     const noteKeys = JSON.parse(notesListJson);
                     if (Array.isArray(noteKeys)) {
                         for (const noteKey of noteKeys) {
-                            await this.migrateKey(noteKey, true);
+                            await this.migrateKey(noteKey);
                         }
                     }
                 }
@@ -938,14 +975,17 @@ class MigrationsUtils {
                                 )}`;
                                 const hostKey = `${baseKey}:host`;
 
-                                await this.migrateKey(baseKey, true);
-                                await this.migrateKey(hostKey, true);
+                                await this.migrateKey(baseKey);
+                                await this.migrateKey(hostKey);
                             }
                         }
                     }
                 }
 
                 await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
+                console.log(
+                    'Keychain cloud sync migration completed successfully.'
+                );
             }
 
             const cashuMigration = await EncryptedStorage.getItem(
@@ -972,186 +1012,6 @@ class MigrationsUtils {
             }
         } catch (error) {
             console.error('Error during keychain cloud sync migration:', error);
-        }
-    }
-
-    /**
-     * Deletes a specific key from iCloud Keychain.
-     * This targets cloud-synced items by passing cloudSync: true.
-     */
-    private async deleteFromiCloud(key: string) {
-        try {
-            await Keychain.resetInternetCredentials({
-                server: key,
-                cloudSync: true
-            });
-            console.log(`Deleted ${key} from iCloud`);
-        } catch (e) {
-            // Item may not exist in iCloud, which is fine
-            console.log(
-                `No iCloud entry found for ${key} (or already deleted)`
-            );
-        }
-    }
-
-    /**
-     * Deletes Cashu-related keys from iCloud for a specific LND directory.
-     */
-    private async deleteCashuFromiCloud(lndDir: string) {
-        const cashuKeys = [
-            `${lndDir}-cashu-mintUrls`,
-            `${lndDir}-cashu-selectedMintUrl`,
-            `${lndDir}-cashu-totalBalanceSats`,
-            `${lndDir}-cashu-invoices`,
-            `${lndDir}-cashu-payments`,
-            `${lndDir}-cashu-received-tokens`,
-            `${lndDir}-cashu-sent-tokens`,
-            `${lndDir}-cashu-seed-version`,
-            `${lndDir}-cashu-seed-phrase`,
-            `${lndDir}-cashu-seed`
-        ];
-
-        for (const key of cashuKeys) {
-            await this.deleteFromiCloud(key);
-        }
-
-        // Also handle per-mint wallet keys
-        const mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
-        if (mintUrlsJson) {
-            try {
-                const mintUrls = JSON.parse(mintUrlsJson);
-                if (Array.isArray(mintUrls)) {
-                    for (const mintUrl of mintUrls) {
-                        const walletId = `${lndDir}==${mintUrl}`;
-                        const walletKeys = [
-                            `${walletId}-mintInfo`,
-                            `${walletId}-counter`,
-                            `${walletId}-proofs`,
-                            `${walletId}-balance`,
-                            `${walletId}-pubkey`
-                        ];
-                        for (const wKey of walletKeys) {
-                            await this.deleteFromiCloud(wKey);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn(
-                    `Failed to parse mintUrls for iCloud cleanup: ${lndDir}`,
-                    e
-                );
-            }
-        }
-    }
-
-    /**
-     * Migration to delete any data that was previously synced to iCloud.
-     * The keychainCloudSyncMigration only creates new local-only entries,
-     * but doesn't delete the old cloud-synced entries.
-     * This migration explicitly removes the cloud-synced data.
-     */
-    public async iCloudCleanupMigration() {
-        if (Platform.OS !== 'ios') return;
-
-        try {
-            const hasCleanedUp = await EncryptedStorage.getItem(
-                ICLOUD_CLEANUP_MIGRATION_KEY
-            );
-
-            if (hasCleanedUp !== 'true') {
-                console.log('Running iCloud cleanup migration...');
-
-                // List of all keys that may have been synced to iCloud
-                const keysToCleanFromCloud = [
-                    STORAGE_KEY,
-                    CONTACTS_KEY,
-                    NOTES_KEY,
-                    LAST_CHANNEL_BACKUP_STATUS,
-                    LAST_CHANNEL_BACKUP_TIME,
-                    ADDRESS_ACTIVATED_STRING,
-                    HASHES_STORAGE_STRING,
-                    POS_HIDDEN_KEY,
-                    POS_STANDALONE_KEY,
-                    CATEGORY_KEY,
-                    PRODUCT_KEY,
-                    UNIT_KEY,
-                    HIDDEN_ACCOUNTS_KEY,
-                    CURRENCY_CODES_KEY,
-                    ACTIVITY_FILTERS_KEY,
-                    IS_BACKED_UP_KEY,
-                    LSPS_ORDERS_KEY,
-                    SWAPS_KEY,
-                    REVERSE_SWAPS_KEY,
-                    SWAPS_RESCUE_KEY,
-                    SWAPS_LAST_USED_KEY
-                ];
-
-                for (const key of keysToCleanFromCloud) {
-                    await this.deleteFromiCloud(key);
-                }
-
-                // Handle notes (dynamic keys)
-                const notesListJson = await Storage.getItem(NOTES_KEY);
-                if (notesListJson) {
-                    try {
-                        const noteKeys = JSON.parse(notesListJson);
-                        if (Array.isArray(noteKeys)) {
-                            for (const noteKey of noteKeys) {
-                                await this.deleteFromiCloud(noteKey);
-                            }
-                        }
-                    } catch (e) {
-                        console.warn(
-                            'Failed to parse notes for iCloud cleanup:',
-                            e
-                        );
-                    }
-                }
-
-                // Handle LNC credentials and Cashu data
-                const settingsJson = await Storage.getItem(STORAGE_KEY);
-                if (settingsJson) {
-                    try {
-                        const settings = JSON.parse(settingsJson);
-                        if (settings.nodes && Array.isArray(settings.nodes)) {
-                            for (const node of settings.nodes) {
-                                // Clean up LNC credentials from iCloud
-                                if (
-                                    node.implementation ===
-                                        'lightning-node-connect' &&
-                                    node.pairingPhrase
-                                ) {
-                                    const baseKey = `${LNC_STORAGE_KEY}:${hash(
-                                        node.pairingPhrase
-                                    )}`;
-                                    const hostKey = `${baseKey}:host`;
-                                    await this.deleteFromiCloud(baseKey);
-                                    await this.deleteFromiCloud(hostKey);
-                                }
-
-                                // Clean up Cashu data from iCloud
-                                if (node.implementation === 'embedded-lnd') {
-                                    const lndDir = node.lndDir || 'lnd';
-                                    await this.deleteCashuFromiCloud(lndDir);
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        console.warn(
-                            'Failed to parse settings for iCloud cleanup:',
-                            e
-                        );
-                    }
-                }
-
-                await EncryptedStorage.setItem(
-                    ICLOUD_CLEANUP_MIGRATION_KEY,
-                    'true'
-                );
-                console.log('iCloud cleanup migration completed!');
-            }
-        } catch (error) {
-            console.error('Error during iCloud cleanup migration:', error);
         }
     }
 }
