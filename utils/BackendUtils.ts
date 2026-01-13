@@ -211,6 +211,13 @@ class BackendUtils {
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
     supportsSettingInvoiceExpiration = () =>
         this.call('supportsSettingInvoiceExpiration');
+    supportsForwardingHistoryChannelFilter = (nodeInfoVersion?: string) => {
+        const VersionUtils = require('./VersionUtils').default;
+        return (
+            this.isLNDBased() &&
+            VersionUtils.isSupportedVersion(nodeInfoVersion, 'v0.20.0')
+        );
+    };
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

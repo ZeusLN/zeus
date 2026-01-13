@@ -427,7 +427,11 @@ export default class CLNRest {
         };
     };
 
-    getForwardingHistory = () => {
+    getForwardingHistory = (
+        _hours?: number,
+        _chanIdIn?: string,
+        _chanIdOut?: string
+    ) => {
         const data = this.postRequest('/v1/listforwards', {
             status: 'settled',
             limit: 10000000,
