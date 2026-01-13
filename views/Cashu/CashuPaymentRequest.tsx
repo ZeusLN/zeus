@@ -249,8 +249,7 @@ export default class CashuPaymentRequest extends React.Component<
 
         const { implementation, settings } = SettingsStore;
 
-        const isNoAmountInvoice: boolean =
-            !requestAmount || requestAmount === 0;
+        const isNoAmountInvoice: boolean = !requestAmount;
 
         const noBalance = totalBalanceSats === 0;
 
