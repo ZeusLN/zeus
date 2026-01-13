@@ -9,7 +9,6 @@ import {
     Dimensions,
     ImageSourcePropType
 } from 'react-native';
-import { Avatar } from '@rneui/themed';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';
@@ -226,20 +225,18 @@ export default class SetWalletPicture extends React.Component<
                         >
                             <View
                                 style={{
-                                    ...styles.avatarContainer,
+                                    ...styles.presetContainer,
                                     backgroundColor: themeColor('secondaryText')
                                 }}
                             >
-                                <Avatar
-                                    rounded
-                                    size={
-                                        Dimensions.get('window').width / 3 - 20
-                                    }
+                                <Image
                                     source={
                                         typeof item === 'string'
-                                            ? { uri: item } // If item is a URL, use { uri: item }
-                                            : (item as ImageSourcePropType) // If it's an image object, cast it
+                                            ? { uri: item }
+                                            : (item as ImageSourcePropType)
                                     }
+                                    style={styles.presetImage}
+                                    resizeMode="contain"
                                 />
                             </View>
                         </TouchableOpacity>
@@ -264,6 +261,8 @@ export default class SetWalletPicture extends React.Component<
     }
 }
 
+const presetSize = Dimensions.get('window').width / 3 - 20;
+
 const styles = StyleSheet.create({
     photoContainer: {
         width: 136,
@@ -279,8 +278,17 @@ const styles = StyleSheet.create({
         height: 128,
         borderRadius: 68
     },
-    avatarContainer: {
+    presetContainer: {
+        width: presetSize,
+        height: presetSize,
+        borderRadius: presetSize / 2,
         margin: 8,
-        borderRadius: 68
+        overflow: 'hidden',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    presetImage: {
+        width: presetSize,
+        height: presetSize
     }
 });
