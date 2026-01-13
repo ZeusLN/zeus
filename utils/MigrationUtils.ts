@@ -83,19 +83,26 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
 class MigrationsUtils {
+    /**
+     * Migrates a key from old keychain (cloud or local) to new Storage namespace.
+     * Safe order: read → write → verify → delete
+     *
+     * Since Storage now uses a "zeus:" prefix, old and new keys are in different
+     * namespaces, so deleting old keys won't affect newly written data.
+     */
     private async migrateKey(key: string): Promise<string | null> {
         try {
-            const localData = await Storage.getItem(key);
-            if (localData) return localData;
+            // 1. Check if already migrated to new Storage namespace
+            const existingData = await Storage.getItem(key);
+            if (existingData) return existingData;
 
-            let credentials = await this.readCredentials(key);
-
+            // 2. Read from old keychain (local first, then cloud)
+            const credentials = await this.readFromOldKeychain(key);
             if (!credentials) return null;
 
             console.log(`[Migration] Moving ${key} to Local Storage...`);
 
-            await this.deleteFromKeychain(key);
-
+            // 3. Write to new Storage namespace (zeus:key)
             const writeSuccess = await Storage.setItem(
                 key,
                 credentials.password
@@ -107,6 +114,18 @@ class MigrationsUtils {
                 );
             }
 
+            // 4. Verify write succeeded by reading back
+            const verifyData = await Storage.getItem(key);
+            if (!verifyData) {
+                throw new Error(
+                    `Verification failed for ${key}. Data not found after write.`
+                );
+            }
+
+            // 5. Only delete old keychain entries after successful write + verify
+            await this.deleteFromOldKeychain(key);
+
+            console.log(`[Migration] Successfully migrated ${key}`);
             return credentials.password;
         } catch (error) {
             console.error(`[Migration] Failed to migrate ${key}:`, error);
@@ -115,13 +134,16 @@ class MigrationsUtils {
     }
 
     /**
-     * Helper to find credentials in either standard or cloud keychain.
+     * Reads from old keychain (without zeus: prefix).
+     * Tries local keychain first, then cloud keychain as fallback.
      */
-    private async readCredentials(key: string) {
+    private async readFromOldKeychain(key: string) {
         try {
-            const creds = await Keychain.getInternetCredentials(key);
-            if (creds) return creds;
+            // Try local keychain first
+            const localCreds = await Keychain.getInternetCredentials(key);
+            if (localCreds) return localCreds;
 
+            // Fallback to cloud keychain
             return await Keychain.getInternetCredentials(key, {
                 cloudSync: true
             });
@@ -132,10 +154,10 @@ class MigrationsUtils {
     }
 
     /**
-     * Helper to delete keys from both Cloud and Local keychain
-     * to clear the path for the new Local Storage item.
+     * Deletes from old keychain entries (without zeus: prefix).
+     * Deletes from both cloud and local keychain.
      */
-    private async deleteFromKeychain(key: string) {
+    private async deleteFromOldKeychain(key: string) {
         try {
             await Keychain.resetInternetCredentials({
                 server: key,
@@ -143,7 +165,7 @@ class MigrationsUtils {
             });
         } catch (e) {
             console.warn(
-                `[Migration] error deleting key from cloud keychain: ${key}`,
+                `[Migration] Error deleting from cloud keychain: ${key}`,
                 e
             );
         }
@@ -151,7 +173,7 @@ class MigrationsUtils {
             await Keychain.resetInternetCredentials({ server: key });
         } catch (e) {
             console.warn(
-                `[Migration] error deleting key from local keychain: ${key}`,
+                `[Migration] Error deleting from local keychain: ${key}`,
                 e
             );
         }
