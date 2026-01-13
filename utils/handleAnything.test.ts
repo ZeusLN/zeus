@@ -1,6 +1,11 @@
 jest.mock('../stores/ChannelBackupStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('react-native-notifications', () => ({}));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    clear: jest.fn()
+}));
 
 import { invoicesStore } from '../stores/Stores';
 import handleAnything, {
