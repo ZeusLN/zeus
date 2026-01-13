@@ -439,6 +439,7 @@
     "views.Wallet.Wallet.pending": "Pending",
     "views.Wallet.Wallet.closed": "Closed",
     "views.Wallet.Wallet.startingUp": "Zeus is starting up.",
+    "views.Wallet.Wallet.migrating": "Zeus is migrating your data. Please wait.",
     "views.Wallet.Wallet.connecting": "Zeus is connecting to your node.",
     "views.Wallet.Wallet.loadingAccount": "Zeus is loading your account.",
     "views.Wallet.Wallet.startingNode": "Zeus is starting your node.",
