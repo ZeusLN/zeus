@@ -18,10 +18,12 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import Screen from '../../components/Screen';
 
-import { Divider } from '@rneui/themed';
+import { Divider, Icon } from '@rneui/themed';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { nodeInfoStore } from '../../stores/Stores';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 
@@ -34,6 +36,45 @@ interface RoutingEventProps {
 interface RoutingEventState {
     routingEvent: any;
 }
+
+const FilterButton = ({
+    onPress,
+    labelKey
+}: {
+    onPress: () => void;
+    labelKey: string;
+}) => (
+    <TouchableOpacity
+        onPress={onPress}
+        style={{
+            backgroundColor: themeColor('secondary'),
+            padding: 12,
+            borderRadius: 8,
+            marginVertical: 10,
+            marginHorizontal: 20,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }}
+    >
+        <Icon
+            name="filter"
+            type="feather"
+            color={themeColor('highlight')}
+            size={18}
+        />
+        <Text
+            style={{
+                color: themeColor('text'),
+                fontSize: 14,
+                marginLeft: 8,
+                fontFamily: 'PPNeueMontreal-Book'
+            }}
+        >
+            {localeString(labelKey)}
+        </Text>
+    </TouchableOpacity>
+);
 
 @inject('ChannelsStore')
 @observer
@@ -147,6 +188,11 @@ export default class RoutingEvent extends React.Component<
             destinationChannel
         } = routingEvent;
 
+        const supportsChannelFilter =
+            BackendUtils.supportsForwardingHistoryChannelFilter(
+                nodeInfoStore.nodeInfo?.version
+            );
+
         const isRebalanceOperation =
             isRebalance || (sourceChannel && destinationChannel);
 
@@ -168,6 +214,18 @@ export default class RoutingEvent extends React.Component<
         const chanOutLabel = aliasesByChannelId[outChannelId] || outChannelId;
         const channelInPoint = chanIn && chanIn.channel_point;
         const channelOutPoint = chanOut && chanOut.channel_point;
+
+        const filterByInChannel = () => {
+            navigation.replace('Routing', {
+                filterChanIdIn: inChannelId
+            });
+        };
+
+        const filterByOutChannel = () => {
+            navigation.replace('Routing', {
+                filterChanIdOut: outChannelId
+            });
+        };
 
         return (
             <Screen>
@@ -232,6 +290,13 @@ export default class RoutingEvent extends React.Component<
                                     })
                             )}
 
+                            {supportsChannelFilter && (
+                                <FilterButton
+                                    onPress={filterByInChannel}
+                                    labelKey="views.Routing.filterByIncomingChannel"
+                                />
+                            )}
+
                             <Divider
                                 orientation="horizontal"
                                 style={{ margin: 8 }}
@@ -247,6 +312,13 @@ export default class RoutingEvent extends React.Component<
                                     navigation.navigate('Channel', {
                                         channel: chanOut
                                     })
+                            )}
+
+                            {supportsChannelFilter && (
+                                <FilterButton
+                                    onPress={filterByOutChannel}
+                                    labelKey="views.Routing.filterByOutgoingChannel"
+                                />
                             )}
                         </>
                     ) : (
@@ -343,6 +415,13 @@ export default class RoutingEvent extends React.Component<
                                 )}
                             />
 
+                            {supportsChannelFilter && (
+                                <FilterButton
+                                    onPress={filterByInChannel}
+                                    labelKey="views.Routing.filterByIncomingChannel"
+                                />
+                            )}
+
                             <FeeBreakdown
                                 channelId={outChannelId}
                                 peerDisplay={chanOutLabel}
@@ -351,6 +430,13 @@ export default class RoutingEvent extends React.Component<
                                     'views.Routing.RoutingEvent.destinationChannel'
                                 )}
                             />
+
+                            {supportsChannelFilter && (
+                                <FilterButton
+                                    onPress={filterByOutChannel}
+                                    labelKey="views.Routing.filterByOutgoingChannel"
+                                />
+                            )}
                         </>
                     )}
                 </ScrollView>

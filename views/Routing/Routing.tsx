@@ -3,6 +3,7 @@ import { FlatList, View, Text, TouchableOpacity } from 'react-native';
 import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
 
 import Header from '../../components/Header';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -17,6 +18,7 @@ import FeeStore from '../../stores/FeeStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { nodeInfoStore } from '../../stores/Stores';
 
 import { RoutingListItem } from './RoutingListItem';
 import { RoutingHeader } from './RoutingHeader';
@@ -24,10 +26,16 @@ import { RoutingHeader } from './RoutingHeader';
 interface RoutingProps {
     navigation: StackNavigationProp<any, any>;
     FeeStore: FeeStore;
+    route?: Route<
+        'Routing',
+        { filterChanIdIn?: string; filterChanIdOut?: string }
+    >;
 }
 
 interface RoutingState {
     selectedIndex: number;
+    filterChanIdIn?: string;
+    filterChanIdOut?: string;
 }
 
 const HOURS: { [key: number]: number } = {
@@ -45,17 +53,40 @@ export default class Routing extends React.PureComponent<
     RoutingProps,
     RoutingState
 > {
-    state = {
+    state: RoutingState = {
         selectedIndex: 0
     };
 
     componentDidMount() {
-        const { FeeStore } = this.props;
+        const { FeeStore, route } = this.props;
+        const filterChanIdIn = route?.params?.filterChanIdIn;
+        const filterChanIdOut = route?.params?.filterChanIdOut;
+
         FeeStore.getFees();
         if (BackendUtils.supportsForwardingHistory()) {
-            FeeStore.getForwardingHistory(HOURS[0]);
+            if (filterChanIdIn || filterChanIdOut) {
+                this.setState({ filterChanIdIn, filterChanIdOut });
+            }
+            FeeStore.getForwardingHistory(
+                HOURS[0],
+                filterChanIdIn,
+                filterChanIdOut
+            );
         }
     }
+
+    private refetchHistory = (selectedIndex: number) => {
+        const { getForwardingHistory } = this.props.FeeStore;
+        const supportsChannelFilter =
+            BackendUtils.supportsForwardingHistoryChannelFilter(
+                nodeInfoStore.nodeInfo?.version
+            );
+        getForwardingHistory(
+            HOURS[selectedIndex],
+            supportsChannelFilter ? this.state.filterChanIdIn : undefined,
+            supportsChannelFilter ? this.state.filterChanIdOut : undefined
+        );
+    };
 
     renderItem = ({ item }: { item: any }) => {
         const { navigation } = this.props;
@@ -79,7 +110,11 @@ export default class Routing extends React.PureComponent<
 
     render() {
         const { FeeStore, navigation } = this.props;
-        const { selectedIndex } = this.state;
+        const { selectedIndex, filterChanIdIn, filterChanIdOut } = this.state;
+        const supportsChannelFilter =
+            BackendUtils.supportsForwardingHistoryChannelFilter(
+                nodeInfoStore.nodeInfo?.version
+            );
         const {
             dayEarned,
             weekEarned,
@@ -99,6 +134,14 @@ export default class Routing extends React.PureComponent<
                       forwardingEvents.length
                   })`
                 : localeString('general.routing');
+
+        const clearFilter = () => {
+            this.setState({
+                filterChanIdIn: undefined,
+                filterChanIdOut: undefined
+            });
+            getForwardingHistory(HOURS[selectedIndex]);
+        };
 
         const FeeBadge = ({
             navigation
@@ -206,7 +249,34 @@ export default class Routing extends React.PureComponent<
                         text: headerString,
                         style: { color: themeColor('text') }
                     }}
-                    rightComponent={<FeeBadge navigation={navigation} />}
+                    rightComponent={
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            {supportsChannelFilter &&
+                                (filterChanIdIn || filterChanIdOut) && (
+                                    <TouchableOpacity
+                                        onPress={clearFilter}
+                                        style={{ marginRight: 10 }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 12
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Routing.clearFilter'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                            <FeeBadge navigation={navigation} />
+                        </View>
+                    }
                     navigation={navigation}
                 />
                 <RoutingHeader
@@ -221,7 +291,7 @@ export default class Routing extends React.PureComponent<
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
-                                getForwardingHistory(HOURS[selectedIndex]);
+                                this.refetchHistory(selectedIndex);
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
@@ -250,8 +320,8 @@ export default class Routing extends React.PureComponent<
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
                                 onRefresh={() => {
-                                    getForwardingHistory(
-                                        HOURS[this.state.selectedIndex]
+                                    this.refetchHistory(
+                                        this.state.selectedIndex
                                     );
                                 }}
                                 refreshing={false}

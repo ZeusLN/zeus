@@ -25319,6 +25319,12 @@ export namespace lnrpc {
 
         /** ForwardingHistoryRequest peer_alias_lookup */
         peer_alias_lookup?: boolean | null;
+
+        /** ForwardingHistoryRequest incoming_chan_ids */
+        incoming_chan_ids?: Long[] | null;
+
+        /** ForwardingHistoryRequest outgoing_chan_ids */
+        outgoing_chan_ids?: Long[] | null;
     }
 
     /** Represents a ForwardingHistoryRequest. */
@@ -25343,6 +25349,12 @@ export namespace lnrpc {
 
         /** ForwardingHistoryRequest peer_alias_lookup. */
         public peer_alias_lookup: boolean;
+
+        /** ForwardingHistoryRequest incoming_chan_ids. */
+        public incoming_chan_ids: Long[];
+
+        /** ForwardingHistoryRequest outgoing_chan_ids. */
+        public outgoing_chan_ids: Long[];
 
         /**
          * Creates a new ForwardingHistoryRequest instance using the specified properties.
