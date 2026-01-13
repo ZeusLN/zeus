@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -8,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import RNRestart from 'react-native-restart';
 
 import AccountIcon from '../../assets/images/SVG/Account.svg';
 import CashuIcon from '../../assets/images/SVG/Ecash.svg';
@@ -26,6 +28,7 @@ import Screen from '../../components/Screen';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -54,6 +57,35 @@ export default class Tools extends React.Component<ToolsProps, {}> {
     }
 
     handleFocus = () => this.props.SettingsStore.getSettings();
+
+    handleClearStorage = () => {
+        Alert.alert(
+            localeString('views.Tools.clearStorage.title'),
+            localeString('views.Tools.clearStorage.message'),
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.Tools.clearStorage.confirm'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await clearAllData();
+                            RNRestart.Restart();
+                        } catch (error) {
+                            console.error('Failed to clear storage:', error);
+                            Alert.alert(
+                                localeString('general.error'),
+                                localeString('views.Tools.clearStorage.error')
+                            );
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     render() {
         const { navigation, SettingsStore } = this.props;
@@ -646,6 +678,42 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity onPress={this.handleClearStorage}>
+                            <View style={styles.columnField}>
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="trash-2"
+                                        type="feather"
+                                        color={themeColor('warning')}
+                                        size={20}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('warning')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Tools.clearStorage.title'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             </Screen>
         );
