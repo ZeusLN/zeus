@@ -1485,6 +1485,7 @@ export default class SettingsStore {
     @observable public posStatus: string = 'unselected';
     @observable public posWasEnabled: boolean = false;
     @observable public loading = false;
+    @observable public isMigrating = false;
     @observable public settingsUpdateInProgress: boolean = false;
     @observable btcPayError: string | null;
     @observable sponsorsError: string | null;
@@ -1696,7 +1697,9 @@ export default class SettingsStore {
     public getSettings = async (silentUpdate: boolean = false) => {
         if (!silentUpdate) this.loading = true;
         try {
+            this.isMigrating = true;
             await MigrationsUtils.keychainCloudSyncMigration();
+            this.isMigrating = false;
 
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
 
@@ -1730,6 +1733,7 @@ export default class SettingsStore {
         } catch (error) {
             console.error('Could not load settings', error);
         } finally {
+            this.isMigrating = false;
             if (!silentUpdate) this.loading = false;
         }
 
