@@ -55,18 +55,18 @@ export default class EcashMintPicker extends React.Component<
                         ...styles.field
                     }}
                 >
-                    <Row>
+                    <Row style={{ flex: 1 }}>
                         {mints[selectedMintUrl]?.icon_url && (
                             <Image
                                 source={{
                                     uri: mints[selectedMintUrl]?.icon_url
                                 }}
                                 style={{
-                                    alignSelf: 'center',
                                     width: 24,
                                     height: 24,
-                                    borderRadius: 68,
-                                    marginRight: 10
+                                    borderRadius: 12,
+                                    marginRight: 10,
+                                    flexShrink: 0
                                 }}
                             />
                         )}
@@ -76,8 +76,9 @@ export default class EcashMintPicker extends React.Component<
                                 color: mints[selectedMintUrl]?.errorConnecting
                                     ? themeColor('warning')
                                     : themeColor('text'),
-                                marginRight: 10,
-                                flex: 1
+                                flex: 1,
+                                flexShrink: 1,
+                                minWidth: 0
                             }}
                             numberOfLines={1}
                             ellipsizeMode="tail"
@@ -89,8 +90,8 @@ export default class EcashMintPicker extends React.Component<
                         {!hideAmount && (
                             <View
                                 style={{
-                                    position: 'absolute',
-                                    right: 30
+                                    marginRight: 8,
+                                    flexShrink: 0
                                 }}
                             >
                                 <Amount
@@ -99,12 +100,7 @@ export default class EcashMintPicker extends React.Component<
                                 />
                             </View>
                         )}
-                        <View
-                            style={{
-                                position: 'absolute',
-                                right: 5
-                            }}
-                        >
+                        <View style={{ marginRight: 8, flexShrink: 0 }}>
                             <CaretRight
                                 stroke={themeColor('text')}
                                 fill={themeColor('text')}
