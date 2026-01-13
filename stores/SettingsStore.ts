@@ -1697,7 +1697,6 @@ export default class SettingsStore {
         if (!silentUpdate) this.loading = true;
         try {
             await MigrationsUtils.keychainCloudSyncMigration();
-            await MigrationsUtils.iCloudCleanupMigration();
 
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
 
