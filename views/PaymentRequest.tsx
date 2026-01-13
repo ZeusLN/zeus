@@ -599,8 +599,7 @@ export default class PaymentRequest extends React.Component<
         const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
 
-        const isNoAmountInvoice: boolean =
-            !requestAmount || requestAmount === 0;
+        const isNoAmountInvoice: boolean = !requestAmount;
 
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
 

@@ -29,7 +29,7 @@ import Switch from '../../components/Switch';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC, numberWithCommas } from '../../utils/UnitsUtils';
+import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import {
@@ -836,22 +836,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             })
                                                         );
 
-                                                        // remove commas
-                                                        const sanitizedSatAmount =
-                                                            units !== 'BTC'
-                                                                ? String(
-                                                                      satAmount
-                                                                  )
-                                                                      .replace(
-                                                                          /,/g,
-                                                                          ''
-                                                                      )
-                                                                      .trim()
-                                                                : satAmount;
                                                         if (
-                                                            !sanitizedSatAmount ||
-                                                            sanitizedSatAmount ===
-                                                                '0'
+                                                            !satAmount ||
+                                                            satAmount === '0'
                                                         ) {
                                                             this.setState({
                                                                 serviceFeeSats: 0,
@@ -861,8 +848,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
                                                         const satAmountNew =
                                                             new BigNumber(
-                                                                sanitizedSatAmount ||
-                                                                    0
+                                                                satAmount || 0
                                                             );
 
                                                         const outputSats =
@@ -905,6 +891,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                         .toFixed(
                                                                             8
                                                                         );
+                                                            } else if (
+                                                                units === 'sats'
+                                                            ) {
+                                                                newOutputDisplayString =
+                                                                    outputSats.toFixed(
+                                                                        0
+                                                                    );
                                                             }
                                                         }
 
@@ -918,9 +911,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                         reverse
                                                                     ),
                                                                 inputSats:
-                                                                    Number(
-                                                                        sanitizedSatAmount
-                                                                    ),
+                                                                    satAmountNew.toNumber(),
                                                                 outputSats,
                                                                 inputFiat:
                                                                     amount &&
@@ -932,18 +923,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 this.checkIsValid()
                                                         );
                                                     }}
-                                                    {...(units !== 'sats'
-                                                        ? { amount: inputFiat }
-                                                        : {})}
-                                                    sats={
-                                                        units === 'sats'
-                                                            ? inputSats
-                                                                ? numberWithCommas(
-                                                                      inputSats.toString()
-                                                                  )
-                                                                : ''
-                                                            : ''
-                                                    }
+                                                    amount={inputFiat}
                                                     hideConversion
                                                     hideUnitChangeButton
                                                     error={errorInput}
@@ -1062,21 +1042,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 })
                                                             );
 
-                                                            // remove commas
-                                                            const sanitizedSatAmount =
-                                                                units !== 'BTC'
-                                                                    ? String(
-                                                                          satAmount
-                                                                      )
-                                                                          .replace(
-                                                                              /,/g,
-                                                                              ''
-                                                                          )
-                                                                          .trim()
-                                                                    : satAmount;
                                                             if (
-                                                                !sanitizedSatAmount ||
-                                                                sanitizedSatAmount ===
+                                                                !satAmount ||
+                                                                satAmount ===
                                                                     '0'
                                                             ) {
                                                                 this.setState({
@@ -1087,7 +1055,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
                                                             const satAmountNew =
                                                                 new BigNumber(
-                                                                    sanitizedSatAmount ||
+                                                                    satAmount ||
                                                                         0
                                                                 );
 
@@ -1145,6 +1113,14 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             .toFixed(
                                                                                 8
                                                                             );
+                                                                } else if (
+                                                                    units ===
+                                                                    'sats'
+                                                                ) {
+                                                                    newInputDisplayString =
+                                                                        newInputSatsBN.toFixed(
+                                                                            0
+                                                                        );
                                                                 }
                                                             }
 
@@ -1174,9 +1150,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     inputSats:
                                                                         input,
                                                                     outputSats:
-                                                                        Number(
-                                                                            sanitizedSatAmount
-                                                                        ),
+                                                                        satAmountNew.toNumber(),
                                                                     inputFiat:
                                                                         newInputDisplayString,
                                                                     outputFiat:
@@ -1187,20 +1161,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     this.checkIsValid()
                                                             );
                                                         }}
-                                                        {...(units !== 'sats'
-                                                            ? {
-                                                                  amount: outputFiat
-                                                              }
-                                                            : {})}
-                                                        sats={
-                                                            units === 'sats'
-                                                                ? outputSats
-                                                                    ? numberWithCommas(
-                                                                          outputSats.toString()
-                                                                      )
-                                                                    : ''
-                                                                : ''
-                                                        }
+                                                        amount={outputFiat}
                                                         hideConversion
                                                         hideUnitChangeButton
                                                         error={errorOutput}
@@ -1333,6 +1294,30 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                                 8
                                                                             );
                                                                 }
+                                                            } else if (
+                                                                newUnit ===
+                                                                'sats'
+                                                            ) {
+                                                                if (
+                                                                    currentInputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newInputDisplayAmount =
+                                                                        currentInputSats.toFixed(
+                                                                            0
+                                                                        );
+                                                                }
+                                                                if (
+                                                                    currentOutputSats.isGreaterThan(
+                                                                        0
+                                                                    )
+                                                                ) {
+                                                                    newOutputDisplayAmount =
+                                                                        currentOutputSats.toFixed(
+                                                                            0
+                                                                        );
+                                                                }
                                                             }
 
                                                             return {
@@ -1415,46 +1400,52 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         error: ''
                                                     });
 
-                                                    const satAmount = min;
+                                                    const satAmountNew =
+                                                        new BigNumber(min || 0);
 
-                                                    const inputFiat =
-                                                        new BigNumber(
-                                                            min
-                                                        ).isGreaterThan(0)
-                                                            ? new BigNumber(min)
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
-
-                                                    // remove commas
-                                                    const sanitizedSatAmount =
-                                                        units !== 'BTC'
-                                                            ? String(satAmount)
-                                                                  .replace(
-                                                                      /,/g,
-                                                                      ''
-                                                                  )
-                                                                  .trim()
-                                                            : satAmount;
+                                                    let inputFiat = '';
                                                     if (
-                                                        !sanitizedSatAmount ||
-                                                        sanitizedSatAmount ===
-                                                            '0'
+                                                        satAmountNew.isGreaterThan(
+                                                            0
+                                                        )
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            inputFiat =
+                                                                satAmountNew
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            inputFiat =
+                                                                satAmountNew
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        } else if (
+                                                            units === 'sats'
+                                                        ) {
+                                                            inputFiat =
+                                                                satAmountNew.toFixed(
+                                                                    0
+                                                                );
+                                                        }
+                                                    }
+
+                                                    if (
+                                                        satAmountNew.isEqualTo(
+                                                            0
+                                                        )
                                                     ) {
                                                         this.setState({
                                                             serviceFeeSats: 0,
                                                             outputSats: 0
                                                         });
                                                     }
-
-                                                    const satAmountNew =
-                                                        new BigNumber(
-                                                            sanitizedSatAmount ||
-                                                                0
-                                                        );
 
                                                     const outputSats =
                                                         calculateReceiveAmount(
@@ -1464,17 +1455,38 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             reverse
                                                         );
 
-                                                    const outputFiat =
+                                                    let outputFiat = '';
+                                                    if (
                                                         outputSats.isGreaterThan(
                                                             0
                                                         )
-                                                            ? outputSats
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        } else if (
+                                                            units === 'sats'
+                                                        ) {
+                                                            outputFiat =
+                                                                outputSats.toFixed(
+                                                                    0
+                                                                );
+                                                        }
+                                                    }
 
                                                     this.setState({
                                                         serviceFeeSats:
@@ -1485,9 +1497,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 reverse
                                                             ),
                                                         inputSats:
-                                                            Number(
-                                                                sanitizedSatAmount
-                                                            ),
+                                                            satAmountNew.toNumber(),
                                                         outputSats,
                                                         inputFiat,
                                                         outputFiat
@@ -1514,46 +1524,52 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         error: ''
                                                     });
 
-                                                    const satAmount = max;
+                                                    const satAmountNew =
+                                                        new BigNumber(max || 0);
 
-                                                    const inputFiat =
-                                                        new BigNumber(
-                                                            max
-                                                        ).isGreaterThan(0)
-                                                            ? new BigNumber(max)
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
-
-                                                    // remove commas
-                                                    const sanitizedSatAmount =
-                                                        units !== 'BTC'
-                                                            ? String(satAmount)
-                                                                  .replace(
-                                                                      /,/g,
-                                                                      ''
-                                                                  )
-                                                                  .trim()
-                                                            : satAmount;
+                                                    let inputFiat = '';
                                                     if (
-                                                        !sanitizedSatAmount ||
-                                                        sanitizedSatAmount ===
-                                                            '0'
+                                                        satAmountNew.isGreaterThan(
+                                                            0
+                                                        )
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            inputFiat =
+                                                                satAmountNew
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            inputFiat =
+                                                                satAmountNew
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        } else if (
+                                                            units === 'sats'
+                                                        ) {
+                                                            inputFiat =
+                                                                satAmountNew.toFixed(
+                                                                    0
+                                                                );
+                                                        }
+                                                    }
+
+                                                    if (
+                                                        satAmountNew.isEqualTo(
+                                                            0
+                                                        )
                                                     ) {
                                                         this.setState({
                                                             serviceFeeSats: 0,
                                                             outputSats: 0
                                                         });
                                                     }
-
-                                                    const satAmountNew =
-                                                        new BigNumber(
-                                                            sanitizedSatAmount ||
-                                                                0
-                                                        );
 
                                                     const outputSats =
                                                         calculateReceiveAmount(
@@ -1563,17 +1579,39 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             reverse
                                                         );
 
-                                                    const outputFiat =
+                                                    let outputFiat = '';
+                                                    if (
                                                         outputSats.isGreaterThan(
                                                             0
                                                         )
-                                                            ? outputSats
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        } else if (
+                                                            units === 'sats'
+                                                        ) {
+                                                            outputFiat =
+                                                                outputSats.toFixed(
+                                                                    0
+                                                                );
+                                                        }
+                                                    }
+
                                                     this.setState({
                                                         serviceFeeSats:
                                                             calculateServiceFeeOnSend(
@@ -1583,9 +1621,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 reverse
                                                             ),
                                                         inputSats:
-                                                            Number(
-                                                                sanitizedSatAmount
-                                                            ),
+                                                            satAmountNew.toNumber(),
                                                         outputSats,
                                                         inputFiat,
                                                         outputFiat
