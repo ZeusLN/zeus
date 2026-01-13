@@ -617,7 +617,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore.getNetworkInfo();
             await UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
-            ChannelsStore.getChannelsWithPolling();
+            ChannelsStore.getChannelsWithPolling().then(() => {
+                // Check for sweep to self-custody threshold after channels are online
+                if (connecting && settings?.ecash?.enableCashu) {
+                    CashuStore.checkAndSweepMints();
+                }
+            });
 
             if (rescan) {
                 await updateSettings({
@@ -737,17 +742,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 } catch (e) {
                     console.error('Lightning address error', e);
                 }
-            }
-        }
-
-        if (
-            connecting &&
-            implementation === 'embedded-lnd' &&
-            settings?.ecash?.enableCashu
-        ) {
-            // Check for sweep to self-custody threshold
-            if (connecting) {
-                CashuStore.checkAndSweepMints();
             }
         }
 
