@@ -553,6 +553,111 @@ describe('AddressUtils', () => {
                     )
                 ).toBeFalsy();
             });
+
+            it('validates lightning addresses from cryptoqr.net/MoneyBadger', () => {
+                // EMVCo QR codes
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '00020126260008za.co.mp0110248723666427530023za.co.electrum.picknpay0122ydgKJviKSomaVw0297RaZw5303710540571.406304CE9C@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '00020126260008za.co.mp0110834501269327530023za.co.electrum.picknpay0122%2BNsSh%2F2KScS6P5MqEHVkGw5303710540555.966304E8AD@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '00020126260008za.co.mp0110847268562627440014za.co.electrum0122%2Br3YIUYPRcuRzFeKDYRAvA@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+
+                // URL-encoded addresses
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%2Fconfirm123@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'http%3A%2F%2Fexample.com%2Fza.co.electrum.picknpay%2Fconfirm123@staging.cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'http%3A%2F%2Fexample.com%2Fza.co.ecentric.payment%2Fconfirm456@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'https%3A%2F%2Fzapper.com%2Fpayment%2F12345@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'https%3A%2F%2Fpayat.io%2Fpayment%2Fabc123@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'https%3A%2F%2Frad2.wigroup.co%2Fbill%2F125468@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'https%3A%2F%2Fapp.scantopay.io%2Fqr%3Fqrcode%3D8784599487@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+
+                // Simple identifiers
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'SK-123-45678901234567890123456@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '12345678901234567890@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'CRSTPC-1-2-3-4-5@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '0337704903@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'UMPQR123456@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'easypay789@staging.cryptoqr.net'
+                    )
+                ).toBeTruthy();
+
+                // Uppercase URL-encoded
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'HTTP%3A%2F%2FEXAMPLE.COM%2FZA.CO.ELECTRUM.PICKNPAY%2FCONFIRM@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'HTTPS%3A%2F%2FTEST.COM%2FZA.CO.ECENTRIC.PAYMENT%2FID123@cryptoqr.net'
+                    )
+                ).toBeTruthy();
+            });
         });
 
         describe('processLNDHubAddress', () => {
