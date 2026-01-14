@@ -1,13 +1,23 @@
+jest.mock('../storage', () => ({
+    setItem: jest.fn(() => Promise.resolve(true)),
+    getItem: jest.fn(() => Promise.resolve(false)),
+    removeItem: jest.fn(() => Promise.resolve(true))
+}));
+
 import {
     handleEnableGraphSync,
     handleIgnoreOnce,
     handleNeverAskAgain,
-    checkGraphSyncBeforePayment
+    checkGraphSyncBeforePayment,
+    savePendingPaymentData,
+    loadPendingPaymentData,
+    clearPendingPaymentData
 } from './GraphSyncUtils';
 
 import { settingsStore, transactionsStore } from '../stores/Stores';
 
 import { restartNeeded } from './RestartUtils';
+import storage from '../storage';
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
@@ -31,6 +41,7 @@ const mockTransactionsStore = transactionsStore as jest.Mocked<
 const mockRestartNeeded = restartNeeded as jest.MockedFunction<
     typeof restartNeeded
 >;
+const mockStorage = storage as jest.Mocked<typeof storage>;
 
 describe('GraphSyncUtils', () => {
     beforeEach(() => {
@@ -38,9 +49,29 @@ describe('GraphSyncUtils', () => {
     });
 
     describe('handleEnableGraphSync', () => {
-        it('should enable graph sync and trigger restart', async () => {
+        it('should enable graph sync and trigger restart without pending data', async () => {
+            mockTransactionsStore.pendingPaymentData = null;
+
             await handleEnableGraphSync();
 
+            expect(mockStorage.setItem).not.toHaveBeenCalled();
+            expect(mockSettingsStore.updateSettings).toHaveBeenCalledWith({
+                expressGraphSync: true,
+                graphSyncPromptIgnoreOnce: false
+            });
+            expect(mockRestartNeeded).toHaveBeenCalledWith(true);
+        });
+
+        it('should save pending payment data before restart', async () => {
+            const paymentData = { payment_request: 'lnbc123...' };
+            mockTransactionsStore.pendingPaymentData = paymentData;
+
+            await handleEnableGraphSync();
+
+            expect(mockStorage.setItem).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync',
+                JSON.stringify(paymentData)
+            );
             expect(mockSettingsStore.updateSettings).toHaveBeenCalledWith({
                 expressGraphSync: true,
                 graphSyncPromptIgnoreOnce: false
@@ -157,6 +188,118 @@ describe('GraphSyncUtils', () => {
             });
             expect(mockTransactionsStore.showGraphSyncPrompt).toBe(true);
             expect(result).toBe(false);
+        });
+    });
+
+    describe('savePendingPaymentData', () => {
+        it('should save payment data to storage', async () => {
+            const paymentData = {
+                payment_request: 'lnbc123...',
+                amount: '1000'
+            };
+
+            await savePendingPaymentData(paymentData);
+
+            expect(mockStorage.setItem).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync',
+                JSON.stringify(paymentData)
+            );
+        });
+
+        it('should re-throw storage errors', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation();
+            const storageError = new Error('Storage full');
+            mockStorage.setItem.mockRejectedValueOnce(storageError);
+
+            const paymentData = { payment_request: 'lnbc123...' };
+
+            await expect(savePendingPaymentData(paymentData)).rejects.toThrow(
+                'Storage full'
+            );
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error saving pending payment data:',
+                storageError
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('loadPendingPaymentData', () => {
+        it('should load and parse payment data from storage', async () => {
+            const paymentData = {
+                payment_request: 'lnbc123...',
+                amount: '1000'
+            };
+            mockStorage.getItem.mockResolvedValueOnce(
+                JSON.stringify(paymentData)
+            );
+
+            const result = await loadPendingPaymentData();
+
+            expect(mockStorage.getItem).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync'
+            );
+            expect(result).toEqual(paymentData);
+        });
+
+        it('should return null when no data is stored', async () => {
+            mockStorage.getItem.mockResolvedValueOnce(false);
+
+            const result = await loadPendingPaymentData();
+
+            expect(result).toBeNull();
+        });
+
+        it('should handle storage errors gracefully', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation();
+            mockStorage.getItem.mockRejectedValueOnce(
+                new Error('Storage error')
+            );
+
+            const result = await loadPendingPaymentData();
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error loading pending payment data:',
+                expect.any(Error)
+            );
+            expect(result).toBeNull();
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('clearPendingPaymentData', () => {
+        it('should remove payment data from storage', async () => {
+            await clearPendingPaymentData();
+
+            expect(mockStorage.removeItem).toHaveBeenCalledWith(
+                'zeus-pending-payment-after-graph-sync'
+            );
+        });
+
+        it('should re-throw removal errors', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation();
+            const removalError = new Error('Removal failed');
+            mockStorage.removeItem.mockRejectedValueOnce(removalError);
+
+            await expect(clearPendingPaymentData()).rejects.toThrow(
+                'Removal failed'
+            );
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error clearing pending payment data:',
+                removalError
+            );
+
+            consoleErrorSpy.mockRestore();
         });
     });
 });
