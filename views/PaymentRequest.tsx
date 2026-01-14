@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Slider from '@react-native-community/slider';
+import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ButtonGroup } from '@rneui/themed';
 
@@ -50,6 +51,7 @@ import {
     calculateDonationAmount,
     findDonationPercentageIndex
 } from '../utils/DonationUtils';
+import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -66,6 +68,7 @@ const zaplockerDestinations = [
 interface InvoiceProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
+    route: Route<'PaymentRequest', { fromGraphSync?: boolean }>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     SwapStore: SwapStore;
@@ -148,9 +151,18 @@ export default class PaymentRequest extends React.Component<
 
     async componentDidMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore } = this.props;
+        const { SettingsStore, InvoicesStore, route } = this.props;
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
+
+        if (route?.params?.fromGraphSync) {
+            clearPendingPaymentData().catch((error) => {
+                console.error(
+                    'Failed to clear pending payment data on PaymentRequest:',
+                    error
+                );
+            });
+        }
 
         const { defaultDonationPercentage } = settings.payments;
 
