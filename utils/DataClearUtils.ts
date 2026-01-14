@@ -162,9 +162,15 @@ async function clearKey(key: string) {
 async function clearCashuDataForNode(lndDir: string) {
     const cashuKeys = [
         `${lndDir}-cashu-mintUrls`,
-        `${lndDir}-cashu-proofs`,
-        `${lndDir}-cashu-pending`,
-        `${lndDir}-cashu-receipts`
+        `${lndDir}-cashu-selectedMintUrl`,
+        `${lndDir}-cashu-totalBalanceSats`,
+        `${lndDir}-cashu-invoices`,
+        `${lndDir}-cashu-payments`,
+        `${lndDir}-cashu-received-tokens`,
+        `${lndDir}-cashu-sent-tokens`,
+        `${lndDir}-cashu-seed-version`,
+        `${lndDir}-cashu-seed-phrase`,
+        `${lndDir}-cashu-seed`
     ];
 
     for (const key of cashuKeys) {
@@ -178,8 +184,18 @@ async function clearCashuDataForNode(lndDir: string) {
             const mintUrls = JSON.parse(mintUrlsJson);
             if (Array.isArray(mintUrls)) {
                 for (const mintUrl of mintUrls) {
-                    const walletKey = `${lndDir}-cashu-wallet-${mintUrl}`;
-                    await clearKey(walletKey);
+                    // walletId format: ${lndDir}==${mintUrl}
+                    const walletId = `${lndDir}==${mintUrl}`;
+                    const walletKeys = [
+                        `${walletId}-mintInfo`,
+                        `${walletId}-counter`,
+                        `${walletId}-proofs`,
+                        `${walletId}-balance`,
+                        `${walletId}-pubkey`
+                    ];
+                    for (const walletKey of walletKeys) {
+                        await clearKey(walletKey);
+                    }
                 }
             }
         }
