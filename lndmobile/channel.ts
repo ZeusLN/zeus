@@ -213,8 +213,26 @@ export const closeChannel = async (
  */
 export const abandonChannel = async (
     funding_txid: string,
-    output_index: number
+    output_index: number,
+    pending_funding_shim_only?: boolean,
+    i_know_what_i_am_doing?: boolean
 ): Promise<lnrpc.AbandonChannelResponse> => {
+    const options: any = {
+        channel_point: {
+            funding_txid_str: funding_txid,
+            output_index
+        }
+    };
+
+    // Only include boolean parameters if they are explicitly set (not undefined)
+    if (pending_funding_shim_only !== undefined) {
+        options.pending_funding_shim_only = pending_funding_shim_only;
+    }
+
+    if (i_know_what_i_am_doing !== undefined) {
+        options.i_know_what_i_am_doing = i_know_what_i_am_doing;
+    }
+
     const response = await sendCommand<
         lnrpc.IAbandonChannelRequest,
         lnrpc.AbandonChannelRequest,
@@ -223,12 +241,7 @@ export const abandonChannel = async (
         request: lnrpc.AbandonChannelRequest,
         response: lnrpc.AbandonChannelResponse,
         method: 'AbandonChannel',
-        options: {
-            channel_point: {
-                funding_txid_str: funding_txid,
-                output_index
-            }
-        }
+        options
     });
     return response;
 };
