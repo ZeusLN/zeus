@@ -293,7 +293,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
-                NostrWalletConnectStore.initializeService();
+                if (BackendUtils.supportsNostrWalletConnectService()) {
+                    NostrWalletConnectStore.initializeService();
+                }
                 this.getSettingsAndNavigate();
             }
         }
@@ -790,7 +792,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.initChannelAcceptor();
         }
 
-        if (connecting) {
+        if (connecting && BackendUtils.supportsNostrWalletConnectService()) {
             try {
                 NostrWalletConnectStore.initializeService();
             } catch (error) {

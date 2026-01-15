@@ -696,4 +696,5 @@ export default class LightningNodeConnect {
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
     supportsSettingInvoiceExpiration = () => true;
+    supportsNostrWalletConnectService = () => true;
 }
