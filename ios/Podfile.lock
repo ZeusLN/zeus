@@ -2182,6 +2182,8 @@ PODS:
     - CocoaAsyncSocket
     - React-Core
   - react-native-vector-icons-feather (12.4.0)
+  - react-native-vector-icons-fontawesome (12.4.0)
+  - react-native-vector-icons-material-design-icons (12.4.0)
   - react-native-vector-icons-material-icons (12.4.0)
   - react-native-view-shot (4.0.3):
     - boost
@@ -3206,34 +3208,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - RNVectorIcons (10.2.0):
-    - boost
-    - DoubleConversion
-    - fast_float
-    - fmt
-    - glog
-    - hermes-engine
-    - RCT-Folly
-    - RCT-Folly/Fabric
-    - RCTRequired
-    - RCTTypeSafety
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/bridging
-    - ReactCommon/turbomodule/core
-    - SocketRocket
-    - Yoga
   - RNWorklets (0.7.1):
     - boost
     - DoubleConversion
@@ -3399,6 +3373,8 @@ DEPENDENCIES:
   - react-native-tor (from `../node_modules/react-native-tor`)
   - react-native-udp (from `../node_modules/react-native-udp`)
   - "react-native-vector-icons-feather (from `../node_modules/@react-native-vector-icons/feather`)"
+  - "react-native-vector-icons-fontawesome (from `../node_modules/@react-native-vector-icons/fontawesome`)"
+  - "react-native-vector-icons-material-design-icons (from `../node_modules/@react-native-vector-icons/material-design-icons`)"
   - "react-native-vector-icons-material-icons (from `../node_modules/@react-native-vector-icons/material-icons`)"
   - react-native-view-shot (from `../node_modules/react-native-view-shot`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
@@ -3448,7 +3424,6 @@ DEPENDENCIES:
   - RNSecureRandom (from `../node_modules/react-native-securerandom`)
   - RNShare (from `../node_modules/react-native-share`)
   - RNSVG (from `../node_modules/react-native-svg`)
-  - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
   - SocketRocket (~> 0.7.1)
   - SwiftProtobuf (~> 1.0)
@@ -3592,6 +3567,10 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-udp"
   react-native-vector-icons-feather:
     :path: "../node_modules/@react-native-vector-icons/feather"
+  react-native-vector-icons-fontawesome:
+    :path: "../node_modules/@react-native-vector-icons/fontawesome"
+  react-native-vector-icons-material-design-icons:
+    :path: "../node_modules/@react-native-vector-icons/material-design-icons"
   react-native-vector-icons-material-icons:
     :path: "../node_modules/@react-native-vector-icons/material-icons"
   react-native-view-shot:
@@ -3690,8 +3669,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-share"
   RNSVG:
     :path: "../node_modules/react-native-svg"
-  RNVectorIcons:
-    :path: "../node_modules/react-native-vector-icons"
   RNWorklets:
     :path: "../node_modules/react-native-worklets"
   VisionCamera:
@@ -3766,6 +3743,8 @@ SPEC CHECKSUMS:
   react-native-tor: dc46832ab810a21fb8954afa20b5aeb740ef93f5
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
   react-native-vector-icons-feather: b0c81b5240bc89ba1546220b694fc5f7b660258d
+  react-native-vector-icons-fontawesome: 9b1827fc73ef619ce268bd6f0871f5a82233121f
+  react-native-vector-icons-material-design-icons: 76cd460b3540b80527b4a80fb7f867f7deedb498
   react-native-vector-icons-material-icons: d67e485a05560416ff6b5977d5fa7e0eb6af6870
   react-native-view-shot: 6c008e58f4720de58370848201c5d4a082c6d4ca
   React-NativeModulesApple: a2c3d2cbec893956a5b3e4060322db2984fff75b
@@ -3815,7 +3794,6 @@ SPEC CHECKSUMS:
   RNSecureRandom: b64d263529492a6897e236a22a2c4249aa1b53dc
   RNShare: 70ae97841ace4522b91cf4b54281493ba3ae16e0
   RNSVG: ba3c3bc3cf413f32d1a7012274fe503c6fc1eadd
-  RNVectorIcons: c13cc1db346e960ecd0aafcdd5d0bb458133b9c1
   RNWorklets: 69f7239afaf3a156f7f9549eeb0ae8d02adc095f
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   SwiftProtobuf: e1b437c8e31a4c5577b643249a0bb62ed4f02153
