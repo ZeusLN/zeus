@@ -500,7 +500,7 @@ export default class CashuLockSettings extends React.Component<
                                 >
                                     <Icon
                                         name="close-circle"
-                                        type="material-community"
+                                        type="material-design"
                                         size={18}
                                         color={themeColor('background')}
                                     />

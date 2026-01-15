@@ -448,7 +448,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                     <View style={styles.icon}>
                                         <Icon
                                             name="key-plus"
-                                            type="material-community"
+                                            type="material-design"
                                             color={themeColor('text')}
                                             size={25}
                                         />
