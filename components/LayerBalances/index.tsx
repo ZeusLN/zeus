@@ -8,6 +8,15 @@ import {
     View,
     I18nManager
 } from 'react-native';
+import Animated, {
+    FadeIn,
+    FadeOut,
+    ZoomIn,
+    ZoomOut,
+    SlideInDown,
+    SlideOutUp,
+    LinearTransition
+} from 'react-native-reanimated';
 import LinearGradient from '../LinearGradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BigNumber from 'bignumber.js';
@@ -22,7 +31,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import { Row as LayoutRow } from '../layout/Row';
 import Pill from '../Pill';
 
-import { cashuStore, utxosStore } from '../../stores/Stores';
+import { balanceStore, cashuStore, utxosStore } from '../../stores/Stores';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -58,6 +67,7 @@ interface LayerBalancesProps {
     editMode?: boolean;
     needsConfig?: boolean;
     refreshing?: boolean;
+    collapsed?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -80,6 +90,7 @@ type DataRow = {
     needsConfig?: boolean;
     hidden?: boolean;
     mints?: MintInfo[];
+    collapsed?: boolean;
 };
 
 const getEcashRowColors = () => {
@@ -182,6 +193,10 @@ const MintIcons = ({ mints }: { mints?: MintInfo[] }) => {
 const Row = ({ item }: { item: DataRow }) => {
     const moreAccounts =
         item.layer === localeString('components.LayerBalances.moreAccounts');
+    const collapseBalances =
+        item.layer ===
+        localeString('components.LayerBalances.collapseBalances');
+    const miniRow = moreAccounts || collapseBalances;
     const ecashRowColors = getEcashRowColors();
     const isEcash = item.layer === 'Ecash';
 
@@ -194,36 +209,37 @@ const Row = ({ item }: { item: DataRow }) => {
             ? [themeColor('buttonBackground'), themeColor('buttonBackground')]
             : [themeColor('secondary'), themeColor('secondary')];
 
+    const finalGradientColors = collapseBalances
+        ? [themeColor('secondary'), themeColor('secondary')]
+        : gradientColors;
+
     return (
         <LinearGradient
-            colors={gradientColors}
-            style={[styles.rectButton, moreAccounts && { height: 40 }]}
+            colors={finalGradientColors}
+            style={[styles.rectButton, miniRow && { height: 40 }]}
         >
             <View style={styles.left}>
-                {item.watchOnly ? (
-                    <MatiSvg />
-                ) : isEcash ? (
-                    <EcashSvg />
-                ) : item.layer === 'On-chain' ? (
-                    <OnChainSvg />
-                ) : item.layer === 'Lightning' ? (
-                    <LightningSvg />
-                ) : moreAccounts ? null : (
-                    <OnChainSvg />
+                {!miniRow && (
+                    <LayerIcon
+                        layer={item.layer}
+                        watchOnly={item.watchOnly}
+                        size={70}
+                    />
                 )}
                 <Spacer width={5} />
                 <View
                     style={{
                         flexDirection: 'column',
-                        left: moreAccounts ? 5 : 0,
+                        left: miniRow ? 5 : 0,
                         flex: 1
                     }}
                 >
                     <Text
                         style={{
                             ...styles.layerText,
-                            color:
-                                themeColor('buttonText') || themeColor('text')
+                            color: collapseBalances
+                                ? themeColor('text')
+                                : themeColor('buttonText') || themeColor('text')
                         }}
                     >
                         {item.layer === 'Lightning'
@@ -236,9 +252,10 @@ const Row = ({ item }: { item: DataRow }) => {
                         <Text
                             style={{
                                 ...styles.layerText,
-                                color:
-                                    themeColor('buttonTextSecondary') ||
-                                    themeColor('secondaryText')
+                                color: collapseBalances
+                                    ? themeColor('text')
+                                    : themeColor('buttonTextSecondary') ||
+                                      themeColor('secondaryText')
                             }}
                         >
                             {item.subtitle}
@@ -277,7 +294,7 @@ const Row = ({ item }: { item: DataRow }) => {
                 </View>
             </View>
 
-            {!moreAccounts ? (
+            {collapseBalances ? null : !moreAccounts ? (
                 <>
                     {!item.needsConfig && (
                         <View style={styles.rightContent}>
@@ -313,6 +330,37 @@ const Row = ({ item }: { item: DataRow }) => {
                 </Text>
             )}
         </LinearGradient>
+    );
+};
+
+const LayerIcon = ({
+    layer,
+    watchOnly,
+    size = 50
+}: {
+    layer: string;
+    watchOnly?: boolean;
+    size?: number;
+}) => {
+    if (watchOnly) return <MatiSvg width={size} height={size} />;
+    if (layer === 'Ecash') return <EcashSvg width={size} height={size} />;
+    if (layer === 'On-chain') return <OnChainSvg width={size} height={size} />;
+    if (layer === 'Lightning')
+        return <LightningSvg width={size} height={size} />;
+    return <OnChainSvg width={size} height={size} />;
+};
+
+const CollapsedItem = ({ item }: { item: DataRow }) => {
+    if (Number(item.balance) === 0) return null;
+
+    return (
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+            <LayerIcon
+                layer={item.layer}
+                watchOnly={item.watchOnly}
+                size={50}
+            />
+        </View>
     );
 };
 
@@ -382,6 +430,16 @@ const SwipeableRow = ({
         );
     }
 
+    if (
+        item.layer === localeString('components.LayerBalances.collapseBalances')
+    ) {
+        return (
+            <TouchableOpacity onPress={() => balanceStore?.toggleCollapse()}>
+                <Row item={item} />
+            </TouchableOpacity>
+        );
+    }
+
     const HideButton = () => (
         <TouchableOpacity
             onPress={() => {
@@ -441,12 +499,14 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             onRefresh,
             locked,
             consolidated,
+            collapsed,
             editMode,
             refreshing
         } = this.props;
 
         const { settings } = SettingsStore!;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBlockchainBalance, lightningBalance, toggleCollapse } =
+            BalanceStore!;
         const { totalBalanceSats, mintUrls, cashuWallets } = CashuStore!;
 
         const otherAccounts = editMode
@@ -457,21 +517,30 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         let DATA: DataRow[] = [];
 
-        DATA.push({
-            layer: 'Lightning',
-            balance: Number(lightningBalance).toFixed(3)
-        });
+        if (!(collapsed && lightningBalance === 0)) {
+            DATA.push({
+                layer: 'Lightning',
+                balance: Number(lightningBalance).toFixed(3),
+                collapsed
+            });
+        }
 
-        if (BackendUtils.supportsOnchainReceiving()) {
+        // Only show on-chain balance for non-Lnbank accounts
+        if (
+            BackendUtils.supportsOnchainReceiving() &&
+            !(collapsed && totalBlockchainBalance === 0)
+        ) {
             DATA.push({
                 layer: 'On-chain',
-                balance: Number(totalBlockchainBalance).toFixed(3)
+                balance: Number(totalBlockchainBalance).toFixed(3),
+                collapsed
             });
         }
 
         if (
             BackendUtils.supportsCashuWallet() &&
-            settings?.ecash?.enableCashu
+            settings?.ecash?.enableCashu &&
+            !(collapsed && totalBalanceSats === 0)
         ) {
             // Build mints info for display
             const mints: MintInfo[] =
@@ -490,11 +559,16 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 custodial: true,
                 needsConfig: mintUrls?.length === 0,
                 balance: Number(totalBalanceSats).toFixed(3),
-                mints
+                mints,
+                collapsed
             });
         }
 
-        if (Object.keys(otherAccounts).length > 0 && !consolidated) {
+        if (
+            Object.keys(otherAccounts).length > 0 &&
+            !consolidated &&
+            !collapsed
+        ) {
             for (let i = 0; i < otherAccounts.length; i++) {
                 if (!editMode && otherAccounts[i].hidden) i++;
                 DATA.push({
@@ -502,12 +576,17 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     subtitle: otherAccounts[i].XFP,
                     balance: otherAccounts[i].balance || 0,
                     watchOnly: otherAccounts[i].watch_only || false,
-                    hidden: otherAccounts[i].hidden || false
+                    hidden: otherAccounts[i].hidden || false,
+                    collapsed
                 });
             }
         }
 
-        if (Object.keys(otherAccounts).length > 0 && consolidated) {
+        if (
+            Object.keys(otherAccounts).length > 0 &&
+            consolidated &&
+            !collapsed
+        ) {
             let n = 0;
             for (let i = 0; i < otherAccounts.length; i++) {
                 while (n < 1) {
@@ -516,23 +595,65 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                         subtitle: otherAccounts[i].XFP,
                         balance: otherAccounts[i].balance || 0,
                         watchOnly: otherAccounts[i].watch_only || false,
-                        hidden: otherAccounts[i].hidden || false
+                        hidden: otherAccounts[i].hidden || false,
+                        collapsed
                     });
                     n++;
                 }
             }
         }
 
-        if (Object.keys(otherAccounts).length > 1 && consolidated) {
+        if (Object.keys(otherAccounts).length > 0 && collapsed) {
+            let filled = false;
+            for (let i = 0; i < otherAccounts.length; i++) {
+                while (!filled && otherAccounts[i].balance > 0) {
+                    filled = true;
+                    DATA.push({
+                        layer: otherAccounts[i].name,
+                        subtitle: otherAccounts[i].XFP,
+                        balance: otherAccounts[i].balance || 0,
+                        watchOnly: otherAccounts[i].watch_only || false,
+                        hidden: otherAccounts[i].hidden || false,
+                        collapsed
+                    });
+                }
+            }
+        }
+
+        if (
+            Object.keys(otherAccounts).length > 1 &&
+            consolidated &&
+            !collapsed
+        ) {
             DATA.push({
                 layer: localeString('components.LayerBalances.moreAccounts'),
                 count: Object.keys(otherAccounts).length,
-                balance: 0
+                balance: 0,
+                collapsed
             });
         }
 
+        if (!collapsed) {
+            DATA.push({
+                layer: localeString(
+                    'components.LayerBalances.collapseBalances'
+                ),
+                balance: 0,
+                collapsed
+            });
+        }
+
+        if (collapsed && DATA.length === 0) return null;
+
         return (
-            <View style={{ flex: 1 }}>
+            <Animated.View
+                layout={LinearTransition.duration(300)}
+                style={{
+                    flex: 1,
+                    width: '100%',
+                    alignItems: collapsed ? 'center' : undefined
+                }}
+            >
                 {lightningBalance === 0 && totalBlockchainBalance !== 0 && (
                     <Button
                         title={localeString(
@@ -542,30 +663,93 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                         secondary
                     />
                 )}
-                <FlatList
-                    data={DATA}
-                    ItemSeparatorComponent={() => (
-                        <View style={styles.separator} />
-                    )}
-                    renderItem={({ item }) => (
-                        <SwipeableRow
-                            item={item}
-                            navigation={navigation}
-                            // select pay method vars
-                            value={value}
-                            satAmount={satAmount}
-                            lightning={lightning}
-                            offer={offer}
-                            locked={locked || editMode}
-                            editMode={editMode}
+
+                {collapsed ? (
+                    <Animated.View
+                        key="collapsed"
+                        entering={ZoomIn.duration(300).springify()}
+                        exiting={ZoomOut.duration(200)}
+                        style={{
+                            marginTop: 10,
+                            alignItems: 'center',
+                            width: '100%'
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={{
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}
+                            onPress={() => toggleCollapse()}
+                        >
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 60,
+                                    paddingVertical: 4,
+                                    paddingHorizontal: 4,
+                                    alignItems: 'center',
+                                    height: 58
+                                }}
+                            >
+                                <FlatList
+                                    data={DATA}
+                                    horizontal={true}
+                                    showsHorizontalScrollIndicator={false}
+                                    scrollEnabled={false}
+                                    renderItem={({ item }) => (
+                                        <CollapsedItem item={item} />
+                                    )}
+                                    keyExtractor={(_item, index) =>
+                                        `collapsed-${index}`
+                                    }
+                                    refreshing={refreshing ? refreshing : false}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 6
+                                }}
+                            >
+                                {localeString('general.tapToExpand')}
+                            </Text>
+                        </TouchableOpacity>
+                    </Animated.View>
+                ) : (
+                    <Animated.View
+                        key="expanded"
+                        entering={SlideInDown.duration(300).springify()}
+                        exiting={SlideOutUp.duration(200)}
+                        style={{ flex: 1, width: '100%' }}
+                    >
+                        <FlatList
+                            data={DATA}
+                            ItemSeparatorComponent={() => (
+                                <View style={styles.separator} />
+                            )}
+                            renderItem={({ item }) => (
+                                <SwipeableRow
+                                    item={item}
+                                    navigation={navigation}
+                                    value={value}
+                                    satAmount={satAmount}
+                                    lightning={lightning}
+                                    offer={offer}
+                                    locked={locked || editMode}
+                                    editMode={editMode}
+                                />
+                            )}
+                            keyExtractor={(_item, index) => `expanded-${index}`}
+                            style={{ marginTop: 20 }}
+                            onRefresh={() => onRefresh()}
+                            refreshing={refreshing ? refreshing : false}
                         />
-                    )}
-                    keyExtractor={(_item, index) => `message ${index}`}
-                    style={{ marginTop: 20 }}
-                    onRefresh={() => onRefresh()}
-                    refreshing={refreshing ? refreshing : false}
-                />
-            </View>
+                    </Animated.View>
+                )}
+            </Animated.View>
         );
     }
 }
