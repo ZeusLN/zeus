@@ -77,7 +77,8 @@ RCT_EXTERN_METHOD(
 )
 
 RCT_EXTERN_METHOD(
-  checkLndFolderExists: (RCTPromiseResolveBlock)resolve
+  checkLndFolderExists: (NSString *)lndDir
+  resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
 

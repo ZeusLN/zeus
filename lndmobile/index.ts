@@ -130,8 +130,8 @@ export const checkApplicationSupportExists = async () => {
 /**
  * @throws
  */
-export const checkLndFolderExists = async () => {
-    return await LndMobileTools.checkLndFolderExists();
+export const checkLndFolderExists = async (lndDir: string = 'lnd') => {
+    return await LndMobileTools.checkLndFolderExists(lndDir);
 };
 
 /**

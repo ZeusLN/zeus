@@ -127,7 +127,7 @@ export interface ILndMobileTools {
     // iOS-specific
     checkICloudEnabled(): Promise<boolean>;
     checkApplicationSupportExists(): Promise<boolean>;
-    checkLndFolderExists(): Promise<boolean>;
+    checkLndFolderExists(lndDir?: string): Promise<boolean>;
     createIOSApplicationSupportAndLndDirectories(
         lndDir: string
     ): Promise<boolean>;
