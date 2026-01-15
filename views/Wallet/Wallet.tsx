@@ -371,7 +371,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
                 await this.fetchData();
             } else {
-                navigation.navigate('IntroSplash');
+                // Only navigate to IntroSplash if Wallet screen is focused
+                // to prevent interference when user is on other screens
+                // (e.g., setting up a wallet image via WalletConfiguration)
+                if (navigation.isFocused()) {
+                    navigation.navigate('IntroSplash');
+                }
             }
         } finally {
             this.setState({ loading: false });
