@@ -301,7 +301,7 @@ export async function startLnd({
     // Skip this check during wallet creation (when walletPassword is empty)
     if (Platform.OS === 'ios' && walletPassword) {
         try {
-            const folderExists = await checkLndFolderExists();
+            const folderExists = await checkLndFolderExists(lndDir);
             if (!folderExists) {
                 console.log(
                     'LND folder does not exist but wallet config exists - likely app was reinstalled'
