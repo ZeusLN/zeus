@@ -10,6 +10,7 @@ import Invoice from './Invoice';
 import CashuInvoice from './CashuInvoice';
 import Payment from './Payment';
 import CashuPayment from './CashuPayment';
+import NostrConnectUtils from '../utils/NostrConnectUtils';
 
 export type ConnectionActivityType =
     | 'pay_invoice'
@@ -370,6 +371,20 @@ export default class NWCConnection extends BaseModel {
 
     public hasPermission(permission: Nip47SingleMethod): boolean {
         return this.permissions?.includes(permission) || false;
+    }
+    public hasReadOnlyPermissions(): boolean {
+        return (
+            this.permissions?.some((permission) =>
+                NostrConnectUtils.getReadOnlyPermissions().includes(permission)
+            ) || false
+        );
+    }
+    public hasPaymentPermissions(): boolean {
+        return (
+            this.permissions?.includes('pay_invoice') ||
+            this.permissions?.includes('pay_keysend') ||
+            false
+        );
     }
     public getDaysUntilExpiry(): number | null {
         if (!this.expiresAt) return null;
