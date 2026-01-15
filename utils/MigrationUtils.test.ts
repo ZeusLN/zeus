@@ -3,6 +3,11 @@ jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()
 }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    clear: jest.fn()
+}));
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
         setSettings: jest.fn()

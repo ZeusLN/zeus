@@ -915,7 +915,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loggedIn,
             connecting,
             posStatus,
-            setConnectingStatus
+            setConnectingStatus,
+            isMigrating
         } = SettingsStore;
         const loginRequired = !settings || SettingsStore.loginRequired();
 
@@ -1293,7 +1294,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             padding: 8
                                         }}
                                     >
-                                        {CashuStore.initializing
+                                        {isMigrating
+                                            ? localeString(
+                                                  'views.Wallet.Wallet.migrating'
+                                              ).replace('Zeus', 'ZEUS')
+                                            : CashuStore.initializing
                                             ? CashuStore.loadingMsg
                                             : settings.nodes &&
                                               loggedIn &&

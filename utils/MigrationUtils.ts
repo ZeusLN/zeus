@@ -76,32 +76,107 @@ import {
 const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
-const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration';
-const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix';
+const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
+const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
 class MigrationsUtils {
-    private async migrateKey(key: string, checkLocalFirst: boolean = false) {
+    /**
+     * Migrates a key from old keychain (cloud or local) to new Storage namespace.
+     * Safe order: read → write → verify → delete
+     *
+     * Since Storage now uses a "zeus:" prefix, old and new keys are in different
+     * namespaces, so deleting old keys won't affect newly written data.
+     */
+    private async migrateKey(key: string): Promise<string | null> {
         try {
-            if (checkLocalFirst) {
-                const localData = await Storage.getItem(key);
-                if (localData) {
-                    return localData;
-                }
+            // 1. Check if already migrated to new Storage namespace
+            const existingData = await Storage.getItem(key);
+            if (existingData) return existingData;
+
+            // 2. Read from old keychain (local first, then cloud)
+            const credentials = await this.readFromOldKeychain(key);
+            if (!credentials) return null;
+
+            console.log(`[Migration] Moving ${key} to Local Storage...`);
+
+            // 3. Write to new Storage namespace (zeus:key)
+            const writeSuccess = await Storage.setItem(
+                key,
+                credentials.password
+            );
+
+            if (!writeSuccess) {
+                throw new Error(
+                    `Write failed for ${key}. Storage.setItem returned false.`
+                );
             }
 
-            const credentials = await Keychain.getInternetCredentials(key);
-
-            if (credentials && credentials.password) {
-                await Storage.setItem(key, credentials.password);
-                return credentials.password;
+            // 4. Verify write succeeded by reading back
+            const verifyData = await Storage.getItem(key);
+            if (!verifyData) {
+                throw new Error(
+                    `Verification failed for ${key}. Data not found after write.`
+                );
             }
-        } catch (e) {
-            console.warn(`Failed to migrate key: ${key}`, e);
+
+            // 5. Only delete old keychain entries after successful write + verify
+            await this.deleteFromOldKeychain(key);
+
+            console.log(`[Migration] Successfully migrated ${key}`);
+            return credentials.password;
+        } catch (error) {
+            console.error(`[Migration] Failed to migrate ${key}:`, error);
+            throw error;
         }
-        return null;
+    }
+
+    /**
+     * Reads from old keychain (without zeus: prefix).
+     * Tries local keychain first, then cloud keychain as fallback.
+     */
+    private async readFromOldKeychain(key: string) {
+        try {
+            // Try local keychain first
+            const localCreds = await Keychain.getInternetCredentials(key);
+            if (localCreds) return localCreds;
+
+            // Fallback to cloud keychain
+            return await Keychain.getInternetCredentials(key, {
+                cloudSync: true
+            });
+        } catch (e) {
+            console.warn(`[Migration] Read error for ${key}`, e);
+            return null;
+        }
+    }
+
+    /**
+     * Deletes from old keychain entries (without zeus: prefix).
+     * Deletes from both cloud and local keychain.
+     */
+    private async deleteFromOldKeychain(key: string) {
+        try {
+            await Keychain.resetInternetCredentials({
+                server: key,
+                cloudSync: true
+            });
+        } catch (e) {
+            console.warn(
+                `[Migration] Error deleting from cloud keychain: ${key}`,
+                e
+            );
+        }
+        try {
+            await Keychain.resetInternetCredentials({ server: key });
+        } catch (e) {
+            console.warn(
+                `[Migration] Error deleting from local keychain: ${key}`,
+                e
+            );
+        }
     }
 
     private async migrateCashuForNode(lndDir: string) {
@@ -121,17 +196,10 @@ class MigrationsUtils {
         ];
 
         for (const key of cashuKeys) {
-            await this.migrateKey(key, true);
+            await this.migrateKey(key);
         }
 
-        let mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
-
-        if (!mintUrlsJson) {
-            const cloudCreds = await Keychain.getInternetCredentials(
-                `${lndDir}-cashu-mintUrls`
-            );
-            if (cloudCreds) mintUrlsJson = cloudCreds.password;
-        }
+        const mintUrlsJson = await this.migrateKey(`${lndDir}-cashu-mintUrls`);
 
         if (mintUrlsJson) {
             try {
@@ -147,7 +215,7 @@ class MigrationsUtils {
                             `${walletId}-pubkey`
                         ];
                         for (const wKey of walletKeys) {
-                            await this.migrateKey(wKey, true);
+                            await this.migrateKey(wKey);
                         }
                     }
                 }
@@ -937,6 +1005,9 @@ class MigrationsUtils {
                 }
 
                 await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
+                console.log(
+                    'Keychain cloud sync migration completed successfully.'
+                );
             }
 
             const cashuMigration = await EncryptedStorage.getItem(
