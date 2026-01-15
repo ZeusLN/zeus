@@ -439,7 +439,7 @@
     "views.Wallet.Wallet.pending": "Čekající",
     "views.Wallet.Wallet.closed": "Uzavřeno",
     "views.Wallet.Wallet.startingUp": "Zeus se spouští.",
-    "views.Wallet.Wallet.migrating": "Zeus is migrating your data. Please wait.",
+    "views.Wallet.Wallet.migrating": "Zeus migruje vaše data. Počkejte prosím.",
     "views.Wallet.Wallet.connecting": "Zeus se připojuje k vašemu uzlu.",
     "views.Wallet.Wallet.loadingAccount": "Zeus načítá váš účet",
     "views.Wallet.Wallet.startingNode": "Zeus spouští váš uzel.",
