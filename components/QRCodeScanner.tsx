@@ -62,7 +62,7 @@ export default function QRCodeScanner({
         CameraAuthStatus.UNKNOWN
     );
     const [isTorchOn, setIsTorchOn] = useState(false);
-    const [scannedCache, setScannedCache] = useState(new Set<string>());
+    const scannedCache = useRef(new Set<string>());
     const [cameraIsActive, setCameraIsActive] = useState(true);
 
     useEffect(() => {
@@ -81,11 +81,11 @@ export default function QRCodeScanner({
 
     const handleRead = (data: any) => {
         const hash = createHash('sha256').update(data).digest().toString('hex');
-        if (scannedCache.has(hash)) {
+        if (scannedCache.current.has(hash)) {
             // this QR was already scanned, let's prevent firing duplicate callbacks
             return;
         }
-        scannedCache.add(hash);
+        scannedCache.current.add(hash);
         handleQRScanned(data);
     };
 
@@ -133,7 +133,7 @@ export default function QRCodeScanner({
         }
     };
 
-    const handleFocus = () => setScannedCache(new Set<string>());
+    const handleFocus = () => scannedCache.current.clear();
 
     useEffect(() => {
         (async () => {
