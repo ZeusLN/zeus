@@ -1026,7 +1026,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         >
                                             <Icon
                                                 name="close-circle"
-                                                type="material-community"
+                                                type="material-design"
                                                 size={18}
                                                 color={themeColor('background')}
                                             />
