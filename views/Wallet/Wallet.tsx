@@ -49,7 +49,8 @@ import {
     initializeLnd,
     startLnd,
     stopLnd,
-    expressGraphSync
+    expressGraphSync,
+    LND_FOLDER_MISSING_ERROR
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
@@ -480,20 +481,90 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                AlertStore.checkNeutrinoPeers();
+                // Helper to check if error is folder missing
+                const isFolderMissingError = (error: any): boolean => {
+                    const msg =
+                        error?.message ||
+                        error?.toString?.() ||
+                        String(error) ||
+                        '';
+                    console.log(
+                        'isFolderMissingError checking:',
+                        msg,
+                        typeof error
+                    );
+                    return (
+                        msg === LND_FOLDER_MISSING_ERROR ||
+                        msg.includes("doesn't exist") ||
+                        msg.includes('does not exist') ||
+                        msg.includes('No such file or directory') ||
+                        msg.includes('folder') ||
+                        msg.includes('directory')
+                    );
+                };
 
-                if (!recovery) await stopLnd();
+                // Helper to show folder missing alert
+                const showFolderMissingAlert = () => {
+                    console.log('showFolderMissingAlert called');
+                    SettingsStore.setConnectingStatus(false);
+                    SettingsStore.setLndFolderMissing(true);
+                    Alert.alert(
+                        localeString('views.Wallet.lndFolderMissing.title'),
+                        localeString('views.Wallet.lndFolderMissing.message'),
+                        [
+                            {
+                                text: localeString(
+                                    'views.Wallet.lndFolderMissing.deleteWallet'
+                                ),
+                                onPress: () =>
+                                    this.props.navigation.navigate('Wallets'),
+                                style: 'destructive' as const
+                            },
+                            {
+                                text: localeString(
+                                    'views.Tools.clearStorage.title'
+                                ),
+                                onPress: () =>
+                                    this.props.navigation.navigate('Tools', {
+                                        showClearDataModal: true
+                                    })
+                            },
+                            {
+                                text: localeString('general.cancel'),
+                                style: 'cancel' as const
+                            }
+                        ]
+                    );
+                };
 
-                if (settings?.ecash?.enableCashu)
-                    await CashuStore.initializeWallets();
+                try {
+                    AlertStore.checkNeutrinoPeers();
 
-                console.log('lndDir', lndDir);
-                await initializeLnd({
-                    lndDir: lndDir || 'lnd',
-                    isTestnet: embeddedLndNetwork === 'Testnet',
-                    rescan,
-                    compactDb
-                });
+                    if (!recovery) await stopLnd();
+
+                    if (settings?.ecash?.enableCashu)
+                        await CashuStore.initializeWallets();
+
+                    console.log('lndDir', lndDir);
+
+                    await initializeLnd({
+                        lndDir: lndDir || 'lnd',
+                        isTestnet: embeddedLndNetwork === 'Testnet',
+                        rescan,
+                        compactDb
+                    });
+                } catch (error: any) {
+                    console.log(
+                        'embedded-lnd startup error:',
+                        error?.message,
+                        error
+                    );
+                    if (isFolderMissingError(error)) {
+                        showFolderMissingAlert();
+                        return;
+                    }
+                    throw error;
+                }
 
                 // on initial load, do not run EGS
                 if (initialLoad) {
@@ -527,12 +598,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                 }
 
-                await startLnd({
-                    lndDir: lndDir || 'lnd',
-                    walletPassword: walletPassword || '',
-                    isTorEnabled: embeddedTor,
-                    isTestnet: embeddedLndNetwork === 'Testnet'
-                });
+                try {
+                    await startLnd({
+                        lndDir: lndDir || 'lnd',
+                        walletPassword: walletPassword || '',
+                        isTorEnabled: embeddedTor,
+                        isTestnet: embeddedLndNetwork === 'Testnet'
+                    });
+                } catch (error: any) {
+                    console.log('startLnd error:', error?.message);
+                    if (isFolderMissingError(error)) {
+                        showFolderMissingAlert();
+                        return;
+                    }
+                    throw error;
+                }
 
                 try {
                     const batterySaverEnabled = await isBatterySaverEnabled();

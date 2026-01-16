@@ -21,8 +21,11 @@ import lndMobile from '../lndmobile/LndMobileInjection';
 import {
     ELndMobileStatusCodes,
     gossipSync,
-    cancelGossipSync
+    cancelGossipSync,
+    checkLndFolderExists
 } from '../lndmobile/index';
+
+export const LND_FOLDER_MISSING_ERROR = 'LND_FOLDER_MISSING';
 
 import { settingsStore, syncStore } from '../stores/Stores';
 import {
@@ -102,15 +105,14 @@ const writeLndConfig = async ({
         ? 'connect'
         : 'addpeer';
 
-    DeviceInfo.getTotalMemory().then(async (totalMemory) => {
-        console.log('totalMemory', totalMemory);
+    const totalMemory = await DeviceInfo.getTotalMemory();
+    console.log('totalMemory', totalMemory);
 
-        const persistFilters =
-            totalMemory >= NEUTRINO_PERSISTENT_FILTER_THRESHOLD;
+    const persistFilters = totalMemory >= NEUTRINO_PERSISTENT_FILTER_THRESHOLD;
 
-        console.log('persistFilters', persistFilters);
+    console.log('persistFilters', persistFilters);
 
-        const config = `[Application Options]
+    const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
     sync-freelist=1
@@ -121,25 +123,25 @@ const writeLndConfig = async ({
     accept-positive-inbound-fees=true
     payments-expiration-grace-period=168h
     ${rescan ? 'reset-wallet-transactions=true' : ''}
-    
+
     [db]
     db.no-graph-cache=false
 
     [bolt]
     db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
     ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}
-    
+
     [Routing]
     routing.assumechanvalid=1
     routing.strictgraphpruning=false
-    
+
     [Bitcoin]
     bitcoin.active=1
     bitcoin.mainnet=${isTestnet ? 0 : 1}
     bitcoin.testnet=${isTestnet ? 1 : 0}
     bitcoin.node=neutrino
     bitcoin.defaultchanconfs=1
-    
+
     [Neutrino]
     ${
         !isTestnet
@@ -169,7 +171,7 @@ const writeLndConfig = async ({
             ? settingsStore?.settings?.customFeeEstimator
             : settingsStore?.settings?.feeEstimator || DEFAULT_FEE_ESTIMATOR
     }
-    
+
     [autopilot]
     autopilot.active=0
     autopilot.private=1
@@ -178,21 +180,19 @@ const writeLndConfig = async ({
     autopilot.allocation=1.0
     autopilot.heuristic=externalscore:1.00
     autopilot.heuristic=preferential:0.00
-    
+
     [protocol]
     protocol.wumbo-channels=true
     protocol.option-scid-alias=true
     protocol.zero-conf=true
     protocol.simple-taproot-chans=true
-    
+
     [routerrpc]
     routerrpc.estimator=${
         settingsStore?.settings?.bimodalPathfinding ? 'bimodal' : 'apriori'
     }`;
 
-        await writeConfig({ lndDir, config });
-        return;
-    });
+    await writeConfig({ lndDir, config });
 };
 
 export async function deleteLndWallet(lndDir: string) {
@@ -297,6 +297,29 @@ export async function startLnd({
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
+    // Check if LND folder exists before starting (iOS issue: keychain data persists after uninstall)
+    // Skip this check during wallet creation (when walletPassword is empty)
+    if (Platform.OS === 'ios' && walletPassword) {
+        try {
+            const folderExists = await checkLndFolderExists(lndDir);
+            if (!folderExists) {
+                console.log(
+                    'LND folder does not exist but wallet config exists - likely app was reinstalled'
+                );
+                throw new Error(LND_FOLDER_MISSING_ERROR);
+            }
+        } catch (e: any) {
+            if (
+                e?.message === LND_FOLDER_MISSING_ERROR ||
+                e?.message?.includes("doesn't exist")
+            ) {
+                throw new Error(LND_FOLDER_MISSING_ERROR);
+            }
+            // Other errors during check - continue and let startLnd handle it
+            console.log('Error checking LND folder:', e);
+        }
+    }
+
     // don't mark as started on wallet creation, only on proper start-up
     if (walletPassword) settingsStore.embeddedLndStarted = true;
 
@@ -307,7 +330,11 @@ export async function startLnd({
     ) {
         try {
             await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
-        } catch (e) {
+        } catch (e: any) {
+            // Check for folder missing error before retrying
+            if (e?.message?.includes("doesn't exist")) {
+                throw new Error(LND_FOLDER_MISSING_ERROR);
+            }
             let started;
             while (!started) {
                 try {
@@ -320,7 +347,12 @@ export async function startLnd({
                         isTestnet
                     });
                     started = true;
-                } catch (e2) {}
+                } catch (e2: any) {
+                    // Stop retrying if folder is missing
+                    if (e2?.message?.includes("doesn't exist")) {
+                        throw new Error(LND_FOLDER_MISSING_ERROR);
+                    }
+                }
             }
         }
     }
