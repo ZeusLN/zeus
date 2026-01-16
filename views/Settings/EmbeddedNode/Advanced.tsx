@@ -83,7 +83,8 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
         } = this.state;
         const { updateSettings, embeddedLndNetwork, isSqlite, settings }: any =
             SettingsStore;
-        const { bimodalPathfinding } = settings;
+        const { bimodalPathfinding, zeroConfPeers, embeddedLndBackend } =
+            settings;
 
         return (
             <Screen>
@@ -186,6 +187,66 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() => navigation.navigate('ZeroConfPeers')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.ZeroConfPeers.title'
+                                    )}
+                                </ListItem.Title>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {zeroConfPeers && zeroConfPeers.length > 0
+                                        ? `${zeroConfPeers.length} ${
+                                              zeroConfPeers.length > 1
+                                                  ? localeString(
+                                                        'general.peers'
+                                                    ).toLowerCase()
+                                                  : localeString(
+                                                        'general.peer'
+                                                    ).toLowerCase()
+                                          } ${localeString(
+                                              'general.selected'
+                                          ).toLowerCase()}.`
+                                        : `${localeString(
+                                              'general.noneSelected'
+                                          )}.`}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                        <View
+                            style={{
+                                margin: 10
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.EmbeddedNode.ZeroConfPeers.subtitle'
+                                )}
+                            </Text>
+                        </View>
                         {false && (
                             <>
                                 <ListItem
@@ -482,56 +543,64 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 />
                             </ListItem>
                         </>
-                        <>
-                            <View style={{ marginTop: 20 }}>
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
-                                    )}
-                                    onPress={async () => {
-                                        try {
-                                            await NativeModules.LndMobile.stopLnd();
-                                            await sleep(5000); // Let lnd close down
-                                        } catch (e: any) {
-                                            // If lnd was closed down already
-                                            if (
-                                                e?.message?.includes?.('closed')
-                                            ) {
-                                                console.log('yes closed');
-                                            } else {
-                                                console.error(e.message, 10000);
-                                                return;
+                        {embeddedLndBackend !== 'esplora' && (
+                            <>
+                                <View style={{ marginTop: 20 }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
+                                        )}
+                                        onPress={async () => {
+                                            try {
+                                                await NativeModules.LndMobile.stopLnd();
+                                                await sleep(5000); // Let lnd close down
+                                            } catch (e: any) {
+                                                // If lnd was closed down already
+                                                if (
+                                                    e?.message?.includes?.(
+                                                        'closed'
+                                                    )
+                                                ) {
+                                                    console.log('yes closed');
+                                                } else {
+                                                    console.error(
+                                                        e.message,
+                                                        10000
+                                                    );
+                                                    return;
+                                                }
                                             }
-                                        }
 
-                                        console.log(
-                                            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
-                                                embeddedLndNetwork === 'Mainnet'
-                                                    ? 'mainnet'
-                                                    : 'testnet'
-                                            )
-                                        );
-                                        restartNeeded();
-                                    }}
-                                />
-                            </View>
-                            <View
-                                style={{
-                                    margin: 10,
-                                    marginTop: 15
-                                }}
-                            >
-                                <Text
+                                            console.log(
+                                                await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                    embeddedLndNetwork ===
+                                                        'Mainnet'
+                                                        ? 'mainnet'
+                                                        : 'testnet'
+                                                )
+                                            );
+                                            restartNeeded();
+                                        }}
+                                    />
+                                </View>
+                                <View
                                     style={{
-                                        color: themeColor('secondaryText')
+                                        margin: 10,
+                                        marginTop: 15
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
+                                        )}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
                         {false && persistentMode && (
                             <View style={{ margin: 15 }}>
                                 <Button

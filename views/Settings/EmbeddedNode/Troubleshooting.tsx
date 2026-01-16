@@ -54,7 +54,9 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
             compactDb,
             resetMissionControlSuccess
         } = this.state;
-        const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+        const { updateSettings, embeddedLndNetwork, settings }: any =
+            SettingsStore;
+        const { embeddedLndBackend } = settings;
 
         return (
             <Screen>
@@ -233,56 +235,64 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                 </Text>
                             </View>
                         </>
-                        <>
-                            <View style={{ marginTop: 25 }}>
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
-                                    )}
-                                    onPress={async () => {
-                                        try {
-                                            await NativeModules.LndMobile.stopLnd();
-                                            await sleep(5000); // Let lnd close down
-                                        } catch (e: any) {
-                                            // If lnd was closed down already
-                                            if (
-                                                e?.message?.includes?.('closed')
-                                            ) {
-                                                console.log('yes closed');
-                                            } else {
-                                                console.error(e.message, 10000);
-                                                return;
+                        {embeddedLndBackend !== 'esplora' && (
+                            <>
+                                <View style={{ marginTop: 25 }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
+                                        )}
+                                        onPress={async () => {
+                                            try {
+                                                await NativeModules.LndMobile.stopLnd();
+                                                await sleep(5000); // Let lnd close down
+                                            } catch (e: any) {
+                                                // If lnd was closed down already
+                                                if (
+                                                    e?.message?.includes?.(
+                                                        'closed'
+                                                    )
+                                                ) {
+                                                    console.log('yes closed');
+                                                } else {
+                                                    console.error(
+                                                        e.message,
+                                                        10000
+                                                    );
+                                                    return;
+                                                }
                                             }
-                                        }
 
-                                        console.log(
-                                            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
-                                                embeddedLndNetwork === 'Mainnet'
-                                                    ? 'mainnet'
-                                                    : 'testnet'
-                                            )
-                                        );
-                                        restartNeeded();
-                                    }}
-                                />
-                            </View>
-                            <View
-                                style={{
-                                    margin: 10,
-                                    marginTop: 15
-                                }}
-                            >
-                                <Text
+                                            console.log(
+                                                await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                    embeddedLndNetwork ===
+                                                        'Mainnet'
+                                                        ? 'mainnet'
+                                                        : 'testnet'
+                                                )
+                                            );
+                                            restartNeeded();
+                                        }}
+                                    />
+                                </View>
+                                <View
                                     style={{
-                                        color: themeColor('secondaryText')
+                                        margin: 10,
+                                        marginTop: 15
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
+                                        )}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
                     </ScrollView>
                 </View>
             </Screen>
