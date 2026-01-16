@@ -292,21 +292,23 @@ export default class NWCConnectionDetails extends React.Component<
                             </View>
                         ) : (
                             <View style={styles.headerActions}>
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'NWCConnectionActivity',
-                                            { connectionId: connection?.id }
-                                        )
-                                    }
-                                    style={styles.headerActionButton}
-                                >
-                                    <ClockIcon
-                                        color={themeColor('bitcoin')}
-                                        width={20}
-                                        height={20}
-                                    />
-                                </TouchableOpacity>
+                                {connection?.hasPaymentPermissions() && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'NWCConnectionActivity',
+                                                { connectionId: connection?.id }
+                                            )
+                                        }
+                                        style={styles.headerActionButton}
+                                    >
+                                        <ClockIcon
+                                            color={themeColor('bitcoin')}
+                                            width={20}
+                                            height={20}
+                                        />
+                                    </TouchableOpacity>
+                                )}
                                 <TouchableOpacity
                                     onPress={() =>
                                         this.editConnection(

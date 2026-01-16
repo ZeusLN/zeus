@@ -1375,14 +1375,13 @@ export default class NostrWalletConnectStore {
                     connection.displayName ||
                     localeString('stores.NostrWalletConnectStore.zeusWallet'),
                 color: nodeInfo?.color || '#3399FF',
-                pubkey: nodeInfo?.identity_pubkey || '',
+                pubkey: nodeInfo?.identity_pubkey,
                 network,
                 block_height: nodeInfo?.block_height,
                 block_hash: nodeInfo?.block_hash,
                 methods: connection.permissions,
                 notifications: NostrConnectUtils.getNotifications()
             };
-            console.log('NWC: GetInfo result:', result);
             return {
                 result,
                 error: undefined
@@ -1460,7 +1459,6 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47MakeInvoiceRequest
     ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        console.log('NWC: handleMakeInvoice request:', request);
         try {
             if (this.isCashuConfigured) {
                 try {
@@ -1775,14 +1773,10 @@ export default class NostrWalletConnectStore {
         connection: NWCConnection,
         request: Nip47ListTransactionsRequest
     ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
-        console.log('NWC: handleListTransactions request:', request);
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
-            if (
-                NostrConnectUtils.hasFullPermissions(connection.permissions) &&
-                connection.activity?.length > 0
-            ) {
+            if (NostrConnectUtils.hasFullPermissions(connection.permissions)) {
                 nip47Transactions = connection.activity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(

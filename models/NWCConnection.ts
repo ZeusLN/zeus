@@ -376,14 +376,17 @@ export default class NWCConnection extends BaseModel {
         return (
             this.permissions?.some((permission) =>
                 NostrConnectUtils.getReadOnlyPermissions().includes(permission)
-            ) || false
+            ) ?? false
         );
     }
     public hasPaymentPermissions(): boolean {
         return (
-            this.permissions?.includes('pay_invoice') ||
-            this.permissions?.includes('pay_keysend') ||
-            false
+            this.permissions?.some(
+                (p) =>
+                    p === 'pay_invoice' ||
+                    p === 'pay_keysend' ||
+                    p === 'make_invoice'
+            ) ?? false
         );
     }
     public getDaysUntilExpiry(): number | null {
