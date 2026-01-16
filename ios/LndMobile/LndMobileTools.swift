@@ -274,10 +274,11 @@ class LndMobileTools: RCTEventEmitter {
     resolve(FileManager.default.fileExists(atPath: applicationSupport.path))
   }
 
-  @objc(checkLndFolderExists:rejecter:)
-  func checkLndFolderExists(resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(checkLndFolderExists:resolver:rejecter:)
+  func checkLndFolderExists(lndDir: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-    let lndFolder = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
+    let folderName = lndDir.isEmpty ? "lnd" : lndDir
+    let lndFolder = applicationSupport.appendingPathComponent(folderName, isDirectory: true)
     resolve(FileManager.default.fileExists(atPath: lndFolder.path))
   }
 
