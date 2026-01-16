@@ -492,9 +492,6 @@ export default class BalancePane extends React.PureComponent<
                                             navigation.navigate('Wallets')
                                         }
                                         quaternary
-                                        titleStyle={{
-                                            color: '#fff'
-                                        }}
                                         buttonStyle={{
                                             minHeight: 80
                                         }}
@@ -513,9 +510,6 @@ export default class BalancePane extends React.PureComponent<
                                             })
                                         }
                                         quaternary
-                                        titleStyle={{
-                                            color: '#fff'
-                                        }}
                                         buttonStyle={{
                                             minHeight: 80
                                         }}
