@@ -13,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
+import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -88,7 +89,7 @@ export default class BalancePane extends React.PureComponent<
             pendingOpenBalance
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
-        const { implementation, settings } = SettingsStore;
+        const { implementation, settings, lndFolderMissing } = SettingsStore;
         const {
             currentBlockHeight,
             bestBlockHeight,
@@ -445,6 +446,85 @@ export default class BalancePane extends React.PureComponent<
                                     </View>
                                 </TouchableOpacity>
                             )}
+                        {implementation === 'embedded-lnd' && lndFolderMissing && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('error'),
+                                    borderRadius: 10,
+                                    margin: 20,
+                                    marginBottom: 0,
+                                    padding: 15
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        color: '#fff',
+                                        fontSize: 16,
+                                        marginBottom: 10
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.lndFolderMissing.title'
+                                    )}
+                                </Text>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: '#fff',
+                                        marginBottom: 20
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Wallet.lndFolderMissing.message'
+                                    )}
+                                </Text>
+                                <View
+                                    style={{
+                                        flexDirection: 'row'
+                                    }}
+                                >
+                                    <Button
+                                        title={localeString(
+                                            'views.Wallet.lndFolderMissing.deleteWallet'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('Wallets')
+                                        }
+                                        quaternary
+                                        titleStyle={{
+                                            color: '#fff'
+                                        }}
+                                        buttonStyle={{
+                                            minHeight: 80
+                                        }}
+                                        containerStyle={{
+                                            flex: 1,
+                                            marginRight: 5
+                                        }}
+                                    />
+                                    <Button
+                                        title={localeString(
+                                            'views.Wallet.lndFolderMissing.clearStorage'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('Tools')
+                                        }
+                                        quaternary
+                                        titleStyle={{
+                                            color: '#fff'
+                                        }}
+                                        buttonStyle={{
+                                            minHeight: 80
+                                        }}
+                                        containerStyle={{
+                                            flex: 1,
+                                            marginLeft: 5
+                                        }}
+                                    />
+                                </View>
+                            </View>
+                        )}
                         {implementation === 'lndhub' ||
                         implementation === 'nostr-wallet-connect' ? (
                             <View style={{ marginTop: 40 }}>

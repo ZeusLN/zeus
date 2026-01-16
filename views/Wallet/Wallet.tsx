@@ -505,6 +505,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 const showFolderMissingAlert = () => {
                     console.log('showFolderMissingAlert called');
                     SettingsStore.setConnectingStatus(false);
+                    SettingsStore.setLndFolderMissing(true);
                     Alert.alert(
                         localeString('views.Wallet.lndFolderMissing.title'),
                         localeString('views.Wallet.lndFolderMissing.message'),

@@ -1531,11 +1531,16 @@ export default class SettingsStore {
     @observable public lndDir?: string;
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
+    @observable public lndFolderMissing: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;
 
     public setInitialStart = (status: boolean) => {
         this.initialStart = status;
+    };
+
+    public setLndFolderMissing = (status: boolean) => {
+        this.lndFolderMissing = status;
     };
 
     public fetchBTCPayConfig = (data: string) => {
@@ -1996,6 +2001,7 @@ export default class SettingsStore {
         if (status) {
             this.error = false;
             this.errorMsg = '';
+            this.lndFolderMissing = false;
             BackendUtils.clearCachedCalls();
             // remove fetchLock on reconnect
             this.fetchLock = false;
