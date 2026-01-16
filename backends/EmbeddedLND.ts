@@ -441,4 +441,5 @@ export default class EmbeddedLND extends LND {
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => true;
     supportsSettingInvoiceExpiration = () => true;
+    supportsNostrWalletConnectService = () => true;
 }

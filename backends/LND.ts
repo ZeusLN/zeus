@@ -886,4 +886,5 @@ export default class LND {
     supportsCashuWallet = () => false;
     supportsAddressMessageSigning = () => true;
     supportsSettingInvoiceExpiration = () => true;
+    supportsNostrWalletConnectService = () => true;
 }
