@@ -13,6 +13,7 @@ import Amount from '../components/Amount';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import ModalBox from '../components/ModalBox';
+import SyncingStatus from '../components/SyncingStatus';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 
@@ -490,6 +491,9 @@ export default class ChoosePaymentMethod extends React.Component<
                     }}
                     navigation={navigation}
                 />
+
+                <SyncingStatus navigation={navigation} />
+
                 {!!satAmount && (
                     <View style={{ paddingVertical: 15, alignItems: 'center' }}>
                         <Text
