@@ -22,6 +22,7 @@ import CollapsedQR from '../../../components/CollapsedQR';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
+import AlertIcon from '../../../assets/images/SVG/Alert.svg';
 
 interface NWCConnectionQRProps {
     navigation: StackNavigationProp<any, any>;
@@ -32,8 +33,9 @@ interface NWCConnectionQRProps {
 interface NWCConnectionQRState {
     isConnected: boolean;
     appState: AppStateStatus;
+    showTimeoutMessage: boolean;
 }
-
+const CONNECTION_TIMEOUT_MS = 20000;
 @inject('NostrWalletConnectStore')
 @observer
 export default class NWCConnectionQR extends React.Component<
@@ -41,12 +43,14 @@ export default class NWCConnectionQR extends React.Component<
     NWCConnectionQRState
 > {
     appStateSubscription: NativeEventSubscription | null = null;
+    connectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(props: NWCConnectionQRProps) {
         super(props);
         this.state = {
             isConnected: false,
-            appState: AppState.currentState
+            appState: AppState.currentState,
+            showTimeoutMessage: false
         };
     }
 
@@ -58,6 +62,14 @@ export default class NWCConnectionQR extends React.Component<
             'change',
             this.handleAppStateChange
         );
+        this.connectionTimeout = setTimeout(() => {
+            if (
+                NostrWalletConnectStore.waitingForConnection &&
+                !NostrWalletConnectStore.connectionJustSucceeded
+            ) {
+                this.setState({ showTimeoutMessage: true });
+            }
+        }, CONNECTION_TIMEOUT_MS);
     }
 
     componentDidUpdate() {
@@ -66,7 +78,11 @@ export default class NWCConnectionQR extends React.Component<
             NostrWalletConnectStore.connectionJustSucceeded &&
             !this.state.isConnected
         ) {
-            this.setState({ isConnected: true });
+            if (this.connectionTimeout) {
+                clearTimeout(this.connectionTimeout);
+                this.connectionTimeout = null;
+            }
+            this.setState({ isConnected: true, showTimeoutMessage: false });
             setTimeout(() => {
                 navigation.popTo('NostrWalletConnect');
             }, 2000);
@@ -78,6 +94,10 @@ export default class NWCConnectionQR extends React.Component<
         NostrWalletConnectStore.stopWaitingForConnection();
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
+        }
+        if (this.connectionTimeout) {
+            clearTimeout(this.connectionTimeout);
+            this.connectionTimeout = null;
         }
     }
 
@@ -139,6 +159,40 @@ export default class NWCConnectionQR extends React.Component<
                             </Text>
                         </View>
                     )}
+
+                    {this.state.showTimeoutMessage &&
+                        NostrWalletConnectStore.waitingForConnection && (
+                            <View
+                                style={[
+                                    styles.timeoutMessageContainer,
+                                    {
+                                        backgroundColor: themeColor('secondary')
+                                    }
+                                ]}
+                            >
+                                <View style={styles.timeoutIconContainer}>
+                                    <AlertIcon
+                                        fill={themeColor('highlight')}
+                                        width={20}
+                                        height={20}
+                                    />
+                                </View>
+                                <View style={styles.timeoutTextContainer}>
+                                    <Text
+                                        style={[
+                                            styles.timeoutMessage,
+                                            {
+                                                color: themeColor('text')
+                                            }
+                                        ]}
+                                    >
+                                        {localeString(
+                                            'views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription'
+                                        )}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
 
                     {shouldShowIosTimer && (
                         <View style={styles.iosTimerContainer}>
@@ -285,6 +339,27 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         textAlign: 'center',
         marginTop: 12,
+        lineHeight: 20
+    },
+    timeoutMessageContainer: {
+        flexDirection: 'row',
+        marginBottom: 20,
+        marginHorizontal: 10,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 8
+    },
+    timeoutIconContainer: {
+        marginRight: 12,
+        justifyContent: 'center'
+    },
+    timeoutTextContainer: {
+        flex: 1,
+        justifyContent: 'center'
+    },
+    timeoutMessage: {
+        fontSize: 14,
+        fontFamily: 'PPNeueMontreal-Book',
         lineHeight: 20
     }
 });

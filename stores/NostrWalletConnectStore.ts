@@ -275,15 +275,13 @@ export default class NostrWalletConnectStore {
                 });
             } catch (error) {
                 console.error('Failed to initialize NWC service:', error);
-                runInAction(() => {
-                    this.setError(
-                        (error instanceof Error
-                            ? error.message
-                            : String(error)) ||
-                            localeString(
-                                'stores.NostrWalletConnectStore.error.failedToInitializeService'
-                            )
+                const errorMessage =
+                    (error instanceof Error ? error.message : String(error)) ||
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToInitializeService'
                     );
+                runInAction(() => {
+                    this.setError(errorMessage);
                     this.loading = false;
                     this.loadingMsg = undefined;
                 });
@@ -372,13 +370,13 @@ export default class NostrWalletConnectStore {
             }, SERVICE_START_DELAY_MS);
         } catch (error) {
             console.error('Failed to start NWC service:', error);
-            runInAction(() => {
-                this.setError(
-                    (error instanceof Error ? error.message : String(error)) ||
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.failedToStartService'
-                        )
+            const errorMessage =
+                (error instanceof Error ? error.message : String(error)) ||
+                localeString(
+                    'stores.NostrWalletConnectStore.error.failedToStartService'
                 );
+            runInAction(() => {
+                this.setError(errorMessage);
             });
             return false;
         }

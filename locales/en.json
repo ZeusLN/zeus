@@ -1657,6 +1657,7 @@
     "views.Settings.NostrWalletConnect.waitingForAppToConnect": "Waiting for app to connect...",
     "views.Settings.NostrWalletConnect.switchToNostrClient": "Switch to your Nostr client app",
     "views.Settings.NostrWalletConnect.backgroundConnectionWindow": "You have 30 seconds to complete the connection while the app is in the background",
+    "views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription": "We didn't receive any event from your Nostr client, but you can still close this screen and use your connection. The connection will work once your Nostr client sends a request.",
     "views.Settings.NostrWalletConnect.connectedSuccessfully": "✓ Connected Successfully!",
     "views.Settings.NostrWalletConnect.noConnectionsFound": "No connections found",
     "views.Settings.NostrWalletConnect.leftInBudget": "Left in budget",
