@@ -728,16 +728,19 @@ export default class WalletConfiguration extends React.Component<
         const { wallet, seed, randomBase64 }: any = response;
 
         if (wallet && wallet.admin_macaroon) {
-            this.setState({
-                adminMacaroon: wallet.admin_macaroon,
-                seedPhrase: seed.cipher_seed_mnemonic,
-                walletPassword: randomBase64,
-                embeddedLndNetwork: network,
-                lndDir,
-                creatingWallet: false
-            });
-
-            this.saveWalletConfiguration(recoveryCipherSeed, true);
+            this.setState(
+                {
+                    adminMacaroon: wallet.admin_macaroon,
+                    seedPhrase: seed.cipher_seed_mnemonic,
+                    walletPassword: randomBase64,
+                    embeddedLndNetwork: network,
+                    lndDir,
+                    creatingWallet: false
+                },
+                () => {
+                    this.saveWalletConfiguration(recoveryCipherSeed, true);
+                }
+            );
         } else {
             this.setState({
                 creatingWallet: false,
