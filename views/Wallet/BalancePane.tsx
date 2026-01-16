@@ -502,7 +502,7 @@ export default class BalancePane extends React.PureComponent<
                                     />
                                     <Button
                                         title={localeString(
-                                            'views.Wallet.lndFolderMissing.clearStorage'
+                                            'views.Tools.clearStorage.title'
                                         )}
                                         onPress={() =>
                                             navigation.navigate('Tools', {

@@ -520,7 +520,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             },
                             {
                                 text: localeString(
-                                    'views.Wallet.lndFolderMissing.clearStorage'
+                                    'views.Tools.clearStorage.title'
                                 ),
                                 onPress: () =>
                                     this.props.navigation.navigate('Tools', {
