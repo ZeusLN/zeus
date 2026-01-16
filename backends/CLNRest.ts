@@ -634,4 +634,5 @@ export default class CLNRest {
     supportsDevTools = () => true;
     supportsCashuWallet = () => false;
     supportsSettingInvoiceExpiration = () => true;
+    supportsNostrWalletConnectService = () => true;
 }

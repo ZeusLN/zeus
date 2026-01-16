@@ -156,6 +156,8 @@ class BackendUtils {
     login = (...args: any[]) => this.call('login', args);
 
     // services
+    supportsNostrWalletConnectService = () =>
+        this.call('supportsNostrWalletConnectService');
     supportsWatchtowerClient = () => this.call('supportsWatchtowerClient');
     supportsPeers = () => this.call('supportsPeers');
     supportsFlowLSP = () => this.call('supportsFlowLSP');
