@@ -523,7 +523,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     'views.Wallet.lndFolderMissing.clearStorage'
                                 ),
                                 onPress: () =>
-                                    this.props.navigation.navigate('Tools')
+                                    this.props.navigation.navigate('Tools', {
+                                        showClearDataModal: true
+                                    })
                             },
                             {
                                 text: localeString('general.cancel'),
