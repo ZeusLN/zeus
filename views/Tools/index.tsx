@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import RNRestart from 'react-native-restart';
 
 import AccountIcon from '../../assets/images/SVG/Account.svg';
@@ -36,6 +37,7 @@ import { Icon } from '@rneui/themed';
 
 interface ToolsProps {
     navigation: StackNavigationProp<any, any>;
+    route: RouteProp<{ Tools: { showClearDataModal?: boolean } }, 'Tools'>;
     SettingsStore: SettingsStore;
 }
 
@@ -45,9 +47,14 @@ export default class Tools extends React.Component<ToolsProps, {}> {
     focusListener: any = null;
 
     componentDidMount() {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
 
         this.focusListener = navigation.addListener('focus', this.handleFocus);
+
+        // Auto-show clear data modal if navigated with showClearDataModal param
+        if (route.params?.showClearDataModal) {
+            this.handleClearStorage();
+        }
     }
 
     componentWillUnmount() {

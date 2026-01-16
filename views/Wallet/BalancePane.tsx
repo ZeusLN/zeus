@@ -508,7 +508,9 @@ export default class BalancePane extends React.PureComponent<
                                             'views.Wallet.lndFolderMissing.clearStorage'
                                         )}
                                         onPress={() =>
-                                            navigation.navigate('Tools')
+                                            navigation.navigate('Tools', {
+                                                showClearDataModal: true
+                                            })
                                         }
                                         quaternary
                                         titleStyle={{
