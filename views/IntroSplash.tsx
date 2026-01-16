@@ -308,7 +308,8 @@ export default class IntroSplash extends React.Component<
                                                     nickname: localeString(
                                                         'general.defaultNodeNickname'
                                                     ),
-                                                    lndDir
+                                                    lndDir,
+                                                    isSqlite: true
                                                 }
                                             ];
 

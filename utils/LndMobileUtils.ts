@@ -33,7 +33,9 @@ import {
     SECONDARY_NEUTRINO_PEERS_MAINNET,
     DEFAULT_NEUTRINO_PEERS_TESTNET,
     DEFAULT_FEE_ESTIMATOR,
-    DEFAULT_SPEEDLOADER
+    DEFAULT_SPEEDLOADER,
+    DEFAULT_ESPLORA_MAINNET,
+    DEFAULT_ESPLORA_TESTNET
 } from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
@@ -92,14 +94,19 @@ const writeLndConfig = async ({
     lndDir = 'lnd',
     isTestnet,
     rescan,
-    compactDb
+    compactDb,
+    isSqlite
 }: {
     lndDir: string;
     isTestnet?: boolean;
     rescan?: boolean;
     compactDb?: boolean;
+    isSqlite?: boolean;
 }) => {
     const { writeConfig } = lndMobile.index;
+
+    const backend = settingsStore?.settings?.embeddedLndBackend || 'neutrino';
+    const isEsplora = backend === 'esplora';
 
     const peerMode = settingsStore?.settings?.dontAllowOtherPeers
         ? 'connect'
@@ -112,37 +119,42 @@ const writeLndConfig = async ({
 
     console.log('persistFilters', persistFilters);
 
-    const config = `[Application Options]
-    debuglevel=info
-    maxbackoff=2s
-    sync-freelist=1
-    accept-keysend=1
-    tlsdisableautofill=1
-    maxpendingchannels=1000
-    max-commit-fee-rate-anchors=21
-    accept-positive-inbound-fees=true
-    payments-expiration-grace-period=168h
-    ${rescan ? 'reset-wallet-transactions=true' : ''}
-
-    [db]
+    const dbConfig = isSqlite
+        ? `[db]
+    db.backend=sqlite
+    db.use-native-sql=true
+    db.no-graph-cache=false`
+        : `[db]
+    db.backend=bolt
+    db.use-native-sql=false
     db.no-graph-cache=false
 
     [bolt]
     db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
-    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}
+    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}`;
 
-    [Routing]
-    routing.assumechanvalid=1
-    routing.strictgraphpruning=false
+    // Get esplora URL
+    const getEsploraUrl = () => {
+        if (!isTestnet) {
+            const mainnetUrl = settingsStore?.settings?.esploraMainnet;
+            if (mainnetUrl === 'Custom') {
+                return settingsStore?.settings?.customEsplora;
+            }
+            return mainnetUrl || DEFAULT_ESPLORA_MAINNET;
+        } else {
+            const testnetUrl = settingsStore?.settings?.esploraTestnet;
+            if (testnetUrl === 'Custom') {
+                return settingsStore?.settings?.customEsplora;
+            }
+            return testnetUrl || DEFAULT_ESPLORA_TESTNET;
+        }
+    };
 
-    [Bitcoin]
-    bitcoin.active=1
-    bitcoin.mainnet=${isTestnet ? 0 : 1}
-    bitcoin.testnet=${isTestnet ? 1 : 0}
-    bitcoin.node=neutrino
-    bitcoin.defaultchanconfs=1
-
-    [Neutrino]
+    // Backend-specific configuration
+    const backendConfig = isEsplora
+        ? `[esplora]
+    esplora.url=${getEsploraUrl()}`
+        : `[Neutrino]
     ${
         !isTestnet
             ? settingsStore?.settings?.neutrinoPeersMainnet
@@ -163,7 +175,34 @@ const writeLndConfig = async ({
             : ''
     }
     neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=${persistFilters}
+    neutrino.persistfilters=${persistFilters}`;
+
+    const config = `[Application Options]
+    debuglevel=info
+    maxbackoff=2s
+    sync-freelist=1
+    accept-keysend=1
+    tlsdisableautofill=1
+    maxpendingchannels=1000
+    max-commit-fee-rate-anchors=21
+    accept-positive-inbound-fees=true
+    payments-expiration-grace-period=168h
+    ${rescan ? 'reset-wallet-transactions=true' : ''}
+
+    ${dbConfig}
+
+    [Routing]
+    routing.assumechanvalid=1
+    routing.strictgraphpruning=false
+
+    [Bitcoin]
+    bitcoin.active=1
+    bitcoin.mainnet=${isTestnet ? 0 : 1}
+    bitcoin.testnet=${isTestnet ? 1 : 0}
+    bitcoin.node=${backend}
+    bitcoin.defaultchanconfs=1
+
+    ${backendConfig}
 
     [fee]
     fee.url=${
@@ -253,15 +292,17 @@ export async function initializeLnd({
     lndDir = 'lnd',
     isTestnet,
     rescan,
-    compactDb
+    compactDb,
+    isSqlite
 }: {
     lndDir: string;
     isTestnet?: boolean;
     rescan?: boolean;
     compactDb?: boolean;
+    isSqlite?: boolean;
 }) {
     const { initialize } = lndMobile.index;
-    await writeLndConfig({ lndDir, isTestnet, rescan, compactDb });
+    await writeLndConfig({ lndDir, isTestnet, rescan, compactDb, isSqlite });
     await initialize();
 }
 
@@ -608,7 +649,8 @@ export async function createLndWallet({
         await excludeLndICloudBackup(lndDir);
     }
 
-    await writeLndConfig({ lndDir, isTestnet });
+    // New wallets always use SQLite
+    await writeLndConfig({ lndDir, isTestnet, isSqlite: true });
     await initialize();
 
     let status = await checkStatus();

@@ -26,7 +26,11 @@ export default class EmbeddedNode extends React.Component<
     render() {
         const { navigation, SettingsStore } = this.props;
         const { embeddedLndNetwork, settings }: any = SettingsStore;
-        const { automaticDisasterRecoveryBackup, expressGraphSync } = settings;
+        const {
+            automaticDisasterRecoveryBackup,
+            expressGraphSync,
+            embeddedLndBackend
+        } = settings;
 
         return (
             <Screen>
@@ -125,7 +129,9 @@ export default class EmbeddedNode extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
-                            onPress={() => navigation.navigate('Peers')}
+                            onPress={() =>
+                                navigation.navigate('BlockchainBackend')
+                            }
                         >
                             <ListItem.Content>
                                 <ListItem.Title
@@ -135,9 +141,18 @@ export default class EmbeddedNode extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'general.peers'
-                                    )[0].toUpperCase() +
-                                        localeString('general.peers').slice(1)}
+                                        'views.Settings.EmbeddedNode.BlockchainBackend.title'
+                                    )}
+                                </ListItem.Title>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {embeddedLndBackend === 'esplora'
+                                        ? 'Esplora'
+                                        : 'Neutrino'}
                                 </ListItem.Title>
                             </ListItem.Content>
                             <Icon

@@ -125,11 +125,13 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             nodeSubtitle +=
                 implementationDisplayValue[selectedNode.implementation];
 
-            if (
-                selectedNode.embeddedLndNetwork &&
-                selectedNode.implementation === 'embedded-lnd'
-            ) {
-                nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
+            if (selectedNode.implementation === 'embedded-lnd') {
+                if (selectedNode.embeddedLndNetwork) {
+                    nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
+                }
+                if (!selectedNode.isSqlite) {
+                    nodeSubtitle += ' [Bolt]';
+                }
             }
         }
 

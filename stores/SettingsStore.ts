@@ -46,6 +46,7 @@ export interface Node {
     adminMacaroon?: string;
     embeddedLndNetwork?: string;
     lndDir?: string;
+    isSqlite?: boolean;
 }
 
 interface PrivacySettings {
@@ -186,10 +187,14 @@ export interface Settings {
     bimodalPathfinding: boolean;
     graphSyncPromptNeverAsk: boolean;
     graphSyncPromptIgnoreOnce: boolean;
+    embeddedLndBackend: 'neutrino' | 'esplora';
     dontAllowOtherPeers: boolean;
     neutrinoPeersMainnet: Array<string>;
     neutrinoPeersTestnet: Array<string>;
     zeroConfPeers: Array<string>;
+    esploraMainnet: string;
+    esploraTestnet: string;
+    customEsplora: string;
     rescan: boolean;
     compactDb: boolean;
     recovery: boolean;
@@ -1320,6 +1325,41 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'noad.sathoarder.com'
 ];
 
+export const DEFAULT_ESPLORA_MAINNET = 'https://mempool.space/api';
+export const DEFAULT_ESPLORA_TESTNET = 'https://mempool.space/testnet/api';
+
+export const ESPLORA_MAINNET_KEYS = [
+    {
+        key: 'Mempool.space',
+        value: 'https://mempool.space/api'
+    },
+    {
+        key: 'Blockstream.info',
+        value: 'https://blockstream.info/api'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
+        value: 'Custom'
+    }
+];
+
+export const ESPLORA_TESTNET_KEYS = [
+    {
+        key: 'Mempool.space',
+        value: 'https://mempool.space/testnet/api'
+    },
+    {
+        key: 'Blockstream.info',
+        value: 'https://blockstream.info/testnet/api'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
+        value: 'Custom'
+    }
+];
+
 export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
     // friends
     [
@@ -1424,10 +1464,14 @@ export default class SettingsStore {
         bimodalPathfinding: true,
         graphSyncPromptNeverAsk: false,
         graphSyncPromptIgnoreOnce: false,
+        embeddedLndBackend: 'neutrino',
         dontAllowOtherPeers: false,
         neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
         neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
         zeroConfPeers: [],
+        esploraMainnet: DEFAULT_ESPLORA_MAINNET,
+        esploraTestnet: DEFAULT_ESPLORA_TESTNET,
+        customEsplora: '',
         rescan: false,
         compactDb: false,
         recovery: false,
@@ -1529,6 +1573,7 @@ export default class SettingsStore {
     @observable public adminMacaroon: string;
     @observable public embeddedLndNetwork: string;
     @observable public lndDir?: string;
+    @observable public isSqlite?: boolean;
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
     @observable public lndFolderMissing: boolean = false;
@@ -1694,6 +1739,7 @@ export default class SettingsStore {
             this.adminMacaroon = node.adminMacaroon;
             this.embeddedLndNetwork = node.embeddedLndNetwork;
             this.lndDir = node.lndDir || 'lnd';
+            this.isSqlite = node.isSqlite;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }

@@ -739,6 +739,25 @@ export namespace lnrpc {
         ): Promise<lnrpc.Invoice>;
 
         /**
+         * Calls DeleteCanceledInvoice.
+         * @param request DelCanceledInvoiceReq message or plain object
+         * @param callback Node-style callback called with the error, if any, and DelCanceledInvoiceResp
+         */
+        public deleteCanceledInvoice(
+            request: lnrpc.IDelCanceledInvoiceReq,
+            callback: lnrpc.Lightning.DeleteCanceledInvoiceCallback
+        ): void;
+
+        /**
+         * Calls DeleteCanceledInvoice.
+         * @param request DelCanceledInvoiceReq message or plain object
+         * @returns Promise
+         */
+        public deleteCanceledInvoice(
+            request: lnrpc.IDelCanceledInvoiceReq
+        ): Promise<lnrpc.DelCanceledInvoiceResp>;
+
+        /**
          * Calls DecodePayReq.
          * @param request PayReqString message or plain object
          * @param callback Node-style callback called with the error, if any, and PayReq
@@ -1700,6 +1719,16 @@ export namespace lnrpc {
         ) => void;
 
         /**
+         * Callback as used by {@link lnrpc.Lightning#deleteCanceledInvoice}.
+         * @param error Error, if any
+         * @param [response] DelCanceledInvoiceResp
+         */
+        type DeleteCanceledInvoiceCallback = (
+            error: Error | null,
+            response?: lnrpc.DelCanceledInvoiceResp
+        ) => void;
+
+        /**
          * Callback as used by {@link lnrpc.Lightning#decodePayReq}.
          * @param error Error, if any
          * @param [response] PayReq
@@ -2610,7 +2639,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a SendCustomMessageResponse. */
-    interface ISendCustomMessageResponse {}
+    interface ISendCustomMessageResponse {
+        /** SendCustomMessageResponse status */
+        status?: string | null;
+    }
 
     /** Represents a SendCustomMessageResponse. */
     class SendCustomMessageResponse implements ISendCustomMessageResponse {
@@ -2619,6 +2651,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.ISendCustomMessageResponse);
+
+        /** SendCustomMessageResponse status. */
+        public status: string;
 
         /**
          * Creates a new SendCustomMessageResponse instance using the specified properties.
@@ -3201,6 +3236,12 @@ export namespace lnrpc {
 
         /** GetTransactionsRequest account */
         account?: string | null;
+
+        /** GetTransactionsRequest index_offset */
+        index_offset?: number | null;
+
+        /** GetTransactionsRequest max_transactions */
+        max_transactions?: number | null;
     }
 
     /** Represents a GetTransactionsRequest. */
@@ -3219,6 +3260,12 @@ export namespace lnrpc {
 
         /** GetTransactionsRequest account. */
         public account: string;
+
+        /** GetTransactionsRequest index_offset. */
+        public index_offset: number;
+
+        /** GetTransactionsRequest max_transactions. */
+        public max_transactions: number;
 
         /**
          * Creates a new GetTransactionsRequest instance using the specified properties.
@@ -3320,6 +3367,12 @@ export namespace lnrpc {
     interface ITransactionDetails {
         /** TransactionDetails transactions */
         transactions?: lnrpc.ITransaction[] | null;
+
+        /** TransactionDetails last_index */
+        last_index?: Long | null;
+
+        /** TransactionDetails first_index */
+        first_index?: Long | null;
     }
 
     /** Represents a TransactionDetails. */
@@ -3332,6 +3385,12 @@ export namespace lnrpc {
 
         /** TransactionDetails transactions. */
         public transactions: lnrpc.ITransaction[];
+
+        /** TransactionDetails last_index. */
+        public last_index: Long;
+
+        /** TransactionDetails first_index. */
+        public first_index: Long;
 
         /**
          * Creates a new TransactionDetails instance using the specified properties.
@@ -6774,7 +6833,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a ConnectPeerResponse. */
-    interface IConnectPeerResponse {}
+    interface IConnectPeerResponse {
+        /** ConnectPeerResponse status */
+        status?: string | null;
+    }
 
     /** Represents a ConnectPeerResponse. */
     class ConnectPeerResponse implements IConnectPeerResponse {
@@ -6783,6 +6845,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IConnectPeerResponse);
+
+        /** ConnectPeerResponse status. */
+        public status: string;
 
         /**
          * Creates a new ConnectPeerResponse instance using the specified properties.
@@ -6994,7 +7059,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a DisconnectPeerResponse. */
-    interface IDisconnectPeerResponse {}
+    interface IDisconnectPeerResponse {
+        /** DisconnectPeerResponse status */
+        status?: string | null;
+    }
 
     /** Represents a DisconnectPeerResponse. */
     class DisconnectPeerResponse implements IDisconnectPeerResponse {
@@ -7003,6 +7071,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IDisconnectPeerResponse);
+
+        /** DisconnectPeerResponse status. */
+        public status: string;
 
         /**
          * Creates a new DisconnectPeerResponse instance using the specified properties.
@@ -7122,6 +7193,9 @@ export namespace lnrpc {
 
         /** HTLC forwarding_htlc_index */
         forwarding_htlc_index?: Long | null;
+
+        /** HTLC locked_in */
+        locked_in?: boolean | null;
     }
 
     /** Represents a HTLC. */
@@ -7152,6 +7226,9 @@ export namespace lnrpc {
 
         /** HTLC forwarding_htlc_index. */
         public forwarding_htlc_index: Long;
+
+        /** HTLC locked_in. */
+        public locked_in: boolean;
 
         /**
          * Creates a new HTLC instance using the specified properties.
@@ -8369,6 +8446,9 @@ export namespace lnrpc {
 
         /** ChannelCloseSummary zero_conf_confirmed_scid */
         zero_conf_confirmed_scid?: Long | null;
+
+        /** ChannelCloseSummary custom_channel_data */
+        custom_channel_data?: Uint8Array | null;
     }
 
     /** Represents a ChannelCloseSummary. */
@@ -8423,6 +8503,9 @@ export namespace lnrpc {
 
         /** ChannelCloseSummary zero_conf_confirmed_scid. */
         public zero_conf_confirmed_scid: Long;
+
+        /** ChannelCloseSummary custom_channel_data. */
+        public custom_channel_data: Uint8Array;
 
         /**
          * Creates a new ChannelCloseSummary instance using the specified properties.
@@ -10621,131 +10704,6 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
-    /** Properties of a ConfirmationUpdate. */
-    interface IConfirmationUpdate {
-        /** ConfirmationUpdate block_sha */
-        block_sha?: Uint8Array | null;
-
-        /** ConfirmationUpdate block_height */
-        block_height?: number | null;
-
-        /** ConfirmationUpdate num_confs_left */
-        num_confs_left?: number | null;
-    }
-
-    /** Represents a ConfirmationUpdate. */
-    class ConfirmationUpdate implements IConfirmationUpdate {
-        /**
-         * Constructs a new ConfirmationUpdate.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: lnrpc.IConfirmationUpdate);
-
-        /** ConfirmationUpdate block_sha. */
-        public block_sha: Uint8Array;
-
-        /** ConfirmationUpdate block_height. */
-        public block_height: number;
-
-        /** ConfirmationUpdate num_confs_left. */
-        public num_confs_left: number;
-
-        /**
-         * Creates a new ConfirmationUpdate instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns ConfirmationUpdate instance
-         */
-        public static create(
-            properties?: lnrpc.IConfirmationUpdate
-        ): lnrpc.ConfirmationUpdate;
-
-        /**
-         * Encodes the specified ConfirmationUpdate message. Does not implicitly {@link lnrpc.ConfirmationUpdate.verify|verify} messages.
-         * @param message ConfirmationUpdate message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encode(
-            message: lnrpc.IConfirmationUpdate,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Encodes the specified ConfirmationUpdate message, length delimited. Does not implicitly {@link lnrpc.ConfirmationUpdate.verify|verify} messages.
-         * @param message ConfirmationUpdate message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        public static encodeDelimited(
-            message: lnrpc.IConfirmationUpdate,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Decodes a ConfirmationUpdate message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns ConfirmationUpdate
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decode(
-            reader: $protobuf.Reader | Uint8Array,
-            length?: number
-        ): lnrpc.ConfirmationUpdate;
-
-        /**
-         * Decodes a ConfirmationUpdate message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns ConfirmationUpdate
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        public static decodeDelimited(
-            reader: $protobuf.Reader | Uint8Array
-        ): lnrpc.ConfirmationUpdate;
-
-        /**
-         * Verifies a ConfirmationUpdate message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        public static verify(message: { [k: string]: any }): string | null;
-
-        /**
-         * Creates a ConfirmationUpdate message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns ConfirmationUpdate
-         */
-        public static fromObject(object: {
-            [k: string]: any;
-        }): lnrpc.ConfirmationUpdate;
-
-        /**
-         * Creates a plain object from a ConfirmationUpdate message. Also converts values to other types if specified.
-         * @param message ConfirmationUpdate
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        public static toObject(
-            message: lnrpc.ConfirmationUpdate,
-            options?: $protobuf.IConversionOptions
-        ): { [k: string]: any };
-
-        /**
-         * Converts this ConfirmationUpdate to JSON.
-         * @returns JSON object
-         */
-        public toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the default type url for ConfirmationUpdate
-         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
-         * @returns The default type url
-         */
-        public static getTypeUrl(typeUrlPrefix?: string): string;
-    }
-
     /** Properties of a ChannelOpenUpdate. */
     interface IChannelOpenUpdate {
         /** ChannelOpenUpdate channel_point */
@@ -11417,6 +11375,12 @@ export namespace lnrpc {
 
         /** PendingUpdate output_index */
         output_index?: number | null;
+
+        /** PendingUpdate fee_per_vbyte */
+        fee_per_vbyte?: Long | null;
+
+        /** PendingUpdate local_close_tx */
+        local_close_tx?: boolean | null;
     }
 
     /** Represents a PendingUpdate. */
@@ -11432,6 +11396,12 @@ export namespace lnrpc {
 
         /** PendingUpdate output_index. */
         public output_index: number;
+
+        /** PendingUpdate fee_per_vbyte. */
+        public fee_per_vbyte: Long;
+
+        /** PendingUpdate local_close_tx. */
+        public local_close_tx: boolean;
 
         /**
          * Creates a new PendingUpdate instance using the specified properties.
@@ -11530,7 +11500,10 @@ export namespace lnrpc {
     }
 
     /** Properties of an InstantUpdate. */
-    interface IInstantUpdate {}
+    interface IInstantUpdate {
+        /** InstantUpdate num_pending_htlcs */
+        num_pending_htlcs?: number | null;
+    }
 
     /** Represents an InstantUpdate. */
     class InstantUpdate implements IInstantUpdate {
@@ -11539,6 +11512,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IInstantUpdate);
+
+        /** InstantUpdate num_pending_htlcs. */
+        public num_pending_htlcs: number;
 
         /**
          * Creates a new InstantUpdate instance using the specified properties.
@@ -14506,6 +14482,12 @@ export namespace lnrpc {
 
             /** PendingOpenChannel funding_expiry_blocks */
             funding_expiry_blocks?: number | null;
+
+            /** PendingOpenChannel confirmations_until_active */
+            confirmations_until_active?: number | null;
+
+            /** PendingOpenChannel confirmation_height */
+            confirmation_height?: number | null;
         }
 
         /** Represents a PendingOpenChannel. */
@@ -14532,6 +14514,12 @@ export namespace lnrpc {
 
             /** PendingOpenChannel funding_expiry_blocks. */
             public funding_expiry_blocks: number;
+
+            /** PendingOpenChannel confirmations_until_active. */
+            public confirmations_until_active: number;
+
+            /** PendingOpenChannel confirmation_height. */
+            public confirmation_height: number;
 
             /**
              * Creates a new PendingOpenChannel instance using the specified properties.
@@ -15328,6 +15316,9 @@ export namespace lnrpc {
         /** ChannelEventUpdate fully_resolved_channel */
         fully_resolved_channel?: lnrpc.IChannelPoint | null;
 
+        /** ChannelEventUpdate channel_funding_timeout */
+        channel_funding_timeout?: lnrpc.IChannelPoint | null;
+
         /** ChannelEventUpdate type */
         type?: lnrpc.ChannelEventUpdate.UpdateType | null;
     }
@@ -15358,6 +15349,9 @@ export namespace lnrpc {
         /** ChannelEventUpdate fully_resolved_channel. */
         public fully_resolved_channel?: lnrpc.IChannelPoint | null;
 
+        /** ChannelEventUpdate channel_funding_timeout. */
+        public channel_funding_timeout?: lnrpc.IChannelPoint | null;
+
         /** ChannelEventUpdate type. */
         public type: lnrpc.ChannelEventUpdate.UpdateType;
 
@@ -15368,7 +15362,8 @@ export namespace lnrpc {
             | 'active_channel'
             | 'inactive_channel'
             | 'pending_open_channel'
-            | 'fully_resolved_channel';
+            | 'fully_resolved_channel'
+            | 'channel_funding_timeout';
 
         /**
          * Creates a new ChannelEventUpdate instance using the specified properties.
@@ -15474,7 +15469,8 @@ export namespace lnrpc {
             ACTIVE_CHANNEL = 2,
             INACTIVE_CHANNEL = 3,
             PENDING_OPEN_CHANNEL = 4,
-            FULLY_RESOLVED_CHANNEL = 5
+            FULLY_RESOLVED_CHANNEL = 5,
+            CHANNEL_FUNDING_TIMEOUT = 6
         }
     }
 
@@ -16297,6 +16293,9 @@ export namespace lnrpc {
 
         /** QueryRoutesRequest time_pref */
         time_pref?: number | null;
+
+        /** QueryRoutesRequest outgoing_chan_ids */
+        outgoing_chan_ids?: Long[] | null;
     }
 
     /** Represents a QueryRoutesRequest. */
@@ -16360,6 +16359,9 @@ export namespace lnrpc {
 
         /** QueryRoutesRequest time_pref. */
         public time_pref: number;
+
+        /** QueryRoutesRequest outgoing_chan_ids. */
+        public outgoing_chan_ids: Long[];
 
         /**
          * Creates a new QueryRoutesRequest instance using the specified properties.
@@ -17403,6 +17405,9 @@ export namespace lnrpc {
 
         /** NodeInfoRequest include_channels */
         include_channels?: boolean | null;
+
+        /** NodeInfoRequest include_auth_proof */
+        include_auth_proof?: boolean | null;
     }
 
     /** Represents a NodeInfoRequest. */
@@ -17418,6 +17423,9 @@ export namespace lnrpc {
 
         /** NodeInfoRequest include_channels. */
         public include_channels: boolean;
+
+        /** NodeInfoRequest include_auth_proof. */
+        public include_auth_proof: boolean;
 
         /**
          * Creates a new NodeInfoRequest instance using the specified properties.
@@ -18077,6 +18085,137 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a ChannelAuthProof. */
+    interface IChannelAuthProof {
+        /** ChannelAuthProof node_sig1 */
+        node_sig1?: Uint8Array | null;
+
+        /** ChannelAuthProof bitcoin_sig1 */
+        bitcoin_sig1?: Uint8Array | null;
+
+        /** ChannelAuthProof node_sig2 */
+        node_sig2?: Uint8Array | null;
+
+        /** ChannelAuthProof bitcoin_sig2 */
+        bitcoin_sig2?: Uint8Array | null;
+    }
+
+    /** Represents a ChannelAuthProof. */
+    class ChannelAuthProof implements IChannelAuthProof {
+        /**
+         * Constructs a new ChannelAuthProof.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IChannelAuthProof);
+
+        /** ChannelAuthProof node_sig1. */
+        public node_sig1: Uint8Array;
+
+        /** ChannelAuthProof bitcoin_sig1. */
+        public bitcoin_sig1: Uint8Array;
+
+        /** ChannelAuthProof node_sig2. */
+        public node_sig2: Uint8Array;
+
+        /** ChannelAuthProof bitcoin_sig2. */
+        public bitcoin_sig2: Uint8Array;
+
+        /**
+         * Creates a new ChannelAuthProof instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ChannelAuthProof instance
+         */
+        public static create(
+            properties?: lnrpc.IChannelAuthProof
+        ): lnrpc.ChannelAuthProof;
+
+        /**
+         * Encodes the specified ChannelAuthProof message. Does not implicitly {@link lnrpc.ChannelAuthProof.verify|verify} messages.
+         * @param message ChannelAuthProof message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IChannelAuthProof,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ChannelAuthProof message, length delimited. Does not implicitly {@link lnrpc.ChannelAuthProof.verify|verify} messages.
+         * @param message ChannelAuthProof message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IChannelAuthProof,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a ChannelAuthProof message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ChannelAuthProof
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.ChannelAuthProof;
+
+        /**
+         * Decodes a ChannelAuthProof message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ChannelAuthProof
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.ChannelAuthProof;
+
+        /**
+         * Verifies a ChannelAuthProof message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a ChannelAuthProof message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ChannelAuthProof
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.ChannelAuthProof;
+
+        /**
+         * Creates a plain object from a ChannelAuthProof message. Also converts values to other types if specified.
+         * @param message ChannelAuthProof
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.ChannelAuthProof,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this ChannelAuthProof to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for ChannelAuthProof
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a ChannelEdge. */
     interface IChannelEdge {
         /** ChannelEdge channel_id */
@@ -18105,6 +18244,9 @@ export namespace lnrpc {
 
         /** ChannelEdge custom_records */
         custom_records?: { [k: string]: Uint8Array } | null;
+
+        /** ChannelEdge auth_proof */
+        auth_proof?: lnrpc.IChannelAuthProof | null;
     }
 
     /** Represents a ChannelEdge. */
@@ -18141,6 +18283,9 @@ export namespace lnrpc {
 
         /** ChannelEdge custom_records. */
         public custom_records: { [k: string]: Uint8Array };
+
+        /** ChannelEdge auth_proof. */
+        public auth_proof?: lnrpc.IChannelAuthProof | null;
 
         /**
          * Creates a new ChannelEdge instance using the specified properties.
@@ -18242,6 +18387,9 @@ export namespace lnrpc {
     interface IChannelGraphRequest {
         /** ChannelGraphRequest include_unannounced */
         include_unannounced?: boolean | null;
+
+        /** ChannelGraphRequest include_auth_proof */
+        include_auth_proof?: boolean | null;
     }
 
     /** Represents a ChannelGraphRequest. */
@@ -18254,6 +18402,9 @@ export namespace lnrpc {
 
         /** ChannelGraphRequest include_unannounced. */
         public include_unannounced: boolean;
+
+        /** ChannelGraphRequest include_auth_proof. */
+        public include_auth_proof: boolean;
 
         /**
          * Creates a new ChannelGraphRequest instance using the specified properties.
@@ -18828,6 +18979,9 @@ export namespace lnrpc {
 
         /** ChanInfoRequest chan_point */
         chan_point?: string | null;
+
+        /** ChanInfoRequest include_auth_proof */
+        include_auth_proof?: boolean | null;
     }
 
     /** Represents a ChanInfoRequest. */
@@ -18843,6 +18997,9 @@ export namespace lnrpc {
 
         /** ChanInfoRequest chan_point. */
         public chan_point: string;
+
+        /** ChanInfoRequest include_auth_proof. */
+        public include_auth_proof: boolean;
 
         /**
          * Creates a new ChanInfoRequest instance using the specified properties.
@@ -19328,7 +19485,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a StopResponse. */
-    interface IStopResponse {}
+    interface IStopResponse {
+        /** StopResponse status */
+        status?: string | null;
+    }
 
     /** Represents a StopResponse. */
     class StopResponse implements IStopResponse {
@@ -19337,6 +19497,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IStopResponse);
+
+        /** StopResponse status. */
+        public status: string;
 
         /**
          * Creates a new StopResponse instance using the specified properties.
@@ -21266,6 +21429,9 @@ export namespace lnrpc {
 
         /** BlindedPathConfig node_omission_list */
         node_omission_list?: Uint8Array[] | null;
+
+        /** BlindedPathConfig incoming_channel_list */
+        incoming_channel_list?: Long[] | null;
     }
 
     /** Represents a BlindedPathConfig. */
@@ -21287,6 +21453,9 @@ export namespace lnrpc {
 
         /** BlindedPathConfig node_omission_list. */
         public node_omission_list: Uint8Array[];
+
+        /** BlindedPathConfig incoming_channel_list. */
+        public incoming_channel_list: Long[];
 
         /** BlindedPathConfig _min_num_real_hops. */
         public _min_num_real_hops?: 'min_num_real_hops';
@@ -22349,6 +22518,232 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a DelCanceledInvoiceReq. */
+    interface IDelCanceledInvoiceReq {
+        /** DelCanceledInvoiceReq invoice_hash */
+        invoice_hash?: string | null;
+    }
+
+    /** Represents a DelCanceledInvoiceReq. */
+    class DelCanceledInvoiceReq implements IDelCanceledInvoiceReq {
+        /**
+         * Constructs a new DelCanceledInvoiceReq.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IDelCanceledInvoiceReq);
+
+        /** DelCanceledInvoiceReq invoice_hash. */
+        public invoice_hash: string;
+
+        /**
+         * Creates a new DelCanceledInvoiceReq instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DelCanceledInvoiceReq instance
+         */
+        public static create(
+            properties?: lnrpc.IDelCanceledInvoiceReq
+        ): lnrpc.DelCanceledInvoiceReq;
+
+        /**
+         * Encodes the specified DelCanceledInvoiceReq message. Does not implicitly {@link lnrpc.DelCanceledInvoiceReq.verify|verify} messages.
+         * @param message DelCanceledInvoiceReq message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IDelCanceledInvoiceReq,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DelCanceledInvoiceReq message, length delimited. Does not implicitly {@link lnrpc.DelCanceledInvoiceReq.verify|verify} messages.
+         * @param message DelCanceledInvoiceReq message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IDelCanceledInvoiceReq,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DelCanceledInvoiceReq message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DelCanceledInvoiceReq
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.DelCanceledInvoiceReq;
+
+        /**
+         * Decodes a DelCanceledInvoiceReq message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DelCanceledInvoiceReq
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.DelCanceledInvoiceReq;
+
+        /**
+         * Verifies a DelCanceledInvoiceReq message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DelCanceledInvoiceReq message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DelCanceledInvoiceReq
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.DelCanceledInvoiceReq;
+
+        /**
+         * Creates a plain object from a DelCanceledInvoiceReq message. Also converts values to other types if specified.
+         * @param message DelCanceledInvoiceReq
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.DelCanceledInvoiceReq,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DelCanceledInvoiceReq to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for DelCanceledInvoiceReq
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a DelCanceledInvoiceResp. */
+    interface IDelCanceledInvoiceResp {
+        /** DelCanceledInvoiceResp status */
+        status?: string | null;
+    }
+
+    /** Represents a DelCanceledInvoiceResp. */
+    class DelCanceledInvoiceResp implements IDelCanceledInvoiceResp {
+        /**
+         * Constructs a new DelCanceledInvoiceResp.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IDelCanceledInvoiceResp);
+
+        /** DelCanceledInvoiceResp status. */
+        public status: string;
+
+        /**
+         * Creates a new DelCanceledInvoiceResp instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DelCanceledInvoiceResp instance
+         */
+        public static create(
+            properties?: lnrpc.IDelCanceledInvoiceResp
+        ): lnrpc.DelCanceledInvoiceResp;
+
+        /**
+         * Encodes the specified DelCanceledInvoiceResp message. Does not implicitly {@link lnrpc.DelCanceledInvoiceResp.verify|verify} messages.
+         * @param message DelCanceledInvoiceResp message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IDelCanceledInvoiceResp,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DelCanceledInvoiceResp message, length delimited. Does not implicitly {@link lnrpc.DelCanceledInvoiceResp.verify|verify} messages.
+         * @param message DelCanceledInvoiceResp message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IDelCanceledInvoiceResp,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DelCanceledInvoiceResp message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DelCanceledInvoiceResp
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.DelCanceledInvoiceResp;
+
+        /**
+         * Decodes a DelCanceledInvoiceResp message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DelCanceledInvoiceResp
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.DelCanceledInvoiceResp;
+
+        /**
+         * Verifies a DelCanceledInvoiceResp message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DelCanceledInvoiceResp message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DelCanceledInvoiceResp
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.DelCanceledInvoiceResp;
+
+        /**
+         * Creates a plain object from a DelCanceledInvoiceResp message. Also converts values to other types if specified.
+         * @param message DelCanceledInvoiceResp
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.DelCanceledInvoiceResp,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DelCanceledInvoiceResp to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for DelCanceledInvoiceResp
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** PaymentFailureReason enum. */
     enum PaymentFailureReason {
         FAILURE_REASON_NONE = 0,
@@ -23253,7 +23648,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a DeletePaymentResponse. */
-    interface IDeletePaymentResponse {}
+    interface IDeletePaymentResponse {
+        /** DeletePaymentResponse status */
+        status?: string | null;
+    }
 
     /** Represents a DeletePaymentResponse. */
     class DeletePaymentResponse implements IDeletePaymentResponse {
@@ -23262,6 +23660,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IDeletePaymentResponse);
+
+        /** DeletePaymentResponse status. */
+        public status: string;
 
         /**
          * Creates a new DeletePaymentResponse instance using the specified properties.
@@ -23360,7 +23761,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a DeleteAllPaymentsResponse. */
-    interface IDeleteAllPaymentsResponse {}
+    interface IDeleteAllPaymentsResponse {
+        /** DeleteAllPaymentsResponse status */
+        status?: string | null;
+    }
 
     /** Represents a DeleteAllPaymentsResponse. */
     class DeleteAllPaymentsResponse implements IDeleteAllPaymentsResponse {
@@ -23369,6 +23773,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IDeleteAllPaymentsResponse);
+
+        /** DeleteAllPaymentsResponse status. */
+        public status: string;
 
         /**
          * Creates a new DeleteAllPaymentsResponse instance using the specified properties.
@@ -23592,7 +23999,10 @@ export namespace lnrpc {
     }
 
     /** Properties of an AbandonChannelResponse. */
-    interface IAbandonChannelResponse {}
+    interface IAbandonChannelResponse {
+        /** AbandonChannelResponse status */
+        status?: string | null;
+    }
 
     /** Represents an AbandonChannelResponse. */
     class AbandonChannelResponse implements IAbandonChannelResponse {
@@ -23601,6 +24011,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IAbandonChannelResponse);
+
+        /** AbandonChannelResponse status. */
+        public status: string;
 
         /**
          * Creates a new AbandonChannelResponse instance using the specified properties.
@@ -24917,6 +25330,9 @@ export namespace lnrpc {
 
         /** PolicyUpdateRequest inbound_fee */
         inbound_fee?: lnrpc.IInboundFee | null;
+
+        /** PolicyUpdateRequest create_missing_edge */
+        create_missing_edge?: boolean | null;
     }
 
     /** Represents a PolicyUpdateRequest. */
@@ -24956,6 +25372,9 @@ export namespace lnrpc {
 
         /** PolicyUpdateRequest inbound_fee. */
         public inbound_fee?: lnrpc.IInboundFee | null;
+
+        /** PolicyUpdateRequest create_missing_edge. */
+        public create_missing_edge: boolean;
 
         /** PolicyUpdateRequest scope. */
         public scope?: 'global' | 'chan_point';
@@ -25489,6 +25908,12 @@ export namespace lnrpc {
 
         /** ForwardingEvent peer_alias_out */
         peer_alias_out?: string | null;
+
+        /** ForwardingEvent incoming_htlc_id */
+        incoming_htlc_id?: Long | null;
+
+        /** ForwardingEvent outgoing_htlc_id */
+        outgoing_htlc_id?: Long | null;
     }
 
     /** Represents a ForwardingEvent. */
@@ -25534,6 +25959,18 @@ export namespace lnrpc {
 
         /** ForwardingEvent peer_alias_out. */
         public peer_alias_out: string;
+
+        /** ForwardingEvent incoming_htlc_id. */
+        public incoming_htlc_id?: Long | null;
+
+        /** ForwardingEvent outgoing_htlc_id. */
+        public outgoing_htlc_id?: Long | null;
+
+        /** ForwardingEvent _incoming_htlc_id. */
+        public _incoming_htlc_id?: 'incoming_htlc_id';
+
+        /** ForwardingEvent _outgoing_htlc_id. */
+        public _outgoing_htlc_id?: 'outgoing_htlc_id';
 
         /**
          * Creates a new ForwardingEvent instance using the specified properties.
@@ -26563,7 +27000,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a RestoreBackupResponse. */
-    interface IRestoreBackupResponse {}
+    interface IRestoreBackupResponse {
+        /** RestoreBackupResponse num_restored */
+        num_restored?: number | null;
+    }
 
     /** Represents a RestoreBackupResponse. */
     class RestoreBackupResponse implements IRestoreBackupResponse {
@@ -26572,6 +27012,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IRestoreBackupResponse);
+
+        /** RestoreBackupResponse num_restored. */
+        public num_restored: number;
 
         /**
          * Creates a new RestoreBackupResponse instance using the specified properties.
@@ -26777,7 +27220,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a VerifyChanBackupResponse. */
-    interface IVerifyChanBackupResponse {}
+    interface IVerifyChanBackupResponse {
+        /** VerifyChanBackupResponse chan_points */
+        chan_points?: string[] | null;
+    }
 
     /** Represents a VerifyChanBackupResponse. */
     class VerifyChanBackupResponse implements IVerifyChanBackupResponse {
@@ -26786,6 +27232,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IVerifyChanBackupResponse);
+
+        /** VerifyChanBackupResponse chan_points. */
+        public chan_points: string[];
 
         /**
          * Creates a new VerifyChanBackupResponse instance using the specified properties.
@@ -28636,6 +29085,9 @@ export namespace lnrpc {
 
         /** CheckMacPermRequest fullMethod */
         fullMethod?: string | null;
+
+        /** CheckMacPermRequest check_default_perms_from_full_method */
+        check_default_perms_from_full_method?: boolean | null;
     }
 
     /** Represents a CheckMacPermRequest. */
@@ -28654,6 +29106,9 @@ export namespace lnrpc {
 
         /** CheckMacPermRequest fullMethod. */
         public fullMethod: string;
+
+        /** CheckMacPermRequest check_default_perms_from_full_method. */
+        public check_default_perms_from_full_method: boolean;
 
         /**
          * Creates a new CheckMacPermRequest instance using the specified properties.
@@ -28889,6 +29344,9 @@ export namespace lnrpc {
 
         /** RPCMiddlewareRequest msg_id */
         msg_id?: Long | null;
+
+        /** RPCMiddlewareRequest metadata_pairs */
+        metadata_pairs?: { [k: string]: lnrpc.IMetadataValues } | null;
     }
 
     /** Represents a RPCMiddlewareRequest. */
@@ -28922,6 +29380,9 @@ export namespace lnrpc {
 
         /** RPCMiddlewareRequest msg_id. */
         public msg_id: Long;
+
+        /** RPCMiddlewareRequest metadata_pairs. */
+        public metadata_pairs: { [k: string]: lnrpc.IMetadataValues };
 
         /** RPCMiddlewareRequest intercept_type. */
         public intercept_type?:
@@ -29020,6 +29481,119 @@ export namespace lnrpc {
 
         /**
          * Gets the default type url for RPCMiddlewareRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a MetadataValues. */
+    interface IMetadataValues {
+        /** MetadataValues values */
+        values?: string[] | null;
+    }
+
+    /** Represents a MetadataValues. */
+    class MetadataValues implements IMetadataValues {
+        /**
+         * Constructs a new MetadataValues.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IMetadataValues);
+
+        /** MetadataValues values. */
+        public values: string[];
+
+        /**
+         * Creates a new MetadataValues instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns MetadataValues instance
+         */
+        public static create(
+            properties?: lnrpc.IMetadataValues
+        ): lnrpc.MetadataValues;
+
+        /**
+         * Encodes the specified MetadataValues message. Does not implicitly {@link lnrpc.MetadataValues.verify|verify} messages.
+         * @param message MetadataValues message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IMetadataValues,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified MetadataValues message, length delimited. Does not implicitly {@link lnrpc.MetadataValues.verify|verify} messages.
+         * @param message MetadataValues message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IMetadataValues,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a MetadataValues message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns MetadataValues
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.MetadataValues;
+
+        /**
+         * Decodes a MetadataValues message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns MetadataValues
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.MetadataValues;
+
+        /**
+         * Verifies a MetadataValues message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a MetadataValues message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns MetadataValues
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.MetadataValues;
+
+        /**
+         * Creates a plain object from a MetadataValues message. Also converts values to other types if specified.
+         * @param message MetadataValues
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.MetadataValues,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this MetadataValues to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for MetadataValues
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */
@@ -38252,6 +38826,25 @@ export namespace routerrpc {
         public xDeleteLocalChanAliases(
             request: routerrpc.IDeleteAliasesRequest
         ): Promise<routerrpc.DeleteAliasesResponse>;
+
+        /**
+         * Calls XFindBaseLocalChanAlias.
+         * @param request FindBaseAliasRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and FindBaseAliasResponse
+         */
+        public xFindBaseLocalChanAlias(
+            request: routerrpc.IFindBaseAliasRequest,
+            callback: routerrpc.Router.XFindBaseLocalChanAliasCallback
+        ): void;
+
+        /**
+         * Calls XFindBaseLocalChanAlias.
+         * @param request FindBaseAliasRequest message or plain object
+         * @returns Promise
+         */
+        public xFindBaseLocalChanAlias(
+            request: routerrpc.IFindBaseAliasRequest
+        ): Promise<routerrpc.FindBaseAliasResponse>;
     }
 
     namespace Router {
@@ -38453,6 +39046,16 @@ export namespace routerrpc {
         type XDeleteLocalChanAliasesCallback = (
             error: Error | null,
             response?: routerrpc.DeleteAliasesResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link routerrpc.Router#xFindBaseLocalChanAlias}.
+         * @param error Error, if any
+         * @param [response] FindBaseAliasResponse
+         */
+        type XFindBaseLocalChanAliasCallback = (
+            error: Error | null,
+            response?: routerrpc.FindBaseAliasResponse
         ) => void;
     }
 
@@ -44197,6 +44800,232 @@ export namespace routerrpc {
          */
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
+
+    /** Properties of a FindBaseAliasRequest. */
+    interface IFindBaseAliasRequest {
+        /** FindBaseAliasRequest alias */
+        alias?: Long | null;
+    }
+
+    /** Represents a FindBaseAliasRequest. */
+    class FindBaseAliasRequest implements IFindBaseAliasRequest {
+        /**
+         * Constructs a new FindBaseAliasRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: routerrpc.IFindBaseAliasRequest);
+
+        /** FindBaseAliasRequest alias. */
+        public alias: Long;
+
+        /**
+         * Creates a new FindBaseAliasRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns FindBaseAliasRequest instance
+         */
+        public static create(
+            properties?: routerrpc.IFindBaseAliasRequest
+        ): routerrpc.FindBaseAliasRequest;
+
+        /**
+         * Encodes the specified FindBaseAliasRequest message. Does not implicitly {@link routerrpc.FindBaseAliasRequest.verify|verify} messages.
+         * @param message FindBaseAliasRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: routerrpc.IFindBaseAliasRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified FindBaseAliasRequest message, length delimited. Does not implicitly {@link routerrpc.FindBaseAliasRequest.verify|verify} messages.
+         * @param message FindBaseAliasRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: routerrpc.IFindBaseAliasRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a FindBaseAliasRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns FindBaseAliasRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.FindBaseAliasRequest;
+
+        /**
+         * Decodes a FindBaseAliasRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns FindBaseAliasRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.FindBaseAliasRequest;
+
+        /**
+         * Verifies a FindBaseAliasRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a FindBaseAliasRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns FindBaseAliasRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.FindBaseAliasRequest;
+
+        /**
+         * Creates a plain object from a FindBaseAliasRequest message. Also converts values to other types if specified.
+         * @param message FindBaseAliasRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: routerrpc.FindBaseAliasRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this FindBaseAliasRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for FindBaseAliasRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a FindBaseAliasResponse. */
+    interface IFindBaseAliasResponse {
+        /** FindBaseAliasResponse base */
+        base?: Long | null;
+    }
+
+    /** Represents a FindBaseAliasResponse. */
+    class FindBaseAliasResponse implements IFindBaseAliasResponse {
+        /**
+         * Constructs a new FindBaseAliasResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: routerrpc.IFindBaseAliasResponse);
+
+        /** FindBaseAliasResponse base. */
+        public base: Long;
+
+        /**
+         * Creates a new FindBaseAliasResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns FindBaseAliasResponse instance
+         */
+        public static create(
+            properties?: routerrpc.IFindBaseAliasResponse
+        ): routerrpc.FindBaseAliasResponse;
+
+        /**
+         * Encodes the specified FindBaseAliasResponse message. Does not implicitly {@link routerrpc.FindBaseAliasResponse.verify|verify} messages.
+         * @param message FindBaseAliasResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: routerrpc.IFindBaseAliasResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified FindBaseAliasResponse message, length delimited. Does not implicitly {@link routerrpc.FindBaseAliasResponse.verify|verify} messages.
+         * @param message FindBaseAliasResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: routerrpc.IFindBaseAliasResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a FindBaseAliasResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns FindBaseAliasResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.FindBaseAliasResponse;
+
+        /**
+         * Decodes a FindBaseAliasResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns FindBaseAliasResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.FindBaseAliasResponse;
+
+        /**
+         * Verifies a FindBaseAliasResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a FindBaseAliasResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns FindBaseAliasResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.FindBaseAliasResponse;
+
+        /**
+         * Creates a plain object from a FindBaseAliasResponse message. Also converts values to other types if specified.
+         * @param message FindBaseAliasResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: routerrpc.FindBaseAliasResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this FindBaseAliasResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for FindBaseAliasResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
 }
 
 /** Namespace signrpc. */
@@ -49485,7 +50314,10 @@ export namespace walletrpc {
     }
 
     /** Properties of a ReleaseOutputResponse. */
-    interface IReleaseOutputResponse {}
+    interface IReleaseOutputResponse {
+        /** ReleaseOutputResponse status */
+        status?: string | null;
+    }
 
     /** Represents a ReleaseOutputResponse. */
     class ReleaseOutputResponse implements IReleaseOutputResponse {
@@ -49494,6 +50326,9 @@ export namespace walletrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: walletrpc.IReleaseOutputResponse);
+
+        /** ReleaseOutputResponse status. */
+        public status: string;
 
         /**
          * Creates a new ReleaseOutputResponse instance using the specified properties.
@@ -52287,7 +53122,10 @@ export namespace walletrpc {
     }
 
     /** Properties of an ImportPublicKeyResponse. */
-    interface IImportPublicKeyResponse {}
+    interface IImportPublicKeyResponse {
+        /** ImportPublicKeyResponse status */
+        status?: string | null;
+    }
 
     /** Represents an ImportPublicKeyResponse. */
     class ImportPublicKeyResponse implements IImportPublicKeyResponse {
@@ -52296,6 +53134,9 @@ export namespace walletrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: walletrpc.IImportPublicKeyResponse);
+
+        /** ImportPublicKeyResponse status. */
+        public status: string;
 
         /**
          * Creates a new ImportPublicKeyResponse instance using the specified properties.
@@ -53917,6 +54758,9 @@ export namespace walletrpc {
 
         /** PendingSweep deadline_height */
         deadline_height?: number | null;
+
+        /** PendingSweep maturity_height */
+        maturity_height?: number | null;
     }
 
     /** Represents a PendingSweep. */
@@ -53968,6 +54812,9 @@ export namespace walletrpc {
 
         /** PendingSweep deadline_height. */
         public deadline_height: number;
+
+        /** PendingSweep maturity_height. */
+        public maturity_height: number;
 
         /**
          * Creates a new PendingSweep instance using the specified properties.
@@ -54307,6 +55154,9 @@ export namespace walletrpc {
 
         /** BumpFeeRequest budget */
         budget?: Long | null;
+
+        /** BumpFeeRequest deadline_delta */
+        deadline_delta?: number | null;
     }
 
     /** Represents a BumpFeeRequest. */
@@ -54337,6 +55187,9 @@ export namespace walletrpc {
 
         /** BumpFeeRequest budget. */
         public budget: Long;
+
+        /** BumpFeeRequest deadline_delta. */
+        public deadline_delta: number;
 
         /**
          * Creates a new BumpFeeRequest instance using the specified properties.
@@ -54563,6 +55416,9 @@ export namespace walletrpc {
 
         /** BumpForceCloseFeeRequest budget */
         budget?: Long | null;
+
+        /** BumpForceCloseFeeRequest target_conf */
+        target_conf?: number | null;
     }
 
     /** Represents a BumpForceCloseFeeRequest. */
@@ -54587,6 +55443,9 @@ export namespace walletrpc {
 
         /** BumpForceCloseFeeRequest budget. */
         public budget: Long;
+
+        /** BumpForceCloseFeeRequest target_conf. */
+        public target_conf: number;
 
         /**
          * Creates a new BumpForceCloseFeeRequest instance using the specified properties.
@@ -55281,7 +56140,10 @@ export namespace walletrpc {
     }
 
     /** Properties of a LabelTransactionResponse. */
-    interface ILabelTransactionResponse {}
+    interface ILabelTransactionResponse {
+        /** LabelTransactionResponse status */
+        status?: string | null;
+    }
 
     /** Represents a LabelTransactionResponse. */
     class LabelTransactionResponse implements ILabelTransactionResponse {
@@ -55290,6 +56152,9 @@ export namespace walletrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: walletrpc.ILabelTransactionResponse);
+
+        /** LabelTransactionResponse status. */
+        public status: string;
 
         /**
          * Creates a new LabelTransactionResponse instance using the specified properties.
@@ -55410,6 +56275,9 @@ export namespace walletrpc {
         /** FundPsbtRequest sat_per_vbyte */
         sat_per_vbyte?: Long | null;
 
+        /** FundPsbtRequest sat_per_kw */
+        sat_per_kw?: Long | null;
+
         /** FundPsbtRequest account */
         account?: string | null;
 
@@ -55424,6 +56292,15 @@ export namespace walletrpc {
 
         /** FundPsbtRequest coin_selection_strategy */
         coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
+
+        /** FundPsbtRequest max_fee_ratio */
+        max_fee_ratio?: number | null;
+
+        /** FundPsbtRequest custom_lock_id */
+        custom_lock_id?: Uint8Array | null;
+
+        /** FundPsbtRequest lock_expiration_seconds */
+        lock_expiration_seconds?: Long | null;
     }
 
     /** Represents a FundPsbtRequest. */
@@ -55449,6 +56326,9 @@ export namespace walletrpc {
         /** FundPsbtRequest sat_per_vbyte. */
         public sat_per_vbyte?: Long | null;
 
+        /** FundPsbtRequest sat_per_kw. */
+        public sat_per_kw?: Long | null;
+
         /** FundPsbtRequest account. */
         public account: string;
 
@@ -55464,11 +56344,20 @@ export namespace walletrpc {
         /** FundPsbtRequest coin_selection_strategy. */
         public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
+        /** FundPsbtRequest max_fee_ratio. */
+        public max_fee_ratio: number;
+
+        /** FundPsbtRequest custom_lock_id. */
+        public custom_lock_id: Uint8Array;
+
+        /** FundPsbtRequest lock_expiration_seconds. */
+        public lock_expiration_seconds: Long;
+
         /** FundPsbtRequest template. */
         public template?: 'psbt' | 'raw' | 'coin_select';
 
         /** FundPsbtRequest fees. */
-        public fees?: 'target_conf' | 'sat_per_vbyte';
+        public fees?: 'target_conf' | 'sat_per_vbyte' | 'sat_per_kw';
 
         /**
          * Creates a new FundPsbtRequest instance using the specified properties.
