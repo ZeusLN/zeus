@@ -142,6 +142,8 @@ interface WalletConfigurationState {
     customMailboxServerError: boolean;
     pairingPhraseError: boolean;
     nostrWalletConnectUrlError: boolean;
+    hostProtocolError: boolean;
+    hostOnionError: boolean;
 }
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
@@ -209,7 +211,9 @@ export default class WalletConfiguration extends React.Component<
         portError: false,
         customMailboxServerError: false,
         pairingPhraseError: false,
-        nostrWalletConnectUrlError: false
+        nostrWalletConnectUrlError: false,
+        hostProtocolError: false,
+        hostOnionError: false
     };
 
     scrollViewRef = React.createRef<ScrollView>();
@@ -797,7 +801,9 @@ export default class WalletConfiguration extends React.Component<
             portError,
             customMailboxServerError,
             pairingPhraseError,
-            nostrWalletConnectUrlError
+            nostrWalletConnectUrlError,
+            hostProtocolError,
+            hostOnionError
         } = this.state;
         const {
             loading,
@@ -1141,31 +1147,31 @@ export default class WalletConfiguration extends React.Component<
                                 onPress={
                                     (!node || !node.photo) && !photo
                                         ? () =>
-                                              navigation.navigate(
-                                                  'SetWalletPicture',
-                                                  { implementation }
-                                              )
+                                            navigation.navigate(
+                                                'SetWalletPicture',
+                                                { implementation }
+                                            )
                                         : () => {
-                                              if (node) {
-                                                  this.setState({
-                                                      node: {
-                                                          ...node,
-                                                          photo: undefined
-                                                      }
-                                                  });
-                                              }
-                                              this.setState(
-                                                  {
-                                                      photo: undefined,
-                                                      saved: false
-                                                  },
-                                                  () => {
-                                                      node
-                                                          ? (node.photo = '')
-                                                          : null;
-                                                  }
-                                              );
-                                          }
+                                            if (node) {
+                                                this.setState({
+                                                    node: {
+                                                        ...node,
+                                                        photo: undefined
+                                                    }
+                                                });
+                                            }
+                                            this.setState(
+                                                {
+                                                    photo: undefined,
+                                                    saved: false
+                                                },
+                                                () => {
+                                                    node
+                                                        ? (node.photo = '')
+                                                        : null;
+                                                }
+                                            );
+                                        }
                                 }
                             >
                                 <View
@@ -1569,350 +1575,411 @@ export default class WalletConfiguration extends React.Component<
                         )}
                         {(implementation === 'lnd' ||
                             implementation === 'cln-rest') && (
-                            <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.serverAddress'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'localhost'}
-                                    textColor={
-                                        hostError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    autoCorrect={false}
-                                    autoCapitalize="none"
-                                    value={host}
-                                    onChangeText={(text: string) => {
-                                        this.setState({ hostError: false });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (text.length < (host?.length || 0)) {
-                                            this.setState({
-                                                host: text,
-                                                saved: false
-                                            });
-                                            return;
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.serverAddress'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'localhost'}
+                                        textColor={
+                                            hostError
+                                                ? themeColor('error')
+                                                : themeColor('text')
                                         }
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        value={host}
+                                        onChangeText={(text: string) => {
+                                            this.setState({ hostError: false });
 
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (host?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text.replace(
-                                                new RegExp(
-                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                    'g'
-                                                ),
-                                                ''
-                                            );
-                                            this.setState({
-                                                host: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
+                                            // Allow backspace/delete operations without validation
+                                            if (text.length < (host?.length || 0)) {
+                                                this.setState({
+                                                    host: text,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
 
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            host: trimmedText,
-                                            hostError:
-                                                !ValidationUtils.isValidServerAddress(
+                                            // For single character additions
+                                            if (
+                                                text.length ===
+                                                (host?.length || 0) + 1
+                                            ) {
+                                                const cleanedText = text.replace(
+                                                    new RegExp(
+                                                        `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                        'g'
+                                                    ),
+                                                    ''
+                                                );
+                                                this.setState({
+                                                    host: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            // For pasted content
+                                            const trimmedText = text.trim();
+                                            const protocolError =
+                                                ValidationUtils.hasProtocolPrefix(
                                                     trimmedText
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (host) {
+                                                );
+                                            const onionError =
+                                                trimmedText.includes('.onion') &&
+                                                !ValidationUtils.isValidOnionAddress(
+                                                    trimmedText
+                                                );
+
                                             this.setState({
+                                                host: trimmedText,
                                                 hostError:
                                                     !ValidationUtils.isValidServerAddress(
+                                                        trimmedText
+                                                    ),
+                                                hostProtocolError: protocolError,
+                                                hostOnionError: onionError,
+                                                saved: false
+                                            });
+                                        }}
+                                        onBlur={() => {
+                                            if (host) {
+                                                const protocolError =
+                                                    ValidationUtils.hasProtocolPrefix(
                                                         host
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
+                                                    );
+                                                const onionError =
+                                                    host.includes('.onion') &&
+                                                    !ValidationUtils.isValidOnionAddress(
+                                                        host
+                                                    );
 
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.restPort'
+                                                this.setState({
+                                                    hostError:
+                                                        !ValidationUtils.isValidServerAddress(
+                                                            host
+                                                        ),
+                                                    hostProtocolError:
+                                                        protocolError,
+                                                    hostOnionError: onionError
+                                                });
+                                            }
+                                        }}
+                                        error={
+                                            hostError ||
+                                            hostProtocolError ||
+                                            hostOnionError
+                                        }
+                                        locked={loading}
+                                    />
+
+                                    {hostProtocolError && (
+                                        <ErrorMessage
+                                            fontSize={14}
+                                            mainStyle={{ top: 0, marginBottom: 5 }}
+                                            message={localeString(
+                                                'views.Settings.AddEditNode.errorProtocolPrefix'
+                                            )}
+                                        />
                                     )}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'443/8080'}
-                                    textColor={
-                                        portError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    value={port}
-                                    onChangeText={(text: string) => {
-                                        this.setState({ portError: false });
 
-                                        // Allow backspace/delete operations without validation
-                                        if (text.length < (port?.length || 0)) {
-                                            this.setState({
-                                                port: text,
-                                                saved: false
-                                            });
-                                            return;
+                                    {hostOnionError && (
+                                        <ErrorMessage
+                                            fontSize={14}
+                                            mainStyle={{ top: 0, marginBottom: 5 }}
+                                            message={localeString(
+                                                'views.Settings.AddEditNode.errorInvalidOnion'
+                                            )}
+                                        />
+                                    )}
+
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.restPort'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'443/8080'}
+                                        textColor={
+                                            portError
+                                                ? themeColor('error')
+                                                : themeColor('text')
                                         }
+                                        value={port}
+                                        onChangeText={(text: string) => {
+                                            this.setState({ portError: false });
 
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (port?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text
-                                                .replace(/[^0-9]/g, '')
-                                                .replace(/^0+/, '');
-                                            this.setState({
-                                                port: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
+                                            // Allow backspace/delete operations without validation
+                                            if (text.length < (port?.length || 0)) {
+                                                this.setState({
+                                                    port: text,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
 
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            port: trimmedText,
-                                            portError:
-                                                !ValidationUtils.isValidPort(
-                                                    trimmedText
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (port) {
+                                            // For single character additions
+                                            if (
+                                                text.length ===
+                                                (port?.length || 0) + 1
+                                            ) {
+                                                const cleanedText = text
+                                                    .replace(/[^0-9]/g, '')
+                                                    .replace(/^0+/, '');
+                                                this.setState({
+                                                    port: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            // For pasted content
+                                            const trimmedText = text.trim();
                                             this.setState({
+                                                port: trimmedText,
                                                 portError:
                                                     !ValidationUtils.isValidPort(
-                                                        port
-                                                    )
+                                                        trimmedText
+                                                    ),
+                                                saved: false
                                             });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
+                                        }}
+                                        onBlur={() => {
+                                            if (port) {
+                                                this.setState({
+                                                    portError:
+                                                        !ValidationUtils.isValidPort(
+                                                            port
+                                                        )
+                                                });
+                                            }
+                                        }}
+                                        error={portError}
+                                        locked={loading}
+                                    />
 
-                                {implementation === 'cln-rest' ? (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.rune'
+                                    {portError && (
+                                        <ErrorMessage
+                                            fontSize={14}
+                                            mainStyle={{ top: 0, marginBottom: 5 }}
+                                            message={localeString(
+                                                'views.Settings.AddEditNode.errorInvalidPort'
                                             )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            <TextInput
-                                                placeholder={'Lt1c...'}
-                                                textColor={
-                                                    runeError
-                                                        ? themeColor('error')
-                                                        : themeColor('text')
-                                                }
-                                                autoCorrect={false}
-                                                autoCapitalize="none"
-                                                value={rune}
-                                                secureTextEntry={
-                                                    this.state.hidden
-                                                }
+                                        />
+                                    )}
+
+                                    {implementation === 'cln-rest' ? (
+                                        <>
+                                            <Text
                                                 style={{
-                                                    flex: 1,
-                                                    marginRight: 15
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
                                                 }}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        runeError: false
-                                                    });
-
-                                                    // Allow backspace/delete operations without validation
-                                                    if (
-                                                        text.length <
-                                                        (rune?.length || 0)
-                                                    ) {
-                                                        this.setState({
-                                                            rune: text,
-                                                            saved: false
-                                                        });
-                                                        return;
-                                                    }
-
-                                                    // For single character additions
-                                                    if (
-                                                        text.length ===
-                                                        (rune?.length || 0) + 1
-                                                    ) {
-                                                        const cleanedText =
-                                                            text.replace(
-                                                                /[^A-Za-z0-9\-_=]/g,
-                                                                ''
-                                                            );
-                                                        this.setState({
-                                                            rune: cleanedText,
-                                                            saved: false
-                                                        });
-                                                        return;
-                                                    }
-
-                                                    // For pasted content
-                                                    const trimmedText =
-                                                        text.trim();
-                                                    this.setState({
-                                                        rune: trimmedText,
-                                                        runeError:
-                                                            !ValidationUtils.hasValidRuneChars(
-                                                                trimmedText
-                                                            ),
-                                                        saved: false
-                                                    });
-                                                }}
-                                                locked={loading}
-                                            />
-                                            <ShowHideToggle
-                                                onPress={() =>
-                                                    this.setState({
-                                                        hidden: !this.state
-                                                            .hidden
-                                                    })
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.macaroon'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            <TextInput
-                                                placeholder={'0A...'}
-                                                textColor={
-                                                    macaroonHexError
-                                                        ? themeColor('error')
-                                                        : themeColor('text')
-                                                }
-                                                autoCorrect={false}
-                                                autoCapitalize="none"
-                                                value={macaroonHex}
-                                                secureTextEntry={
-                                                    this.state.hidden
-                                                }
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.rune'
+                                                )}
+                                            </Text>
+                                            <View
                                                 style={{
-                                                    flex: 1,
-                                                    marginRight: 15
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
                                                 }}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        macaroonHexError: false
-                                                    });
-
-                                                    // Allow backspace/delete operations without validation
-                                                    if (
-                                                        text.length <
-                                                        (macaroonHex?.length ||
-                                                            0)
-                                                    ) {
+                                            >
+                                                <TextInput
+                                                    placeholder={'Lt1c...'}
+                                                    textColor={
+                                                        runeError
+                                                            ? themeColor('error')
+                                                            : themeColor('text')
+                                                    }
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    value={rune}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
                                                         this.setState({
-                                                            macaroonHex: text,
+                                                            runeError: false
+                                                        });
+
+                                                        // Allow backspace/delete operations without validation
+                                                        if (
+                                                            text.length <
+                                                            (rune?.length || 0)
+                                                        ) {
+                                                            this.setState({
+                                                                rune: text,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For single character additions
+                                                        if (
+                                                            text.length ===
+                                                            (rune?.length || 0) + 1
+                                                        ) {
+                                                            const cleanedText =
+                                                                text.replace(
+                                                                    /[^A-Za-z0-9\-_=]/g,
+                                                                    ''
+                                                                );
+                                                            this.setState({
+                                                                rune: cleanedText,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For pasted content
+                                                        const trimmedText =
+                                                            text.trim();
+                                                        this.setState({
+                                                            rune: trimmedText,
+                                                            runeError:
+                                                                !ValidationUtils.hasValidRuneChars(
+                                                                    trimmedText
+                                                                ),
                                                             saved: false
                                                         });
-                                                        return;
+                                                    }}
+                                                    locked={loading}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
                                                     }
+                                                />
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.macaroon'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    placeholder={'0A...'}
+                                                    textColor={
+                                                        macaroonHexError
+                                                            ? themeColor('error')
+                                                            : themeColor('text')
+                                                    }
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    value={macaroonHex}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            macaroonHexError: false
+                                                        });
 
-                                                    // For single character additions
-                                                    if (
-                                                        text.length ===
-                                                        (macaroonHex?.length ||
-                                                            0) +
+                                                        // Allow backspace/delete operations without validation
+                                                        if (
+                                                            text.length <
+                                                            (macaroonHex?.length ||
+                                                                0)
+                                                        ) {
+                                                            this.setState({
+                                                                macaroonHex: text,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For single character additions
+                                                        if (
+                                                            text.length ===
+                                                            (macaroonHex?.length ||
+                                                                0) +
                                                             1
-                                                    ) {
-                                                        const cleanedText =
-                                                            text.replace(
-                                                                /[^0-9a-fA-F]/g,
-                                                                ''
-                                                            );
+                                                        ) {
+                                                            const cleanedText =
+                                                                text.replace(
+                                                                    /[^0-9a-fA-F]/g,
+                                                                    ''
+                                                                );
+                                                            this.setState({
+                                                                macaroonHex:
+                                                                    cleanedText,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For pasted content
+                                                        const trimmedText =
+                                                            text.trim();
                                                         this.setState({
                                                             macaroonHex:
-                                                                cleanedText,
+                                                                trimmedText,
+                                                            macaroonHexError:
+                                                                !ValidationUtils.hasValidMacaroonChars(
+                                                                    trimmedText
+                                                                ),
                                                             saved: false
                                                         });
-                                                        return;
+                                                    }}
+                                                    locked={loading}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
                                                     }
-
-                                                    // For pasted content
-                                                    const trimmedText =
-                                                        text.trim();
-                                                    this.setState({
-                                                        macaroonHex:
-                                                            trimmedText,
-                                                        macaroonHexError:
-                                                            !ValidationUtils.hasValidMacaroonChars(
-                                                                trimmedText
-                                                            ),
-                                                        saved: false
-                                                    });
-                                                }}
-                                                locked={loading}
-                                            />
-                                            <ShowHideToggle
-                                                onPress={() =>
-                                                    this.setState({
-                                                        hidden: !this.state
-                                                            .hidden
-                                                    })
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                )}
-                            </>
-                        )}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </>
+                            )}
 
                         {implementation === 'lightning-node-connect' && (
                             <>
@@ -1967,7 +2034,7 @@ export default class WalletConfiguration extends React.Component<
                                                     text.length ===
                                                     (customMailboxServer?.length ||
                                                         0) +
-                                                        1
+                                                    1
                                                 ) {
                                                     if (text.includes('::'))
                                                         return;
@@ -2292,11 +2359,11 @@ export default class WalletConfiguration extends React.Component<
                                             title={
                                                 embeddedLndNetwork === 'mainnet'
                                                     ? localeString(
-                                                          'views.Settings.NodeConfiguration.createMainnetWallet'
-                                                      )
+                                                        'views.Settings.NodeConfiguration.createMainnetWallet'
+                                                    )
                                                     : localeString(
-                                                          'views.Settings.NodeConfiguration.createTestnetWallet'
-                                                      )
+                                                        'views.Settings.NodeConfiguration.createTestnetWallet'
+                                                    )
                                             }
                                             onPress={async () => {
                                                 await this.createNewWallet(
@@ -2315,11 +2382,11 @@ export default class WalletConfiguration extends React.Component<
                                             title={
                                                 embeddedLndNetwork === 'mainnet'
                                                     ? localeString(
-                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                      )
+                                                        'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                    )
                                                     : localeString(
-                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
-                                                      )
+                                                        'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                    )
                                             }
                                             onPress={() =>
                                                 navigation.navigate(
@@ -2365,10 +2432,10 @@ export default class WalletConfiguration extends React.Component<
                                             !certVerification &&
                                             !enableTor &&
                                             implementation !==
-                                                'lightning-node-connect' &&
+                                            'lightning-node-connect' &&
                                             implementation !== 'embedded-lnd' &&
                                             implementation !==
-                                                'nostr-wallet-connect'
+                                            'nostr-wallet-connect'
                                         ) {
                                             this.setState({
                                                 showCertModal: true
@@ -2503,11 +2570,11 @@ export default class WalletConfiguration extends React.Component<
                                 title={
                                     deletionAwaitingConfirmation
                                         ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
+                                            'views.Settings.AddEditNode.tapToConfirm'
+                                        )
                                         : localeString(
-                                              'views.Settings.WalletConfiguration.deleteWallet'
-                                          )
+                                            'views.Settings.WalletConfiguration.deleteWallet'
+                                        )
                                 }
                                 onPress={() => {
                                     if (!deletionAwaitingConfirmation) {
@@ -2577,7 +2644,7 @@ export default class WalletConfiguration extends React.Component<
                                             (BalanceStore.confirmedBlockchainBalance !==
                                                 0 ||
                                                 BalanceStore.unconfirmedBlockchainBalance !==
-                                                    0)
+                                                0)
                                         ) {
                                             Alert.alert(
                                                 localeString('general.warning'),
