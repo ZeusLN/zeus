@@ -483,6 +483,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (connecting) {
                 // Helper to check if error is folder missing
                 const isFolderMissingError = (error: any): boolean => {
+                    // Skip folder missing detection during recovery - folder may not exist yet
+                    // and errors during recovery should not trigger the modal
+                    if (recovery) return false;
+
                     const msg =
                         error?.message ||
                         error?.toString?.() ||
@@ -496,10 +500,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return (
                         msg === LND_FOLDER_MISSING_ERROR ||
                         msg.includes("doesn't exist") ||
+                        msg.includes('doesn\u2019t exist') || // curly apostrophe
                         msg.includes('does not exist') ||
-                        msg.includes('No such file or directory') ||
-                        msg.includes('folder') ||
-                        msg.includes('directory')
+                        msg.includes('No such file or directory')
                     );
                 };
 
@@ -547,12 +550,25 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                     console.log('lndDir', lndDir);
 
-                    await initializeLnd({
-                        lndDir: lndDir || 'lnd',
-                        isTestnet: embeddedLndNetwork === 'Testnet',
-                        rescan,
-                        compactDb
-                    });
+                    try {
+                        await initializeLnd({
+                            lndDir: lndDir || 'lnd',
+                            isTestnet: embeddedLndNetwork === 'Testnet',
+                            rescan,
+                            compactDb
+                        });
+                    } catch (initError: any) {
+                        // During recovery, initializeLnd may fail because createLndWallet
+                        // already set up the directories and config - that's OK, continue
+                        if (recovery) {
+                            console.log(
+                                'initializeLnd failed during recovery (expected):',
+                                initError?.message
+                            );
+                        } else {
+                            throw initError;
+                        }
+                    }
                 } catch (error: any) {
                     console.log(
                         'embedded-lnd startup error:',
@@ -603,7 +619,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         lndDir: lndDir || 'lnd',
                         walletPassword: walletPassword || '',
                         isTorEnabled: embeddedTor,
-                        isTestnet: embeddedLndNetwork === 'Testnet'
+                        isTestnet: embeddedLndNetwork === 'Testnet',
+                        isRecovery: recovery
                     });
                 } catch (error: any) {
                     console.log('startLnd error:', error?.message);
@@ -741,8 +758,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     });
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
-                } catch (e) {
-                    console.error('recover error', e);
+                } catch (recoverError) {
+                    console.error('recover error', recoverError);
                 }
             } else {
                 if (SettingsStore.settings.automaticDisasterRecoveryBackup)

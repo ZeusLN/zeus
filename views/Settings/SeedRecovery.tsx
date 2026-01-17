@@ -400,16 +400,21 @@ export default class SeedRecovery extends React.PureComponent<
                 const { wallet, seed, randomBase64 }: any = response;
 
                 if (wallet && wallet.admin_macaroon) {
-                    this.setState({
-                        adminMacaroon: wallet.admin_macaroon,
-                        seedPhrase: seed.cipher_seed_mnemonic,
-                        walletPassword: randomBase64,
-                        embeddedLndNetwork:
-                            network.charAt(0).toUpperCase() + network.slice(1),
-                        lndDir
-                    });
-
-                    this.saveWalletConfiguration(recoveryCipherSeed);
+                    this.setState(
+                        {
+                            adminMacaroon: wallet.admin_macaroon,
+                            seedPhrase: seed.cipher_seed_mnemonic,
+                            walletPassword: randomBase64,
+                            embeddedLndNetwork:
+                                network.charAt(0).toUpperCase() +
+                                network.slice(1),
+                            lndDir
+                        },
+                        () => {
+                            // Use callback to ensure state is updated before saving
+                            this.saveWalletConfiguration(recoveryCipherSeed);
+                        }
+                    );
                 } else {
                     this.setState({
                         loading: false,
