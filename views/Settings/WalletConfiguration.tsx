@@ -1596,56 +1596,11 @@ export default class WalletConfiguration extends React.Component<
                                         autoCapitalize="none"
                                         value={host}
                                         onChangeText={(text: string) => {
-                                            this.setState({ hostError: false });
-
-                                            // Allow backspace/delete operations without validation
-                                            if (text.length < (host?.length || 0)) {
-                                                this.setState({
-                                                    host: text,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For single character additions
-                                            if (
-                                                text.length ===
-                                                (host?.length || 0) + 1
-                                            ) {
-                                                const cleanedText = text.replace(
-                                                    new RegExp(
-                                                        `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                        'g'
-                                                    ),
-                                                    ''
-                                                );
-                                                this.setState({
-                                                    host: cleanedText,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For pasted content
-                                            const trimmedText = text.trim();
-                                            const protocolError =
-                                                ValidationUtils.hasProtocolPrefix(
-                                                    trimmedText
-                                                );
-                                            const onionError =
-                                                trimmedText.includes('.onion') &&
-                                                !ValidationUtils.isValidOnionAddress(
-                                                    trimmedText
-                                                );
-
                                             this.setState({
-                                                host: trimmedText,
-                                                hostError:
-                                                    !ValidationUtils.isValidServerAddress(
-                                                        trimmedText
-                                                    ),
-                                                hostProtocolError: protocolError,
-                                                hostOnionError: onionError,
+                                                host: text,
+                                                hostError: false,
+                                                hostProtocolError: false,
+                                                hostOnionError: false,
                                                 saved: false
                                             });
                                         }}
@@ -1719,40 +1674,9 @@ export default class WalletConfiguration extends React.Component<
                                         }
                                         value={port}
                                         onChangeText={(text: string) => {
-                                            this.setState({ portError: false });
-
-                                            // Allow backspace/delete operations without validation
-                                            if (text.length < (port?.length || 0)) {
-                                                this.setState({
-                                                    port: text,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For single character additions
-                                            if (
-                                                text.length ===
-                                                (port?.length || 0) + 1
-                                            ) {
-                                                const cleanedText = text
-                                                    .replace(/[^0-9]/g, '')
-                                                    .replace(/^0+/, '');
-                                                this.setState({
-                                                    port: cleanedText,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For pasted content
-                                            const trimmedText = text.trim();
                                             this.setState({
-                                                port: trimmedText,
-                                                portError:
-                                                    !ValidationUtils.isValidPort(
-                                                        trimmedText
-                                                    ),
+                                                port: text,
+                                                portError: false,
                                                 saved: false
                                             });
                                         }}
@@ -1820,50 +1744,22 @@ export default class WalletConfiguration extends React.Component<
                                                         text: string
                                                     ) => {
                                                         this.setState({
-                                                            runeError: false
-                                                        });
-
-                                                        // Allow backspace/delete operations without validation
-                                                        if (
-                                                            text.length <
-                                                            (rune?.length || 0)
-                                                        ) {
-                                                            this.setState({
-                                                                rune: text,
-                                                                saved: false
-                                                            });
-                                                            return;
-                                                        }
-
-                                                        // For single character additions
-                                                        if (
-                                                            text.length ===
-                                                            (rune?.length || 0) + 1
-                                                        ) {
-                                                            const cleanedText =
-                                                                text.replace(
-                                                                    /[^A-Za-z0-9\-_=]/g,
-                                                                    ''
-                                                                );
-                                                            this.setState({
-                                                                rune: cleanedText,
-                                                                saved: false
-                                                            });
-                                                            return;
-                                                        }
-
-                                                        // For pasted content
-                                                        const trimmedText =
-                                                            text.trim();
-                                                        this.setState({
-                                                            rune: trimmedText,
-                                                            runeError:
-                                                                !ValidationUtils.hasValidRuneChars(
-                                                                    trimmedText
-                                                                ),
+                                                            rune: text,
+                                                            runeError: false,
                                                             saved: false
                                                         });
                                                     }}
+                                                    onBlur={() => {
+                                                        if (rune) {
+                                                            this.setState({
+                                                                runeError:
+                                                                    !ValidationUtils.hasValidRuneChars(
+                                                                        rune
+                                                                    )
+                                                            });
+                                                        }
+                                                    }}
+                                                    error={runeError}
                                                     locked={loading}
                                                 />
                                                 <ShowHideToggle
@@ -1916,66 +1812,36 @@ export default class WalletConfiguration extends React.Component<
                                                         text: string
                                                     ) => {
                                                         this.setState({
-                                                            macaroonHexError: false
-                                                        });
-
-                                                        // Allow backspace/delete operations without validation
-                                                        if (
-                                                            text.length <
-                                                            (macaroonHex?.length ||
-                                                                0)
-                                                        ) {
-                                                            this.setState({
-                                                                macaroonHex: text,
-                                                                saved: false
-                                                            });
-                                                            return;
-                                                        }
-
-                                                        // For single character additions
-                                                        if (
-                                                            text.length ===
-                                                            (macaroonHex?.length ||
-                                                                0) +
-                                                            1
-                                                        ) {
-                                                            const cleanedText =
-                                                                text.replace(
-                                                                    /[^0-9a-fA-F]/g,
-                                                                    ''
-                                                                );
-                                                            this.setState({
-                                                                macaroonHex:
-                                                                    cleanedText,
-                                                                saved: false
-                                                            });
-                                                            return;
-                                                        }
-
-                                                        // For pasted content
-                                                        const trimmedText =
-                                                            text.trim();
-                                                        this.setState({
-                                                            macaroonHex:
-                                                                trimmedText,
-                                                            macaroonHexError:
-                                                                !ValidationUtils.hasValidMacaroonChars(
-                                                                    trimmedText
-                                                                ),
+                                                            macaroonHex: text,
+                                                            macaroonHexError: false,
                                                             saved: false
                                                         });
                                                     }}
+                                                    onBlur={() => {
+                                                        if (macaroonHex) {
+                                                            this.setState({
+                                                                macaroonHexError:
+                                                                    !ValidationUtils.hasValidMacaroonChars(
+                                                                        macaroonHex
+                                                                    )
+                                                            });
+                                                        }
+                                                    }}
                                                     locked={loading}
                                                 />
-                                                <ShowHideToggle
-                                                    onPress={() =>
-                                                        this.setState({
-                                                            hidden: !this.state
-                                                                .hidden
-                                                        })
-                                                    }
-                                                />
                                             </View>
+                                            {macaroonHexError && (
+                                                <ErrorMessage
+                                                    fontSize={14}
+                                                    mainStyle={{
+                                                        top: 0,
+                                                        marginBottom: 5
+                                                    }}
+                                                    message={localeString(
+                                                        'views.Settings.AddEditNode.errorInvalidMacaroon'
+                                                    )}
+                                                />
+                                            )}
                                         </>
                                     )}
                                 </>
@@ -2011,64 +1877,9 @@ export default class WalletConfiguration extends React.Component<
                                             value={customMailboxServer}
                                             onChangeText={(text: string) => {
                                                 this.setState({
+                                                    customMailboxServer: text,
                                                     customMailboxServerError:
-                                                        false
-                                                });
-
-                                                // Allow backspace/delete operations without validation
-                                                if (
-                                                    text.length <
-                                                    (customMailboxServer?.length ||
-                                                        0)
-                                                ) {
-                                                    this.setState({
-                                                        customMailboxServer:
-                                                            text,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For single character additions
-                                                if (
-                                                    text.length ===
-                                                    (customMailboxServer?.length ||
-                                                        0) +
-                                                    1
-                                                ) {
-                                                    if (text.includes('::'))
-                                                        return;
-
-                                                    const cleanedText =
-                                                        text.replace(
-                                                            new RegExp(
-                                                                `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                                'g'
-                                                            ),
-                                                            ''
-                                                        );
-                                                    this.setState({
-                                                        customMailboxServer:
-                                                            cleanedText,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For pasted content
-                                                const trimmedText = text.trim();
-                                                this.setState({
-                                                    customMailboxServer:
-                                                        trimmedText,
-                                                    customMailboxServerError:
-                                                        !ValidationUtils.isValidServerAddress(
-                                                            trimmedText,
-                                                            {
-                                                                allowPort: true,
-                                                                requireHttps:
-                                                                    true
-                                                            }
-                                                        ),
+                                                        false,
                                                     saved: false
                                                 });
                                             }}
@@ -2125,67 +1936,26 @@ export default class WalletConfiguration extends React.Component<
                                         }}
                                         onChangeText={(text: string) => {
                                             this.setState({
-                                                pairingPhraseError: false
-                                            });
-
-                                            // Allow backspace/delete operations without validation
-                                            if (
-                                                text.length <
-                                                (pairingPhrase?.length || 0)
-                                            ) {
-                                                this.setState({
-                                                    pairingPhrase: text,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For single character additions
-                                            if (
-                                                text.length ===
-                                                (pairingPhrase?.length || 0) + 1
-                                            ) {
-                                                if (text === ' ') return;
-                                                if (text.includes('  ')) return;
-
-                                                const cleanedText =
-                                                    text.replace(
-                                                        /[^a-zA-Z\s]/g,
-                                                        ''
-                                                    );
-                                                this.setState({
-                                                    pairingPhrase: cleanedText,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For pasted content
-                                            const normalizedPhrase = text
-                                                .trim()
-                                                .replace(/\s+/g, ' ');
-                                            this.setState({
-                                                pairingPhrase: normalizedPhrase,
-                                                pairingPhraseError:
-                                                    !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                        normalizedPhrase
-                                                    ),
+                                                pairingPhrase: text,
+                                                pairingPhraseError: false,
                                                 saved: false
                                             });
                                         }}
                                         onBlur={() => {
-                                            const normalizedPhrase =
-                                                pairingPhrase
-                                                    ?.trim()
-                                                    .replace(/\s+/g, ' ');
-                                            this.setState({
-                                                pairingPhrase: normalizedPhrase,
-                                                pairingPhraseError:
-                                                    !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                        normalizedPhrase
-                                                    ),
-                                                saved: false
-                                            });
+                                            if (pairingPhrase) {
+                                                const normalizedPhrase =
+                                                    pairingPhrase
+                                                        .trim()
+                                                        .replace(/\s+/g, ' ');
+                                                this.setState({
+                                                    pairingPhrase:
+                                                        normalizedPhrase,
+                                                    pairingPhraseError:
+                                                        !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                            normalizedPhrase
+                                                        )
+                                                });
+                                            }
                                         }}
                                         locked={loading}
                                     />
