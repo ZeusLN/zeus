@@ -713,8 +713,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             await BalanceStore.getCombinedBalance(false);
             ChannelsStore.getChannelsWithPolling().then(() => {
                 // Check for sweep to self-custody threshold after channels are online
-                if (connecting && settings?.ecash?.enableCashu) {
+                if (settings?.ecash?.enableCashu) {
                     CashuStore.checkAndSweepMints();
+                    // Check Cashu balance for upgrade prompts after channels are loaded
+                    CashuStore.checkAndShowUpgradeModal(
+                        0,
+                        CashuStore.totalBalanceSats || 0
+                    );
                 }
             });
 
@@ -888,14 +893,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 );
             }
         }
-        if (implementation === 'embedded-lnd' && settings?.ecash?.enableCashu) {
-            // Check Cashu balance for upgrade prompts
-            CashuStore.checkAndShowUpgradeModal(
-                0,
-                CashuStore.totalBalanceSats || 0
-            );
-        }
-
         // only navigate to initial url after connection and main calls are made
         if (
             this.state.initialLoad &&
