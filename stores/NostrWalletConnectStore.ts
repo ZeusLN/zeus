@@ -1379,11 +1379,11 @@ export default class NostrWalletConnectStore {
                             'stores.NostrWalletConnectStore.zeusWallet'
                         ),
                     color: nodeInfo?.color || '#3399FF',
-                    pubkey: nodeInfo?.identity_pubkey,
+                    pubkey: nodeInfo?.identity_pubkey || '',
                     network,
-                    block_height: nodeInfo?.block_height,
-                    block_hash: nodeInfo?.block_hash,
-                    methods: connection.permissions,
+                    block_height: nodeInfo?.block_height || 0,
+                    block_hash: nodeInfo?.block_hash || '',
+                    methods: connection.permissions || [],
                     notifications: NostrConnectUtils.getNotifications()
                 },
                 error: undefined
