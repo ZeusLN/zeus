@@ -663,7 +663,7 @@ export default class WalletHeader extends React.Component<
                             >
                                 {!connecting && loading && (
                                     <View style={{ paddingRight: 15 }}>
-                                        <LoadingIndicator size={35} />
+                                        <LoadingIndicator size={31} />
                                     </View>
                                 )}
                                 {!connecting && nwcloading && (
