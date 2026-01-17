@@ -597,6 +597,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 ].map((index: number) => {
                                                     return (
                                                         <RecoveryLabel
+                                                            key={index}
                                                             type="mnemonicWord"
                                                             index={index}
                                                             text={
@@ -621,6 +622,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 ].map((index: number) => {
                                                     return (
                                                         <RecoveryLabel
+                                                            key={index}
                                                             type="mnemonicWord"
                                                             index={index}
                                                             text={
