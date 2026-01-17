@@ -222,21 +222,26 @@ export default class Payment extends BaseModel {
             const totalMsat = succeeded.reduce((sum: number, htlc: any) => {
                 let htlcAmountMsat = 0;
                 const route = htlc.route;
-                const firstHop = route?.hops?.[0];
+                const hops = route?.hops;
+                const lastHop = hops?.[hops.length - 1];
 
-                // Prefer total_amt_msat from the route when available
-                if (route?.total_amt_msat !== undefined) {
-                    htlcAmountMsat = Number(route.total_amt_msat);
-                    // Fallback to total_amt (sats) on the route
+                // Use the last hop's forwarded amount (actual payment without fees)
+                if (lastHop?.amt_to_forward_msat !== undefined) {
+                    htlcAmountMsat = Number(lastHop.amt_to_forward_msat);
+                } else if (lastHop?.amt_to_forward !== undefined) {
+                    htlcAmountMsat = Number(lastHop.amt_to_forward) * 1000;
+                }
+                // Fallback to route total minus fees if no hops available
+                else if (route?.total_amt_msat !== undefined) {
+                    const feesMsat = route.total_fees_msat
+                        ? Number(route.total_fees_msat)
+                        : 0;
+                    htlcAmountMsat = Number(route.total_amt_msat) - feesMsat;
                 } else if (route?.total_amt !== undefined) {
-                    htlcAmountMsat = Number(route.total_amt) * 1000;
-                    // Use hop-level amounts if route totals are missing
-                } else if (firstHop?.amt_msat !== undefined) {
-                    htlcAmountMsat = Number(firstHop.amt_msat);
-                } else if (firstHop?.amt_to_forward_msat !== undefined) {
-                    htlcAmountMsat = Number(firstHop.amt_to_forward_msat);
-                } else if (firstHop?.amt_to_forward !== undefined) {
-                    htlcAmountMsat = Number(firstHop.amt_to_forward) * 1000;
+                    const feesSat = route.total_fees
+                        ? Number(route.total_fees)
+                        : 0;
+                    htlcAmountMsat = (Number(route.total_amt) - feesSat) * 1000;
                 }
 
                 return sum + htlcAmountMsat;
