@@ -300,7 +300,7 @@ export default class NeutrinoPeers extends React.Component<
                                             </TouchableOpacity>
                                         </View>
 
-                                        <View style={{ width: 50, height: 60 }}>
+                                        <View style={{ width: 60, height: 60 }}>
                                             <Button
                                                 icon={{
                                                     name: 'plus',
@@ -429,7 +429,7 @@ export default class NeutrinoPeers extends React.Component<
                                                         style={{
                                                             alignSelf:
                                                                 'flex-end',
-                                                            width: 50,
+                                                            width: 60,
                                                             height: 60
                                                         }}
                                                     >
