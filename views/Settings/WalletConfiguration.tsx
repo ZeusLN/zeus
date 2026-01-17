@@ -1829,6 +1829,13 @@ export default class WalletConfiguration extends React.Component<
                                                     }}
                                                     locked={loading}
                                                 />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state.hidden
+                                                        })
+                                                    }
+                                                />
                                             </View>
                                             {macaroonHexError && (
                                                 <ErrorMessage
