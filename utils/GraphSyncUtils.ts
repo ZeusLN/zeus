@@ -80,6 +80,12 @@ export const checkGraphSyncBeforePayment = (
         return true;
     }
 
+    // Only show prompt on mainnet, not testnet
+    const isMainnet = settingsStore.embeddedLndNetwork === 'Mainnet';
+    if (!isMainnet) {
+        return true;
+    }
+
     const isGraphSyncEnabled = settings.expressGraphSync === true;
     if (isGraphSyncEnabled) {
         return true;
