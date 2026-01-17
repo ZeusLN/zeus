@@ -286,20 +286,22 @@ export async function startLnd({
     lndDir = 'lnd',
     walletPassword,
     isTorEnabled = false,
-    isTestnet = false
+    isTestnet = false,
+    isRecovery = false
 }: {
     lndDir: string;
     walletPassword: string;
     isTorEnabled: boolean;
     isTestnet: boolean;
+    isRecovery?: boolean;
 }) {
     const { checkStatus, startLnd, decodeState, subscribeState } =
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
     // Check if LND folder exists before starting (iOS issue: keychain data persists after uninstall)
-    // Skip this check during wallet creation (when walletPassword is empty)
-    if (Platform.OS === 'ios' && walletPassword) {
+    // Skip this check during wallet creation (when walletPassword is empty) or recovery (folder doesn't exist yet)
+    if (Platform.OS === 'ios' && walletPassword && !isRecovery) {
         try {
             const folderExists = await checkLndFolderExists(lndDir);
             if (!folderExists) {

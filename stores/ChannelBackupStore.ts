@@ -173,9 +173,10 @@ export default class ChannelBackupStore {
                 this.error_msg = '';
                 this.loading = false;
             });
-        } catch (e: any) {
+        } catch (err: any) {
+            const errorMsg = errorToUserFriendly(err);
             runInAction(() => {
-                this.error_msg = errorToUserFriendly(e);
+                this.error_msg = errorMsg;
                 this.loading = false;
             });
 
