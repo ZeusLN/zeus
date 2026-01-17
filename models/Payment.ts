@@ -219,35 +219,41 @@ export default class Payment extends BaseModel {
                     htlc.status === lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED
             );
 
-            const totalMsat = succeeded.reduce((sum: number, htlc: any) => {
-                let htlcAmountMsat = 0;
+            const totalMsat = succeeded.reduce((sum: BigNumber, htlc: any) => {
+                let htlcAmountMsat = new BigNumber(0);
                 const route = htlc.route;
                 const hops = route?.hops;
                 const lastHop = hops?.[hops.length - 1];
 
                 // Use the last hop's forwarded amount (actual payment without fees)
                 if (lastHop?.amt_to_forward_msat !== undefined) {
-                    htlcAmountMsat = Number(lastHop.amt_to_forward_msat);
+                    htlcAmountMsat = new BigNumber(lastHop.amt_to_forward_msat);
                 } else if (lastHop?.amt_to_forward !== undefined) {
-                    htlcAmountMsat = Number(lastHop.amt_to_forward) * 1000;
+                    htlcAmountMsat = new BigNumber(
+                        lastHop.amt_to_forward
+                    ).times(1000);
                 }
                 // Fallback to route total minus fees if no hops available
                 else if (route?.total_amt_msat !== undefined) {
                     const feesMsat = route.total_fees_msat
-                        ? Number(route.total_fees_msat)
-                        : 0;
-                    htlcAmountMsat = Number(route.total_amt_msat) - feesMsat;
+                        ? new BigNumber(route.total_fees_msat)
+                        : new BigNumber(0);
+                    htlcAmountMsat = new BigNumber(route.total_amt_msat).minus(
+                        feesMsat
+                    );
                 } else if (route?.total_amt !== undefined) {
                     const feesSat = route.total_fees
-                        ? Number(route.total_fees)
-                        : 0;
-                    htlcAmountMsat = (Number(route.total_amt) - feesSat) * 1000;
+                        ? new BigNumber(route.total_fees)
+                        : new BigNumber(0);
+                    htlcAmountMsat = new BigNumber(route.total_amt)
+                        .minus(feesSat)
+                        .times(1000);
                 }
 
-                return sum + htlcAmountMsat;
-            }, 0);
+                return sum.plus(htlcAmountMsat);
+            }, new BigNumber(0));
 
-            return totalMsat ? totalMsat / 1000 : 0;
+            return !totalMsat.isZero() ? totalMsat.div(1000).toNumber() : 0;
         }
 
         return this.amount_msat
