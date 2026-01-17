@@ -80,8 +80,9 @@ export default class ZeroConfPeers extends React.Component<
                                     style={{ flex: 1 }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    numberOfLines={1}
                                 />
-                                <View style={{ width: 50, height: 60 }}>
+                                <View style={{ width: 60, height: 60 }}>
                                     <Button
                                         icon={{
                                             name: 'plus',
