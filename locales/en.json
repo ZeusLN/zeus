@@ -2029,5 +2029,22 @@
     "androidNotification.shutdown": "Shutdown",
     "backends.NWC.permissionDenied": "Permission denied for this operation",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
-    "androidNotification.nwcShutdown": "Stop Service"
+    "androidNotification.nwcShutdown": "Stop Service",
+    "views.Swaps.intro.title": "Swaps",
+    "views.Swaps.intro.description": "Swaps allow you to move funds between on-chain and Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.button": "Get Started",
+    "views.Swaps.title": "Swaps",
+    "views.Swaps.create": "Create Swap",
+    "views.Swaps.rescueKey": "Rescue Key",
+    "views.Swaps.rescueKey.modal.text1": "Before you can use swaps, you need to create a rescue key.",
+    "views.Swaps.rescueKey.modal.text2": "This key is used to recover your funds if something goes wrong during a swap.",
+    "views.Swaps.rescueKey.modal.text3": "Make sure to back up this key in a safe place.",
+    "views.Swaps.rescueKey.create": "Create Rescue Key",
+    "views.Swaps.rescueKey.restore": "Restore Rescue Key",
+    "views.Swaps.SwapsPane.noSwaps": "No swaps yet",
+    "views.Swaps.SwapsPane.restoreSwaps": "Restore Swaps",
+    "views.Swaps.SwapsPane.imported": "Imported",
+    "views.SwapDetails.swapId": "Swap ID",
+    "views.SwapDetails.expectedAmount": "Expected Amount",
+    "views.SwapDetails.onchainAmount": "On-chain Amount"
 }

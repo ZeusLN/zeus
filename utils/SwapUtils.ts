@@ -12,6 +12,7 @@ export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
 export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
+export const SWAPS_INTRO_SEEN = 'swaps-intro-seen';
 
 export const calculateReceiveAmount = (
     sendAmount: BigNumber,
@@ -21,11 +22,11 @@ export const calculateReceiveAmount = (
 ): BigNumber => {
     const receiveAmount = reverse
         ? sendAmount
-              .minus(bigCeil(sendAmount.times(serviceFee).div(100)))
-              .minus(minerFee)
+            .minus(bigCeil(sendAmount.times(serviceFee).div(100)))
+            .minus(minerFee)
         : sendAmount
-              .minus(minerFee)
-              .div(new BigNumber(1).plus(new BigNumber(serviceFee).div(100)));
+            .minus(minerFee)
+            .div(new BigNumber(1).plus(new BigNumber(serviceFee).div(100)));
 
     return BigNumber.maximum(bigFloor(receiveAmount), 0);
 };
@@ -79,25 +80,25 @@ export const calculateSendAmount = (
 
     return reverse
         ? bigCeil(
-              receiveAmount
-                  .plus(minerFee)
-                  .div(
-                      new BigNumber(1).minus(new BigNumber(serviceFee).div(100))
-                  )
-          )
+            receiveAmount
+                .plus(minerFee)
+                .div(
+                    new BigNumber(1).minus(new BigNumber(serviceFee).div(100))
+                )
+        )
         : bigCeil(
-              // ensure enough is sent
-              receiveAmount
-                  .plus(
-                      bigCeil(
-                          // service fee is on receiveAmount for submarine
-                          receiveAmount.times(
-                              new BigNumber(serviceFee).div(100)
-                          )
-                      )
-                  )
-                  .plus(minerFee)
-          );
+            // ensure enough is sent
+            receiveAmount
+                .plus(
+                    bigCeil(
+                        // service fee is on receiveAmount for submarine
+                        receiveAmount.times(
+                            new BigNumber(serviceFee).div(100)
+                        )
+                    )
+                )
+                .plus(minerFee)
+        );
 };
 
 export const calculateLimit = (
@@ -108,10 +109,10 @@ export const calculateLimit = (
 ): number => {
     return !reverse
         ? calculateSendAmount(
-              new BigNumber(limit),
-              serviceFeePct,
-              minerFee,
-              reverse
-          ).toNumber()
+            new BigNumber(limit),
+            serviceFeePct,
+            minerFee,
+            reverse
+        ).toNumber()
         : limit;
 };

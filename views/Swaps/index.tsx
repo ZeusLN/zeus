@@ -38,7 +38,8 @@ import {
     calculateServiceFeeOnSend,
     calculateSendAmount,
     calculateLimit,
-    SWAPS_RESCUE_KEY
+    SWAPS_RESCUE_KEY,
+    SWAPS_INTRO_SEEN
 } from '../../utils/SwapUtils';
 
 import SwapStore from '../../stores/SwapStore';
@@ -95,6 +96,7 @@ interface SwapState {
     lastUsedKey?: number;
     seedPhrase?: string[];
     isModalVisible: boolean;
+    showIntroModal: boolean;
     showRescueKeyBtn: boolean;
     enableLSP: boolean;
     flowLspNotConfigured: boolean;
@@ -135,6 +137,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         lastUsedKey: 0,
         seedPhrase: [],
         isModalVisible: false,
+        showIntroModal: false,
         showRescueKeyBtn: false,
         enableLSP: true,
         flowLspNotConfigured: true
@@ -160,8 +163,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFeeBigNum = this.state.reverse
             ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
+                info?.fees?.minerFees?.lockup || 0
+            )
             : new BigNumber(info?.fees?.minerFees || 0);
         const networkFee = networkFeeBigNum.toNumber();
 
@@ -235,13 +238,20 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const checkAndShowModal = async () => {
             if (!SwapStore.loading) {
+                const introSeen = await Storage.getItem(SWAPS_INTRO_SEEN);
                 const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+
                 if (mnemonic) {
+                    // User has rescue key, don't show any modals
                     this.setState({
                         showRescueKeyBtn: true,
                         seedPhrase: mnemonic.split(' ')
                     });
+                } else if (!introSeen) {
+                    // First time user - show intro modal
+                    this.setState({ showIntroModal: true });
                 } else {
+                    // Intro seen but no rescue key - show rescue key modal
                     this.setState({ isModalVisible: true });
                 }
             } else {
@@ -341,8 +351,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     const fiatEntry =
                         fiat && fiatRates
                             ? fiatRates.filter(
-                                  (entry: any) => entry.code === fiat
-                              )[0]
+                                (entry: any) => entry.code === fiat
+                            )[0]
                             : null;
                     const rate =
                         fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
@@ -353,8 +363,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     const serviceFeePct = info?.fees?.percentage || 0;
                     const networkFeeBigNum = initialReverse
                         ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                              info?.fees?.minerFees?.lockup || 0
-                          )
+                            info?.fees?.minerFees?.lockup || 0
+                        )
                         : new BigNumber(info?.fees?.minerFees || 0);
                     const networkFee = networkFeeBigNum.toNumber();
 
@@ -464,6 +474,80 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 paramsProcessed: false
             },
             () => this.checkIsValid()
+        );
+    };
+
+    renderIntroModal = () => {
+        const { showIntroModal } = this.state;
+
+        return (
+            <ModalBox
+                isOpen={showIntroModal}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        showIntroModal: false
+                    });
+                }}
+                position="center"
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('background'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: font('marlideBold'),
+                                marginBottom: 12,
+                                fontSize: 32,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.Swaps.intro.title')}
+                        </Text>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('text'),
+                                marginBottom: 20,
+                                fontSize: 18,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.Swaps.intro.description')}
+                        </Text>
+
+                        <Button
+                            title={localeString('views.Swaps.intro.button')}
+                            onPress={async () => {
+                                // Mark intro as seen
+                                await Storage.setItem(SWAPS_INTRO_SEEN, 'true');
+
+                                // Close intro modal and show rescue key modal
+                                this.setState({
+                                    showIntroModal: false,
+                                    isModalVisible: true
+                                });
+                            }}
+                            tertiary
+                        />
+                    </View>
+                </View>
+            </ModalBox>
         );
     };
 
@@ -618,8 +702,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFeeBigNum = reverse
             ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
+                info?.fees?.minerFees?.lockup || 0
+            )
             : new BigNumber(info?.fees?.minerFees || 0);
         const networkFee = networkFeeBigNum.toNumber();
 
@@ -694,6 +778,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         return (
             <Screen>
+                {this.renderIntroModal()}
                 {this.renderRescueKeyModal()}
                 <Header
                     leftComponent="Back"
@@ -1045,7 +1130,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             if (
                                                                 !satAmount ||
                                                                 satAmount ===
-                                                                    '0'
+                                                                '0'
                                                             ) {
                                                                 this.setState({
                                                                     serviceFeeSats: 0,
@@ -1056,7 +1141,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             const satAmountNew =
                                                                 new BigNumber(
                                                                     satAmount ||
-                                                                        0
+                                                                    0
                                                                 );
 
                                                             let input: any;
@@ -1127,19 +1212,19 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             const serviceFeeSats =
                                                                 reverse && input
                                                                     ? input
-                                                                          .times(
-                                                                              serviceFeePct
-                                                                          )
-                                                                          .div(
-                                                                              100
-                                                                          )
+                                                                        .times(
+                                                                            serviceFeePct
+                                                                        )
+                                                                        .div(
+                                                                            100
+                                                                        )
                                                                     : satAmountNew
-                                                                          .times(
-                                                                              serviceFeePct
-                                                                          )
-                                                                          .div(
-                                                                              100
-                                                                          );
+                                                                        .times(
+                                                                            serviceFeePct
+                                                                        )
+                                                                        .div(
+                                                                            100
+                                                                        );
 
                                                             this.setState(
                                                                 {
@@ -1190,15 +1275,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     const fiatEntry =
                                                         fiat && fiatRates
                                                             ? fiatRates.filter(
-                                                                  (entry) =>
-                                                                      entry.code ===
-                                                                      fiat
-                                                              )[0]
+                                                                (entry) =>
+                                                                    entry.code ===
+                                                                    fiat
+                                                            )[0]
                                                             : null;
                                                     const rate =
                                                         fiat &&
-                                                        fiatRates &&
-                                                        fiatEntry
+                                                            fiatRates &&
+                                                            fiatEntry
                                                             ? fiatEntry.rate
                                                             : 0;
 
@@ -1211,12 +1296,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             const currentInputSats =
                                                                 new BigNumber(
                                                                     prevState.inputSats ||
-                                                                        0
+                                                                    0
                                                                 );
                                                             const currentOutputSats =
                                                                 new BigNumber(
                                                                     prevState.outputSats ||
-                                                                        0
+                                                                    0
                                                                 );
                                                             let newInputDisplayAmount =
                                                                 '';
@@ -1225,7 +1310,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
                                                             if (
                                                                 newUnit ===
-                                                                    'fiat' &&
+                                                                'fiat' &&
                                                                 rate > 0
                                                             ) {
                                                                 if (
@@ -1335,7 +1420,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 }}
                                             >
                                                 {UnitsStore!.getNextUnit() ===
-                                                'fiat' ? (
+                                                    'fiat' ? (
                                                     <ExchangeFiatSVG
                                                         fill={themeColor(
                                                             'text'
@@ -1665,8 +1750,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     marginBottom:
                                                         zeroConfFee !==
                                                             undefined &&
-                                                        invoice &&
-                                                        enableLSP
+                                                            invoice &&
+                                                            enableLSP
                                                             ? 8
                                                             : 0
                                                 }}
@@ -1819,12 +1904,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         fetchingInvoice
                                             ? ''
                                             : reverse
-                                            ? localeString(
-                                                  'views.Settings.AddContact.onchainAddress'
-                                              )
-                                            : localeString(
-                                                  'views.PaymentRequest.title'
-                                              )
+                                                ? localeString(
+                                                    'views.Settings.AddContact.onchainAddress'
+                                                )
+                                                : localeString(
+                                                    'views.PaymentRequest.title'
+                                                )
                                     }
                                     loading={fetchingInvoice}
                                     style={{ marginHorizontal: 20 }}
@@ -1839,116 +1924,116 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         reverse &&
                                         !BackendUtils.supportsOnchainSends()
                                     ) && (
-                                        <Button
-                                            onPress={async () => {
-                                                this.setState({
-                                                    invoice: '',
-                                                    fetchingInvoice: true
-                                                });
-                                                try {
-                                                    if (!outputSats) {
+                                            <Button
+                                                onPress={async () => {
+                                                    this.setState({
+                                                        invoice: '',
+                                                        fetchingInvoice: true
+                                                    });
+                                                    try {
+                                                        if (!outputSats) {
+                                                            this.setState({
+                                                                error: localeString(
+                                                                    'views.Swaps.missingAmount'
+                                                                ),
+                                                                fetchingInvoice:
+                                                                    false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        await InvoicesStore.createUnifiedInvoice(
+                                                            {
+                                                                memo: '',
+                                                                value:
+                                                                    outputSats.toString() ||
+                                                                    '0',
+                                                                expirySeconds:
+                                                                    '3600'
+                                                            }
+                                                        );
+
+                                                        if (reverse) {
+                                                            if (
+                                                                InvoicesStore.onChainAddress
+                                                            ) {
+                                                                this.setState(
+                                                                    {
+                                                                        invoice:
+                                                                            InvoicesStore.onChainAddress,
+                                                                        error: ''
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
+                                                                );
+                                                            } else {
+                                                                this.setState({
+                                                                    error: localeString(
+                                                                        'views.Swaps.generateOnchainAddressFailed'
+                                                                    ),
+                                                                    fetchingInvoice:
+                                                                        false
+                                                                });
+                                                            }
+                                                        } else {
+                                                            if (
+                                                                InvoicesStore.payment_request
+                                                            ) {
+                                                                this.setState(
+                                                                    {
+                                                                        invoice:
+                                                                            InvoicesStore.payment_request,
+                                                                        error: ''
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
+                                                                );
+                                                            } else {
+                                                                this.setState({
+                                                                    error: localeString(
+                                                                        'views.Swaps.generateInvoiceFailed'
+                                                                    ),
+                                                                    fetchingInvoice:
+                                                                        false
+                                                                });
+                                                            }
+                                                        }
+                                                        this.setState({
+                                                            fetchingInvoice: false
+                                                        });
+                                                    } catch (e: any) {
+                                                        console.error(
+                                                            'Error generating invoice:',
+                                                            e
+                                                        );
                                                         this.setState({
                                                             error: localeString(
-                                                                'views.Swaps.missingAmount'
+                                                                'views.Swaps.generateInvoiceFailed'
                                                             ),
-                                                            fetchingInvoice:
-                                                                false
+                                                            fetchingInvoice: false
                                                         });
-                                                        return;
                                                     }
-
-                                                    await InvoicesStore.createUnifiedInvoice(
-                                                        {
-                                                            memo: '',
-                                                            value:
-                                                                outputSats.toString() ||
-                                                                '0',
-                                                            expirySeconds:
-                                                                '3600'
-                                                        }
-                                                    );
-
-                                                    if (reverse) {
-                                                        if (
-                                                            InvoicesStore.onChainAddress
-                                                        ) {
-                                                            this.setState(
-                                                                {
-                                                                    invoice:
-                                                                        InvoicesStore.onChainAddress,
-                                                                    error: ''
-                                                                },
-                                                                () =>
-                                                                    this.checkIsValid()
-                                                            );
-                                                        } else {
-                                                            this.setState({
-                                                                error: localeString(
-                                                                    'views.Swaps.generateOnchainAddressFailed'
-                                                                ),
-                                                                fetchingInvoice:
-                                                                    false
-                                                            });
-                                                        }
-                                                    } else {
-                                                        if (
-                                                            InvoicesStore.payment_request
-                                                        ) {
-                                                            this.setState(
-                                                                {
-                                                                    invoice:
-                                                                        InvoicesStore.payment_request,
-                                                                    error: ''
-                                                                },
-                                                                () =>
-                                                                    this.checkIsValid()
-                                                            );
-                                                        } else {
-                                                            this.setState({
-                                                                error: localeString(
-                                                                    'views.Swaps.generateInvoiceFailed'
-                                                                ),
-                                                                fetchingInvoice:
-                                                                    false
-                                                            });
-                                                        }
-                                                    }
-                                                    this.setState({
-                                                        fetchingInvoice: false
-                                                    });
-                                                } catch (e: any) {
-                                                    console.error(
-                                                        'Error generating invoice:',
-                                                        e
-                                                    );
-                                                    this.setState({
-                                                        error: localeString(
-                                                            'views.Swaps.generateInvoiceFailed'
-                                                        ),
-                                                        fetchingInvoice: false
-                                                    });
+                                                }}
+                                                title={
+                                                    !reverse
+                                                        ? localeString(
+                                                            'views.Swaps.generateInvoice'
+                                                        )
+                                                        : localeString(
+                                                            'views.Swaps.generateOnchainAddress'
+                                                        )
                                                 }
-                                            }}
-                                            title={
-                                                !reverse
-                                                    ? localeString(
-                                                          'views.Swaps.generateInvoice'
-                                                      )
-                                                    : localeString(
-                                                          'views.Swaps.generateOnchainAddress'
-                                                      )
-                                            }
-                                            secondary
-                                            disabled={
-                                                errorMsg ||
-                                                !!invoice ||
-                                                loading ||
-                                                inputSats === 0 ||
-                                                outputSats === 0 ||
-                                                fetchingInvoice
-                                            }
-                                        />
-                                    )}
+                                                secondary
+                                                disabled={
+                                                    errorMsg ||
+                                                    !!invoice ||
+                                                    loading ||
+                                                    inputSats === 0 ||
+                                                    outputSats === 0 ||
+                                                    fetchingInvoice
+                                                }
+                                            />
+                                        )}
                                 </View>
                                 {reverse && (
                                     <View style={{ paddingHorizontal: 20 }}>
@@ -1964,7 +2049,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 style={{
                                                     marginTop:
                                                         reverse &&
-                                                        !BackendUtils.supportsOnchainSends()
+                                                            !BackendUtils.supportsOnchainSends()
                                                             ? 0
                                                             : 10,
                                                     marginBottom: 20
@@ -2035,24 +2120,24 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         onPress={() => {
                                             reverse
                                                 ? SwapStore?.createReverseSwap(
-                                                      invoice,
-                                                      Number(
-                                                          this.state.inputSats
-                                                      ),
-                                                      this.state.fee,
-                                                      navigation
-                                                  )
+                                                    invoice,
+                                                    Number(
+                                                        this.state.inputSats
+                                                    ),
+                                                    this.state.fee,
+                                                    navigation
+                                                )
                                                 : SwapStore?.createSubmarineSwap(
-                                                      invoice,
-                                                      navigation
-                                                  );
+                                                    invoice,
+                                                    navigation
+                                                );
                                         }}
                                         {...(!reverse
                                             ? {
-                                                  containerStyle: {
-                                                      marginTop: 10
-                                                  }
-                                              }
+                                                containerStyle: {
+                                                    marginTop: 10
+                                                }
+                                            }
                                             : {})}
                                         disabled={!isValid}
                                     />
