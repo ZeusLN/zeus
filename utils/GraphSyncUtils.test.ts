@@ -21,7 +21,8 @@ import storage from '../storage';
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
-        updateSettings: jest.fn()
+        updateSettings: jest.fn(),
+        embeddedLndNetwork: 'Mainnet'
     },
     transactionsStore: {
         proceedWithPayment: jest.fn(),
@@ -46,6 +47,8 @@ const mockStorage = storage as jest.Mocked<typeof storage>;
 describe('GraphSyncUtils', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockTransactionsStore.pendingPaymentData = null;
+        mockTransactionsStore.showGraphSyncPrompt = false;
     });
 
     describe('handleEnableGraphSync', () => {
@@ -118,6 +121,25 @@ describe('GraphSyncUtils', () => {
             );
 
             expect(result).toBe(true);
+        });
+
+        it('should return true and not show prompt on testnet', () => {
+            // Temporarily set to testnet
+            (mockSettingsStore as any).embeddedLndNetwork = 'Testnet';
+
+            const result = checkGraphSyncBeforePayment(
+                mockSettings,
+                'embedded-lnd',
+                { payment_request: 'test' },
+                mockTransactionsStore
+            );
+
+            expect(result).toBe(true);
+            expect(mockTransactionsStore.showGraphSyncPrompt).toBe(false);
+            expect(mockTransactionsStore.pendingPaymentData).toBeNull();
+
+            // Restore to mainnet for other tests
+            (mockSettingsStore as any).embeddedLndNetwork = 'Mainnet';
         });
 
         it('should return true when graph sync is enabled', () => {
