@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Slider from '@react-native-community/slider';
@@ -36,6 +36,8 @@ interface PaymentsSettingsState {
     slideToPayThreshold: string;
     enableDonations: boolean;
     donationPercentage: number;
+    autoPayEnabled: boolean;
+    autoPayThreshold: string;
     mounted?: boolean;
 }
 
@@ -55,6 +57,8 @@ export default class PaymentsSettings extends React.Component<
         slideToPayThreshold: '10000',
         enableDonations: false,
         donationPercentage: 5,
+        autoPayEnabled: false,
+        autoPayThreshold: '0',
         mounted: false
     };
 
@@ -76,6 +80,9 @@ export default class PaymentsSettings extends React.Component<
             enableDonations: settings?.payments?.enableDonations || false,
             donationPercentage:
                 settings?.payments?.defaultDonationPercentage || 5,
+            autoPayEnabled: settings?.payments?.autoPayEnabled || false,
+            autoPayThreshold:
+                settings?.payments?.autoPayThreshold?.toString() || '0',
             mounted: true
         });
     }
@@ -99,7 +106,9 @@ export default class PaymentsSettings extends React.Component<
             preferredMempoolRate,
             slideToPayThreshold,
             enableDonations,
-            donationPercentage
+            donationPercentage,
+            autoPayEnabled,
+            autoPayThreshold
         } = this.state;
         const { SettingsStore, NodeInfoStore } = this.props;
         const { nodeInfo } = NodeInfoStore;
@@ -120,10 +129,14 @@ export default class PaymentsSettings extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <View
+                <ScrollView
                     style={{
+                        flex: 1
+                    }}
+                    contentContainerStyle={{
                         paddingHorizontal: 15,
-                        marginTop: 5
+                        marginTop: 5,
+                        paddingBottom: 30
                     }}
                 >
                     {BackendUtils.isLNDBased() && (
@@ -391,27 +404,27 @@ export default class PaymentsSettings extends React.Component<
                             />
                         </View>
                     </View>
-                    <View style={{ marginTop: 12 }}>
-                        <DropdownSetting
-                            title={localeString(
-                                'views.Settings.Payments.preferredMempoolRate'
-                            )}
-                            selectedValue={preferredMempoolRate}
-                            onValueChange={async (value: string) => {
-                                this.setState({
+
+                    <DropdownSetting
+                        title={localeString(
+                            'views.Settings.Payments.preferredMempoolRate'
+                        )}
+                        selectedValue={preferredMempoolRate}
+                        onValueChange={async (value: string) => {
+                            this.setState({
+                                preferredMempoolRate: value
+                            });
+                            await updateSettings({
+                                payments: {
+                                    ...settings.payments,
                                     preferredMempoolRate: value
-                                });
-                                await updateSettings({
-                                    payments: {
-                                        ...settings.payments,
-                                        preferredMempoolRate: value
-                                    }
-                                });
-                            }}
-                            values={MEMPOOL_RATES_KEYS}
-                            disabled={!enableMempoolRates}
-                        />
-                    </View>
+                                }
+                            });
+                        }}
+                        values={MEMPOOL_RATES_KEYS}
+                        disabled={!enableMempoolRates}
+                    />
+
                     {isMainNet && (
                         <View
                             style={{
@@ -515,7 +528,104 @@ export default class PaymentsSettings extends React.Component<
                             </View>
                         </>
                     )}
-                </View>
+
+                    {/* Auto-Pay Settings */}
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 10
+                        }}
+                    >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.enableQuickPayPaste'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 13,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 5
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.quickPayPasteExplainer'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                            <Switch
+                                value={autoPayEnabled}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        autoPayEnabled: !autoPayEnabled
+                                    });
+                                    await updateSettings({
+                                        payments: {
+                                            ...settings.payments,
+                                            autoPayEnabled: !autoPayEnabled
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </View>
+
+                    {autoPayEnabled && (
+                        <View style={{ marginTop: 20 }}>
+                            <AmountInput
+                                amount={autoPayThreshold.toString()}
+                                title={
+                                    localeString('general.lightning') +
+                                    ' - ' +
+                                    localeString(
+                                        'views.Settings.Payments.quickPayThreshold'
+                                    )
+                                }
+                                onAmountChange={async (amount, _) => {
+                                    this.setState({
+                                        autoPayThreshold: amount
+                                    });
+                                    const amountNumber = Number(amount);
+                                    if (
+                                        this.state.mounted &&
+                                        !Number.isNaN(amountNumber)
+                                    ) {
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                autoPayThreshold: Number(amount)
+                                            }
+                                        });
+                                    }
+                                }}
+                                hideConversion={true}
+                                hideUnitChangeButton={true}
+                                forceUnit="sats"
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 5,
+                                    fontStyle: 'italic'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Payments.quickPayThresholdDescription'
+                                )}
+                            </Text>
+                        </View>
+                    )}
+                </ScrollView>
             </Screen>
         );
     }
