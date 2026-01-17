@@ -379,7 +379,7 @@ export default class WalletHeader extends React.Component<
                 ) : (
                     <NodeIdenticon
                         selectedNode={selectedNode}
-                        width={36}
+                        width={31}
                         rounded
                     />
                 )}
