@@ -404,10 +404,10 @@ export default class SendEcash extends React.Component<
                                     <View style={styles.lockContainer}>
                                         <Button
                                             icon={{
-                                                type: 'ionicon',
+                                                type: 'feather',
                                                 name: pubkey
-                                                    ? 'lock-closed-outline'
-                                                    : 'lock-open-outline',
+                                                    ? 'lock'
+                                                    : 'unlock',
                                                 size: 20,
                                                 color: themeColor('text')
                                             }}

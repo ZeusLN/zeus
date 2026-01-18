@@ -952,8 +952,8 @@ export default class SendingLightning extends React.Component<
                                             'views.SendingLightning.tryAgain'
                                         )}
                                         icon={{
-                                            name: 'return-up-back',
-                                            type: 'ionicon',
+                                            name: 'rotate-ccw',
+                                            type: 'feather',
                                             size: 25
                                         }}
                                         onPress={() => navigation.goBack()}
@@ -972,8 +972,8 @@ export default class SendingLightning extends React.Component<
                                                 'views.Settings.EmbeddedNode.Troubleshooting.title'
                                             )}
                                             icon={{
-                                                name: 'help-buoy-outline',
-                                                type: 'ionicon',
+                                                name: 'life-buoy',
+                                                type: 'feather',
                                                 size: 25
                                             }}
                                             onPress={() => {

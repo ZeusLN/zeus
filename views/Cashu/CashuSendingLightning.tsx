@@ -721,8 +721,8 @@ export default class CashuSendingLightning extends React.Component<
                                             'views.SendingLightning.tryAgain'
                                         )}
                                         icon={{
-                                            name: 'return-up-back',
-                                            type: 'ionicon',
+                                            name: 'rotate-ccw',
+                                            type: 'feather',
                                             size: 25
                                         }}
                                         onPress={() => navigation.goBack()}
@@ -740,8 +740,8 @@ export default class CashuSendingLightning extends React.Component<
                                             'views.Settings.Ecash.cashuTroubleshooting'
                                         )}
                                         icon={{
-                                            name: 'help-buoy-outline',
-                                            type: 'ionicon',
+                                            name: 'life-buoy',
+                                            type: 'feather',
                                             size: 25
                                         }}
                                         onPress={() => {
