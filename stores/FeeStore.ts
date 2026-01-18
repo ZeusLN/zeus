@@ -189,8 +189,9 @@ export default class FeeStore {
                 });
             })
             .catch((err: any) => {
+                const errorMsg = errorToUserFriendly(err);
                 runInAction(() => {
-                    this.setFeesErrorMsg = errorToUserFriendly(err);
+                    this.setFeesErrorMsg = errorMsg;
                     this.loading = false;
                     this.setFeesError = true;
                 });
@@ -369,16 +370,18 @@ export default class FeeStore {
                             });
                         })
                         .catch((err: Error) => {
+                            const errorMsg = errorToUserFriendly(err);
                             runInAction(() => {
                                 this.bumpFeeError = true;
-                                this.bumpFeeErrorMsg = errorToUserFriendly(err);
+                                this.bumpFeeErrorMsg = errorMsg;
                                 this.loading = false;
                             });
                         });
                 } else {
+                    const errorMsg = errorToUserFriendly(err);
                     runInAction(() => {
                         this.bumpFeeError = true;
-                        this.bumpFeeErrorMsg = errorToUserFriendly(err);
+                        this.bumpFeeErrorMsg = errorMsg;
                         this.loading = false;
                     });
                 }

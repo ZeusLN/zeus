@@ -42,9 +42,10 @@ export default class OffersStore {
                 return data;
             })
             .catch((e: any) => {
+                const errorMsg = errorToUserFriendly(e);
                 runInAction(() => {
                     this.error = true;
-                    this.error_msg = errorToUserFriendly(e);
+                    this.error_msg = errorMsg;
                     this.loading = false;
                 });
             });
@@ -62,9 +63,10 @@ export default class OffersStore {
                 return data;
             })
             .catch((e: any) => {
+                const errorMsg = errorToUserFriendly(e);
                 runInAction(() => {
                     this.error = true;
-                    this.error_msg = errorToUserFriendly(e);
+                    this.error_msg = errorMsg;
                     this.loading = false;
                 });
             });

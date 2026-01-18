@@ -172,18 +172,20 @@ export default class TransactionsStore {
                         });
                         return data;
                     } else {
+                        const errorMsg = errorToUserFriendly(data);
                         runInAction(() => {
-                            this.error_msg = errorToUserFriendly(data);
+                            this.error_msg = errorMsg;
                             this.error = true;
                             this.loading = false;
                         });
                     }
                 })
                 .catch((err: any) => {
+                    const errorMsg = errorToUserFriendly(
+                        err?.error || err?.message || err?.toString()
+                    );
                     runInAction(() => {
-                        this.error_msg = errorToUserFriendly(
-                            err?.error || err?.message || err?.toString()
-                        );
+                        this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
                     });
@@ -194,26 +196,28 @@ export default class TransactionsStore {
             tx_hex
         })
             .then((data: any) => {
-                runInAction(() => {
-                    if (data.publish_error) {
-                        this.error_msg = errorToUserFriendly(
-                            data.publish_error
-                        );
+                if (data.publish_error) {
+                    const errorMsg = errorToUserFriendly(data.publish_error);
+                    runInAction(() => {
+                        this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
-                    } else {
+                    });
+                } else {
+                    runInAction(() => {
                         this.txid = txid;
                         this.publishSuccess = true;
                         this.loading = false;
                         this.channelsStore.resetOpenChannel();
-                    }
-                });
+                    });
+                }
             })
             .catch((error: any) => {
+                const errorMsg = errorToUserFriendly(
+                    error.publish_error || error.message
+                );
                 runInAction(() => {
-                    this.error_msg = errorToUserFriendly(
-                        error.publish_error || error.message
-                    );
+                    this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
                 });
@@ -232,8 +236,9 @@ export default class TransactionsStore {
             return BackendUtils.finalizePsbt({ funded_psbt })
                 .then((data: any) => this.broadcast(data.raw_final_tx))
                 .catch((error: any) => {
+                    const errorMsg = errorToUserFriendly(error.message);
                     runInAction(() => {
-                        this.error_msg = errorToUserFriendly(error.message);
+                        this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
                     });
@@ -260,10 +265,11 @@ export default class TransactionsStore {
 
                     resolve(true);
                 } catch (error: any) {
+                    const errorMsg = errorToUserFriendly(
+                        error?.message || error
+                    );
                     runInAction(() => {
-                        this.error_msg = errorToUserFriendly(
-                            error?.message || error
-                        );
+                        this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
                     });
@@ -287,14 +293,15 @@ export default class TransactionsStore {
             }
         })
             .then((data: any) => {
-                runInAction(() => {
-                    if (data.publish_error) {
-                        this.error_msg = errorToUserFriendly(
-                            data.publish_error
-                        );
+                if (data.publish_error) {
+                    const errorMsg = errorToUserFriendly(data.publish_error);
+                    runInAction(() => {
+                        this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
-                    } else {
+                    });
+                } else {
+                    runInAction(() => {
                         try {
                             // Parse the PSBT
                             const psbt = bitcoin.Psbt.fromBase64(signed_psbt);
@@ -309,12 +316,13 @@ export default class TransactionsStore {
                         this.publishSuccess = true;
                         this.loading = false;
                         this.channelsStore.resetOpenChannel();
-                    }
-                });
+                    });
+                }
             })
             .catch((error: any) => {
+                const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
-                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
                 });
@@ -334,14 +342,15 @@ export default class TransactionsStore {
             }
         })
             .then((data: any) => {
-                runInAction(() => {
-                    if (data.publish_error) {
-                        this.error_msg = errorToUserFriendly(
-                            data.publish_error
-                        );
+                if (data.publish_error) {
+                    const errorMsg = errorToUserFriendly(data.publish_error);
+                    runInAction(() => {
+                        this.error_msg = errorMsg;
                         this.error = true;
                         this.loading = false;
-                    } else {
+                    });
+                } else {
+                    runInAction(() => {
                         try {
                             // Parse the tx
                             const tx = bitcoin.Transaction.fromHex(tx_hex);
@@ -353,12 +362,13 @@ export default class TransactionsStore {
                         this.publishSuccess = true;
                         this.loading = false;
                         this.channelsStore.resetOpenChannel();
-                    }
-                });
+                    });
+                }
             })
             .catch((error: any) => {
+                const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
-                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
                 });
@@ -427,8 +437,9 @@ export default class TransactionsStore {
                 });
             })
             .catch((error: any) => {
+                const errorMsg = errorToUserFriendly(error.message);
                 runInAction(() => {
-                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error_msg = errorMsg;
                     this.error = true;
                     this.crafting = false;
                     this.loading = false;
@@ -491,8 +502,9 @@ export default class TransactionsStore {
                 });
             })
             .catch((error: Error) => {
+                const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
-                    this.error_msg = errorToUserFriendly(error);
+                    this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
                 });

@@ -88,8 +88,9 @@ export default class NodeInfoStore {
                         resolve('Old getNodeInfo call');
                         return;
                     }
+                    const errorMsg = errorToUserFriendly(error.toString());
                     runInAction(() => {
-                        this.errorMsg = errorToUserFriendly(error.toString());
+                        this.errorMsg = errorMsg;
                         this.handleGetNodeInfoError();
                     });
                     reject(error);
@@ -111,8 +112,9 @@ export default class NodeInfoStore {
                 return this.networkInfo;
             })
             .catch((error: any) => {
+                const errorMsg = errorToUserFriendly(error.toString());
                 runInAction(() => {
-                    this.errorMsg = errorToUserFriendly(error.toString());
+                    this.errorMsg = errorMsg;
                     this.handleGetNetworkInfoError();
                 });
             });

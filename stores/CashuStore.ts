@@ -1508,10 +1508,10 @@ export default class CashuStore {
 
             return;
         } catch (e: any) {
-            const error = e;
+            const errorMsg = errorToUserFriendly(e);
             runInAction(() => {
                 this.payReq = undefined;
-                this.getPayReqError = errorToUserFriendly(error);
+                this.getPayReqError = errorMsg;
                 this.loading = false;
             });
         }

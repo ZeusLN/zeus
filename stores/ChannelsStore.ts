@@ -931,10 +931,11 @@ export default class ChannelsStore {
                 })
                     .then((data: any) => {
                         if (data.publish_error) {
+                            const errorMsg = errorToUserFriendly(
+                                data.publish_error
+                            );
                             runInAction(() => {
-                                this.errorMsgChannel = errorToUserFriendly(
-                                    data.publish_error
-                                );
+                                this.errorMsgChannel = errorMsg;
                                 this.output_index = null;
                                 this.funding_txid_str = null;
                                 this.errorOpenChannel = true;
@@ -993,9 +994,10 @@ export default class ChannelsStore {
                                 );
                         }
                     })
-                    .catch((error: any) =>
+                    .catch((error: any) => {
+                        const errorMsg = errorToUserFriendly(error);
                         runInAction(() => {
-                            this.errorMsgChannel = errorToUserFriendly(error);
+                            this.errorMsgChannel = errorMsg;
                             this.output_index = null;
                             this.funding_txid_str = null;
                             this.errorOpenChannel = true;
@@ -1003,12 +1005,13 @@ export default class ChannelsStore {
                             this.channelRequest = null;
                             this.peerSuccess = false;
                             this.channelSuccess = false;
-                        })
-                    );
+                        });
+                    });
             })
-            .catch((error: any) =>
+            .catch((error: any) => {
+                const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
-                    this.errorMsgChannel = errorToUserFriendly(error);
+                    this.errorMsgChannel = errorMsg;
                     this.output_index = null;
                     this.funding_txid_str = null;
                     this.errorOpenChannel = true;
@@ -1016,8 +1019,8 @@ export default class ChannelsStore {
                     this.channelRequest = null;
                     this.peerSuccess = false;
                     this.channelSuccess = false;
-                })
-            );
+                });
+            });
     };
 
     @action
@@ -1183,9 +1186,10 @@ export default class ChannelsStore {
                         this.connectingToPeer = false;
                     })
                 )
-                .catch((error: Error) =>
+                .catch((error: Error) => {
+                    const errorMsg = errorToUserFriendly(error);
                     runInAction(() => {
-                        this.errorMsgChannel = errorToUserFriendly(error);
+                        this.errorMsgChannel = errorMsg;
                         this.output_index = null;
                         this.funding_txid_str = null;
                         this.errorOpenChannel = true;
@@ -1194,8 +1198,8 @@ export default class ChannelsStore {
                         this.channelRequest = null;
                         this.peerSuccess = false;
                         this.channelSuccess = false;
-                    })
-                );
+                    });
+                });
         }
     };
 
