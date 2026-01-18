@@ -211,40 +211,7 @@ export default class Payment extends BaseModel {
         return DateTimeUtils.listFormattedDateShort(this.getTimestamp);
     }
 
-    @computed public get getAmount(): number | string {
-        if (this.htlcs && this.htlcs.length > 0) {
-            const succeeded = this.htlcs.filter(
-                (htlc: any) =>
-                    htlc.status === 'SUCCEEDED' ||
-                    htlc.status === lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED
-            );
-
-            const totalMsat = succeeded.reduce((sum: number, htlc: any) => {
-                let htlcAmountMsat = 0;
-                const route = htlc.route;
-                const firstHop = route?.hops?.[0];
-
-                // Prefer total_amt_msat from the route when available
-                if (route?.total_amt_msat !== undefined) {
-                    htlcAmountMsat = Number(route.total_amt_msat);
-                    // Fallback to total_amt (sats) on the route
-                } else if (route?.total_amt !== undefined) {
-                    htlcAmountMsat = Number(route.total_amt) * 1000;
-                    // Use hop-level amounts if route totals are missing
-                } else if (firstHop?.amt_msat !== undefined) {
-                    htlcAmountMsat = Number(firstHop.amt_msat);
-                } else if (firstHop?.amt_to_forward_msat !== undefined) {
-                    htlcAmountMsat = Number(firstHop.amt_to_forward_msat);
-                } else if (firstHop?.amt_to_forward !== undefined) {
-                    htlcAmountMsat = Number(firstHop.amt_to_forward) * 1000;
-                }
-
-                return sum + htlcAmountMsat;
-            }, 0);
-
-            return totalMsat ? totalMsat / 1000 : 0;
-        }
-
+    private get amountFromFields(): number | string {
         return this.amount_msat
             ? Number(this.amount_msat.toString().replace('msat', '')) / 1000
             : this.value_sat ||
@@ -253,6 +220,56 @@ export default class Payment extends BaseModel {
                   Number(this.amount_sent_msat) / 1000 ||
                   Number(this.amount) ||
                   0;
+    }
+
+    private getHtlcAmountMsat(htlc: any): BigNumber {
+        const route = htlc.route;
+        const hops = route?.hops;
+        const lastHop = hops?.[hops.length - 1];
+
+        // Use the last hop's forwarded amount (actual payment without fees)
+        if (lastHop?.amt_to_forward_msat !== undefined) {
+            return new BigNumber(lastHop.amt_to_forward_msat);
+        }
+        if (lastHop?.amt_to_forward !== undefined) {
+            return new BigNumber(lastHop.amt_to_forward).times(1000);
+        }
+        // Fallback to route total minus fees if no hops available
+        if (route?.total_amt_msat !== undefined) {
+            const feesMsat = new BigNumber(route.total_fees_msat || 0);
+            return new BigNumber(route.total_amt_msat).minus(feesMsat);
+        }
+        if (route?.total_amt !== undefined) {
+            const feesSat = new BigNumber(route.total_fees || 0);
+            return new BigNumber(route.total_amt).minus(feesSat).times(1000);
+        }
+        return new BigNumber(0);
+    }
+
+    @computed public get getAmount(): number | string {
+        if (!this.htlcs || this.htlcs.length === 0) {
+            return this.amountFromFields;
+        }
+
+        const succeeded = this.htlcs.filter(
+            (htlc: any) =>
+                htlc.status === 'SUCCEEDED' ||
+                htlc.status === lnrpc.HTLCAttempt.HTLCStatus.SUCCEEDED
+        );
+
+        // If all HTLCs succeeded, prefer direct amount fields for efficiency
+        if (succeeded.length === this.htlcs.length && this.amountFromFields) {
+            return this.amountFromFields;
+        }
+
+        // Partial success: sum only successful HTLCs
+        const totalMsat = succeeded.reduce(
+            (sum: BigNumber, htlc: any) =>
+                sum.plus(this.getHtlcAmountMsat(htlc)),
+            new BigNumber(0)
+        );
+
+        return !totalMsat.isZero() ? totalMsat.div(1000).toNumber() : 0;
     }
 
     @computed public get getFee(): string {
