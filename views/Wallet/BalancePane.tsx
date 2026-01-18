@@ -15,6 +15,7 @@ import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
+import SyncingStatus from '../../components/SyncingStatus';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -82,6 +83,7 @@ export default class BalancePane extends React.PureComponent<
             loading
         } = this.props;
         const { showBackupPrompt } = this.state;
+        const { recoveryProgress, isRecovering, isSyncing } = SyncStore;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -90,13 +92,6 @@ export default class BalancePane extends React.PureComponent<
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const { implementation, settings, lndFolderMissing } = SettingsStore;
-        const {
-            currentBlockHeight,
-            bestBlockHeight,
-            recoveryProgress,
-            isSyncing,
-            isRecovering
-        } = SyncStore;
 
         const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
             .plus(unconfirmedBlockchainBalance)
@@ -289,97 +284,7 @@ export default class BalancePane extends React.PureComponent<
                                 </View>
                             </TouchableOpacity>
                         )}
-                        {isSyncing && (
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Sync')}
-                            >
-                                <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 10,
-                                        margin: 20,
-                                        padding: 15,
-                                        borderWidth: 0.5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.title'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            color: themeColor('text'),
-                                            marginTop: 20
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.text'
-                                        ).replace('Zeus', 'ZEUS')}
-                                    </Text>
-                                    {currentBlockHeight !== undefined &&
-                                        bestBlockHeight && (
-                                            <View
-                                                style={{
-                                                    marginTop: 30,
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    display: 'flex',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    minWidth: '100%'
-                                                }}
-                                            >
-                                                <LinearProgress
-                                                    value={
-                                                        Math.floor(
-                                                            (currentBlockHeight /
-                                                                bestBlockHeight) *
-                                                                100
-                                                        ) / 100
-                                                    }
-                                                    variant="determinate"
-                                                    color={themeColor(
-                                                        'highlight'
-                                                    )}
-                                                    trackColor={themeColor(
-                                                        'secondaryBackground'
-                                                    )}
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row'
-                                                    }}
-                                                />
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Medium',
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        marginTop: -8,
-                                                        marginLeft: 14,
-                                                        height: 40
-                                                    }}
-                                                >
-                                                    {`${Math.floor(
-                                                        (currentBlockHeight /
-                                                            bestBlockHeight) *
-                                                            100
-                                                    ).toString()}%`}
-                                                </Text>
-                                            </View>
-                                        )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
+                        <SyncingStatus navigation={navigation} />
                         {implementation === 'embedded-lnd' &&
                             !isSyncing &&
                             showBackupPrompt &&
