@@ -200,11 +200,10 @@ export default class LSPStore {
                             );
                         } catch (e) {}
                     } else {
+                        const errorMsg = errorToUserFriendly(data.message);
                         runInAction(() => {
                             this.flow_error = true;
-                            this.flow_error_msg = errorToUserFriendly(
-                                data.message
-                            );
+                            this.flow_error_msg = errorMsg;
                             // handle LSP geoblocking :(
                             if (
                                 this.error_msg.includes(
@@ -410,9 +409,10 @@ export default class LSPStore {
                     resolve(response);
                 })
                 .catch((error: any) => {
+                    const errorMsg = errorToUserFriendly(error);
                     runInAction(() => {
                         this.error = true;
-                        this.error_msg = errorToUserFriendly(error);
+                        this.error_msg = errorMsg;
                     });
                     reject(error);
                 });
@@ -638,28 +638,30 @@ export default class LSPStore {
         )
             .then((response) => {
                 const responseData = JSON.parse(response.data);
-                runInAction(() => {
-                    if (responseData.error) {
+                if (responseData.error) {
+                    const errorMsg = errorToUserFriendly(responseData.message);
+                    runInAction(() => {
                         this.error = true;
-                        this.error_msg = errorToUserFriendly(
-                            responseData.message
-                        );
+                        this.error_msg = errorMsg;
                         this.loadingLSPS1 = false;
-                    } else {
+                    });
+                } else {
+                    runInAction(() => {
                         this.createOrderResponse = responseData;
                         this.loadingLSPS1 = false;
                         console.log('Response received:', responseData);
-                    }
-                });
+                    });
+                }
             })
             .catch((error) => {
                 console.error(
                     'Error sending (create_order) custom message:',
                     error
                 );
+                const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error = true;
-                    this.error_msg = errorToUserFriendly(error);
+                    this.error_msg = errorMsg;
                     this.loadingLSPS1 = false;
                 });
             });
@@ -735,9 +737,10 @@ export default class LSPStore {
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
+                const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error = true;
-                    this.error_msg = errorToUserFriendly(error);
+                    this.error_msg = errorMsg;
                     this.loadingLSPS1 = false;
                 });
             });
