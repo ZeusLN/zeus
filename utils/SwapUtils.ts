@@ -12,6 +12,7 @@ export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
 export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
+export const SWAPS_INTRO_SHOWN = 'swaps-intro-shown';
 
 export const calculateReceiveAmount = (
     sendAmount: BigNumber,
