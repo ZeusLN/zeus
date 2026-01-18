@@ -1,7 +1,7 @@
 import url from 'url';
 import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
 import { Route } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import Button from '../components/Button';
 import Header from '../components/Header';
 import LightningIndicator from '../components/LightningIndicator';
 import Screen from '../components/Screen';
+import Switch from '../components/Switch';
 import {
     SuccessMessage,
     ErrorMessage
@@ -257,13 +258,6 @@ export default class LnurlChannel extends React.Component<
                                         privateChannel: !privateChannel
                                     })
                                 }
-                                trackColor={{
-                                    false: '#767577',
-                                    true: themeColor('highlight')
-                                }}
-                                style={{
-                                    alignSelf: 'flex-end'
-                                }}
                             />
                         </>
                     </View>
