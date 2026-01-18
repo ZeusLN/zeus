@@ -17,14 +17,17 @@ let mockProcessBIP21Uri = jest.fn();
 let mockIsValidBitcoinAddress = false;
 let mockIsValidLightningPubKey = false;
 let mockIsValidLightningPaymentRequest = false;
+let mockIsValidLightningAddress = false;
 let mockSupportsOnchainSends = true;
 let mockGetLnurlParams = {};
+let mockBlobUtilFetch = jest.fn();
 
 jest.mock('./AddressUtils', () => ({
     processBIP21Uri: (...args: string[]) => mockProcessBIP21Uri(...args),
     isValidBitcoinAddress: () => mockIsValidBitcoinAddress,
     isValidLightningPubKey: () => mockIsValidLightningPubKey,
     isValidLightningPaymentRequest: () => mockIsValidLightningPaymentRequest,
+    isValidLightningAddress: () => mockIsValidLightningAddress,
     isValidLightningOffer: () => false,
     isValidLNDHubAddress: () => false,
     processLNDHubAddress: () => ({}),
@@ -44,7 +47,9 @@ jest.mock('../stores/Stores', () => ({
     invoicesStore: { getPayReq: jest.fn() },
     settingsStore: { settings: { locale: 'en' } }
 }));
-jest.mock('react-native-blob-util', () => ({}));
+jest.mock('react-native-blob-util', () => ({
+    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+}));
 jest.mock('react-native-encrypted-storage', () => ({}));
 jest.mock('react-native-fs', () => ({}));
 const mockGetLnurlParamsFn = jest.fn();
@@ -57,9 +62,11 @@ jest.mock('js-lnurl', () => ({
 describe('handleAnything', () => {
     beforeEach(() => {
         mockProcessBIP21Uri.mockReset();
+        mockBlobUtilFetch.mockReset();
         mockIsValidBitcoinAddress = false;
         mockIsValidLightningPubKey = false;
         mockIsValidLightningPaymentRequest = false;
+        mockIsValidLightningAddress = false;
     });
 
     describe('input sanitization', () => {
@@ -739,6 +746,100 @@ describe('handleAnything', () => {
                 'signet'
             );
             expect(result).toBe('easypay789@staging.cryptoqr.net');
+        });
+    });
+
+    describe('Lightning Address username casing', () => {
+        it('preserves uppercase URL-encoded hex digits for cryptoqr.net addresses', async () => {
+            const address =
+                'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@cryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://cryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://cryptoqr.net/.well-known/lnurlp/https%3A%2F%2Fpay.cryptoqr.net%2F3458967'
+            );
+        });
+
+        it('preserves uppercase URL-encoded hex digits for staging.cryptoqr.net addresses', async () => {
+            const address =
+                'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@staging.cryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({
+                    callback: 'https://staging.cryptoqr.net/callback'
+                })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://staging.cryptoqr.net/.well-known/lnurlp/https%3A%2F%2Fpay.cryptoqr.net%2F3458967'
+            );
+        });
+
+        it('handles uppercase cryptoqr.net domain (case-insensitive detection)', async () => {
+            const address =
+                'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@CRYPTOQR.NET';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://cryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            // Domain should be lowercased per LUD-16, username preserved for cryptoqr.net
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://cryptoqr.net/.well-known/lnurlp/https%3A%2F%2Fpay.cryptoqr.net%2F3458967'
+            );
+        });
+
+        it('lowercases username for standard Lightning Address domains', async () => {
+            const address = 'SatoshiNakamoto@example.com';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://example.com/.well-known/lnurlp/satoshinakamoto'
+            );
+        });
+
+        it('lowercases domain per LUD-16 spec', async () => {
+            const address = 'satoshi@EXAMPLE.COM';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+
+            await handleAnything(address);
+
+            // Both domain and username should be lowercased for standard addresses
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://example.com/.well-known/lnurlp/satoshi'
+            );
         });
     });
 
