@@ -545,8 +545,8 @@ export default class CashuLockSettings extends React.Component<
                     {hasClipboardContent && (
                         <Button
                             icon={{
-                                type: 'ionicon',
-                                name: 'clipboard-outline',
+                                type: 'feather',
+                                name: 'clipboard',
                                 size: 20,
                                 color: themeColor('text')
                             }}

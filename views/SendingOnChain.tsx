@@ -246,8 +246,8 @@ export default class SendingOnChain extends React.Component<
                                         'views.SendingLightning.tryAgain'
                                     )}
                                     icon={{
-                                        name: 'return-up-back',
-                                        type: 'ionicon',
+                                        name: 'rotate-ccw',
+                                        type: 'feather',
                                         size: 25
                                     }}
                                     onPress={() => navigation.goBack()}

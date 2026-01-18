@@ -266,8 +266,8 @@ export default class EcashSettings extends React.Component<
                                 );
                             }}
                             icon={{
-                                name: 'help-buoy-outline',
-                                type: 'ionicon',
+                                name: 'life-buoy',
+                                type: 'feather',
                                 size: 25
                             }}
                             secondary
