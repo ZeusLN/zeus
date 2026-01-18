@@ -42,6 +42,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
+import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -1754,6 +1755,10 @@ export default class CashuStore {
             if (!isDonationPayment) {
                 this.loading = false;
             }
+
+            setTimeout(() => {
+                this.modalStore.checkAndTriggerRatingModal();
+            }, RATING_MODAL_TRIGGER_DELAY);
 
             return payment;
         } catch (err: any) {

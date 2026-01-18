@@ -55,7 +55,8 @@ export const transactionsStore = new TransactionsStore(
     settingsStore,
     nodeInfoStore,
     channelsStore,
-    balanceStore
+    balanceStore,
+    modalStore
 );
 export const unitsStore = new UnitsStore(settingsStore, fiatStore);
 export const paymentsStore = new PaymentsStore(settingsStore, channelsStore);
