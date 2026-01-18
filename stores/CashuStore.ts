@@ -36,7 +36,6 @@ import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
 import ModalStore from './ModalStore';
 
 import Base64Utils from '../utils/Base64Utils';
-import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils from '../utils/CashuUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -44,8 +43,6 @@ import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
 
 import NavigationService from '../NavigationService';
-
-const bip39 = require('bip39');
 
 const BATCH_SIZE = 100;
 const MAX_GAP = 3;
@@ -337,15 +334,6 @@ export default class CashuStore {
         this.error_msg = undefined;
 
         try {
-            if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
-                const seedVersion = 'v2-bip39';
-                await Storage.setItem(
-                    `${this.getLndDir()}-cashu-seed-version`,
-                    seedVersion
-                );
-                this.seedVersion = seedVersion;
-            }
-
             const wallet = await this.initializeWallet(mintUrl, true);
             if (wallet.errorConnecting) {
                 runInAction(() => {
@@ -432,41 +420,10 @@ export default class CashuStore {
     private getSeed = () => {
         if (this.seed) return this.seed;
 
-        if (this.seedVersion === 'v2-bip39') {
-            const lndSeedPhrase = this.settingsStore.seedPhrase;
-            const mnemonic = lndSeedPhrase.join(' ');
-
-            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(mnemonic);
-            // only need 16 bytes for a 12 word phrase
-            const entropy = seedFromMnemonic.slice(48, 64);
-
-            const cashuSeedPhrase = bip39scure.entropyToMnemonic(
-                entropy,
-                BIP39_WORD_LIST
-            );
-            const seedPhrase = cashuSeedPhrase.split(' ');
-
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-seed-phrase`,
-                seedPhrase
-            );
-            this.seedPhrase = seedPhrase;
-
-            const seed = bip39scure.mnemonicToSeedSync(cashuSeedPhrase);
-
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-seed`,
-                Base64Utils.bytesToBase64(seed)
-            );
-            this.seed = seed;
-            return this.seed;
-        }
-
-        // v1
         const seedPhrase = this.settingsStore.seedPhrase;
         const mnemonic = seedPhrase.join(' ');
-        const seed = bip39.mnemonicToSeedSync(mnemonic);
-        this.seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+        const seed = bip39scure.mnemonicToSeedSync(mnemonic);
+        this.seed = new Uint8Array(seed.slice(32, 64));
         return this.seed;
     };
 
