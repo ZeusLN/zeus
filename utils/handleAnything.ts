@@ -543,10 +543,16 @@ const handleAnything = async (
 
         // try BOLT 11 address
         const [username, bolt11Domain] = value.split('@');
+        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
+        // data where hex digit casing matters for server-side lookup
+        const isCryptoQR = bolt11Domain.endsWith('cryptoqr.net');
+        const normalizedUsername = isCryptoQR
+            ? username
+            : username.toLowerCase();
         if (bolt11Domain.includes('.onion')) {
-            url = `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+            url = `http://${bolt11Domain}/.well-known/lnurlp/${normalizedUsername}`;
         } else {
-            url = `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+            url = `https://${bolt11Domain}/.well-known/lnurlp/${normalizedUsername}`;
         }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
