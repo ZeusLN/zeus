@@ -788,6 +788,25 @@ describe('handleAnything', () => {
             );
         });
 
+        it('handles uppercase cryptoqr.net domain (case-insensitive detection)', async () => {
+            const address =
+                'https%3A%2F%2Fpay.cryptoqr.net%2F3458967@CRYPTOQR.NET';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://cryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            // Domain should be lowercased per LUD-16, username preserved for cryptoqr.net
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://cryptoqr.net/.well-known/lnurlp/https%3A%2F%2Fpay.cryptoqr.net%2F3458967'
+            );
+        });
+
         it('lowercases username for standard Lightning Address domains', async () => {
             const address = 'SatoshiNakamoto@example.com';
             mockProcessBIP21Uri.mockReturnValue({ value: address });
@@ -802,6 +821,24 @@ describe('handleAnything', () => {
             expect(mockBlobUtilFetch).toHaveBeenCalledWith(
                 'get',
                 'https://example.com/.well-known/lnurlp/satoshinakamoto'
+            );
+        });
+
+        it('lowercases domain per LUD-16 spec', async () => {
+            const address = 'satoshi@EXAMPLE.COM';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+
+            await handleAnything(address);
+
+            // Both domain and username should be lowercased for standard addresses
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://example.com/.well-known/lnurlp/satoshi'
             );
         });
     });
