@@ -1378,11 +1378,11 @@ export default class NostrWalletConnectStore {
                             'stores.NostrWalletConnectStore.zeusWallet'
                         ),
                     color: nodeInfo?.color || '#3399FF',
-                    pubkey: nodeInfo?.identity_pubkey,
+                    pubkey: nodeInfo?.identity_pubkey || '',
                     network,
-                    block_height: nodeInfo?.block_height,
-                    block_hash: nodeInfo?.block_hash,
-                    methods: connection.permissions,
+                    block_height: nodeInfo?.block_height || 0,
+                    block_hash: nodeInfo?.block_hash || '',
+                    methods: connection.permissions || [],
                     notifications: NostrConnectUtils.getNotifications()
                 },
                 error: undefined
@@ -1777,7 +1777,7 @@ export default class NostrWalletConnectStore {
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
-            if (NostrConnectUtils.hasFullPermissions(connection.permissions)) {
+            if (connection.hasPaymentPermissions()) {
                 nip47Transactions = connection.activity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(
@@ -1792,14 +1792,11 @@ export default class NostrWalletConnectStore {
                     this.invoicesStore.getInvoices(),
                     this.transactionsStore.getTransactions()
                 ]);
-                const paymentTransactions =
-                    NostrConnectUtils.convertLightningPaymentsToNip47Transactions(
-                        this.paymentsStore.payments || []
-                    );
-                const invoiceTransactions =
-                    NostrConnectUtils.convertLightningInvoicesToNip47Transactions(
-                        this.invoicesStore.invoices || []
-                    );
+                const lightningTransactions =
+                    NostrConnectUtils.convertLightningDataToNip47Transactions({
+                        payments: this.paymentsStore.payments || [],
+                        invoices: this.invoicesStore.invoices || []
+                    });
                 const onChainTransactions =
                     NostrConnectUtils.convertOnChainTransactionsToNip47Transactions(
                         this.transactionsStore.transactions || []
@@ -1816,8 +1813,7 @@ export default class NostrWalletConnectStore {
                         });
                 }
                 nip47Transactions = [
-                    ...paymentTransactions,
-                    ...invoiceTransactions,
+                    ...lightningTransactions,
                     ...onChainTransactions,
                     ...cashuTransactions
                 ].sort((a, b) => b.created_at - a.created_at);

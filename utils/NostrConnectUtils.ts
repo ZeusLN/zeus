@@ -616,21 +616,6 @@ export default class NostrConnectUtils {
     }
 
     /**
-     * Checks if a connection has full access permissions
-     * @param permissions - Array of permissions to check
-     * @returns true if permissions match full access permissions
-     */
-    static hasFullPermissions(permissions: Nip47SingleMethod[]): boolean {
-        const fullAccessPermissions =
-            NostrConnectUtils.getFullAccessPermissions().slice().sort();
-        const connectionPermissions = [...permissions].sort();
-        return (
-            JSON.stringify(connectionPermissions) ===
-            JSON.stringify(fullAccessPermissions)
-        );
-    }
-
-    /**
      * Converts a ConnectionActivity to a NIP-47 transaction
      * @param activity - Connection activity to convert
      * @returns NIP-47 transaction object
@@ -844,80 +829,92 @@ export default class NostrConnectUtils {
     }
 
     /**
-     * Converts Lightning payments to NIP-47 transactions
-     * @param payments - Array of Lightning payments
+     * Converts Lightning payments and invoices to NIP-47 transactions
+     * @param lightningData - Object containing Lightning payments and invoices
      * @returns Array of NIP-47 transactions
      */
-    static convertLightningPaymentsToNip47Transactions(
-        payments: Payment[]
-    ): Nip47Transaction[] {
-        return (payments || []).map((payment: Payment) => {
-            const amount = Number(payment.getAmount) || 0;
-            const timestamp = Number(payment.getTimestamp) || Date.now() / 1000;
-            const paymentHash = payment.paymentHash || '';
-            const invoice = payment.getPaymentRequest || '';
-            const feesPaid = satsToMillisats(Number(payment.getFee) || 0);
-            const description = payment.getMemo || '';
-            const preimage = payment.getPreimage || '';
+    static convertLightningDataToNip47Transactions(lightningData: {
+        payments?: Payment[];
+        invoices?: Invoice[];
+    }): Nip47Transaction[] {
+        const transactions: Nip47Transaction[] = [];
 
-            // Determine state based on payment status
-            let state: 'settled' | 'pending' | 'failed' = 'pending';
-            if (payment.isFailed) {
-                state = 'failed';
-            } else if (!payment.isIncomplete) {
-                state = 'settled';
-            }
+        // Convert Lightning payments
+        if (lightningData.payments) {
+            const paymentTransactions = lightningData.payments.map(
+                (payment: Payment) => {
+                    const amount = Number(payment.getAmount) || 0;
+                    const timestamp =
+                        Number(payment.getTimestamp) || Date.now() / 1000;
+                    const paymentHash = payment.paymentHash || '';
+                    const invoice = payment.getPaymentRequest || '';
+                    const feesPaid = satsToMillisats(
+                        Number(payment.getFee) || 0
+                    );
+                    const description = payment.getMemo || '';
+                    const preimage = payment.getPreimage || '';
 
-            return NostrConnectUtils.createNip47Transaction({
-                type: 'outgoing',
-                state,
-                invoice,
-                payment_hash: paymentHash,
-                amount: satsToMillisats(amount),
-                description,
-                preimage,
-                fees_paid: feesPaid,
-                settled_at: state === 'settled' ? timestamp : 0,
-                created_at: timestamp,
-                expires_at: 0
-            });
-        });
-    }
+                    // Determine state based on payment status
+                    let state: 'settled' | 'pending' | 'failed' = 'pending';
+                    if (payment.isFailed) {
+                        state = 'failed';
+                    } else if (!payment.isIncomplete) {
+                        state = 'settled';
+                    }
 
-    /**
-     * Converts Lightning invoices to NIP-47 transactions
-     * @param invoices - Array of Lightning invoices
-     * @returns Array of NIP-47 transactions
-     */
-    static convertLightningInvoicesToNip47Transactions(
-        invoices: Invoice[]
-    ): Nip47Transaction[] {
-        return (invoices || []).map((invoice: Invoice) => {
-            const amount = Number(invoice.getAmount) || 0;
-            const timestamp = Number(invoice.getTimestamp) || Date.now() / 1000;
-            const paymentHash = invoice.payment_hash || '';
-            const invoiceString = invoice.getPaymentRequest || '';
-            const description = invoice.getMemo || '';
-            const expiresAt = Number(invoice.expires_at) || 0;
+                    return NostrConnectUtils.createNip47Transaction({
+                        type: 'outgoing',
+                        state,
+                        invoice,
+                        payment_hash: paymentHash,
+                        amount: satsToMillisats(amount),
+                        description,
+                        preimage,
+                        fees_paid: feesPaid,
+                        settled_at: state === 'settled' ? timestamp : 0,
+                        created_at: timestamp,
+                        expires_at: 0
+                    });
+                }
+            );
+            transactions.push(...paymentTransactions);
+        }
 
-            let state: 'settled' | 'pending' | 'failed' = 'pending';
-            if (invoice.isPaid) {
-                state = 'settled';
-            }
+        // Convert Lightning invoices
+        if (lightningData.invoices) {
+            const invoiceTransactions = lightningData.invoices.map(
+                (invoice: Invoice) => {
+                    const amount = Number(invoice.getAmount) || 0;
+                    const timestamp =
+                        Number(invoice.getTimestamp) || Date.now() / 1000;
+                    const paymentHash = invoice.payment_hash || '';
+                    const invoiceString = invoice.getPaymentRequest || '';
+                    const description = invoice.getMemo || '';
+                    const expiresAt = Number(invoice.expires_at) || 0;
 
-            return NostrConnectUtils.createNip47Transaction({
-                type: 'incoming',
-                state,
-                invoice: invoiceString,
-                payment_hash: paymentHash,
-                amount: satsToMillisats(amount),
-                description,
-                fees_paid: 0,
-                settled_at: state === 'settled' ? timestamp : 0,
-                created_at: timestamp,
-                expires_at: expiresAt
-            });
-        });
+                    let state: 'settled' | 'pending' | 'failed' = 'pending';
+                    if (invoice.isPaid) {
+                        state = 'settled';
+                    }
+
+                    return NostrConnectUtils.createNip47Transaction({
+                        type: 'incoming',
+                        state,
+                        invoice: invoiceString,
+                        payment_hash: paymentHash,
+                        amount: satsToMillisats(amount),
+                        description,
+                        fees_paid: 0,
+                        settled_at: state === 'settled' ? timestamp : 0,
+                        created_at: timestamp,
+                        expires_at: expiresAt
+                    });
+                }
+            );
+            transactions.push(...invoiceTransactions);
+        }
+
+        return transactions;
     }
 
     /**
