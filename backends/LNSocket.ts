@@ -1,6 +1,5 @@
 import { Platform } from 'react-native';
 // @ts-ignore
-// eslint-disable-next-line import/no-duplicates
 import Lnmessage, { createReactNativeTcpSocket } from 'lnmessage';
 import TcpSocket from 'react-native-tcp-socket';
 
