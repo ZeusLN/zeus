@@ -326,34 +326,46 @@ export async function startLnd({
     if (walletPassword) settingsStore.embeddedLndStarted = true;
 
     const status = await checkStatus();
+    // If LND is already running, kill the old process first
     if (
-        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
+        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
+        log.d('LND process already running, stopping it first');
         try {
-            await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
-        } catch (e: any) {
-            // Check for folder missing error before retrying
-            if (e?.message?.includes("doesn't exist")) {
-                throw new Error(LND_FOLDER_MISSING_ERROR);
-            }
-            let started;
-            while (!started) {
-                try {
-                    console.log('error starting LND - retrying momentarily', e);
-                    await sleep(3000);
-                    await startLnd({
-                        args: '',
-                        lndDir,
-                        isTorEnabled,
-                        isTestnet
-                    });
-                    started = true;
-                } catch (e2: any) {
-                    // Stop retrying if folder is missing
-                    if (e2?.message?.includes("doesn't exist")) {
-                        throw new Error(LND_FOLDER_MISSING_ERROR);
-                    }
+            await lndMobile.index.stopLnd();
+            await NativeModules.LndMobileTools.killLnd();
+            // Give the process time to fully terminate
+            await sleep(1000);
+        } catch (e) {
+            log.e('Error stopping existing LND process', [e]);
+        }
+    }
+
+    // Now start the LND process
+    try {
+        await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+    } catch (e: any) {
+        // Check for folder missing error before retrying
+        if (e?.message?.includes("doesn't exist")) {
+            throw new Error(LND_FOLDER_MISSING_ERROR);
+        }
+        let started;
+        while (!started) {
+            try {
+                console.log('error starting LND - retrying momentarily', e);
+                await sleep(3000);
+                await startLnd({
+                    args: '',
+                    lndDir,
+                    isTorEnabled,
+                    isTestnet
+                });
+                started = true;
+            } catch (e2: any) {
+                // Stop retrying if folder is missing
+                if (e2?.message?.includes("doesn't exist")) {
+                    throw new Error(LND_FOLDER_MISSING_ERROR);
                 }
             }
         }
