@@ -2,21 +2,21 @@ import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
-import Button from './../components/Button';
-import LightningIndicator from './../components/LightningIndicator';
+import Button from '../components/Button';
+import LightningIndicator from '../components/LightningIndicator';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../components/SuccessErrorMessage';
-import TextInput from './../components/TextInput';
+} from '../components/SuccessErrorMessage';
+import TextInput from '../components/TextInput';
 
-import BackendUtils from './../utils/BackendUtils';
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import ChannelsStore from './../stores/ChannelsStore';
-import FeeStore from './../stores/FeeStore';
-import SettingsStore from './../stores/SettingsStore';
+import ChannelsStore from '../stores/ChannelsStore';
+import FeeStore from '../stores/FeeStore';
+import SettingsStore from '../stores/SettingsStore';
 
 interface SetFeesFormProps {
     FeeStore?: FeeStore;
