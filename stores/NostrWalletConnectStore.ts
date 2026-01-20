@@ -65,7 +65,6 @@ import NWCConnection, {
     ConnectionWarningType,
     TimeUnit
 } from '../models/NWCConnection';
-import Transaction from '../models/Transaction';
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
 import Payment from '../models/Payment';
@@ -1174,7 +1173,7 @@ export default class NostrWalletConnectStore {
                     request: Nip47ListTransactionsRequest
                 ) =>
                     this.withGlobalHandler(connection.id, () =>
-                        this.handleListTransactions(request)
+                        this.handleListTransactions(connection, request)
                     );
             }
 
@@ -1770,224 +1769,64 @@ export default class NostrWalletConnectStore {
     }
 
     private async handleListTransactions(
+        connection: NWCConnection,
         request: Nip47ListTransactionsRequest
     ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
         try {
             let nip47Transactions: Nip47Transaction[] = [];
 
-            if (this.isCashuConfigured) {
-                const cashuPayments = this.cashuStore.payments || [];
-                const cashuInvoices = this.cashuStore.invoices || [];
-                const receivedTokens = this.cashuStore.receivedTokens || [];
-                const sentTokens = this.cashuStore.sentTokens || [];
-
-                // Convert Cashu payments to NIP-47 transactions
-                const cashuPaymentTransactions: Nip47Transaction[] =
-                    cashuPayments.map((payment) => {
-                        const timestamp =
-                            Number(payment.getTimestamp) || Date.now() / 1000;
-                        return NostrConnectUtils.createNip47Transaction({
-                            type: 'outgoing',
-                            state: 'settled',
-                            invoice: payment.getPaymentRequest || '',
-                            payment_hash: payment.paymentHash || '',
-                            amount: satsToMillisats(
-                                Number(payment.getAmount) || 0
-                            ),
-                            description: payment.getMemo,
-
-                            fees_paid: satsToMillisats(
-                                Number(payment.getFee) || 0
-                            ),
-                            settled_at: Math.floor(timestamp),
-                            created_at: Math.floor(timestamp),
-                            expires_at: Math.floor(
-                                timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS
-                            )
-                        });
-                    });
-
-                // Convert Cashu invoices to NIP-47 transactions
-                const cashuInvoiceTransactions: Nip47Transaction[] =
-                    cashuInvoices.map((invoice) => {
-                        const timestamp =
-                            Number(invoice.getTimestamp) || Date.now() / 1000;
-                        const expiresAt =
-                            Number(invoice.expires_at) ||
-                            timestamp + DEFAULT_INVOICE_EXPIRY_SECONDS;
-                        return NostrConnectUtils.createNip47Transaction({
-                            type: 'incoming',
-                            state: invoice.isPaid ? 'settled' : 'pending',
-                            invoice: invoice.getPaymentRequest || '',
-                            payment_hash: invoice.quote || '',
-                            amount: satsToMillisats(invoice.getAmount || 0),
-                            description: invoice.getMemo,
-                            settled_at: invoice.isPaid
-                                ? Math.floor(
-                                      invoice.settleDate?.getTime()
-                                          ? invoice.settleDate.getTime() / 1000
-                                          : Number(invoice.getTimestamp) ||
-                                                Date.now() / 1000
-                                  )
-                                : 0,
-                            created_at: Math.floor(timestamp),
-                            expires_at: Math.floor(expiresAt)
-                        });
-                    });
-
-                // Convert received tokens to NIP-47 transactions
-                const receivedTokenTransactions: Nip47Transaction[] =
-                    receivedTokens.map((token) => {
-                        const receivedAt =
-                            Number(token.received_at) || Date.now() / 1000;
-                        const createdAt =
-                            Number(token.created_at) || receivedAt;
-                        return NostrConnectUtils.createNip47Transaction({
-                            type: 'incoming',
-                            state: 'settled',
-                            invoice: '',
-                            payment_hash: token.encodedToken || '',
-                            amount: satsToMillisats(token.getAmount || 0),
-                            description:
-                                token.memo ||
-                                localeString(
-                                    'stores.NostrWalletConnectStore.receivedCashuToken'
-                                ),
-                            settled_at: Math.floor(receivedAt),
-                            created_at: Math.floor(createdAt),
-                            expires_at: Math.floor(
-                                createdAt + DEFAULT_INVOICE_EXPIRY_SECONDS
-                            )
-                        });
-                    });
-
-                // Convert sent tokens to NIP-47 transactions
-                const sentTokenTransactions: Nip47Transaction[] =
-                    sentTokens.map((token) => {
-                        const createdAt =
-                            Number(token.created_at) || Date.now() / 1000;
-                        return NostrConnectUtils.createNip47Transaction({
-                            type: 'outgoing',
-                            state: token.spent ? 'settled' : 'pending',
-                            invoice: '',
-                            payment_hash: token.encodedToken || '',
-                            amount: satsToMillisats(token.getAmount || 0),
-                            description:
-                                token.memo ||
-                                localeString(
-                                    'stores.NostrWalletConnectStore.sentCashuToken'
-                                ),
-                            settled_at: token.spent
-                                ? Math.floor(
-                                      Number(token.received_at) ||
-                                          Number(token.created_at) ||
-                                          Date.now() / 1000
-                                  )
-                                : 0,
-                            created_at: Math.floor(createdAt),
-                            expires_at: Math.floor(
-                                createdAt + DEFAULT_INVOICE_EXPIRY_SECONDS
-                            )
-                        });
-                    });
-
-                nip47Transactions = [
-                    ...cashuPaymentTransactions,
-                    ...cashuInvoiceTransactions,
-                    ...receivedTokenTransactions,
-                    ...sentTokenTransactions
-                ];
-                nip47Transactions.sort((a, b) => b.created_at - a.created_at);
+            if (connection.hasPaymentPermissions()) {
+                nip47Transactions = connection.activity
+                    .map((activity) =>
+                        NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                            activity
+                        )
+                    )
+                    .filter((tx) => tx.amount > 0)
+                    .sort((a, b) => b.created_at - a.created_at);
             } else {
-                await this.transactionsStore.getTransactions();
-                const transactions = this.transactionsStore.transactions;
-
-                nip47Transactions = (transactions || []).map(
-                    (tx: Transaction) => {
-                        const amount = Number(tx.amount);
-                        const type: 'incoming' | 'outgoing' =
-                            amount >= 0 ? 'incoming' : 'outgoing';
-                        // Determine state: failed if status indicates failure, settled if confirmed, pending otherwise
-                        let state: 'settled' | 'pending' | 'failed' = 'pending';
-                        if (
-                            tx.status &&
-                            (tx.status === 'failed' ||
-                                tx.status === 'FAILED' ||
-                                tx.status.toLowerCase().includes('fail'))
-                        ) {
-                            state = 'failed';
-                        } else if (tx.num_confirmations > 0) {
-                            state = 'settled';
-                        }
-                        const amountMsats = satsToMillisats(Math.abs(amount));
-                        const feesMsats = satsToMillisats(
-                            Number(tx.total_fees) || 0
-                        );
-                        const timestamp = Number(tx.time_stamp) || 0;
-                        const txHash = tx.tx_hash || tx.txid || '';
-
-                        return NostrConnectUtils.createNip47Transaction({
-                            type,
-                            state,
-                            invoice: '',
-                            payment_hash: txHash,
-                            amount: amountMsats,
-                            description: tx.note || undefined,
-                            fees_paid: feesMsats,
-                            settled_at: state === 'settled' ? timestamp : 0,
-                            created_at: timestamp,
-                            expires_at: 0, // On-chain transactions don't expire
-                            metadata: {
-                                block_height: tx.block_height,
-                                block_hash: tx.block_hash,
-                                num_confirmations: tx.num_confirmations,
-                                dest_addresses: tx.dest_addresses,
-                                raw_tx_hex: tx.raw_tx_hex
-                            }
+                await Promise.all([
+                    this.paymentsStore.getPayments(),
+                    this.invoicesStore.getInvoices(),
+                    this.transactionsStore.getTransactions()
+                ]);
+                const lightningTransactions =
+                    NostrConnectUtils.convertLightningDataToNip47Transactions({
+                        payments: this.paymentsStore.payments || [],
+                        invoices: this.invoicesStore.invoices || []
+                    });
+                const onChainTransactions =
+                    NostrConnectUtils.convertOnChainTransactionsToNip47Transactions(
+                        this.transactionsStore.transactions || []
+                    );
+                let cashuTransactions: Nip47Transaction[] = [];
+                if (this.isCashuConfigured) {
+                    cashuTransactions =
+                        NostrConnectUtils.convertCashuDataToNip47Transactions({
+                            payments: this.cashuStore.payments || [],
+                            invoices: this.cashuStore.invoices || [],
+                            receivedTokens:
+                                this.cashuStore.receivedTokens || [],
+                            sentTokens: this.cashuStore.sentTokens || []
                         });
-                    }
-                );
-            }
-            if (request.type && request.type.trim() !== '') {
-                nip47Transactions = nip47Transactions.filter(
-                    (tx) => tx.type === request.type
-                );
-            }
-
-            if (request.from) {
-                nip47Transactions = nip47Transactions.filter(
-                    (tx) => tx.created_at >= request.from!
-                );
-            }
-
-            if (request.until) {
-                nip47Transactions = nip47Transactions.filter(
-                    (tx) => tx.created_at <= request.until!
-                );
-            }
-
-            if (request.unpaid !== undefined) {
-                if (request.unpaid) {
-                    nip47Transactions = nip47Transactions.filter(
-                        (tx) => tx.state === 'pending'
-                    );
-                } else {
-                    nip47Transactions = nip47Transactions.filter(
-                        (tx) => tx.state === 'settled'
-                    );
                 }
+                nip47Transactions = [
+                    ...lightningTransactions,
+                    ...onChainTransactions,
+                    ...cashuTransactions
+                ].sort((a, b) => b.created_at - a.created_at);
             }
 
-            const totalCount = nip47Transactions.length;
-            const offset = Math.max(0, request.offset || 0);
-            const MAX_LIMIT = 1000;
-            const limit = request.limit
-                ? Math.min(request.limit, MAX_LIMIT)
-                : Math.min(totalCount, MAX_LIMIT);
-            nip47Transactions = nip47Transactions.slice(offset, offset + limit);
+            // Filter and paginate transactions
+            const { transactions, totalCount } =
+                NostrConnectUtils.filterAndPaginateTransactions(
+                    nip47Transactions,
+                    request
+                );
+
             return {
                 result: {
-                    transactions: nip47Transactions,
+                    transactions,
                     total_count: totalCount
                 },
                 error: undefined

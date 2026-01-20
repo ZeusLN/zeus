@@ -1,22 +1,29 @@
 import type {
     Nip47NotificationType,
     Nip47SingleMethod,
-    Nip47Transaction
+    Nip47Transaction,
+    Nip47ListTransactionsRequest
 } from '@getalby/sdk/dist/nwc/types';
 
 import {
     BudgetRenewalType,
     PermissionType,
-    TimeUnit
+    TimeUnit,
+    ConnectionActivity
 } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
+import Payment from '../models/Payment';
+import CashuPayment from '../models/CashuPayment';
+import CashuInvoice from '../models/CashuInvoice';
+import CashuToken from '../models/CashuToken';
+import Transaction from '../models/Transaction';
 
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
 import Base64Utils from './Base64Utils';
 import BackendUtils from './BackendUtils';
-import { millisatsToSats } from './AmountUtils';
+import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
 export interface PermissionOption {
     key: PermissionType;
@@ -606,5 +613,415 @@ export default class NostrConnectUtils {
             msg.includes('invoice canceled') ||
             msg.includes('invoice cancelled')
         );
+    }
+
+    /**
+     * Converts a ConnectionActivity to a NIP-47 transaction
+     * @param activity - Connection activity to convert
+     * @returns NIP-47 transaction object
+     */
+    static convertConnectionActivityToNip47Transaction(
+        activity: ConnectionActivity
+    ): Nip47Transaction {
+        let type: 'incoming' | 'outgoing' = 'outgoing';
+        if (activity.type === 'make_invoice') {
+            type = 'incoming';
+        } else if (
+            activity.type === 'pay_invoice' ||
+            activity.type === 'pay_keysend'
+        ) {
+            type = 'outgoing';
+        }
+
+        let state: 'settled' | 'pending' | 'failed' = 'pending';
+        if (activity.status === 'success') {
+            state = 'settled';
+        } else if (activity.status === 'failed') {
+            state = 'failed';
+        }
+
+        let invoice = '';
+        if (activity.invoice) {
+            invoice = activity.invoice.getPaymentRequest || '';
+        }
+
+        let paymentHash = activity.paymentHash || '';
+        if (!paymentHash && activity.payment) {
+            paymentHash = activity.payment.paymentHash || '';
+        }
+        if (!paymentHash && activity.invoice) {
+            paymentHash = (activity.invoice as Invoice).payment_hash || '';
+        }
+        if (!paymentHash) {
+            paymentHash = activity.id || '';
+        }
+
+        let amount = 0;
+        if (activity.satAmount) {
+            amount = satsToMillisats(activity.satAmount);
+        } else if (activity.payment) {
+            const paymentAmount = activity.payment.getAmount;
+            amount = satsToMillisats(Number(paymentAmount) || 0);
+        } else if (activity.invoice) {
+            amount = satsToMillisats(Number(activity.invoice.getAmount) || 0);
+        }
+
+        const feesPaid = activity.fees_paid
+            ? satsToMillisats(activity.fees_paid)
+            : activity.payment
+            ? satsToMillisats(Number(activity.payment.getFee) || 0)
+            : 0;
+
+        const lastProcessAt = activity.lastprocessAt
+            ? Math.floor(activity.lastprocessAt.getTime() / 1000)
+            : Date.now() / 1000;
+        const expiresAt = activity.expiresAt
+            ? Math.floor(activity.expiresAt.getTime() / 1000)
+            : activity.invoice
+            ? Number(activity.invoice.expires_at) || 0
+            : 0;
+
+        let description = '';
+        if (activity.invoice) {
+            description = activity.invoice.getMemo || '';
+        } else if (activity.payment) {
+            description = activity.payment.getMemo || '';
+        }
+
+        const preimage =
+            activity.preimage ||
+            (activity.payment ? activity.payment.getPreimage || '' : '');
+
+        return NostrConnectUtils.createNip47Transaction({
+            type,
+            state,
+            invoice,
+            payment_hash: paymentHash,
+            amount,
+            description,
+            preimage,
+            fees_paid: feesPaid,
+            settled_at: state === 'settled' ? lastProcessAt : 0,
+            created_at: lastProcessAt,
+            expires_at: expiresAt
+        });
+    }
+
+    /**
+     * Converts Cashu payments, invoices, and tokens to NIP-47 transactions
+     * @param cashuData - Object containing Cashu payments, invoices, and tokens
+     * @returns Array of NIP-47 transactions
+     */
+    static convertCashuDataToNip47Transactions(cashuData: {
+        payments?: CashuPayment[];
+        invoices?: CashuInvoice[];
+        receivedTokens?: CashuToken[];
+        sentTokens?: CashuToken[];
+    }): Nip47Transaction[] {
+        const transactions: Nip47Transaction[] = [];
+
+        // Convert Cashu payments
+        if (cashuData.payments) {
+            const paymentTransactions = cashuData.payments.map((payment) => {
+                const timestamp =
+                    Number(payment.getTimestamp) || Date.now() / 1000;
+                return NostrConnectUtils.createNip47Transaction({
+                    type: 'outgoing',
+                    state: 'settled',
+                    invoice: payment.getPaymentRequest || '',
+                    payment_hash: payment.paymentHash || '',
+                    amount: satsToMillisats(Number(payment.getAmount) || 0),
+                    description: payment.getMemo,
+                    fees_paid: satsToMillisats(Number(payment.getFee) || 0),
+                    settled_at: Math.floor(timestamp),
+                    created_at: Math.floor(timestamp),
+                    expires_at: 0
+                });
+            });
+            transactions.push(...paymentTransactions);
+        }
+
+        // Convert Cashu invoices
+        if (cashuData.invoices) {
+            const invoiceTransactions = cashuData.invoices.map((invoice) => {
+                const timestamp =
+                    Number(invoice.getTimestamp) || Date.now() / 1000;
+                const expiresAt = Number(invoice.expires_at) || 0;
+                return NostrConnectUtils.createNip47Transaction({
+                    type: 'incoming',
+                    state: invoice.isPaid ? 'settled' : 'pending',
+                    invoice: invoice.getPaymentRequest || '',
+                    payment_hash: invoice.quote || '',
+                    amount: satsToMillisats(invoice.getAmount || 0),
+                    description: invoice.getMemo,
+                    settled_at: invoice.isPaid
+                        ? Math.floor(
+                              invoice.settleDate?.getTime()
+                                  ? invoice.settleDate.getTime() / 1000
+                                  : Number(invoice.getTimestamp) ||
+                                        Date.now() / 1000
+                          )
+                        : 0,
+                    created_at: Math.floor(timestamp),
+                    expires_at: Math.floor(expiresAt)
+                });
+            });
+            transactions.push(...invoiceTransactions);
+        }
+
+        // Convert received tokens
+        if (cashuData.receivedTokens) {
+            const receivedTokenTransactions = cashuData.receivedTokens.map(
+                (token) => {
+                    const receivedAt =
+                        Number(token.received_at) || Date.now() / 1000;
+                    const createdAt = Number(token.created_at) || receivedAt;
+                    return NostrConnectUtils.createNip47Transaction({
+                        type: 'incoming',
+                        state: 'settled',
+                        invoice: '',
+                        payment_hash: token.encodedToken || '',
+                        amount: satsToMillisats(token.getAmount || 0),
+                        description:
+                            token.memo ||
+                            localeString(
+                                'stores.NostrWalletConnectStore.receivedCashuToken'
+                            ),
+                        settled_at: Math.floor(receivedAt),
+                        created_at: Math.floor(createdAt),
+                        expires_at: 0
+                    });
+                }
+            );
+            transactions.push(...receivedTokenTransactions);
+        }
+
+        // Convert sent tokens
+        if (cashuData.sentTokens) {
+            const sentTokenTransactions = cashuData.sentTokens.map((token) => {
+                const createdAt = Number(token.created_at) || Date.now() / 1000;
+                return NostrConnectUtils.createNip47Transaction({
+                    type: 'outgoing',
+                    state: token.spent ? 'settled' : 'pending',
+                    invoice: '',
+                    payment_hash: token.encodedToken || '',
+                    amount: satsToMillisats(token.getAmount || 0),
+                    description:
+                        token.memo ||
+                        localeString(
+                            'stores.NostrWalletConnectStore.sentCashuToken'
+                        ),
+                    settled_at: token.spent
+                        ? Math.floor(
+                              Number(token.received_at) ||
+                                  Number(token.created_at) ||
+                                  Date.now() / 1000
+                          )
+                        : 0,
+                    created_at: Math.floor(createdAt),
+                    expires_at: 0
+                });
+            });
+            transactions.push(...sentTokenTransactions);
+        }
+
+        return transactions;
+    }
+
+    /**
+     * Converts Lightning payments and invoices to NIP-47 transactions
+     * @param lightningData - Object containing Lightning payments and invoices
+     * @returns Array of NIP-47 transactions
+     */
+    static convertLightningDataToNip47Transactions(lightningData: {
+        payments?: Payment[];
+        invoices?: Invoice[];
+    }): Nip47Transaction[] {
+        const transactions: Nip47Transaction[] = [];
+
+        // Convert Lightning payments
+        if (lightningData.payments) {
+            const paymentTransactions = lightningData.payments.map(
+                (payment: Payment) => {
+                    const amount = Number(payment.getAmount) || 0;
+                    const timestamp =
+                        Number(payment.getTimestamp) || Date.now() / 1000;
+                    const paymentHash = payment.paymentHash || '';
+                    const invoice = payment.getPaymentRequest || '';
+                    const feesPaid = satsToMillisats(
+                        Number(payment.getFee) || 0
+                    );
+                    const description = payment.getMemo || '';
+                    const preimage = payment.getPreimage || '';
+
+                    // Determine state based on payment status
+                    let state: 'settled' | 'pending' | 'failed' = 'pending';
+                    if (payment.isFailed) {
+                        state = 'failed';
+                    } else if (!payment.isIncomplete) {
+                        state = 'settled';
+                    }
+
+                    return NostrConnectUtils.createNip47Transaction({
+                        type: 'outgoing',
+                        state,
+                        invoice,
+                        payment_hash: paymentHash,
+                        amount: satsToMillisats(amount),
+                        description,
+                        preimage,
+                        fees_paid: feesPaid,
+                        settled_at: state === 'settled' ? timestamp : 0,
+                        created_at: timestamp,
+                        expires_at: 0
+                    });
+                }
+            );
+            transactions.push(...paymentTransactions);
+        }
+
+        // Convert Lightning invoices
+        if (lightningData.invoices) {
+            const invoiceTransactions = lightningData.invoices.map(
+                (invoice: Invoice) => {
+                    const amount = Number(invoice.getAmount) || 0;
+                    const timestamp =
+                        Number(invoice.getTimestamp) || Date.now() / 1000;
+                    const paymentHash = invoice.payment_hash || '';
+                    const invoiceString = invoice.getPaymentRequest || '';
+                    const description = invoice.getMemo || '';
+                    const expiresAt = Number(invoice.expires_at) || 0;
+
+                    let state: 'settled' | 'pending' | 'failed' = 'pending';
+                    if (invoice.isPaid) {
+                        state = 'settled';
+                    }
+
+                    return NostrConnectUtils.createNip47Transaction({
+                        type: 'incoming',
+                        state,
+                        invoice: invoiceString,
+                        payment_hash: paymentHash,
+                        amount: satsToMillisats(amount),
+                        description,
+                        fees_paid: 0,
+                        settled_at: state === 'settled' ? timestamp : 0,
+                        created_at: timestamp,
+                        expires_at: expiresAt
+                    });
+                }
+            );
+            transactions.push(...invoiceTransactions);
+        }
+
+        return transactions;
+    }
+
+    /**
+     * Converts on-chain transactions to NIP-47 transactions
+     * @param transactions - Array of on-chain transactions
+     * @returns Array of NIP-47 transactions
+     */
+    static convertOnChainTransactionsToNip47Transactions(
+        transactions: Transaction[]
+    ): Nip47Transaction[] {
+        return (transactions || []).map((tx: Transaction) => {
+            const amount = Number(tx.amount);
+            const type: 'incoming' | 'outgoing' =
+                amount >= 0 ? 'incoming' : 'outgoing';
+
+            let state: 'settled' | 'pending' | 'failed' = 'pending';
+            if (
+                tx.status &&
+                (tx.status === 'failed' ||
+                    tx.status === 'FAILED' ||
+                    tx.status.toLowerCase().includes('fail'))
+            ) {
+                state = 'failed';
+            } else if (tx.num_confirmations > 0) {
+                state = 'settled';
+            }
+
+            const amountMsats = satsToMillisats(Math.abs(amount));
+            const feesMsats = satsToMillisats(Number(tx.total_fees) || 0);
+            const timestamp = Number(tx.time_stamp) || 0;
+            const txHash = tx.tx_hash || tx.txid || '';
+
+            return NostrConnectUtils.createNip47Transaction({
+                type,
+                state,
+                invoice: '',
+                payment_hash: txHash,
+                amount: amountMsats,
+                description: tx.note || undefined,
+                fees_paid: feesMsats,
+                settled_at: state === 'settled' ? timestamp : 0,
+                created_at: timestamp,
+                expires_at: 0, // On-chain transactions don't expire
+                metadata: {
+                    block_height: tx.block_height,
+                    block_hash: tx.block_hash,
+                    num_confirmations: tx.num_confirmations,
+                    dest_addresses: tx.dest_addresses,
+                    raw_tx_hex: tx.raw_tx_hex
+                }
+            });
+        });
+    }
+
+    /**
+     * Filters and paginates NIP-47 transactions based on request parameters
+     * @param transactions - Array of transactions to filter
+     * @param request - Filter and pagination parameters
+     * @returns Filtered and paginated transactions with total count
+     */
+    static filterAndPaginateTransactions(
+        transactions: Nip47Transaction[],
+        request: Nip47ListTransactionsRequest
+    ): {
+        transactions: Nip47Transaction[];
+        totalCount: number;
+    } {
+        let filtered = [...transactions];
+
+        // Filter by type
+        if (request.type && request.type.trim() !== '') {
+            filtered = filtered.filter((tx) => tx.type === request.type);
+        }
+
+        // Filter by from timestamp
+        if (request.from) {
+            filtered = filtered.filter((tx) => tx.created_at >= request.from!);
+        }
+
+        // Filter by until timestamp
+        if (request.until) {
+            filtered = filtered.filter((tx) => tx.created_at <= request.until!);
+        }
+
+        // Filter by unpaid status
+        if (request.unpaid !== undefined) {
+            if (request.unpaid) {
+                filtered = filtered.filter((tx) => tx.state === 'pending');
+            } else {
+                filtered = filtered.filter((tx) => tx.state === 'settled');
+            }
+        }
+
+        // Calculate pagination
+        const totalCount = filtered.length;
+        const offset = Math.max(0, request.offset || 0);
+        const MAX_LIMIT = 1000;
+        const limit = request.limit
+            ? Math.min(request.limit, MAX_LIMIT)
+            : Math.min(totalCount, MAX_LIMIT);
+
+        // Apply pagination
+        const paginated = filtered.slice(offset, offset + limit);
+
+        return {
+            transactions: paginated,
+            totalCount
+        };
     }
 }
