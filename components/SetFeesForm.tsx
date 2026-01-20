@@ -70,6 +70,30 @@ export default class SetFeesForm extends React.Component<
         };
     }
 
+    convertFeeRate = (
+        value: string,
+        fromUnit: '%' | 'ppm',
+        toUnit: '%' | 'ppm'
+    ): string => {
+        if (fromUnit === toUnit || !value) return value;
+        const sanitized = value.replace(',', '.');
+        const num = parseFloat(sanitized);
+        if (isNaN(num)) return '';
+        return fromUnit === '%'
+            ? (num * 10000).toString()
+            : (num / 10000).toString();
+    };
+
+    prepareFeeRateForSubmission = (
+        value: string,
+        unit: '%' | 'ppm'
+    ): string => {
+        if (unit === '%') return value;
+        const sanitized = value.replace(',', '.');
+        const parsed = parseFloat(sanitized);
+        return isNaN(parsed) ? '' : (parsed / 10000).toString();
+    };
+
     render() {
         const {
             feesSubmitted,
@@ -176,25 +200,21 @@ export default class SetFeesForm extends React.Component<
                                   'components.SetFeesForm.ppmMilliMsat'
                               )
                             : feeRateUnit === '%'
-                            ? localeString('general.percentage')
-                            : localeString('components.SetFeesForm.ppm')
+                              ? localeString('general.percentage')
+                              : localeString('components.SetFeesForm.ppm')
                     }
                     toggleUnits={
                         implementation !== 'cln-rest'
                             ? () => {
-                                  const sanitized = newFeeRate
-                                      ? newFeeRate.replace(',', '.')
-                                      : '';
-                                  const num = parseFloat(sanitized);
+                                  const newUnit =
+                                      feeRateUnit === '%' ? 'ppm' : '%';
                                   this.setState({
-                                      feeRateUnit:
-                                          feeRateUnit === '%' ? 'ppm' : '%',
-                                      newFeeRate:
-                                          !sanitized || isNaN(num)
-                                              ? ''
-                                              : feeRateUnit === '%'
-                                              ? (num * 10000).toString()
-                                              : (num / 10000).toString()
+                                      feeRateUnit: newUnit,
+                                      newFeeRate: this.convertFeeRate(
+                                          newFeeRate,
+                                          feeRateUnit,
+                                          newUnit
+                                      )
                                   });
                               }
                             : undefined
@@ -260,21 +280,15 @@ export default class SetFeesForm extends React.Component<
                                     : localeString('components.SetFeesForm.ppm')
                             }
                             toggleUnits={() => {
-                                const sanitized = newFeeRateInbound
-                                    ? newFeeRateInbound.replace(',', '.')
-                                    : '';
-                                const num = parseFloat(sanitized);
+                                const newUnit =
+                                    feeRateInboundUnit === '%' ? 'ppm' : '%';
                                 this.setState({
-                                    feeRateInboundUnit:
-                                        feeRateInboundUnit === '%'
-                                            ? 'ppm'
-                                            : '%',
-                                    newFeeRateInbound:
-                                        !sanitized || isNaN(num)
-                                            ? ''
-                                            : feeRateInboundUnit === '%'
-                                            ? (num * 10000).toString()
-                                            : (num / 10000).toString()
+                                    feeRateInboundUnit: newUnit,
+                                    newFeeRateInbound: this.convertFeeRate(
+                                        newFeeRateInbound,
+                                        feeRateInboundUnit,
+                                        newUnit
+                                    )
                                 });
                             }}
                             autoCapitalize="none"
@@ -360,25 +374,19 @@ export default class SetFeesForm extends React.Component<
                                 'components.SetFeesForm.submit'
                             )}
                             onPress={() => {
-                                const sanitizedOut = newFeeRate
-                                    ? newFeeRate.replace(',', '.')
-                                    : '';
-                                const parsedOut = parseFloat(sanitizedOut);
                                 const feeRateToSubmit =
                                     implementation === 'cln-rest'
                                         ? newFeeRate
-                                        : feeRateUnit === 'ppm'
-                                        ? (isNaN(parsedOut) ? '' : (parsedOut / 10000).toString())
-                                        : newFeeRate;
+                                        : this.prepareFeeRateForSubmission(
+                                              newFeeRate,
+                                              feeRateUnit
+                                          );
 
-                                const sanitizedIn = newFeeRateInbound
-                                    ? newFeeRateInbound.replace(',', '.')
-                                    : '';
-                                const parsedIn = parseFloat(sanitizedIn);
                                 const feeRateInboundToSubmit =
-                                    feeRateInboundUnit === 'ppm'
-                                        ? (isNaN(parsedIn) ? '' : (parsedIn / 10000).toString())
-                                        : newFeeRateInbound;
+                                    this.prepareFeeRateForSubmission(
+                                        newFeeRateInbound,
+                                        feeRateInboundUnit
+                                    );
 
                                 setFees(
                                     newBaseFee,
