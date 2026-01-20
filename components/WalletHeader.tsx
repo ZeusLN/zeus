@@ -489,8 +489,8 @@ export default class WalletHeader extends React.Component<
             >
                 <Alert
                     fill={themeColor('error')}
-                    width="35"
-                    height="35"
+                    width="31"
+                    height="31"
                     style={{ alignSelf: 'center', marginRight: 15 }}
                 />
             </TouchableOpacity>
