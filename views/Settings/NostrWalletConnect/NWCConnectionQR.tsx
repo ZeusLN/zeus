@@ -18,10 +18,13 @@ import Header from '../../../components/Header';
 import Button from '../../../components/Button';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import CollapsedQR from '../../../components/CollapsedQR';
+import ModalBox from '../../../components/ModalBox';
 
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
+import AlertIcon from '../../../assets/images/SVG/Alert.svg';
+import { font } from '../../../utils/FontUtils';
 
 interface NWCConnectionQRProps {
     navigation: StackNavigationProp<any, any>;
@@ -32,8 +35,9 @@ interface NWCConnectionQRProps {
 interface NWCConnectionQRState {
     isConnected: boolean;
     appState: AppStateStatus;
+    showTimeoutMessage: boolean;
 }
-
+const CONNECTION_TIMEOUT_MS = 20000;
 @inject('NostrWalletConnectStore')
 @observer
 export default class NWCConnectionQR extends React.Component<
@@ -41,12 +45,14 @@ export default class NWCConnectionQR extends React.Component<
     NWCConnectionQRState
 > {
     appStateSubscription: NativeEventSubscription | null = null;
+    connectionTimeout: ReturnType<typeof setTimeout> | null = null;
 
     constructor(props: NWCConnectionQRProps) {
         super(props);
         this.state = {
             isConnected: false,
-            appState: AppState.currentState
+            appState: AppState.currentState,
+            showTimeoutMessage: false
         };
     }
 
@@ -58,6 +64,14 @@ export default class NWCConnectionQR extends React.Component<
             'change',
             this.handleAppStateChange
         );
+        this.connectionTimeout = setTimeout(() => {
+            if (
+                NostrWalletConnectStore.waitingForConnection &&
+                !NostrWalletConnectStore.connectionJustSucceeded
+            ) {
+                this.setState({ showTimeoutMessage: true });
+            }
+        }, CONNECTION_TIMEOUT_MS);
     }
 
     componentDidUpdate() {
@@ -66,7 +80,11 @@ export default class NWCConnectionQR extends React.Component<
             NostrWalletConnectStore.connectionJustSucceeded &&
             !this.state.isConnected
         ) {
-            this.setState({ isConnected: true });
+            if (this.connectionTimeout) {
+                clearTimeout(this.connectionTimeout);
+                this.connectionTimeout = null;
+            }
+            this.setState({ isConnected: true, showTimeoutMessage: false });
             setTimeout(() => {
                 navigation.popTo('NostrWalletConnect');
             }, 2000);
@@ -79,10 +97,38 @@ export default class NWCConnectionQR extends React.Component<
         if (this.appStateSubscription) {
             this.appStateSubscription.remove();
         }
+        if (this.connectionTimeout) {
+            clearTimeout(this.connectionTimeout);
+            this.connectionTimeout = null;
+        }
     }
 
     handleAppStateChange = (nextAppState: AppStateStatus) => {
         this.setState({ appState: nextAppState });
+    };
+
+    handleContinueWaiting = () => {
+        const { NostrWalletConnectStore } = this.props;
+
+        this.setState({ showTimeoutMessage: false });
+
+        if (this.connectionTimeout) {
+            clearTimeout(this.connectionTimeout);
+        }
+        this.connectionTimeout = setTimeout(() => {
+            if (
+                NostrWalletConnectStore.waitingForConnection &&
+                !NostrWalletConnectStore.connectionJustSucceeded
+            ) {
+                this.setState({ showTimeoutMessage: true });
+            }
+        }, CONNECTION_TIMEOUT_MS);
+    };
+
+    handleGoBack = () => {
+        const { navigation } = this.props;
+        this.setState({ showTimeoutMessage: false });
+        navigation.popTo('NostrWalletConnect');
     };
 
     render() {
@@ -212,6 +258,85 @@ export default class NWCConnectionQR extends React.Component<
                         />
                     </View>
                 </ScrollView>
+                <ModalBox
+                    isOpen={
+                        this.state.showTimeoutMessage &&
+                        NostrWalletConnectStore.waitingForConnection
+                    }
+                    style={{
+                        backgroundColor: 'transparent',
+                        minHeight: 200,
+                        zIndex: 9999
+                    }}
+                    onClosed={() =>
+                        this.setState({ showTimeoutMessage: false })
+                    }
+                    backdropPressToClose={false}
+                    swipeToClose={false}
+                >
+                    <View
+                        style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <View
+                            style={[
+                                styles.modalContainer,
+                                {
+                                    backgroundColor:
+                                        themeColor('modalBackground')
+                                }
+                            ]}
+                        >
+                            <View style={styles.modalIconContainer}>
+                                <AlertIcon
+                                    fill={themeColor('highlight')}
+                                    width={42}
+                                    height={42}
+                                />
+                            </View>
+                            <Text
+                                style={[
+                                    styles.modalTitle,
+                                    { color: themeColor('text') }
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.connectionTimeout'
+                                )}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.modalMessage,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.noEventReceivedTimeoutDescription'
+                                )}
+                            </Text>
+                            <View style={styles.modalButtonsContainer}>
+                                <View style={styles.modalButton}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.NostrWalletConnect.continueWaiting'
+                                        )}
+                                        onPress={this.handleContinueWaiting}
+                                    />
+                                </View>
+                                <View style={styles.modalButton}>
+                                    <Button
+                                        title={localeString('general.goBack')}
+                                        onPress={this.handleGoBack}
+                                        secondary
+                                    />
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+                </ModalBox>
             </Screen>
         );
     }
@@ -286,5 +411,47 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginTop: 12,
         lineHeight: 20
+    },
+    modalContainer: {
+        borderRadius: 30,
+        padding: 30,
+        width: '90%',
+        maxWidth: 400,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 4
+        },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8
+    },
+    modalIconContainer: {
+        marginBottom: 20,
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    modalTitle: {
+        fontSize: 28,
+        fontFamily: font('marlideBold'),
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: 12
+    },
+    modalMessage: {
+        fontSize: 16,
+        fontFamily: 'PPNeueMontreal-Book',
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 30
+    },
+    modalButtonsContainer: {
+        width: '100%',
+        alignItems: 'center'
+    },
+    modalButton: {
+        width: '100%',
+        marginBottom: 12
     }
 });
