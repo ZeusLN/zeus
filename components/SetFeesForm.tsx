@@ -43,6 +43,8 @@ interface SetFeesFormState {
     newTimeLockDelta: string;
     newMinHtlc: string;
     newMaxHtlc: string;
+    feeRateUnit: '%' | 'ppm';
+    feeRateInboundUnit: '%' | 'ppm';
 }
 
 @inject('FeeStore', 'ChannelsStore', 'SettingsStore')
@@ -62,7 +64,9 @@ export default class SetFeesForm extends React.Component<
             newFeeRateInbound: props.feeRateInbound || '',
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
-            newMaxHtlc: props.maxHtlc || ''
+            newMaxHtlc: props.maxHtlc || '',
+            feeRateUnit: '%',
+            feeRateInboundUnit: '%'
         };
     }
 
@@ -75,7 +79,9 @@ export default class SetFeesForm extends React.Component<
             newFeeRateInbound,
             newTimeLockDelta,
             newMinHtlc,
-            newMaxHtlc
+            newMaxHtlc,
+            feeRateUnit,
+            feeRateInboundUnit
         } = this.state;
         const {
             FeeStore,
@@ -146,24 +152,52 @@ export default class SetFeesForm extends React.Component<
                         color: themeColor('secondaryText')
                     }}
                 >
-                    {`${localeString('components.SetFeesForm.feeRate')} (${
-                        implementation === 'cln-rest'
-                            ? localeString(
-                                  'components.SetFeesForm.ppmMilliMsat'
-                              )
-                            : localeString('general.percentage')
-                    })`}
+                    {localeString('components.SetFeesForm.feeRate')}
                 </Text>
                 <TextInput
                     keyboardType="numeric"
                     placeholder={
-                        feeRate || implementation === 'cln-rest' ? '1' : '0.001'
+                        feeRate ||
+                        (implementation === 'cln-rest'
+                            ? '1'
+                            : feeRateUnit === 'ppm'
+                              ? '10'
+                              : '0.001')
                     }
                     value={newFeeRate}
                     onChangeText={(text: string) =>
                         this.setState({
                             newFeeRate: text
                         })
+                    }
+                    suffix={
+                        implementation === 'cln-rest'
+                            ? localeString(
+                                  'components.SetFeesForm.ppmMilliMsat'
+                              )
+                            : feeRateUnit === '%'
+                            ? localeString('general.percentage')
+                            : localeString('components.SetFeesForm.ppm')
+                    }
+                    toggleUnits={
+                        implementation !== 'cln-rest'
+                            ? () => {
+                                  const sanitized = newFeeRate
+                                      ? newFeeRate.replace(',', '.')
+                                      : '';
+                                  const num = parseFloat(sanitized);
+                                  this.setState({
+                                      feeRateUnit:
+                                          feeRateUnit === '%' ? 'ppm' : '%',
+                                      newFeeRate:
+                                          !sanitized || isNaN(num)
+                                              ? ''
+                                              : feeRateUnit === '%'
+                                              ? (num * 10000).toString()
+                                              : (num / 10000).toString()
+                                  });
+                              }
+                            : undefined
                     }
                     autoCapitalize="none"
                     autoCorrect={false}
@@ -205,18 +239,44 @@ export default class SetFeesForm extends React.Component<
                                 'views.Channel.inbound'
                             )} ${localeString(
                                 'components.SetFeesForm.feeRate'
-                            )} (${localeString('general.percentage')})`}
+                            )}`}
                         </Text>
                         <TextInput
                             // @ts-ignore:next-line
                             keyboardType="decimal"
-                            placeholder={feeRateInbound || '1'}
+                            placeholder={
+                                feeRateInbound ||
+                                (feeRateInboundUnit === 'ppm' ? '10' : '0.001')
+                            }
                             value={newFeeRateInbound}
                             onChangeText={(text: string) =>
                                 this.setState({
                                     newFeeRateInbound: text
                                 })
                             }
+                            suffix={
+                                feeRateInboundUnit === '%'
+                                    ? localeString('general.percentage')
+                                    : localeString('components.SetFeesForm.ppm')
+                            }
+                            toggleUnits={() => {
+                                const sanitized = newFeeRateInbound
+                                    ? newFeeRateInbound.replace(',', '.')
+                                    : '';
+                                const num = parseFloat(sanitized);
+                                this.setState({
+                                    feeRateInboundUnit:
+                                        feeRateInboundUnit === '%'
+                                            ? 'ppm'
+                                            : '%',
+                                    newFeeRateInbound:
+                                        !sanitized || isNaN(num)
+                                            ? ''
+                                            : feeRateInboundUnit === '%'
+                                            ? (num * 10000).toString()
+                                            : (num / 10000).toString()
+                                });
+                            }}
                             autoCapitalize="none"
                             autoCorrect={false}
                         />
@@ -300,11 +360,31 @@ export default class SetFeesForm extends React.Component<
                                 'components.SetFeesForm.submit'
                             )}
                             onPress={() => {
+                                const sanitizedOut = newFeeRate
+                                    ? newFeeRate.replace(',', '.')
+                                    : '';
+                                const parsedOut = parseFloat(sanitizedOut);
+                                const feeRateToSubmit =
+                                    implementation === 'cln-rest'
+                                        ? newFeeRate
+                                        : feeRateUnit === 'ppm'
+                                        ? (isNaN(parsedOut) ? '' : (parsedOut / 10000).toString())
+                                        : newFeeRate;
+
+                                const sanitizedIn = newFeeRateInbound
+                                    ? newFeeRateInbound.replace(',', '.')
+                                    : '';
+                                const parsedIn = parseFloat(sanitizedIn);
+                                const feeRateInboundToSubmit =
+                                    feeRateInboundUnit === 'ppm'
+                                        ? (isNaN(parsedIn) ? '' : (parsedIn / 10000).toString())
+                                        : newFeeRateInbound;
+
                                 setFees(
                                     newBaseFee,
-                                    newFeeRate,
+                                    feeRateToSubmit,
                                     newBaseFeeInbound,
-                                    newFeeRateInbound,
+                                    feeRateInboundToSubmit,
                                     Number(newTimeLockDelta),
                                     channelPoint,
                                     channelId,
