@@ -22,7 +22,8 @@ import LoadingIndicator from '../../../../components/LoadingIndicator';
 
 import SettingsStore, {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
-    DEFAULT_NEUTRINO_PEERS_TESTNET
+    DEFAULT_NEUTRINO_PEERS_TESTNET,
+    DEFAULT_NEUTRINO_PEERS_TESTNET4
 } from '../../../../stores/SettingsStore';
 
 import {
@@ -66,8 +67,10 @@ export default class NeutrinoPeers extends React.Component<
         this.state = {
             dontAllowOtherPeers: settings.dontAllowOtherPeers ?? false,
             neutrinoPeers:
-                embeddedLndNetwork === 'Testnet'
+                embeddedLndNetwork === 'Testnet3'
                     ? settings.neutrinoPeersTestnet
+                    : embeddedLndNetwork === 'Testnet4'
+                    ? settings.neutrinoPeersTestnet4
                     : settings.neutrinoPeersMainnet,
             addPeer: '',
             pingTime: 0,
@@ -102,9 +105,14 @@ export default class NeutrinoPeers extends React.Component<
                 JSON.stringify(DEFAULT_NEUTRINO_PEERS_MAINNET);
 
         const testnetPeersChanged =
-            embeddedLndNetwork === 'Testnet' &&
+            embeddedLndNetwork === 'Testnet3' &&
             JSON.stringify(neutrinoPeers) !==
                 JSON.stringify(DEFAULT_NEUTRINO_PEERS_TESTNET);
+
+        const testnet4PeersChanged =
+            embeddedLndNetwork === 'Testnet4' &&
+            JSON.stringify(neutrinoPeers) !==
+                JSON.stringify(DEFAULT_NEUTRINO_PEERS_TESTNET4);
 
         const pingTimeMsg = `${pingHost}: ${pingTime}ms`;
 
@@ -339,10 +347,18 @@ export default class NeutrinoPeers extends React.Component<
                                                         });
                                                     } else if (
                                                         embeddedLndNetwork ===
-                                                        'Testnet'
+                                                        'Testnet3'
                                                     ) {
                                                         await updateSettings({
                                                             neutrinoPeersTestnet:
+                                                                newNeutrinoPeers
+                                                        });
+                                                    } else if (
+                                                        embeddedLndNetwork ===
+                                                        'Testnet4'
+                                                    ) {
+                                                        await updateSettings({
+                                                            neutrinoPeersTestnet4:
                                                                 newNeutrinoPeers
                                                         });
                                                     }
@@ -470,11 +486,21 @@ export default class NeutrinoPeers extends React.Component<
                                                                     );
                                                                 } else if (
                                                                     embeddedLndNetwork ===
-                                                                    'Testnet'
+                                                                    'Testnet3'
                                                                 ) {
                                                                     await updateSettings(
                                                                         {
                                                                             neutrinoPeersTestnet:
+                                                                                newNeutrinoPeers
+                                                                        }
+                                                                    );
+                                                                } else if (
+                                                                    embeddedLndNetwork ===
+                                                                    'Testnet4'
+                                                                ) {
+                                                                    await updateSettings(
+                                                                        {
+                                                                            neutrinoPeersTestnet4:
                                                                                 newNeutrinoPeers
                                                                         }
                                                                     );
@@ -519,7 +545,9 @@ export default class NeutrinoPeers extends React.Component<
                                     this.setState({
                                         loading: true
                                     });
-                                    await optimizeNeutrinoPeers();
+                                    await optimizeNeutrinoPeers(
+                                        embeddedLndNetwork?.toLowerCase()
+                                    );
                                     const { getSettings } = SettingsStore;
                                     const settings = await getSettings();
                                     this.setState({
@@ -536,7 +564,8 @@ export default class NeutrinoPeers extends React.Component<
                     )}
                     {(dontAllowOtherPeers ||
                         mainnetPeersChanged ||
-                        testnetPeersChanged) && (
+                        testnetPeersChanged ||
+                        testnet4PeersChanged) && (
                         <View style={{ marginBottom: 10, marginTop: 10 }}>
                             <Button
                                 title={localeString('general.reset')}
@@ -554,7 +583,7 @@ export default class NeutrinoPeers extends React.Component<
                                         });
                                     }
 
-                                    if (embeddedLndNetwork === 'Testnet') {
+                                    if (embeddedLndNetwork === 'Testnet3') {
                                         this.setState({
                                             neutrinoPeers:
                                                 DEFAULT_NEUTRINO_PEERS_TESTNET,
@@ -563,6 +592,19 @@ export default class NeutrinoPeers extends React.Component<
                                         await updateSettings({
                                             neutrinoPeersTestnet:
                                                 DEFAULT_NEUTRINO_PEERS_TESTNET,
+                                            dontAllowOtherPeers: false
+                                        });
+                                    }
+
+                                    if (embeddedLndNetwork === 'Testnet4') {
+                                        this.setState({
+                                            neutrinoPeers:
+                                                DEFAULT_NEUTRINO_PEERS_TESTNET4,
+                                            dontAllowOtherPeers: false
+                                        });
+                                        await updateSettings({
+                                            neutrinoPeersTestnet4:
+                                                DEFAULT_NEUTRINO_PEERS_TESTNET4,
                                             dontAllowOtherPeers: false
                                         });
                                     }
