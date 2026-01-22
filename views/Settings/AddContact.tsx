@@ -1028,7 +1028,9 @@ export default class AddContact extends React.Component<
                                                             dynamicStyles.modalItemText
                                                         }
                                                     >
-                                                        {value.key}
+                                                        {localeString(
+                                                            value.translateKey
+                                                        )}
                                                     </Text>
                                                 </TouchableOpacity>
                                             </View>
