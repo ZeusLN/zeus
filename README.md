@@ -109,7 +109,7 @@ ZEUS is proud to be integrated on the following platforms:
 **Don't trust, verify** the code with your own two eyes. Then when ready proceed to the steps below based on your platform.
 
 ### Prerequisites
-- Node.js (minimum version: 18.18)
+- Node.js (minimum version: `v20 (Iron)`)
 
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
