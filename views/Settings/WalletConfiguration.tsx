@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Alert,
+    KeyboardAvoidingView,
     Modal,
     StyleSheet,
     Text,
@@ -14,7 +15,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
@@ -25,6 +26,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import ValidationUtils from '../../utils/ValidationUtils';
+import { confirmAction } from '../../utils/ActionUtils';
 
 import Storage from '../../storage';
 
@@ -48,6 +50,7 @@ import ShowHideToggle from '../../components/ShowHideToggle';
 
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import SyncStore from '../../stores/SyncStore';
 import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
@@ -67,13 +70,13 @@ import {
     deleteLndWallet,
     stopLnd
 } from '../../utils/LndMobileUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 
 interface WalletConfigurationProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
+    SyncStore: SyncStore;
     route: Route<
         'WalletConfiguration',
         {
@@ -108,6 +111,7 @@ interface WalletConfigurationState {
     index: number | null;
     newEntry: boolean;
     suggestImport: string;
+    importError: string;
     showLndHubModal: boolean;
     showCertModal: boolean;
     enableTor: boolean;
@@ -121,13 +125,13 @@ interface WalletConfigurationState {
     remoteKey?: string;
     // LNSocket
     pubkey: string;
-    deletionAwaitingConfirmation?: boolean;
     // embeded lnd
     seedPhrase?: string[];
     walletPassword?: string;
     adminMacaroon?: string;
     embeddedLndNetwork?: string;
     lndDir?: string;
+    isSqlite?: boolean;
     recoveryCipherSeed?: string;
     channelBackupsBase64?: string;
     creatingWallet: boolean;
@@ -152,7 +156,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('BalanceStore', 'ChannelsStore', 'SettingsStore')
+@inject('BalanceStore', 'ChannelsStore', 'SettingsStore', 'SyncStore')
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -175,6 +179,7 @@ export default class WalletConfiguration extends React.Component<
         enableTor: false,
         existingAccount: false,
         suggestImport: '',
+        importError: '',
         lndhubUrl: '',
         showLndHubModal: false,
         showCertModal: false,
@@ -190,13 +195,13 @@ export default class WalletConfiguration extends React.Component<
         remoteKey: '',
         // LNSocket
         pubkey: '',
-        deletionAwaitingConfirmation: false,
         // embedded lnd
         seedPhrase: [],
         walletPassword: '',
         adminMacaroon: '',
         embeddedLndNetwork: 'mainnet',
         lndDir: '',
+        isSqlite: false,
         interfaceKeys: INTERFACE_KEYS,
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
@@ -230,35 +235,46 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 suggestImport: '',
+                importError: '',
                 enableTor: host.includes('.onion')
             });
         } else if (
             suggestImport.includes('lndhub://') ||
             suggestImport.includes('bluewallet:')
         ) {
-            const { username, password, host } =
-                AddressUtils.processLNDHubAddress(suggestImport);
-
-            const existingAccount = !!username;
-
-            if (host) {
+            if (!AddressUtils.isValidLNDHubAddress(suggestImport)) {
                 this.setState({
+                    suggestImport: '',
+                    importError: localeString('utils.handleAnything.notValid')
+                });
+                return;
+            }
+
+            try {
+                const { username, password, host } =
+                    AddressUtils.processLNDHubAddress(suggestImport);
+
+                const existingAccount = !!username;
+
+                const stateUpdate: any = {
                     username,
                     password,
-                    lndhubUrl: host,
                     implementation: 'lndhub',
                     suggestImport: '',
-                    enableTor: host.includes('.onion'),
-                    existingAccount
-                });
-            } else {
+                    importError: '',
+                    existingAccount,
+                    ...(host && {
+                        lndhubUrl: host,
+                        enableTor: host.includes('.onion')
+                    })
+                };
+                this.setState(stateUpdate);
+            } catch (error) {
                 this.setState({
-                    username,
-                    password,
-                    implementation: 'lndhub',
                     suggestImport: '',
-                    existingAccount
+                    importError: localeString('utils.handleAnything.notValid')
                 });
+                return;
             }
         } else if (
             suggestImport.includes('clnrest://') ||
@@ -284,7 +300,8 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 enableTor,
                 implementation,
-                suggestImport: ''
+                suggestImport: '',
+                importError: ''
             });
         }
 
@@ -293,7 +310,8 @@ export default class WalletConfiguration extends React.Component<
 
     clearImportSuggestion = () => {
         this.setState({
-            suggestImport: ''
+            suggestImport: '',
+            importError: ''
         });
     };
 
@@ -349,6 +367,16 @@ export default class WalletConfiguration extends React.Component<
     async initFromProps(props: WalletConfigurationProps) {
         const { route } = props;
 
+        // When returning from SetWalletPicture, only update the photo
+        // to avoid overwriting unsaved edits (e.g. nickname) from node
+        if (route.params.photo && !route.params.node) {
+            this.setState({
+                photo: route.params.photo,
+                saved: route.params.saved ?? this.state.saved
+            });
+            return;
+        }
+
         const node = route.params.node ?? this.state.node;
         const index = route.params.index ?? this.state.index;
         const active = route.params.active ?? this.state.active;
@@ -386,6 +414,7 @@ export default class WalletConfiguration extends React.Component<
                 adminMacaroon,
                 embeddedLndNetwork,
                 lndDir,
+                isSqlite,
                 // NWC
                 nostrWalletConnectUrl
             } = node as any;
@@ -423,6 +452,7 @@ export default class WalletConfiguration extends React.Component<
                 adminMacaroon,
                 embeddedLndNetwork,
                 lndDir,
+                isSqlite,
                 // NWC
                 nostrWalletConnectUrl
             });
@@ -465,6 +495,7 @@ export default class WalletConfiguration extends React.Component<
             adminMacaroon,
             embeddedLndNetwork,
             lndDir,
+            isSqlite,
             nostrWalletConnectUrl,
             photo
         } = this.state;
@@ -500,6 +531,7 @@ export default class WalletConfiguration extends React.Component<
             adminMacaroon,
             embeddedLndNetwork,
             lndDir,
+            isSqlite,
             nostrWalletConnectUrl,
             photo
         };
@@ -522,7 +554,11 @@ export default class WalletConfiguration extends React.Component<
         if (newEmbeddedLndWallet) {
             update = {
                 nodes,
-                selectedNode: nodes.length - 1
+                selectedNode: nodes.length - 1,
+                // Force Wallet view to restart connection for new wallet
+                justDeletedWallet: false,
+                // Ensure Express Graph Sync runs for new wallet
+                initialLoad: false
             };
         } else {
             update = {
@@ -569,7 +605,12 @@ export default class WalletConfiguration extends React.Component<
                 navigation.popTo('Wallet');
             } else {
                 if (newEmbeddedLndWallet) {
+                    // New wallet created - trigger fresh connection
+                    // LND was already stopped in createNewWallet(), just navigate
+                    setConnectingStatus(true);
                     navigation.popTo('Wallet');
+                } else if (this.state.newEntry) {
+                    navigation.navigate('Wallets');
                 } else {
                     navigation.goBack();
                 }
@@ -635,7 +676,7 @@ export default class WalletConfiguration extends React.Component<
     deleteNodeConfig = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
-        const { index, implementation, lndDir } = this.state;
+        const { index, implementation, lndDir, active } = this.state;
         const { nodes } = settings;
 
         const newNodes: any = [];
@@ -645,28 +686,145 @@ export default class WalletConfiguration extends React.Component<
             }
         }
 
+        // If deleting active embedded LND wallet, stop it first
+        if (active && implementation === 'embedded-lnd' && embeddedLndStarted) {
+            try {
+                console.log(
+                    'Stopping active LND before deletion:',
+                    lndDir || 'lnd'
+                );
+                this.props.SyncStore.reset(); // Stop sync loop before stopping LND
+                await stopLnd();
+            } catch (error) {
+                console.log('Error stopping LND before deletion:', error);
+                // Continue anyway - stopLnd handles errors gracefully
+            }
+            SettingsStore.embeddedLndStarted = false;
+        }
+
+        // Delete embedded LND wallet data if applicable
+        // Skip stopLnd: already stopped above if active, or inactive wallet (don't stop active)
         if (implementation === 'embedded-lnd') {
             await deleteLndWallet(lndDir || 'lnd');
         }
 
-        updateSettings({
+        const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
+            index,
+            settings
+        );
+
+        await updateSettings({
             nodes: newNodes,
-            selectedNode: this.getNewSelectedNodeIndex(index, settings)
-        }).then(() => {
-            if (
-                implementation === 'embedded-lnd' &&
-                Platform.OS === 'android' &&
-                embeddedLndStarted
-            ) {
-                restartNeeded(true);
-            } else {
-                if (newNodes.length === 0) {
-                    navigation.navigate('IntroSplash');
-                } else {
-                    navigation.popTo('Wallets');
-                }
-            }
+            selectedNode: newSelectedNodeIndex,
+            justDeletedWallet: active // Set flag only if active wallet was deleted
         });
+
+        if (newNodes.length === 0) {
+            navigation.navigate('IntroSplash');
+        } else {
+            navigation.popTo('Wallets');
+        }
+    };
+
+    private handleDeletePress = () => {
+        confirmAction(
+            localeString('views.Settings.WalletConfiguration.deleteWallet'),
+            localeString(
+                'views.Settings.WalletConfiguration.deleteWallet.confirm'
+            ),
+            {
+                text: localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet'
+                ),
+                style: 'destructive',
+                onPress: this.performDelete
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
+    };
+
+    private performDelete = () => {
+        const { implementation, active } = this.state;
+        const { ChannelsStore, BalanceStore } = this.props;
+
+        if (implementation === 'embedded-lnd' && !active) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+                ),
+                [
+                    {
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.setWalletActive'
+                        ),
+                        onPress: () => this.setWalletConfigurationAsActive(),
+                        isPreferred: true
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else if (
+            implementation === 'embedded-lnd' &&
+            (ChannelsStore.channels.length > 0 ||
+                ChannelsStore.pendingChannels.length > 0)
+        ) {
+            Alert.alert(
+                localeString('general.warning'),
+                localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                ),
+                [
+                    {
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.deleteWallet'
+                        ),
+                        onPress: () => this.deleteNodeConfig()
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0,
+                        isPreferred: true
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else if (
+            implementation === 'embedded-lnd' &&
+            (BalanceStore.confirmedBlockchainBalance !== 0 ||
+                BalanceStore.unconfirmedBlockchainBalance !== 0)
+        ) {
+            Alert.alert(
+                localeString('general.warning'),
+                localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+                ),
+                [
+                    {
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.deleteWallet'
+                        ),
+                        onPress: () => this.deleteNodeConfig()
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0,
+                        isPreferred: true
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else {
+            this.deleteNodeConfig();
+        }
     };
 
     getNewSelectedNodeIndex(
@@ -690,25 +848,13 @@ export default class WalletConfiguration extends React.Component<
 
     setWalletConfigurationAsActive = async () => {
         const { SettingsStore, navigation } = this.props;
-        const {
-            updateSettings,
-            setConnectingStatus,
-            setInitialStart,
-            embeddedLndStarted
-        } = SettingsStore;
-        const { index, implementation } = this.state;
+        const { updateSettings, setConnectingStatus, setInitialStart } =
+            SettingsStore;
+        const { index } = this.state;
 
         await updateSettings({
             selectedNode: index
         });
-
-        if (
-            implementation === 'embedded-lnd' &&
-            Platform.OS === 'android' &&
-            embeddedLndStarted
-        ) {
-            restartNeeded(true);
-        }
 
         this.setState({
             active: true
@@ -722,23 +868,55 @@ export default class WalletConfiguration extends React.Component<
 
     createNewWallet = async (network: string = 'Mainnet') => {
         const { recoveryCipherSeed, channelBackupsBase64 } = this.state;
+        const { SettingsStore, SyncStore } = this.props;
+        const { embeddedLndStarted } = SettingsStore;
 
         this.setState({
-            creatingWallet: true
+            creatingWallet: true,
+            errorCreatingWallet: false
         });
 
-        await stopLnd();
+        // CRITICAL: Stop old LND instance completely before creating new wallet
+        if (embeddedLndStarted) {
+            try {
+                console.log(
+                    'Stopping existing LND before creating new wallet...'
+                );
+                SyncStore.reset(); // Stop sync loop before stopping LND to prevent crash
+                await stopLnd();
+                console.log('LND stopped successfully');
+            } catch (error) {
+                console.log(
+                    'Error stopping LND before creating new wallet:',
+                    error
+                );
+                // Continue anyway - stopLnd handles errors gracefully
+            }
+        }
 
         await optimizeNeutrinoPeers(network === 'Testnet');
 
         const lndDir = uuidv4();
 
-        const response = await createLndWallet({
-            lndDir,
-            seedMnemonic: recoveryCipherSeed,
-            isTestnet: network === 'Testnet',
-            channelBackupsBase64
-        });
+        if (!embeddedLndStarted) {
+            SyncStore.reset();
+        }
+        let response;
+        try {
+            response = await createLndWallet({
+                lndDir,
+                seedMnemonic: recoveryCipherSeed,
+                isTestnet: network === 'Testnet',
+                channelBackupsBase64
+            });
+        } catch (error) {
+            console.log('Error creating wallet:', error);
+            this.setState({
+                creatingWallet: false,
+                errorCreatingWallet: true
+            });
+            return;
+        }
 
         const { wallet, seed, randomBase64 }: any = response;
 
@@ -750,6 +928,7 @@ export default class WalletConfiguration extends React.Component<
                     walletPassword: randomBase64,
                     embeddedLndNetwork: network,
                     lndDir,
+                    isSqlite: true,
                     creatingWallet: false
                 },
                 () => {
@@ -767,8 +946,7 @@ export default class WalletConfiguration extends React.Component<
     render() {
         const SERVER_ADDRESS_CHARS = "a-zA-Z0-9-._~!$&'()*+,;=";
 
-        const { navigation, BalanceStore, ChannelsStore, SettingsStore } =
-            this.props;
+        const { navigation, SettingsStore } = this.props;
         const {
             node,
             nickname,
@@ -789,15 +967,15 @@ export default class WalletConfiguration extends React.Component<
             interfaceKeys,
             existingAccount,
             suggestImport,
+            importError,
             showLndHubModal,
             showCertModal,
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
-            pubkey,
             localKey,
             remoteKey,
-            deletionAwaitingConfirmation,
+            pubkey,
             adminMacaroon,
             embeddedLndNetwork,
             recoveryCipherSeed,
@@ -825,13 +1003,13 @@ export default class WalletConfiguration extends React.Component<
 
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
+            implementation !== 'lnsocket' &&
             implementation !== 'embedded-lnd' &&
-            implementation !== 'nostr-wallet-connect' &&
-            implementation !== 'lnsocket';
+            implementation !== 'nostr-wallet-connect';
         const supportsCertVerification =
             implementation !== 'lightning-node-connect' &&
-            implementation !== 'embedded-lnd' &&
             implementation !== 'lnsocket' &&
+            implementation !== 'embedded-lnd' &&
             implementation !== 'nostr-wallet-connect';
 
         const CertInstallInstructions = () => (
@@ -863,7 +1041,8 @@ export default class WalletConfiguration extends React.Component<
                         saved: false,
                         certVerification: value === 'lndhub' ? true : false,
                         host: '',
-                        lndhubUrl: ''
+                        lndhubUrl: '',
+                        pubkey: ''
                     });
                 }}
                 values={interfaceKeys}
@@ -1122,134 +1301,190 @@ export default class WalletConfiguration extends React.Component<
                     </View>
                 </Modal>
 
-                <ScrollView
-                    ref={this.scrollViewRef}
-                    style={{ flex: 1, paddingHorizontal: 20 }}
-                    keyboardShouldPersistTaps="handled"
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
-                    <View style={styles.form}>
-                        {!!createAccountError &&
-                            implementation === 'lndhub' &&
-                            !loading && (
-                                <ErrorMessage message={createAccountError} />
+                    <ScrollView
+                        ref={this.scrollViewRef}
+                        style={{ flex: 1, paddingHorizontal: 20 }}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <View style={{ ...styles.form, marginBottom: 20 }}>
+                            {!!importError && (
+                                <ErrorMessage message={importError} />
                             )}
 
-                        {!!createAccountSuccess &&
-                            implementation === 'lndhub' &&
-                            !loading && (
-                                <SuccessMessage
-                                    message={createAccountSuccess}
-                                />
-                            )}
-
-                        <View style={{ marginLeft: 64 }}>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.AddEditNode.nickname'
-                                )}
-                            </Text>
-                        </View>
-                        <View style={styles.container}>
-                            <TouchableOpacity
-                                onPress={
-                                    (!node || !node.photo) && !photo
-                                        ? () =>
-                                              navigation.navigate(
-                                                  'SetWalletPicture',
-                                                  { implementation }
-                                              )
-                                        : () => {
-                                              if (node) {
-                                                  this.setState({
-                                                      node: {
-                                                          ...node,
-                                                          photo: undefined
-                                                      }
-                                                  });
-                                              }
-                                              this.setState(
-                                                  {
-                                                      photo: undefined,
-                                                      saved: false
-                                                  },
-                                                  () => {
-                                                      node
-                                                          ? (node.photo = '')
-                                                          : null;
-                                                  }
-                                              );
-                                          }
-                                }
-                            >
-                                <View
-                                    style={{
-                                        ...styles.imageBackground,
-                                        backgroundColor:
-                                            themeColor('secondaryText')
-                                    }}
-                                >
-                                    {node?.photo || photo ? (
-                                        <Image
-                                            source={{
-                                                uri: getPhoto(
-                                                    node?.photo || photo
-                                                )
-                                            }}
-                                            style={styles.imageBackground}
-                                        />
-                                    ) : (
-                                        <AddPhotos />
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-
-                            <View
-                                style={{
-                                    flex: 1,
-                                    marginLeft: 14
-                                }}
-                            >
-                                <TextInput
-                                    placeholder={localeString(
-                                        'general.defaultNodeNickname'
-                                    )}
-                                    value={nickname}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            nickname: text,
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                />
-                            </View>
-                        </View>
-
-                        {!adminMacaroon && <WalletInterface />}
-
-                        {!adminMacaroon && implementation === 'embedded-lnd' && (
-                            <View>
-                                {!adminMacaroon && (
-                                    <DropdownSetting
-                                        title={localeString('general.network')}
-                                        selectedValue={
-                                            embeddedLndNetwork || 'mainnet'
-                                        }
-                                        onValueChange={(value: string) => {
-                                            this.setState({
-                                                embeddedLndNetwork: value
-                                            });
-                                        }}
-                                        values={EMBEDDED_NODE_NETWORK_KEYS}
+                            {!!createAccountError &&
+                                implementation === 'lndhub' &&
+                                !loading && (
+                                    <ErrorMessage
+                                        message={createAccountError}
                                     />
                                 )}
-                                {false && (
-                                    <>
+
+                            {!!createAccountSuccess &&
+                                implementation === 'lndhub' &&
+                                !loading && (
+                                    <SuccessMessage
+                                        message={createAccountSuccess}
+                                    />
+                                )}
+
+                            <View style={{ marginLeft: 64 }}>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.nickname'
+                                    )}
+                                </Text>
+                            </View>
+                            <View style={styles.container}>
+                                <TouchableOpacity
+                                    onPress={
+                                        (!node || !node.photo) && !photo
+                                            ? () =>
+                                                  navigation.navigate(
+                                                      'SetWalletPicture',
+                                                      { implementation }
+                                                  )
+                                            : () => {
+                                                  if (node) {
+                                                      this.setState({
+                                                          node: {
+                                                              ...node,
+                                                              photo: undefined
+                                                          }
+                                                      });
+                                                  }
+                                                  this.setState(
+                                                      {
+                                                          photo: undefined,
+                                                          saved: false
+                                                      },
+                                                      () => {
+                                                          node
+                                                              ? (node.photo =
+                                                                    '')
+                                                              : null;
+                                                      }
+                                                  );
+                                              }
+                                    }
+                                >
+                                    <View
+                                        style={{
+                                            ...styles.imageBackground,
+                                            backgroundColor:
+                                                themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {node?.photo || photo ? (
+                                            <Image
+                                                source={{
+                                                    uri: getPhoto(
+                                                        node?.photo || photo
+                                                    )
+                                                }}
+                                                style={styles.imageBackground}
+                                            />
+                                        ) : (
+                                            <AddPhotos />
+                                        )}
+                                    </View>
+                                </TouchableOpacity>
+
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        marginLeft: 14
+                                    }}
+                                >
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'general.defaultNodeNickname'
+                                        )}
+                                        value={nickname}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                nickname: text,
+                                                saved: false
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+                                </View>
+                            </View>
+
+                            {!adminMacaroon && <WalletInterface />}
+
+                            {!adminMacaroon &&
+                                implementation === 'embedded-lnd' && (
+                                    <View>
+                                        {!adminMacaroon && (
+                                            <DropdownSetting
+                                                title={localeString(
+                                                    'general.network'
+                                                )}
+                                                selectedValue={
+                                                    embeddedLndNetwork ||
+                                                    'mainnet'
+                                                }
+                                                onValueChange={(
+                                                    value: string
+                                                ) => {
+                                                    this.setState({
+                                                        embeddedLndNetwork:
+                                                            value
+                                                    });
+                                                }}
+                                                values={
+                                                    EMBEDDED_NODE_NETWORK_KEYS
+                                                }
+                                            />
+                                        )}
+                                        {false && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'views.Settings.AddEditNode.recoveryCipherSeed'
+                                                    )} (${localeString(
+                                                        'general.optional'
+                                                    )})`}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder="ship yellow box resource scan pelican..."
+                                                    value={recoveryCipherSeed}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            recoveryCipherSeed:
+                                                                text
+                                                        })
+                                                    }
+                                                    locked={loading}
+                                                />
+                                            </>
+                                        )}
+                                    </View>
+                                )}
+
+                            {!adminMacaroon &&
+                                implementation === 'embedded-lnd' &&
+                                recoveryCipherSeed && (
+                                    <View>
                                         <Text
                                             style={{
                                                 ...styles.text,
@@ -1257,530 +1492,208 @@ export default class WalletConfiguration extends React.Component<
                                             }}
                                         >
                                             {`${localeString(
-                                                'views.Settings.AddEditNode.recoveryCipherSeed'
+                                                'views.Settings.AddEditNode.disasterRecoveryBase64'
                                             )} (${localeString(
                                                 'general.optional'
                                             )})`}
                                         </Text>
                                         <TextInput
-                                            placeholder="ship yellow box resource scan pelican..."
-                                            value={recoveryCipherSeed}
+                                            value={channelBackupsBase64}
                                             onChangeText={(text: string) =>
                                                 this.setState({
-                                                    recoveryCipherSeed: text
+                                                    channelBackupsBase64: text
                                                 })
                                             }
                                             locked={loading}
                                         />
-                                    </>
+                                    </View>
                                 )}
-                            </View>
-                        )}
 
-                        {!adminMacaroon &&
-                            implementation === 'embedded-lnd' &&
-                            recoveryCipherSeed && (
-                                <View>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.Settings.AddEditNode.disasterRecoveryBase64'
-                                        )} (${localeString(
-                                            'general.optional'
-                                        )})`}
-                                    </Text>
-                                    <TextInput
-                                        value={channelBackupsBase64}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                channelBackupsBase64: text
-                                            })
-                                        }
-                                        locked={loading}
-                                    />
-                                </View>
-                            )}
-
-                        {implementation === 'nostr-wallet-connect' && (
-                            <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.WalletConfiguration.nostrWalletConnectUrl'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'nostr+walletconnect://'}
-                                    textColor={
-                                        nostrWalletConnectUrlError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    value={nostrWalletConnectUrl}
-                                    autoCapitalize="none"
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            nostrWalletConnectUrl: text
-                                                .trim()
-                                                .replace(/\s+/g, ' '),
-                                            nostrWalletConnectUrlError:
-                                                !text.startsWith(
-                                                    'nostr+walletconnect://'
-                                                ),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                    autoCorrect={false}
-                                />
-                            </>
-                        )}
-                        {implementation === 'lndhub' && (
-                            <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.serverAddress'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'https://'}
-                                    textColor={
-                                        lndhubUrlError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    value={lndhubUrl}
-                                    autoCorrect={false}
-                                    autoCapitalize="none"
-                                    onChangeText={(text: string) => {
-                                        this.setState({
-                                            lndhubUrlError: false
-                                        });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (
-                                            text.length <
-                                            (lndhubUrl?.length || 0)
-                                        ) {
-                                            this.setState({
-                                                lndhubUrl: text,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (lndhubUrl?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text.replace(
-                                                new RegExp(
-                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                    'g'
-                                                ),
-                                                ''
-                                            );
-                                            this.setState({
-                                                lndhubUrl: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            lndhubUrl: trimmedText,
-                                            lndhubUrlError:
-                                                !ValidationUtils.isValidServerAddress(
-                                                    trimmedText,
-                                                    { allowPort: true }
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (lndhubUrl) {
-                                            this.setState({
-                                                lndhubUrlError:
-                                                    !ValidationUtils.isValidServerAddress(
-                                                        lndhubUrl,
-                                                        { allowPort: true }
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
-
+                            {implementation === 'nostr-wallet-connect' && (
                                 <>
                                     <Text
                                         style={{
-                                            top: 20,
                                             color: themeColor('secondaryText')
                                         }}
                                     >
                                         {localeString(
-                                            'views.Settings.AddEditNode.existingAccount'
+                                            'views.Settings.WalletConfiguration.nostrWalletConnectUrl'
                                         )}
                                     </Text>
-                                    <Switch
-                                        value={existingAccount}
-                                        onValueChange={() =>
+                                    <TextInput
+                                        placeholder={'nostr+walletconnect://'}
+                                        textColor={
+                                            nostrWalletConnectUrlError
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        value={nostrWalletConnectUrl}
+                                        autoCapitalize="none"
+                                        onChangeText={(text: string) =>
                                             this.setState({
-                                                existingAccount:
-                                                    !existingAccount
+                                                nostrWalletConnectUrl: text
+                                                    .trim()
+                                                    .replace(/\s+/g, ' '),
+                                                nostrWalletConnectUrlError:
+                                                    !text.startsWith(
+                                                        'nostr+walletconnect://'
+                                                    ),
+                                                saved: false
                                             })
                                         }
+                                        locked={loading}
+                                        autoCorrect={false}
                                     />
                                 </>
+                            )}
+                            {implementation === 'lndhub' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.serverAddress'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'https://'}
+                                        textColor={
+                                            lndhubUrlError
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        value={lndhubUrl}
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        onChangeText={(text: string) => {
+                                            this.setState({
+                                                lndhubUrlError: false
+                                            });
 
-                                {existingAccount && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.username'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            placeholder={'...'}
-                                            textColor={
-                                                usernameError
-                                                    ? themeColor('error')
-                                                    : themeColor('text')
-                                            }
-                                            value={username}
-                                            onFocus={() =>
+                                            // Allow backspace/delete operations without validation
+                                            if (
+                                                text.length <
+                                                (lndhubUrl?.length || 0)
+                                            ) {
                                                 this.setState({
-                                                    usernameError: false
-                                                })
-                                            }
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    usernameError: false
-                                                });
-
-                                                // Allow backspace/delete operations without validation
-                                                if (
-                                                    text.length <
-                                                    (username?.length || 0)
-                                                ) {
-                                                    this.setState({
-                                                        username: text,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For single character additions
-                                                if (
-                                                    text.length ===
-                                                    (username?.length || 0) + 1
-                                                ) {
-                                                    const cleanedText =
-                                                        text.trim();
-                                                    this.setState({
-                                                        username: cleanedText,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For pasted content
-                                                const trimmedText = text.trim();
-                                                this.setState({
-                                                    username: trimmedText,
-                                                    usernameError: /\s/.test(
-                                                        trimmedText
-                                                    ),
+                                                    lndhubUrl: text,
                                                     saved: false
                                                 });
-                                            }}
-                                            locked={loading}
-                                            autoCorrect={false}
-                                            autoCapitalize="none"
-                                        />
+                                                return;
+                                            }
 
+                                            // For single character additions
+                                            if (
+                                                text.length ===
+                                                (lndhubUrl?.length || 0) + 1
+                                            ) {
+                                                const cleanedText =
+                                                    text.replace(
+                                                        new RegExp(
+                                                            `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                            'g'
+                                                        ),
+                                                        ''
+                                                    );
+                                                this.setState({
+                                                    lndhubUrl: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            // For pasted content
+                                            const trimmedText = text.trim();
+                                            this.setState({
+                                                lndhubUrl: trimmedText,
+                                                lndhubUrlError:
+                                                    !ValidationUtils.isValidServerAddress(
+                                                        trimmedText,
+                                                        { allowPort: true }
+                                                    ),
+                                                saved: false
+                                            });
+                                        }}
+                                        onBlur={() => {
+                                            if (lndhubUrl) {
+                                                this.setState({
+                                                    lndhubUrlError:
+                                                        !ValidationUtils.isValidServerAddress(
+                                                            lndhubUrl,
+                                                            { allowPort: true }
+                                                        )
+                                                });
+                                            }
+                                        }}
+                                        locked={loading}
+                                    />
+
+                                    <>
                                         <Text
                                             style={{
+                                                top: 20,
                                                 color: themeColor(
                                                     'secondaryText'
                                                 )
                                             }}
                                         >
                                             {localeString(
-                                                'views.Settings.AddEditNode.password'
+                                                'views.Settings.AddEditNode.existingAccount'
                                             )}
                                         </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center'
-                                            }}
-                                        >
+                                        <Switch
+                                            value={existingAccount}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    existingAccount:
+                                                        !existingAccount
+                                                })
+                                            }
+                                        />
+                                    </>
+
+                                    {existingAccount && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.username'
+                                                )}
+                                            </Text>
                                             <TextInput
                                                 placeholder={'...'}
-                                                value={password}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        password: text.trim(),
-                                                        saved: false
-                                                    })
-                                                }
-                                                locked={loading}
-                                                secureTextEntry={
-                                                    this.state.hidden
-                                                }
-                                                autoCorrect={false}
-                                                autoCapitalize="none"
-                                                style={{
-                                                    flex: 1,
-                                                    marginRight: 15
-                                                }}
-                                            />
-                                            <ShowHideToggle
-                                                onPress={() =>
-                                                    this.setState({
-                                                        hidden: !this.state
-                                                            .hidden
-                                                    })
-                                                }
-                                            />
-                                        </View>
-
-                                        {saved && (
-                                            <CollapsedQR
-                                                showText={localeString(
-                                                    'views.Settings.AddEditNode.showAccountQR'
-                                                )}
-                                                collapseText={localeString(
-                                                    'views.Settings.AddEditNode.hideAccountQR'
-                                                )}
-                                                value={
-                                                    `lndhub://${username}:${password}` +
-                                                    `@${lndhubUrl}`
-                                                }
-                                                hideText
-                                            />
-                                        )}
-                                    </>
-                                )}
-                            </>
-                        )}
-                        {(implementation === 'lnd' ||
-                            implementation === 'cln-rest') && (
-                            <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.serverAddress'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'localhost'}
-                                    textColor={
-                                        hostError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    autoCorrect={false}
-                                    autoCapitalize="none"
-                                    value={host}
-                                    onChangeText={(text: string) => {
-                                        this.setState({ hostError: false });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (text.length < (host?.length || 0)) {
-                                            this.setState({
-                                                host: text,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (host?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text.replace(
-                                                new RegExp(
-                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                    'g'
-                                                ),
-                                                ''
-                                            );
-                                            this.setState({
-                                                host: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            host: trimmedText,
-                                            hostError:
-                                                !ValidationUtils.isValidServerAddress(
-                                                    trimmedText
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (host) {
-                                            this.setState({
-                                                hostError:
-                                                    !ValidationUtils.isValidServerAddress(
-                                                        host
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
-
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.restPort'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'443/8080'}
-                                    textColor={
-                                        portError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    value={port}
-                                    onChangeText={(text: string) => {
-                                        this.setState({ portError: false });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (text.length < (port?.length || 0)) {
-                                            this.setState({
-                                                port: text,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (port?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text
-                                                .replace(/[^0-9]/g, '')
-                                                .replace(/^0+/, '');
-                                            this.setState({
-                                                port: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            port: trimmedText,
-                                            portError:
-                                                !ValidationUtils.isValidPort(
-                                                    trimmedText
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (port) {
-                                            this.setState({
-                                                portError:
-                                                    !ValidationUtils.isValidPort(
-                                                        port
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
-
-                                {implementation === 'cln-rest' ? (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.rune'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            <TextInput
-                                                placeholder={'Lt1c...'}
                                                 textColor={
-                                                    runeError
+                                                    usernameError
                                                         ? themeColor('error')
                                                         : themeColor('text')
                                                 }
-                                                autoCorrect={false}
-                                                autoCapitalize="none"
-                                                value={rune}
-                                                secureTextEntry={
-                                                    this.state.hidden
+                                                value={username}
+                                                onFocus={() =>
+                                                    this.setState({
+                                                        usernameError: false
+                                                    })
                                                 }
-                                                style={{
-                                                    flex: 1,
-                                                    marginRight: 15
-                                                }}
                                                 onChangeText={(
                                                     text: string
                                                 ) => {
                                                     this.setState({
-                                                        runeError: false
+                                                        usernameError: false
                                                     });
 
                                                     // Allow backspace/delete operations without validation
                                                     if (
                                                         text.length <
-                                                        (rune?.length || 0)
+                                                        (username?.length || 0)
                                                     ) {
                                                         this.setState({
-                                                            rune: text,
+                                                            username: text,
                                                             saved: false
                                                         });
                                                         return;
@@ -1789,114 +1702,14 @@ export default class WalletConfiguration extends React.Component<
                                                     // For single character additions
                                                     if (
                                                         text.length ===
-                                                        (rune?.length || 0) + 1
-                                                    ) {
-                                                        const cleanedText =
-                                                            text.replace(
-                                                                /[^A-Za-z0-9\-_=]/g,
-                                                                ''
-                                                            );
-                                                        this.setState({
-                                                            rune: cleanedText,
-                                                            saved: false
-                                                        });
-                                                        return;
-                                                    }
-
-                                                    // For pasted content
-                                                    const trimmedText =
-                                                        text.trim();
-                                                    this.setState({
-                                                        rune: trimmedText,
-                                                        runeError:
-                                                            !ValidationUtils.hasValidRuneChars(
-                                                                trimmedText
-                                                            ),
-                                                        saved: false
-                                                    });
-                                                }}
-                                                locked={loading}
-                                            />
-                                            <ShowHideToggle
-                                                onPress={() =>
-                                                    this.setState({
-                                                        hidden: !this.state
-                                                            .hidden
-                                                    })
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.macaroon'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            <TextInput
-                                                placeholder={'0A...'}
-                                                textColor={
-                                                    macaroonHexError
-                                                        ? themeColor('error')
-                                                        : themeColor('text')
-                                                }
-                                                autoCorrect={false}
-                                                autoCapitalize="none"
-                                                value={macaroonHex}
-                                                secureTextEntry={
-                                                    this.state.hidden
-                                                }
-                                                style={{
-                                                    flex: 1,
-                                                    marginRight: 15
-                                                }}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        macaroonHexError: false
-                                                    });
-
-                                                    // Allow backspace/delete operations without validation
-                                                    if (
-                                                        text.length <
-                                                        (macaroonHex?.length ||
-                                                            0)
-                                                    ) {
-                                                        this.setState({
-                                                            macaroonHex: text,
-                                                            saved: false
-                                                        });
-                                                        return;
-                                                    }
-
-                                                    // For single character additions
-                                                    if (
-                                                        text.length ===
-                                                        (macaroonHex?.length ||
+                                                        (username?.length ||
                                                             0) +
                                                             1
                                                     ) {
                                                         const cleanedText =
-                                                            text.replace(
-                                                                /[^0-9a-fA-F]/g,
-                                                                ''
-                                                            );
+                                                            text.trim();
                                                         this.setState({
-                                                            macaroonHex:
+                                                            username:
                                                                 cleanedText,
                                                             saved: false
                                                         });
@@ -1907,435 +1720,120 @@ export default class WalletConfiguration extends React.Component<
                                                     const trimmedText =
                                                         text.trim();
                                                     this.setState({
-                                                        macaroonHex:
-                                                            trimmedText,
-                                                        macaroonHexError:
-                                                            !ValidationUtils.hasValidMacaroonChars(
+                                                        username: trimmedText,
+                                                        usernameError:
+                                                            /\s/.test(
                                                                 trimmedText
                                                             ),
                                                         saved: false
                                                     });
                                                 }}
                                                 locked={loading}
+                                                autoCorrect={false}
+                                                autoCapitalize="none"
                                             />
-                                            <ShowHideToggle
-                                                onPress={() =>
-                                                    this.setState({
-                                                        hidden: !this.state
-                                                            .hidden
-                                                    })
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                )}
-                            </>
-                        )}
 
-                        {implementation === 'lightning-node-connect' && (
-                            <>
-                                <Mailbox />
-                                {mailboxServer === 'custom-defined' && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.customMailboxServer'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            placeholder={
-                                                'my-custom.lnc.server:443'
-                                            }
-                                            textColor={
-                                                customMailboxServerError
-                                                    ? themeColor('error')
-                                                    : themeColor('text')
-                                            }
-                                            autoCorrect={false}
-                                            autoCapitalize="none"
-                                            value={customMailboxServer}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    customMailboxServerError:
-                                                        false
-                                                });
-
-                                                // Allow backspace/delete operations without validation
-                                                if (
-                                                    text.length <
-                                                    (customMailboxServer?.length ||
-                                                        0)
-                                                ) {
-                                                    this.setState({
-                                                        customMailboxServer:
-                                                            text,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For single character additions
-                                                if (
-                                                    text.length ===
-                                                    (customMailboxServer?.length ||
-                                                        0) +
-                                                        1
-                                                ) {
-                                                    if (text.includes('::'))
-                                                        return;
-
-                                                    const cleanedText =
-                                                        text.replace(
-                                                            new RegExp(
-                                                                `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                                'g'
-                                                            ),
-                                                            ''
-                                                        );
-                                                    this.setState({
-                                                        customMailboxServer:
-                                                            cleanedText,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For pasted content
-                                                const trimmedText = text.trim();
-                                                this.setState({
-                                                    customMailboxServer:
-                                                        trimmedText,
-                                                    customMailboxServerError:
-                                                        !ValidationUtils.isValidServerAddress(
-                                                            trimmedText,
-                                                            {
-                                                                allowPort: true,
-                                                                requireHttps:
-                                                                    true
-                                                            }
-                                                        ),
-                                                    saved: false
-                                                });
-                                            }}
-                                            onBlur={() => {
-                                                if (customMailboxServer) {
-                                                    this.setState({
-                                                        customMailboxServerError:
-                                                            !ValidationUtils.isValidServerAddress(
-                                                                customMailboxServer,
-                                                                {
-                                                                    allowPort:
-                                                                        true,
-                                                                    requireHttps:
-                                                                        true
-                                                                }
-                                                            )
-                                                    });
-                                                }
-                                            }}
-                                            locked={loading}
-                                        />
-                                    </>
-                                )}
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.pairingPhrase'
-                                    )}
-                                </Text>
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center'
-                                    }}
-                                >
-                                    <TextInput
-                                        placeholder={
-                                            'cherry truth mask employ box silver mass bunker fiscal vote'
-                                        }
-                                        textColor={
-                                            pairingPhraseError
-                                                ? themeColor('error')
-                                                : themeColor('text')
-                                        }
-                                        autoCapitalize="none"
-                                        value={pairingPhrase}
-                                        secureTextEntry={this.state.hidden}
-                                        style={{
-                                            flex: 1,
-                                            marginRight: 15
-                                        }}
-                                        onChangeText={(text: string) => {
-                                            this.setState({
-                                                pairingPhraseError: false
-                                            });
-
-                                            // Allow backspace/delete operations without validation
-                                            if (
-                                                text.length <
-                                                (pairingPhrase?.length || 0)
-                                            ) {
-                                                this.setState({
-                                                    pairingPhrase: text,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For single character additions
-                                            if (
-                                                text.length ===
-                                                (pairingPhrase?.length || 0) + 1
-                                            ) {
-                                                if (text === ' ') return;
-                                                if (text.includes('  ')) return;
-
-                                                const cleanedText =
-                                                    text.replace(
-                                                        /[^a-zA-Z\s]/g,
-                                                        ''
-                                                    );
-                                                this.setState({
-                                                    pairingPhrase: cleanedText,
-                                                    saved: false
-                                                });
-                                                return;
-                                            }
-
-                                            // For pasted content
-                                            const normalizedPhrase = text
-                                                .trim()
-                                                .replace(/\s+/g, ' ');
-                                            this.setState({
-                                                pairingPhrase: normalizedPhrase,
-                                                pairingPhraseError:
-                                                    !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                        normalizedPhrase
-                                                    ),
-                                                saved: false
-                                            });
-                                        }}
-                                        onBlur={() => {
-                                            const normalizedPhrase =
-                                                pairingPhrase
-                                                    ?.trim()
-                                                    .replace(/\s+/g, ' ');
-                                            this.setState({
-                                                pairingPhrase: normalizedPhrase,
-                                                pairingPhraseError:
-                                                    !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                        normalizedPhrase
-                                                    ),
-                                                saved: false
-                                            });
-                                        }}
-                                        locked={loading}
-                                    />
-                                    <ShowHideToggle
-                                        onPress={() =>
-                                            this.setState({
-                                                hidden: !this.state.hidden
-                                            })
-                                        }
-                                    />
-                                </View>
-
-                                {!!localKey && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            🔒{' '}
-                                            {localeString(
-                                                'views.Settings.AddEditNode.localKey'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            value={localKey}
-                                            locked={true}
-                                        />
-                                    </>
-                                )}
-
-                                {!!remoteKey && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            🔒{' '}
-                                            {localeString(
-                                                'views.Settings.AddEditNode.remoteKey'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            value={remoteKey}
-                                            locked={true}
-                                        />
-                                    </>
-                                )}
-                            </>
-                        )}
-
-                        {implementation === 'lnsocket' && (
-                            <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.serverAddress'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'192.168.1.2:9735'}
-                                    textColor={
-                                        hostError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    autoCorrect={false}
-                                    autoCapitalize="none"
-                                    value={host}
-                                    onChangeText={(text: string) => {
-                                        this.setState({ hostError: false });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (text.length < (host?.length || 0)) {
-                                            this.setState({
-                                                host: text,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (host?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text.replace(
-                                                new RegExp(
-                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
-                                                    'g'
-                                                ),
-                                                ''
-                                            );
-                                            this.setState({
-                                                host: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            host: trimmedText,
-                                            hostError:
-                                                !ValidationUtils.isValidServerAddress(
-                                                    trimmedText,
-                                                    { allowPort: true }
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (host) {
-                                            this.setState({
-                                                hostError:
-                                                    !ValidationUtils.isValidServerAddress(
-                                                        host,
-                                                        { allowPort: true }
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
                                                     )
-                                            });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.OpenChannel.nodePubkey'
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.password'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    placeholder={'...'}
+                                                    value={password}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            password:
+                                                                text.trim(),
+                                                            saved: false
+                                                        })
+                                                    }
+                                                    locked={loading}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
+                                                    }
+                                                />
+                                            </View>
+
+                                            {saved && (
+                                                <CollapsedQR
+                                                    showText={localeString(
+                                                        'views.Settings.AddEditNode.showAccountQR'
+                                                    )}
+                                                    collapseText={localeString(
+                                                        'views.Settings.AddEditNode.hideAccountQR'
+                                                    )}
+                                                    value={
+                                                        `lndhub://${username}:${password}` +
+                                                        `@${lndhubUrl}`
+                                                    }
+                                                    hideText
+                                                />
+                                            )}
+                                        </>
                                     )}
-                                </Text>
-                                <TextInput
-                                    placeholder={
-                                        '02cdfbc50a09e40d0adbe54a275eca9bcf4685bd67d697558bcb22c6c0ebcd0be2'
-                                    }
-                                    autoCorrect={false}
-                                    autoCapitalize="none"
-                                    value={pubkey}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            pubkey: text.trim(),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                />
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.rune'
-                                    )}
-                                </Text>
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center'
-                                    }}
-                                >
+                                </>
+                            )}
+                            {(implementation === 'lnd' ||
+                                implementation === 'cln-rest') && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.serverAddress'
+                                        )}
+                                    </Text>
                                     <TextInput
-                                        placeholder={'Lt1c...'}
+                                        placeholder={'localhost'}
                                         textColor={
-                                            runeError
+                                            hostError
                                                 ? themeColor('error')
                                                 : themeColor('text')
                                         }
                                         autoCorrect={false}
                                         autoCapitalize="none"
-                                        value={rune}
-                                        secureTextEntry={this.state.hidden}
-                                        style={{
-                                            flex: 1,
-                                            marginRight: 15
-                                        }}
+                                        value={host}
                                         onChangeText={(text: string) => {
-                                            this.setState({
-                                                runeError: false
-                                            });
+                                            this.setState({ hostError: false });
 
                                             // Allow backspace/delete operations without validation
                                             if (
                                                 text.length <
-                                                (rune?.length || 0)
+                                                (host?.length || 0)
                                             ) {
                                                 this.setState({
-                                                    rune: text,
+                                                    host: text,
                                                     saved: false
                                                 });
                                                 return;
@@ -2344,15 +1842,18 @@ export default class WalletConfiguration extends React.Component<
                                             // For single character additions
                                             if (
                                                 text.length ===
-                                                (rune?.length || 0) + 1
+                                                (host?.length || 0) + 1
                                             ) {
                                                 const cleanedText =
                                                     text.replace(
-                                                        /[^A-Za-z0-9\-_=]/g,
+                                                        new RegExp(
+                                                            `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                            'g'
+                                                        ),
                                                         ''
                                                     );
                                                 this.setState({
-                                                    rune: cleanedText,
+                                                    host: cleanedText,
                                                     saved: false
                                                 });
                                                 return;
@@ -2361,488 +1862,1154 @@ export default class WalletConfiguration extends React.Component<
                                             // For pasted content
                                             const trimmedText = text.trim();
                                             this.setState({
-                                                rune: trimmedText,
-                                                runeError:
-                                                    !ValidationUtils.hasValidRuneChars(
+                                                host: trimmedText,
+                                                hostError:
+                                                    !ValidationUtils.isValidServerAddress(
                                                         trimmedText
                                                     ),
                                                 saved: false
                                             });
                                         }}
-                                        locked={loading}
-                                    />
-                                    <ShowHideToggle
-                                        onPress={() =>
-                                            this.setState({
-                                                hidden: !this.state.hidden
-                                            })
-                                        }
-                                    />
-                                </View>
-                            </>
-                        )}
-
-                        {supportsTor && (
-                            <>
-                                <Text
-                                    style={{
-                                        top: 20,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.useTor'
-                                    )}
-                                </Text>
-                                <Switch
-                                    value={enableTor}
-                                    onValueChange={() =>
-                                        this.setState({
-                                            enableTor: !enableTor,
-                                            saved: false
-                                        })
-                                    }
-                                />
-                            </>
-                        )}
-
-                        {supportsCertVerification && !enableTor && (
-                            <>
-                                <Text
-                                    style={{
-                                        top: 20,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.certificateVerification'
-                                    )}
-                                </Text>
-                                <Switch
-                                    value={certVerification}
-                                    onValueChange={() =>
-                                        this.setState({
-                                            certVerification: !certVerification,
-                                            saved: false
-                                        })
-                                    }
-                                />
-                            </>
-                        )}
-                    </View>
-
-                    {!existingAccount && implementation === 'lndhub' && (
-                        <View style={{ ...styles.button, marginTop: 20 }}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.AddEditNode.createLndhub'
-                                )}
-                                onPress={() => {
-                                    if (CUSTODIAL_LNDHUBS.includes(lndhubUrl)) {
-                                        this.setState({
-                                            showLndHubModal: true
-                                        });
-                                    } else {
-                                        createAccount(
-                                            lndhubUrl,
-                                            certVerification,
-                                            enableTor
-                                        ).then((data: any) => {
-                                            if (data) {
+                                        onBlur={() => {
+                                            if (host) {
                                                 this.setState({
-                                                    username: data.login,
-                                                    password: data.password,
-                                                    existingAccount: true
+                                                    hostError:
+                                                        !ValidationUtils.isValidServerAddress(
+                                                            host
+                                                        )
                                                 });
                                             }
-                                        });
-                                    }
-                                }}
-                                disabled={loading || !lndhubUrl}
-                            />
-                        </View>
-                    )}
+                                        }}
+                                        locked={loading}
+                                    />
 
-                    {implementation === 'embedded-lnd' && adminMacaroon && (
-                        <KeyValue
-                            keyValue={localeString('general.network')}
-                            value={embeddedLndNetwork}
-                        />
-                    )}
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.restPort'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        placeholder={'443/8080'}
+                                        textColor={
+                                            portError
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        value={port}
+                                        onChangeText={(text: string) => {
+                                            this.setState({ portError: false });
 
-                    {implementation === 'embedded-lnd' &&
-                        recoveryCipherSeed && (
-                            <WarningMessage
-                                message={localeString(
-                                    'views.Settings.NodeConfiguration.restoreWarning'
-                                )}
-                            />
-                        )}
-
-                    {active && (
-                        <View style={{ alignItems: 'center' }}>
-                            <Pill
-                                title={localeString(
-                                    'views.Settings.WalletConfiguration.walletActive'
-                                )}
-                                backgroundColor="transparent"
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'embedded-lnd' && (
-                        <View style={{ ...styles.button, marginTop: 20 }}>
-                            {!adminMacaroon && !creatingWallet && (
-                                <>
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                embeddedLndNetwork === 'mainnet'
-                                                    ? localeString(
-                                                          'views.Settings.NodeConfiguration.createMainnetWallet'
-                                                      )
-                                                    : localeString(
-                                                          'views.Settings.NodeConfiguration.createTestnetWallet'
-                                                      )
+                                            // Allow backspace/delete operations without validation
+                                            if (
+                                                text.length <
+                                                (port?.length || 0)
+                                            ) {
+                                                this.setState({
+                                                    port: text,
+                                                    saved: false
+                                                });
+                                                return;
                                             }
-                                            onPress={async () => {
-                                                await this.createNewWallet(
-                                                    embeddedLndNetwork ===
-                                                        'mainnet'
-                                                        ? undefined
-                                                        : 'Testnet'
-                                                );
-                                            }}
-                                            tertiary
-                                            disabled={loading}
-                                        />
-                                    </View>
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={
-                                                embeddedLndNetwork === 'mainnet'
-                                                    ? localeString(
-                                                          'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                      )
-                                                    : localeString(
-                                                          'views.Settings.NodeConfiguration.restoreTestnetWallet'
-                                                      )
+
+                                            // For single character additions
+                                            if (
+                                                text.length ===
+                                                (port?.length || 0) + 1
+                                            ) {
+                                                const cleanedText = text
+                                                    .replace(/[^0-9]/g, '')
+                                                    .replace(/^0+/, '');
+                                                this.setState({
+                                                    port: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
                                             }
-                                            onPress={() =>
-                                                navigation.navigate(
-                                                    'SeedRecovery',
-                                                    {
-                                                        network:
-                                                            embeddedLndNetwork
+
+                                            // For pasted content
+                                            const trimmedText = text.trim();
+                                            this.setState({
+                                                port: trimmedText,
+                                                portError:
+                                                    !ValidationUtils.isValidPort(
+                                                        trimmedText
+                                                    ),
+                                                saved: false
+                                            });
+                                        }}
+                                        onBlur={() => {
+                                            if (port) {
+                                                this.setState({
+                                                    portError:
+                                                        !ValidationUtils.isValidPort(
+                                                            port
+                                                        )
+                                                });
+                                            }
+                                        }}
+                                        locked={loading}
+                                    />
+
+                                    {implementation === 'cln-rest' ? (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.rune'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    placeholder={'Lt1c...'}
+                                                    textColor={
+                                                        runeError
+                                                            ? themeColor(
+                                                                  'error'
+                                                              )
+                                                            : themeColor('text')
                                                     }
-                                                )
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    value={rune}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            runeError: false
+                                                        });
+
+                                                        // Allow backspace/delete operations without validation
+                                                        if (
+                                                            text.length <
+                                                            (rune?.length || 0)
+                                                        ) {
+                                                            this.setState({
+                                                                rune: text,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For single character additions
+                                                        if (
+                                                            text.length ===
+                                                            (rune?.length ||
+                                                                0) +
+                                                                1
+                                                        ) {
+                                                            const cleanedText =
+                                                                text.replace(
+                                                                    /[^A-Za-z0-9\-_=]/g,
+                                                                    ''
+                                                                );
+                                                            this.setState({
+                                                                rune: cleanedText,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For pasted content
+                                                        const trimmedText =
+                                                            text.trim();
+                                                        this.setState({
+                                                            rune: trimmedText,
+                                                            runeError:
+                                                                !ValidationUtils.hasValidRuneChars(
+                                                                    trimmedText
+                                                                ),
+                                                            saved: false
+                                                        });
+                                                    }}
+                                                    locked={loading}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
+                                                    }
+                                                />
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.macaroon'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <TextInput
+                                                    placeholder={'0A...'}
+                                                    textColor={
+                                                        macaroonHexError
+                                                            ? themeColor(
+                                                                  'error'
+                                                              )
+                                                            : themeColor('text')
+                                                    }
+                                                    autoCorrect={false}
+                                                    autoCapitalize="none"
+                                                    value={macaroonHex}
+                                                    secureTextEntry={
+                                                        this.state.hidden
+                                                    }
+                                                    style={{
+                                                        flex: 1,
+                                                        marginRight: 15
+                                                    }}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            macaroonHexError:
+                                                                false
+                                                        });
+
+                                                        // Allow backspace/delete operations without validation
+                                                        if (
+                                                            text.length <
+                                                            (macaroonHex?.length ||
+                                                                0)
+                                                        ) {
+                                                            this.setState({
+                                                                macaroonHex:
+                                                                    text,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For single character additions
+                                                        if (
+                                                            text.length ===
+                                                            (macaroonHex?.length ||
+                                                                0) +
+                                                                1
+                                                        ) {
+                                                            const cleanedText =
+                                                                text.replace(
+                                                                    /[^0-9a-fA-F]/g,
+                                                                    ''
+                                                                );
+                                                            this.setState({
+                                                                macaroonHex:
+                                                                    cleanedText,
+                                                                saved: false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        // For pasted content
+                                                        const trimmedText =
+                                                            text.trim();
+                                                        this.setState({
+                                                            macaroonHex:
+                                                                trimmedText,
+                                                            macaroonHexError:
+                                                                !ValidationUtils.hasValidMacaroonChars(
+                                                                    trimmedText
+                                                                ),
+                                                            saved: false
+                                                        });
+                                                    }}
+                                                    locked={loading}
+                                                />
+                                                <ShowHideToggle
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            hidden: !this.state
+                                                                .hidden
+                                                        })
+                                                    }
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </>
+                            )}
+
+                            {implementation === 'lnsocket' && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.serverAddress'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={localeString(
+                                            'views.OpenChannel.hostPort'
+                                        )}
+                                        textColor={
+                                            hostError
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        value={host}
+                                        onChangeText={(text: string) => {
+                                            this.setState({ hostError: false });
+
+                                            if (
+                                                text.length <
+                                                (host?.length || 0)
+                                            ) {
+                                                this.setState({
+                                                    host: text,
+                                                    saved: false
+                                                });
+                                                return;
                                             }
-                                            secondary
-                                            disabled={loading}
+
+                                            if (
+                                                text.length ===
+                                                (host?.length || 0) + 1
+                                            ) {
+                                                const cleanedText =
+                                                    text.replace(
+                                                        new RegExp(
+                                                            `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                            'g'
+                                                        ),
+                                                        ''
+                                                    );
+                                                this.setState({
+                                                    host: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            const trimmedText = text.trim();
+                                            this.setState({
+                                                host: trimmedText,
+                                                hostError:
+                                                    !ValidationUtils.validateNodeHost(
+                                                        trimmedText
+                                                    ),
+                                                saved: false
+                                            });
+                                        }}
+                                        onBlur={() => {
+                                            if (host) {
+                                                this.setState({
+                                                    hostError:
+                                                        !ValidationUtils.validateNodeHost(
+                                                            host
+                                                        )
+                                                });
+                                            }
+                                        }}
+                                        locked={loading}
+                                    />
+
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OpenChannel.nodePubkey'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        placeholder={'0A...'}
+                                        textColor={
+                                            pubkey &&
+                                            !ValidationUtils.validateNodePubkey(
+                                                pubkey
+                                            )
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        autoCorrect={false}
+                                        autoCapitalize="none"
+                                        value={pubkey}
+                                        onChangeText={(text: string) =>
+                                            this.setState({
+                                                pubkey: text.trim(),
+                                                saved: false
+                                            })
+                                        }
+                                        locked={loading}
+                                    />
+
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.rune'
+                                        )}
+                                    </Text>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <TextInput
+                                            placeholder={'Lt1c...'}
+                                            textColor={
+                                                runeError
+                                                    ? themeColor('error')
+                                                    : themeColor('text')
+                                            }
+                                            autoCorrect={false}
+                                            autoCapitalize="none"
+                                            value={rune}
+                                            secureTextEntry={this.state.hidden}
+                                            style={{
+                                                flex: 1,
+                                                marginRight: 15
+                                            }}
+                                            onChangeText={(text: string) => {
+                                                this.setState({
+                                                    runeError: false
+                                                });
+
+                                                if (
+                                                    text.length <
+                                                    (rune?.length || 0)
+                                                ) {
+                                                    this.setState({
+                                                        rune: text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                if (
+                                                    text.length ===
+                                                    (rune?.length || 0) + 1
+                                                ) {
+                                                    const cleanedText =
+                                                        text.replace(
+                                                            /[^A-Za-z0-9\-_=]/g,
+                                                            ''
+                                                        );
+                                                    this.setState({
+                                                        rune: cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                const trimmedText = text.trim();
+                                                this.setState({
+                                                    rune: trimmedText,
+                                                    runeError:
+                                                        !ValidationUtils.hasValidRuneChars(
+                                                            trimmedText
+                                                        ),
+                                                    saved: false
+                                                });
+                                            }}
+                                            locked={loading}
+                                        />
+                                        <ShowHideToggle
+                                            onPress={() =>
+                                                this.setState({
+                                                    hidden: !this.state.hidden
+                                                })
+                                            }
                                         />
                                     </View>
                                 </>
                             )}
-                            {adminMacaroon && seedPhrase && (
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.NodeConfiguration.backUpWallet'
+
+                            {implementation === 'lightning-node-connect' && (
+                                <>
+                                    <Mailbox />
+                                    {mailboxServer === 'custom-defined' && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.customMailboxServer'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={
+                                                    'my-custom.lnc.server:443'
+                                                }
+                                                textColor={
+                                                    customMailboxServerError
+                                                        ? themeColor('error')
+                                                        : themeColor('text')
+                                                }
+                                                autoCorrect={false}
+                                                autoCapitalize="none"
+                                                value={customMailboxServer}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        customMailboxServerError:
+                                                            false
+                                                    });
+
+                                                    // Allow backspace/delete operations without validation
+                                                    if (
+                                                        text.length <
+                                                        (customMailboxServer?.length ||
+                                                            0)
+                                                    ) {
+                                                        this.setState({
+                                                            customMailboxServer:
+                                                                text,
+                                                            saved: false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // For single character additions
+                                                    if (
+                                                        text.length ===
+                                                        (customMailboxServer?.length ||
+                                                            0) +
+                                                            1
+                                                    ) {
+                                                        if (text.includes('::'))
+                                                            return;
+
+                                                        const cleanedText =
+                                                            text.replace(
+                                                                new RegExp(
+                                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                                    'g'
+                                                                ),
+                                                                ''
+                                                            );
+                                                        this.setState({
+                                                            customMailboxServer:
+                                                                cleanedText,
+                                                            saved: false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // For pasted content
+                                                    const trimmedText =
+                                                        text.trim();
+                                                    this.setState({
+                                                        customMailboxServer:
+                                                            trimmedText,
+                                                        customMailboxServerError:
+                                                            !ValidationUtils.isValidServerAddress(
+                                                                trimmedText,
+                                                                {
+                                                                    allowPort:
+                                                                        true,
+                                                                    requireHttps:
+                                                                        true
+                                                                }
+                                                            ),
+                                                        saved: false
+                                                    });
+                                                }}
+                                                onBlur={() => {
+                                                    if (customMailboxServer) {
+                                                        this.setState({
+                                                            customMailboxServerError:
+                                                                !ValidationUtils.isValidServerAddress(
+                                                                    customMailboxServer,
+                                                                    {
+                                                                        allowPort:
+                                                                            true,
+                                                                        requireHttps:
+                                                                            true
+                                                                    }
+                                                                )
+                                                        });
+                                                    }
+                                                }}
+                                                locked={loading}
+                                            />
+                                        </>
                                     )}
-                                    onPress={() => navigation.navigate('Seed')}
-                                    secondary
-                                    disabled={loading}
-                                />
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.pairingPhrase'
+                                        )}
+                                    </Text>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center'
+                                        }}
+                                    >
+                                        <TextInput
+                                            placeholder={
+                                                'cherry truth mask employ box silver mass bunker fiscal vote'
+                                            }
+                                            textColor={
+                                                pairingPhraseError
+                                                    ? themeColor('error')
+                                                    : themeColor('text')
+                                            }
+                                            autoCapitalize="none"
+                                            value={pairingPhrase}
+                                            secureTextEntry={this.state.hidden}
+                                            style={{
+                                                flex: 1,
+                                                marginRight: 15
+                                            }}
+                                            onChangeText={(text: string) => {
+                                                this.setState({
+                                                    pairingPhraseError: false
+                                                });
+
+                                                // Allow backspace/delete operations without validation
+                                                if (
+                                                    text.length <
+                                                    (pairingPhrase?.length || 0)
+                                                ) {
+                                                    this.setState({
+                                                        pairingPhrase: text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For single character additions
+                                                if (
+                                                    text.length ===
+                                                    (pairingPhrase?.length ||
+                                                        0) +
+                                                        1
+                                                ) {
+                                                    if (text === ' ') return;
+                                                    if (text.includes('  '))
+                                                        return;
+
+                                                    const cleanedText =
+                                                        text.replace(
+                                                            /[^a-zA-Z\s]/g,
+                                                            ''
+                                                        );
+                                                    this.setState({
+                                                        pairingPhrase:
+                                                            cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For pasted content
+                                                const normalizedPhrase = text
+                                                    .trim()
+                                                    .replace(/\s+/g, ' ');
+                                                this.setState({
+                                                    pairingPhrase:
+                                                        normalizedPhrase,
+                                                    pairingPhraseError:
+                                                        !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                            normalizedPhrase
+                                                        ),
+                                                    saved: false
+                                                });
+                                            }}
+                                            onBlur={() => {
+                                                const normalizedPhrase =
+                                                    pairingPhrase
+                                                        ?.trim()
+                                                        .replace(/\s+/g, ' ');
+                                                this.setState({
+                                                    pairingPhrase:
+                                                        normalizedPhrase,
+                                                    pairingPhraseError:
+                                                        !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                            normalizedPhrase
+                                                        ),
+                                                    saved: false
+                                                });
+                                            }}
+                                            locked={loading}
+                                        />
+                                        <ShowHideToggle
+                                            onPress={() =>
+                                                this.setState({
+                                                    hidden: !this.state.hidden
+                                                })
+                                            }
+                                        />
+                                    </View>
+
+                                    {!!localKey && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                🔒{' '}
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.localKey'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                value={localKey}
+                                                locked={true}
+                                            />
+                                        </>
+                                    )}
+
+                                    {!!remoteKey && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                🔒{' '}
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.remoteKey'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                value={remoteKey}
+                                                locked={true}
+                                            />
+                                        </>
+                                    )}
+                                </>
+                            )}
+
+                            {supportsTor && (
+                                <>
+                                    <Text
+                                        style={{
+                                            top: 20,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.useTor'
+                                        )}
+                                    </Text>
+                                    <Switch
+                                        value={enableTor}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                enableTor: !enableTor,
+                                                saved: false
+                                            })
+                                        }
+                                    />
+                                </>
+                            )}
+
+                            {supportsCertVerification && !enableTor && (
+                                <>
+                                    <Text
+                                        style={{
+                                            top: 20,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.AddEditNode.certificateVerification'
+                                        )}
+                                    </Text>
+                                    <Switch
+                                        value={certVerification}
+                                        onValueChange={() =>
+                                            this.setState({
+                                                certVerification:
+                                                    !certVerification,
+                                                saved: false
+                                            })
+                                        }
+                                    />
+                                </>
                             )}
                         </View>
-                    )}
 
-                    {!creatingWallet &&
-                        !(
-                            implementation === 'embedded-lnd' && !adminMacaroon
-                        ) &&
-                        !saved && (
+                        {!existingAccount && implementation === 'lndhub' && (
                             <View style={{ ...styles.button }}>
                                 <Button
                                     title={localeString(
-                                        'views.Settings.WalletConfiguration.saveWallet'
+                                        'views.Settings.AddEditNode.createLndhub'
                                     )}
                                     onPress={() => {
                                         if (
-                                            !saved &&
-                                            !certVerification &&
-                                            !enableTor &&
-                                            implementation !==
-                                                'lightning-node-connect' &&
-                                            implementation !== 'embedded-lnd' &&
-                                            implementation !==
-                                                'nostr-wallet-connect'
+                                            CUSTODIAL_LNDHUBS.includes(
+                                                lndhubUrl
+                                            )
                                         ) {
                                             this.setState({
-                                                showCertModal: true
+                                                showLndHubModal: true
                                             });
                                         } else {
-                                            this.saveWalletConfiguration();
+                                            createAccount(
+                                                lndhubUrl,
+                                                certVerification,
+                                                enableTor
+                                            ).then((data: any) => {
+                                                if (data) {
+                                                    this.setState({
+                                                        username: data.login,
+                                                        password: data.password,
+                                                        existingAccount: true
+                                                    });
+                                                }
+                                            });
                                         }
                                     }}
-                                    // disable save button if loading, required input missing or input invalid
-                                    disabled={
-                                        loading ||
-                                        hostError ||
-                                        (host &&
-                                            !ValidationUtils.isValidServerAddress(
-                                                host,
-                                                implementation === 'lnsocket' ||
-                                                    implementation ===
-                                                        'cln-rest'
-                                                    ? { allowPort: true }
-                                                    : undefined
-                                            )) ||
-                                        portError ||
-                                        (port &&
-                                            !ValidationUtils.isValidPort(
-                                                port
-                                            )) ||
-                                        macaroonHexError ||
-                                        (macaroonHex &&
-                                            !ValidationUtils.hasValidMacaroonChars(
-                                                macaroonHex
-                                            )) ||
-                                        runeError ||
-                                        (rune &&
-                                            !ValidationUtils.hasValidRuneChars(
-                                                rune
-                                            )) ||
-                                        lndhubUrlError ||
-                                        (lndhubUrl &&
-                                            !ValidationUtils.isValidServerAddress(
-                                                lndhubUrl,
-                                                { allowPort: true }
-                                            )) ||
-                                        customMailboxServerError ||
-                                        (customMailboxServer &&
-                                            !ValidationUtils.isValidServerAddress(
-                                                customMailboxServer,
-                                                {
-                                                    allowPort: true,
-                                                    requireHttps: true
-                                                }
-                                            )) ||
-                                        pairingPhraseError ||
-                                        (pairingPhrase &&
-                                            !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                pairingPhrase
-                                            )) ||
-                                        nostrWalletConnectUrlError ||
-                                        // Required input check
-                                        // Port is optional, it will fallback to 80 or 443
-                                        (implementation === 'lndhub' &&
-                                            !(
-                                                lndhubUrl &&
-                                                username &&
-                                                password
-                                            )) ||
-                                        (implementation === 'lnd' &&
-                                            !(host && macaroonHex)) ||
-                                        (implementation === 'cln-rest' &&
-                                            !(host && rune)) ||
-                                        (implementation === 'lnsocket' &&
-                                            !(host && pubkey && rune)) ||
-                                        (implementation ===
-                                            'lightning-node-connect' &&
-                                            (!pairingPhrase ||
-                                                (mailboxServer ===
-                                                    'custom-defined' &&
-                                                    !customMailboxServer)))
-                                    }
+                                    disabled={loading || !lndhubUrl}
                                 />
                             </View>
                         )}
 
-                    {creatingWallet && <LoadingIndicator />}
+                        {implementation === 'embedded-lnd' && adminMacaroon && (
+                            <KeyValue
+                                keyValue={localeString('general.network')}
+                                value={embeddedLndNetwork}
+                            />
+                        )}
 
-                    {errorCreatingWallet && (
-                        <ErrorMessage
-                            message={localeString(
-                                'views.Intro.errorCreatingWallet'
+                        {implementation === 'embedded-lnd' &&
+                            recoveryCipherSeed && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Settings.NodeConfiguration.restoreWarning'
+                                    )}
+                                />
                             )}
-                        />
-                    )}
 
-                    {!saved && certVerification && !enableTor && (
-                        <CertInstallInstructions />
-                    )}
+                        {active && (
+                            <View style={{ alignItems: 'center' }}>
+                                <Pill
+                                    title={localeString(
+                                        'views.Settings.WalletConfiguration.walletActive'
+                                    )}
+                                    backgroundColor="transparent"
+                                    width={'100%'}
+                                />
+                            </View>
+                        )}
 
-                    {saved && !active && !newEntry && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.WalletConfiguration.setWalletActive'
+                        {implementation === 'embedded-lnd' && (
+                            <View style={{ ...styles.button }}>
+                                {!adminMacaroon && !creatingWallet && (
+                                    <>
+                                        <View style={styles.button}>
+                                            <Button
+                                                title={
+                                                    embeddedLndNetwork ===
+                                                    'mainnet'
+                                                        ? localeString(
+                                                              'views.Settings.NodeConfiguration.createMainnetWallet'
+                                                          )
+                                                        : localeString(
+                                                              'views.Settings.NodeConfiguration.createTestnetWallet'
+                                                          )
+                                                }
+                                                onPress={async () => {
+                                                    await this.createNewWallet(
+                                                        embeddedLndNetwork ===
+                                                            'mainnet'
+                                                            ? undefined
+                                                            : 'Testnet'
+                                                    );
+                                                }}
+                                                tertiary
+                                                disabled={loading}
+                                            />
+                                        </View>
+                                        <View style={styles.button}>
+                                            <Button
+                                                title={
+                                                    embeddedLndNetwork ===
+                                                    'mainnet'
+                                                        ? localeString(
+                                                              'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                          )
+                                                        : localeString(
+                                                              'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                          )
+                                                }
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'SeedRecovery',
+                                                        {
+                                                            network:
+                                                                embeddedLndNetwork,
+                                                            nickname,
+                                                            photo
+                                                        }
+                                                    )
+                                                }
+                                                secondary
+                                                disabled={loading}
+                                            />
+                                        </View>
+                                    </>
                                 )}
-                                onPress={() =>
-                                    this.setWalletConfigurationAsActive()
-                                }
-                                disabled={loading}
-                            />
-                        </View>
-                    )}
-
-                    {saved && implementation !== 'embedded-lnd' && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.WalletConfiguration.duplicateWallet'
-                                )}
-                                onPress={() => {
-                                    /**
-                                     * Scrolls to the top of the screen when going to the node config
-                                     * page for the copied node. Without this, the user would have to
-                                     * manually scroll to the top to edit the copied node properties.
-                                     */
-                                    this.scrollViewRef.current?.scrollTo({
-                                        x: 0,
-                                        y: 0,
-                                        animated: true
-                                    });
-                                    this.copyNodeConfig();
-                                }}
-                                secondary
-                                disabled={loading}
-                            />
-                        </View>
-                    )}
-
-                    {saved && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    deletionAwaitingConfirmation
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.WalletConfiguration.deleteWallet'
-                                          )
-                                }
-                                onPress={() => {
-                                    if (!deletionAwaitingConfirmation) {
-                                        this.setState({
-                                            deletionAwaitingConfirmation: true
-                                        });
-                                    } else {
-                                        if (
-                                            implementation === 'embedded-lnd' &&
-                                            !active
-                                        ) {
-                                            Alert.alert(
-                                                localeString('general.error'),
-                                                localeString(
-                                                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
-                                                ),
-                                                [
-                                                    {
-                                                        text: localeString(
-                                                            'views.Settings.WalletConfiguration.setWalletActive'
-                                                        ),
-                                                        onPress: () =>
-                                                            this.setWalletConfigurationAsActive(),
-                                                        isPreferred: true
-                                                    },
-                                                    {
-                                                        text: localeString(
-                                                            'general.cancel'
-                                                        ),
-                                                        onPress: () => void 0
-                                                    }
-                                                ],
-                                                { cancelable: false }
-                                            );
-                                        } else if (
-                                            implementation === 'embedded-lnd' &&
-                                            (ChannelsStore.channels.length >
-                                                0 ||
-                                                ChannelsStore.pendingChannels
-                                                    .length > 0)
-                                        ) {
-                                            Alert.alert(
-                                                localeString('general.warning'),
-                                                localeString(
-                                                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
-                                                ),
-                                                [
-                                                    {
-                                                        text: localeString(
-                                                            'views.Settings.WalletConfiguration.deleteWallet'
-                                                        ),
-                                                        onPress: () =>
-                                                            this.deleteNodeConfig()
-                                                    },
-                                                    {
-                                                        text: localeString(
-                                                            'general.cancel'
-                                                        ),
-                                                        onPress: () => void 0,
-                                                        isPreferred: true
-                                                    }
-                                                ],
-                                                { cancelable: false }
-                                            );
-                                        } else if (
-                                            implementation === 'embedded-lnd' &&
-                                            (BalanceStore.confirmedBlockchainBalance !==
-                                                0 ||
-                                                BalanceStore.unconfirmedBlockchainBalance !==
-                                                    0)
-                                        ) {
-                                            Alert.alert(
-                                                localeString('general.warning'),
-                                                localeString(
-                                                    'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
-                                                ),
-                                                [
-                                                    {
-                                                        text: localeString(
-                                                            'views.Settings.WalletConfiguration.deleteWallet'
-                                                        ),
-                                                        onPress: () =>
-                                                            this.deleteNodeConfig()
-                                                    },
-                                                    {
-                                                        text: localeString(
-                                                            'general.cancel'
-                                                        ),
-                                                        onPress: () => void 0,
-                                                        isPreferred: true
-                                                    }
-                                                ],
-                                                { cancelable: false }
-                                            );
-                                        } else {
-                                            this.deleteNodeConfig();
+                                {adminMacaroon && seedPhrase && (
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.NodeConfiguration.backUpWallet'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('Seed')
                                         }
-                                    }
-                                }}
-                                warning
-                                disabled={loading}
-                            />
-                        </View>
-                    )}
-
-                    {implementation === 'embedded-lnd' && !newEntry && (
-                        <>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    textAlign: 'center',
-                                    marginTop: 20
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.NodeConfiguration.embeddedDelete2'
+                                        secondary
+                                        disabled={loading}
+                                    />
                                 )}
-                            </Text>
-                        </>
-                    )}
-                </ScrollView>
+                            </View>
+                        )}
+
+                        {!creatingWallet &&
+                            !(
+                                implementation === 'embedded-lnd' &&
+                                !adminMacaroon
+                            ) &&
+                            !saved && (
+                                <View style={{ ...styles.button }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.WalletConfiguration.saveWallet'
+                                        )}
+                                        onPress={() => {
+                                            if (
+                                                !saved &&
+                                                !certVerification &&
+                                                !enableTor &&
+                                                implementation !==
+                                                    'lightning-node-connect' &&
+                                                implementation !== 'lnsocket' &&
+                                                implementation !==
+                                                    'embedded-lnd' &&
+                                                implementation !==
+                                                    'nostr-wallet-connect'
+                                            ) {
+                                                this.setState({
+                                                    showCertModal: true
+                                                });
+                                            } else {
+                                                this.saveWalletConfiguration();
+                                            }
+                                        }}
+                                        // disable save button if loading, required input missing or input invalid
+                                        disabled={
+                                            loading ||
+                                            hostError ||
+                                            (host &&
+                                                (implementation === 'lnsocket'
+                                                    ? !ValidationUtils.validateNodeHost(
+                                                          host
+                                                      )
+                                                    : !ValidationUtils.isValidServerAddress(
+                                                          host
+                                                      ))) ||
+                                            portError ||
+                                            (port &&
+                                                !ValidationUtils.isValidPort(
+                                                    port
+                                                )) ||
+                                            macaroonHexError ||
+                                            (macaroonHex &&
+                                                !ValidationUtils.hasValidMacaroonChars(
+                                                    macaroonHex
+                                                )) ||
+                                            runeError ||
+                                            (rune &&
+                                                !ValidationUtils.hasValidRuneChars(
+                                                    rune
+                                                )) ||
+                                            lndhubUrlError ||
+                                            (lndhubUrl &&
+                                                !ValidationUtils.isValidServerAddress(
+                                                    lndhubUrl,
+                                                    { allowPort: true }
+                                                )) ||
+                                            customMailboxServerError ||
+                                            (customMailboxServer &&
+                                                !ValidationUtils.isValidServerAddress(
+                                                    customMailboxServer,
+                                                    {
+                                                        allowPort: true,
+                                                        requireHttps: true
+                                                    }
+                                                )) ||
+                                            pairingPhraseError ||
+                                            (pairingPhrase &&
+                                                !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                    pairingPhrase
+                                                )) ||
+                                            nostrWalletConnectUrlError ||
+                                            // Required input check
+                                            // Port is optional, it will fallback to 80 or 443
+                                            (implementation === 'lndhub' &&
+                                                !(
+                                                    lndhubUrl &&
+                                                    username &&
+                                                    password
+                                                )) ||
+                                            (implementation === 'lnd' &&
+                                                !(host && macaroonHex)) ||
+                                            (implementation === 'cln-rest' &&
+                                                !(host && rune)) ||
+                                            (implementation === 'lnsocket' &&
+                                                !(
+                                                    host &&
+                                                    pubkey &&
+                                                    ValidationUtils.validateNodePubkey(
+                                                        pubkey
+                                                    ) &&
+                                                    rune
+                                                )) ||
+                                            (implementation ===
+                                                'lightning-node-connect' &&
+                                                (!pairingPhrase ||
+                                                    (mailboxServer ===
+                                                        'custom-defined' &&
+                                                        !customMailboxServer)))
+                                        }
+                                    />
+                                </View>
+                            )}
+
+                        {creatingWallet && <LoadingIndicator />}
+
+                        {errorCreatingWallet && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Intro.errorCreatingWallet'
+                                )}
+                            />
+                        )}
+
+                        {!saved && certVerification && !enableTor && (
+                            <CertInstallInstructions />
+                        )}
+
+                        {saved && !active && !newEntry && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.WalletConfiguration.setWalletActive'
+                                    )}
+                                    onPress={() =>
+                                        this.setWalletConfigurationAsActive()
+                                    }
+                                    disabled={loading}
+                                />
+                            </View>
+                        )}
+
+                        {saved && implementation !== 'embedded-lnd' && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.WalletConfiguration.duplicateWallet'
+                                    )}
+                                    onPress={() => {
+                                        /**
+                                         * Scrolls to the top of the screen when going to the node config
+                                         * page for the copied node. Without this, the user would have to
+                                         * manually scroll to the top to edit the copied node properties.
+                                         */
+                                        this.scrollViewRef.current?.scrollTo({
+                                            x: 0,
+                                            y: 0,
+                                            animated: true
+                                        });
+                                        this.copyNodeConfig();
+                                    }}
+                                    secondary
+                                    disabled={loading}
+                                />
+                            </View>
+                        )}
+
+                        {saved && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.WalletConfiguration.deleteWallet'
+                                    )}
+                                    onPress={this.handleDeletePress}
+                                    warning
+                                    disabled={loading}
+                                />
+                            </View>
+                        )}
+
+                        {implementation === 'embedded-lnd' && !newEntry && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        textAlign: 'center',
+                                        marginTop: 20
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.NodeConfiguration.embeddedDelete2'
+                                    )}
+                                </Text>
+                            </>
+                        )}
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </Screen>
         );
     }
