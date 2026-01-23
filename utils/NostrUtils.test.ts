@@ -156,4 +156,138 @@ describe('NostrUtils', () => {
             expect(hex).toBe(validHex);
         });
     });
+
+    // Valid nsec for testing (randomly generated, not a real secret)
+    const validNsec =
+        'nsec1vl029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laqsnlfe5';
+    const validNsecHex =
+        '67dea2ed018072d675f5415ecfaed7d2597555e202d85b3d65ea4e58d2d92ffa';
+
+    describe('isValidNsec', () => {
+        it('should return true for valid nsec', () => {
+            expect(NostrUtils.isValidNsec(validNsec)).toBe(true);
+        });
+
+        it('should return true for valid nsec with whitespace', () => {
+            expect(NostrUtils.isValidNsec(`  ${validNsec}  `)).toBe(true);
+        });
+
+        it('should return true for uppercase nsec (case insensitive)', () => {
+            expect(NostrUtils.isValidNsec(validNsec.toUpperCase())).toBe(true);
+        });
+
+        it('should return false for empty string', () => {
+            expect(NostrUtils.isValidNsec('')).toBe(false);
+        });
+
+        it('should return false for null/undefined', () => {
+            expect(NostrUtils.isValidNsec(null as any)).toBe(false);
+            expect(NostrUtils.isValidNsec(undefined as any)).toBe(false);
+        });
+
+        it('should return false for npub (wrong type)', () => {
+            expect(NostrUtils.isValidNsec(validNpub)).toBe(false);
+        });
+
+        it('should return false for too short nsec', () => {
+            expect(NostrUtils.isValidNsec('nsec1abc123')).toBe(false);
+        });
+
+        it('should return false for too long nsec', () => {
+            expect(NostrUtils.isValidNsec(validNsec + 'extra')).toBe(false);
+        });
+
+        it('should return false for invalid bech32 checksum', () => {
+            const invalidChecksum = validNsec.slice(0, -1) + 'a';
+            expect(NostrUtils.isValidNsec(invalidChecksum)).toBe(false);
+        });
+
+        it('should return false for hex key', () => {
+            expect(NostrUtils.isValidNsec(validNsecHex)).toBe(false);
+        });
+    });
+
+    describe('nsecToHex', () => {
+        it('should decode valid nsec to hex', () => {
+            expect(NostrUtils.nsecToHex(validNsec)).toBe(validNsecHex);
+        });
+
+        it('should handle whitespace', () => {
+            expect(NostrUtils.nsecToHex(`  ${validNsec}  `)).toBe(validNsecHex);
+        });
+
+        it('should return null for empty string', () => {
+            expect(NostrUtils.nsecToHex('')).toBe(null);
+        });
+
+        it('should return null for null/undefined', () => {
+            expect(NostrUtils.nsecToHex(null as any)).toBe(null);
+            expect(NostrUtils.nsecToHex(undefined as any)).toBe(null);
+        });
+
+        it('should return null for invalid nsec', () => {
+            expect(NostrUtils.nsecToHex('nsec1invalid')).toBe(null);
+        });
+
+        it('should return null for npub (wrong type)', () => {
+            expect(NostrUtils.nsecToHex(validNpub)).toBe(null);
+        });
+    });
+
+    describe('hexToNsec', () => {
+        it('should encode valid hex to nsec', () => {
+            expect(NostrUtils.hexToNsec(validNsecHex)).toBe(validNsec);
+        });
+
+        it('should handle whitespace', () => {
+            expect(NostrUtils.hexToNsec(`  ${validNsecHex}  `)).toBe(validNsec);
+        });
+
+        it('should handle uppercase hex', () => {
+            expect(NostrUtils.hexToNsec(validNsecHex.toUpperCase())).toBe(
+                validNsec
+            );
+        });
+
+        it('should return null for empty string', () => {
+            expect(NostrUtils.hexToNsec('')).toBe(null);
+        });
+
+        it('should return null for null/undefined', () => {
+            expect(NostrUtils.hexToNsec(null as any)).toBe(null);
+            expect(NostrUtils.hexToNsec(undefined as any)).toBe(null);
+        });
+
+        it('should return null for too short hex', () => {
+            expect(NostrUtils.hexToNsec('abcd1234')).toBe(null);
+        });
+
+        it('should return null for too long hex', () => {
+            expect(NostrUtils.hexToNsec(validNsecHex + 'ff')).toBe(null);
+        });
+
+        it('should return null for invalid hex characters', () => {
+            expect(
+                NostrUtils.hexToNsec(
+                    'ghij029mgpspedva04g90vltkh6fvh240zqtv9k0t9af8935ke9laq'
+                )
+            ).toBe(null);
+        });
+    });
+
+    describe('nsec roundtrip', () => {
+        it('should roundtrip nsec -> hex -> nsec', () => {
+            const hex = NostrUtils.nsecToHex(validNsec);
+            expect(hex).not.toBe(null);
+            const nsec = NostrUtils.hexToNsec(hex!);
+            expect(nsec).toBe(validNsec);
+        });
+
+        it('should roundtrip hex -> nsec -> hex', () => {
+            const nsec = NostrUtils.hexToNsec(validNsecHex);
+            expect(nsec).not.toBe(null);
+            const hex = NostrUtils.nsecToHex(nsec!);
+            expect(hex).toBe(validNsecHex);
+        });
+    });
 });
