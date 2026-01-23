@@ -127,7 +127,7 @@ const parseReviewRating = (
         }
     }
 
-    return { cleanContent: content };
+    return { cleanContent: content.trim() };
 };
 
 export interface ReviewerProfile {
