@@ -8,9 +8,9 @@ import {
     Text,
     TouchableOpacity,
     TouchableHighlight,
-    ViewStyle,
-    SafeAreaView
+    ViewStyle
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 
 import { themeColor } from '../utils/ThemeUtils';
