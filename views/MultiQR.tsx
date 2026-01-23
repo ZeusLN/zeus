@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Dimensions, View, SafeAreaView } from 'react-native';
+import { Dimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 

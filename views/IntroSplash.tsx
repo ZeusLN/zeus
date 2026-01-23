@@ -5,9 +5,9 @@ import {
     ImageBackground,
     NativeEventSubscription,
     View,
-    SafeAreaView,
     Text
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
