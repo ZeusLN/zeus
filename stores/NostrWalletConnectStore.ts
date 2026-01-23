@@ -1000,8 +1000,16 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
+        if (!connection.activity || !Array.isArray(connection.activity)) {
+            runInAction(() => {
+                connection.activity = [];
+            });
+        }
         const locale = this.settingsStore.settings.locale;
-        const promises = connection.activity.map(async (activity) => {
+        const safeActivity = Array.isArray(connection.activity)
+            ? connection.activity
+            : [];
+        const promises = safeActivity.map(async (activity) => {
             if (activity?.invoice) {
                 runInAction(() => {
                     activity.invoice =
@@ -1015,7 +1023,6 @@ export default class NostrWalletConnectStore {
                 activity.invoice.determineFormattedOriginalTimeUntilExpiry(
                     locale
                 );
-
                 if (
                     activity.type === 'make_invoice' &&
                     activity.status === 'pending'
@@ -1065,7 +1072,10 @@ export default class NostrWalletConnectStore {
         });
         await Promise.all(promises);
         runInAction(() => {
-            connection.activity = connection.activity.filter((activity) => {
+            const currentActivity = Array.isArray(connection.activity)
+                ? connection.activity
+                : [];
+            connection.activity = currentActivity.filter((activity) => {
                 const isInvalidFailure =
                     activity.status === 'failed' &&
                     NostrConnectUtils.isIgnorableError(activity.error || '');
@@ -1073,7 +1083,10 @@ export default class NostrWalletConnectStore {
             });
         });
         this.saveConnections();
-        return { name: connection.name, activity: connection.activity || [] };
+        const finalActivity = Array.isArray(connection.activity)
+            ? connection.activity
+            : [];
+        return { name: connection.name, activity: finalActivity };
     };
     @action
     private markConnectionUsed = async (connectionId: string) => {
@@ -1624,9 +1637,7 @@ export default class NostrWalletConnectStore {
                         status: 'pending',
                         type: 'make_invoice',
                         payment_source: 'lightning',
-                        lastprocessAt: new Date(),
                         paymentHash,
-                        expiresAt: new Date(expiryTime),
                         satAmount: millisatsToSats(request.amount)
                     });
                     this.findAndUpdateConnection(connection);
@@ -1813,7 +1824,10 @@ export default class NostrWalletConnectStore {
             let nip47Transactions: Nip47Transaction[] = [];
 
             if (connection.hasPaymentPermissions()) {
-                nip47Transactions = connection.activity
+                const safeActivity = Array.isArray(connection.activity)
+                    ? connection.activity
+                    : [];
+                nip47Transactions = safeActivity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(
                             activity
@@ -2512,23 +2526,29 @@ export default class NostrWalletConnectStore {
         errorMessage: string,
         paymentHash?: string
     ): Promise<void> {
-        const activity = connection.activity.find((conn) => conn.id === id);
+        const safeActivity = Array.isArray(connection.activity)
+            ? connection.activity
+            : [];
+        const activity = safeActivity.find((conn) => conn.id === id);
         if (activity?.status === 'success') {
             return;
         }
-        const index = connection.activity.findIndex((conn) => conn.id === id);
+        const index = safeActivity.findIndex((conn) => conn.id === id);
         runInAction(() => {
             const record: ConnectionActivity = {
                 id,
                 type,
                 satAmount: amountSats,
                 status: 'failed',
-                lastprocessAt: new Date(),
                 payment_source,
                 error: errorMessage,
-                paymentHash
+                paymentHash,
+                createdAt: new Date()
             };
 
+            if (!Array.isArray(connection.activity)) {
+                connection.activity = [];
+            }
             if (index !== -1) {
                 connection.activity[index] = {
                     ...connection.activity[index],

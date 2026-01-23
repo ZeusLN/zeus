@@ -34,8 +34,8 @@ export interface ConnectionActivity {
     error?: string;
     preimage?: string;
     paymentHash?: string;
-    lastprocessAt?: Date;
     satAmount?: number;
+    createdAt?: Date;
     expiresAt?: Date;
     isExpired?: boolean;
     expiryLabel?: string;
@@ -138,7 +138,6 @@ export default class NWCConnection extends BaseModel {
             this.maxAmountSats !== undefined
                 ? Math.floor(Number(this.maxAmountSats))
                 : undefined;
-
         this.normalizeDates();
     }
 
@@ -173,16 +172,18 @@ export default class NWCConnection extends BaseModel {
             }
         });
 
-        if (Array.isArray(this.activity)) {
+        if (this.activity && Array.isArray(this.activity)) {
             this.activity = this.activity.map((a: any) => {
-                const lastprocessAt = this.coerceToDate(a?.lastprocessAt);
+                const createdAt = this.coerceToDate(a?.createdAt);
                 const expiresAt = this.coerceToDate(a?.expiresAt);
                 return {
                     ...a,
-                    ...(lastprocessAt ? { lastprocessAt } : {}),
+                    ...(createdAt ? { createdAt } : {}),
                     ...(expiresAt ? { expiresAt } : {})
                 };
             });
+        } else if (!this.activity) {
+            this.activity = [];
         }
     }
     @computed public get isExpired(): boolean {
