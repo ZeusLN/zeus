@@ -21,6 +21,13 @@ import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
+import {
+    generatePrivateKey,
+    getPublicKey,
+    getEventHash,
+    getSignature,
+    relayInit
+} from 'nostr-tools';
 
 import NostrUtils from '../utils/NostrUtils';
 
@@ -185,6 +192,9 @@ export default class CashuStore {
         new Map();
     @observable public loadingTrustedMints = false;
     @observable public loadingReviews = false;
+    @observable public submittingReview = false;
+    @observable public reviewSubmitSuccess = false;
+    @observable public reviewSubmitError = false;
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
 
@@ -639,6 +649,132 @@ export default class CashuStore {
                 this.loadingReviews = false;
             });
         }
+    };
+
+    /**
+     * Submits a mint review to Nostr relays (NIP-87).
+     * @param mintUrl - The mint URL to review
+     * @param rating - Rating from 1-5 (optional)
+     * @param reviewText - Review text content (optional)
+     * @param nsec - User's nsec for signing (if not provided, generates anonymous keypair)
+     * @returns Object with success status and optional npub of the signer
+     */
+    @action
+    public submitMintReview = async (
+        mintUrl: string,
+        rating?: number,
+        reviewText?: string,
+        nsec?: string
+    ): Promise<{ success: boolean; npub?: string; error?: string }> => {
+        if (!mintUrl) {
+            return { success: false, error: 'Mint URL is required' };
+        }
+
+        runInAction(() => {
+            this.submittingReview = true;
+            this.reviewSubmitSuccess = false;
+            this.reviewSubmitError = false;
+        });
+
+        try {
+            // Get or generate private key
+            let privateKey: string;
+            if (nsec) {
+                const hexKey = NostrUtils.nsecToHex(nsec);
+                if (!hexKey) {
+                    runInAction(() => {
+                        this.submittingReview = false;
+                        this.reviewSubmitError = true;
+                    });
+                    return { success: false, error: 'Invalid nsec' };
+                }
+                privateKey = hexKey;
+            } else {
+                // Generate anonymous keypair
+                privateKey = generatePrivateKey();
+            }
+
+            const publicKey = getPublicKey(privateKey);
+            const npub = NostrUtils.hexToNpub(publicKey);
+
+            // Build content with optional rating prefix
+            let content = '';
+            if (rating && rating >= 1 && rating <= 5) {
+                content = `[${rating}/5]`;
+                if (reviewText?.trim()) {
+                    content += ` ${reviewText.trim()}`;
+                }
+            } else if (reviewText?.trim()) {
+                content = reviewText.trim();
+            }
+
+            // Create NIP-87 event (kind 38000, parameterized replaceable)
+            const unsignedEvent = {
+                kind: 38000,
+                content,
+                tags: [
+                    ['k', '38172'], // Cashu mint recommendation
+                    ['u', mintUrl],
+                    ['d', mintUrl] // Identifier for parameterized replaceable
+                ],
+                created_at: Math.floor(Date.now() / 1000),
+                pubkey: publicKey
+            };
+
+            // Sign the event
+            const signedEvent = {
+                ...unsignedEvent,
+                id: getEventHash(unsignedEvent),
+                sig: getSignature(unsignedEvent, privateKey)
+            };
+
+            // Publish to relays
+            const publishPromises = DEFAULT_NOSTR_RELAYS.map(
+                async (relayUrl) => {
+                    try {
+                        const relay = relayInit(relayUrl);
+                        await relay.connect();
+                        await relay.publish(signedEvent);
+                        relay.close();
+                        return true;
+                    } catch (e) {
+                        console.warn(`Failed to publish to ${relayUrl}:`, e);
+                        return false;
+                    }
+                }
+            );
+
+            const results = await Promise.all(publishPromises);
+            const successCount = results.filter(Boolean).length;
+
+            if (successCount === 0) {
+                throw new Error('Failed to publish to any relay');
+            }
+
+            runInAction(() => {
+                this.submittingReview = false;
+                this.reviewSubmitSuccess = true;
+            });
+
+            return { success: true, npub: npub || publicKey };
+        } catch (e: any) {
+            console.error('Error submitting mint review:', e);
+            runInAction(() => {
+                this.submittingReview = false;
+                this.reviewSubmitError = true;
+            });
+            return {
+                success: false,
+                error: e?.message || 'Failed to submit review'
+            };
+        }
+    };
+
+    @action
+    public resetReviewSubmitState = () => {
+        this.submittingReview = false;
+        this.reviewSubmitSuccess = false;
+        this.reviewSubmitError = false;
     };
 
     @action
