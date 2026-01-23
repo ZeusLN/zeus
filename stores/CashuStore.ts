@@ -22,6 +22,8 @@ import { bytesToHex } from '@noble/hashes/utils';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 
+import NostrUtils from '../utils/NostrUtils';
+
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
@@ -58,6 +60,10 @@ const UPGRADE_MESSAGES: { [key: number]: string } = {
     50000: 'cashu.upgradePrompt.message50k',
     100000: 'cashu.upgradePrompt.message100k'
 };
+
+// ZEUS official npub for trusted mint recommendations
+const ZEUS_NPUB =
+    'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
 
 interface Wallet {
     wallet?: CashuWallet;
@@ -124,6 +130,8 @@ export default class CashuStore {
     @observable public paymentDuration?: number;
 
     @observable public mintRecommendations?: MintRecommendation[];
+    @observable public trustedMintRecommendations?: MintRecommendation[];
+    @observable public loadingTrustedMints = false;
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
 
@@ -303,6 +311,154 @@ export default class CashuStore {
             console.error('Error fetching mints:', e);
             runInAction(() => {
                 this.loading = false;
+                this.error = true;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorDiscoveringMints'
+                );
+            });
+        }
+    };
+
+    // Validate npub format and return hex pubkey if valid
+    public validateNpub = (npubInput: string): string | null => {
+        return NostrUtils.npubToHex(npubInput);
+    };
+
+    @action
+    public fetchMintsFromFollows = async (npubInput?: string) => {
+        try {
+            runInAction(() => {
+                this.loadingTrustedMints = true;
+                this.error = false;
+                this.error_msg = undefined;
+            });
+
+            // Use provided npub or default to ZEUS npub
+            const npubToUse = npubInput?.trim() || ZEUS_NPUB;
+            const hexPubkey = this.validateNpub(npubToUse);
+
+            if (!hexPubkey) {
+                runInAction(() => {
+                    this.loadingTrustedMints = false;
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'views.Cashu.AddMint.invalidNpub'
+                    );
+                });
+                return [];
+            }
+
+            // Initialize NDK if not already done
+            if (!this.ndk) {
+                this.ndk = new NDK({
+                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                });
+                await this.ndk.connect();
+            }
+
+            // Fetch follow list (kind 3)
+            const followFilter: NDKFilter = {
+                kinds: [3 as NDKKind],
+                authors: [hexPubkey],
+                limit: 1
+            };
+
+            const followEvents = await this.ndk.fetchEvents(followFilter);
+            const followEvent = Array.from(followEvents)[0];
+
+            if (!followEvent) {
+                console.log('No follow list found for npub');
+                runInAction(() => {
+                    this.trustedMintRecommendations = [];
+                    this.loadingTrustedMints = false;
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'views.Cashu.AddMint.noFollowList'
+                    );
+                });
+                return [];
+            }
+
+            // Extract followed pubkeys from 'p' tags
+            const followedPubkeys = new Set<string>();
+            for (const tag of followEvent.tags) {
+                if (tag[0] === 'p' && tag[1]) {
+                    followedPubkeys.add(tag[1]);
+                }
+            }
+
+            if (followedPubkeys.size === 0) {
+                runInAction(() => {
+                    this.trustedMintRecommendations = [];
+                    this.loadingTrustedMints = false;
+                });
+                return [];
+            }
+
+            // Fetch mint recommendations (kind 38000) from followed accounts
+            const mintFilter: NDKFilter = {
+                kinds: [38000 as NDKKind],
+                authors: Array.from(followedPubkeys),
+                limit: 2000
+            };
+
+            const events = new Set<NDKEvent>();
+            let eoseCount = 0;
+            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
+            const sub = this.ndk.subscribe(mintFilter, { closeOnEose: true });
+
+            await new Promise<void>((resolve) => {
+                sub.on('event', (event: NDKEvent) => {
+                    events.add(event);
+                });
+                sub.on('eose', () => {
+                    eoseCount++;
+                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
+                        console.log(
+                            'Trusted mint discovery: EOSE received from majority of relays'
+                        );
+                        resolve();
+                    }
+                });
+                setTimeout(() => {
+                    console.log('Trusted mint discovery: Timeout reached');
+                    resolve();
+                }, 10000);
+            });
+
+            sub.stop();
+
+            const mintCounts = new Map<string, number>();
+
+            for (const event of events) {
+                if (event.tagValue('k') === '38172' && event.tagValue('u')) {
+                    const mintUrl = event.tagValue('u');
+                    if (
+                        typeof mintUrl === 'string' &&
+                        mintUrl.startsWith('https://')
+                    ) {
+                        mintCounts.set(
+                            mintUrl,
+                            (mintCounts.get(mintUrl) || 0) + 1
+                        );
+                    }
+                }
+            }
+
+            const mintUrlsCounted = Array.from(mintCounts.entries())
+                .map(([url, count]) => ({ url, count }))
+                .sort((a, b) => b.count - a.count);
+
+            runInAction(() => {
+                this.trustedMintRecommendations = mintUrlsCounted;
+                this.loadingTrustedMints = false;
+            });
+
+            return mintUrlsCounted;
+        } catch (e: any) {
+            console.error('Error fetching mints from follows:', e);
+            runInAction(() => {
+                this.loadingTrustedMints = false;
                 this.error = true;
                 this.error_msg = localeString(
                     'stores.CashuStore.errorDiscoveringMints'
