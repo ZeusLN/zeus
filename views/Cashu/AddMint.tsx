@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {
+    Clipboard,
     FlatList,
+    Image,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -21,12 +23,15 @@ import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import TextInput from '../../components/TextInput';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import UrlUtils from '../../utils/UrlUtils';
 
-import CashuStore from '../../stores/CashuStore';
+import CashuStore, {
+    MintReview,
+    MintReviewRating
+} from '../../stores/CashuStore';
 
 type DiscoverMode = 'zeus' | 'all' | 'custom';
 
@@ -41,6 +46,8 @@ interface AddMintState {
     loading: boolean;
     showDiscoverMints: boolean;
     showDiscoverModal: boolean;
+    showReviewsModal: boolean;
+    reviewsMintUrl: string;
     discoverMode: DiscoverMode;
     customNpub: string;
     npubError: string;
@@ -61,6 +68,8 @@ export default class AddMint extends React.Component<
             mintUrl: '',
             showDiscoverMints: false,
             showDiscoverModal: false,
+            showReviewsModal: false,
+            reviewsMintUrl: '',
             discoverMode: 'zeus',
             customNpub: '',
             npubError: '',
@@ -184,6 +193,8 @@ export default class AddMint extends React.Component<
         const { showDiscoverModal, discoverMode, customNpub, npubError } =
             this.state;
 
+        const highlightColor = themeColor('highlight');
+
         return (
             <ModalBox
                 isOpen={showDiscoverModal}
@@ -194,12 +205,27 @@ export default class AddMint extends React.Component<
                 onClosed={() => this.setState({ showDiscoverModal: false })}
             >
                 <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            { backgroundColor: themeColor('secondary') }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.modalTitle,
+                                { color: themeColor('text') }
+                            ]}
+                        >
                             {localeString('views.Cashu.AddMint.discover')}
                         </Text>
 
-                        <Text style={styles.modalSubtitle}>
+                        <Text
+                            style={[
+                                styles.modalSubtitle,
+                                { color: themeColor('secondaryText') }
+                            ]}
+                        >
                             {localeString(
                                 'views.Cashu.AddMint.discoverModal.subtitle'
                             )}
@@ -209,23 +235,46 @@ export default class AddMint extends React.Component<
                         <TouchableOpacity
                             style={[
                                 styles.optionItem,
-                                discoverMode === 'zeus' &&
-                                    styles.optionItemSelected
+                                { backgroundColor: themeColor('background') },
+                                discoverMode === 'zeus' && [
+                                    styles.optionItemSelected,
+                                    { borderColor: highlightColor }
+                                ]
                             ]}
                             onPress={() => this.handleDiscoverSelect('zeus')}
                         >
-                            <View style={styles.radioOuter}>
+                            <View
+                                style={[
+                                    styles.radioOuter,
+                                    { borderColor: highlightColor }
+                                ]}
+                            >
                                 {discoverMode === 'zeus' && (
-                                    <View style={styles.radioInner} />
+                                    <View
+                                        style={[
+                                            styles.radioInner,
+                                            { backgroundColor: highlightColor }
+                                        ]}
+                                    />
                                 )}
                             </View>
                             <View style={styles.optionTextContainer}>
-                                <Text style={styles.optionTitle}>
+                                <Text
+                                    style={[
+                                        styles.optionTitle,
+                                        { color: themeColor('text') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.zeusFollows'
                                     )}
                                 </Text>
-                                <Text style={styles.optionDescription}>
+                                <Text
+                                    style={[
+                                        styles.optionDescription,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.zeusFollows.description'
                                     )}
@@ -237,23 +286,46 @@ export default class AddMint extends React.Component<
                         <TouchableOpacity
                             style={[
                                 styles.optionItem,
-                                discoverMode === 'all' &&
-                                    styles.optionItemSelected
+                                { backgroundColor: themeColor('background') },
+                                discoverMode === 'all' && [
+                                    styles.optionItemSelected,
+                                    { borderColor: highlightColor }
+                                ]
                             ]}
                             onPress={() => this.handleDiscoverSelect('all')}
                         >
-                            <View style={styles.radioOuter}>
+                            <View
+                                style={[
+                                    styles.radioOuter,
+                                    { borderColor: highlightColor }
+                                ]}
+                            >
                                 {discoverMode === 'all' && (
-                                    <View style={styles.radioInner} />
+                                    <View
+                                        style={[
+                                            styles.radioInner,
+                                            { backgroundColor: highlightColor }
+                                        ]}
+                                    />
                                 )}
                             </View>
                             <View style={styles.optionTextContainer}>
-                                <Text style={styles.optionTitle}>
+                                <Text
+                                    style={[
+                                        styles.optionTitle,
+                                        { color: themeColor('text') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.allNostrUsers'
                                     )}
                                 </Text>
-                                <Text style={styles.optionDescription}>
+                                <Text
+                                    style={[
+                                        styles.optionDescription,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.allNostrUsers.description'
                                     )}
@@ -265,23 +337,46 @@ export default class AddMint extends React.Component<
                         <TouchableOpacity
                             style={[
                                 styles.optionItem,
-                                discoverMode === 'custom' &&
-                                    styles.optionItemSelected
+                                { backgroundColor: themeColor('background') },
+                                discoverMode === 'custom' && [
+                                    styles.optionItemSelected,
+                                    { borderColor: highlightColor }
+                                ]
                             ]}
                             onPress={() => this.handleDiscoverSelect('custom')}
                         >
-                            <View style={styles.radioOuter}>
+                            <View
+                                style={[
+                                    styles.radioOuter,
+                                    { borderColor: highlightColor }
+                                ]}
+                            >
                                 {discoverMode === 'custom' && (
-                                    <View style={styles.radioInner} />
+                                    <View
+                                        style={[
+                                            styles.radioInner,
+                                            { backgroundColor: highlightColor }
+                                        ]}
+                                    />
                                 )}
                             </View>
                             <View style={styles.optionTextContainer}>
-                                <Text style={styles.optionTitle}>
+                                <Text
+                                    style={[
+                                        styles.optionTitle,
+                                        { color: themeColor('text') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.yourFollows'
                                     )}
                                 </Text>
-                                <Text style={styles.optionDescription}>
+                                <Text
+                                    style={[
+                                        styles.optionDescription,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.yourFollows.description'
                                     )}
@@ -292,7 +387,12 @@ export default class AddMint extends React.Component<
                         {/* Custom npub input */}
                         {discoverMode === 'custom' && (
                             <View style={styles.npubInputContainer}>
-                                <Text style={styles.npubLabel}>
+                                <Text
+                                    style={[
+                                        styles.npubLabel,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
                                     {localeString(
                                         'views.Cashu.AddMint.enterNpub'
                                     )}
@@ -305,7 +405,12 @@ export default class AddMint extends React.Component<
                                     autoCorrect={false}
                                 />
                                 {npubError ? (
-                                    <Text style={styles.npubError}>
+                                    <Text
+                                        style={[
+                                            styles.npubError,
+                                            { color: themeColor('error') }
+                                        ]}
+                                    >
                                         {npubError}
                                     </Text>
                                 ) : null}
@@ -331,6 +436,257 @@ export default class AddMint extends React.Component<
                                     secondary
                                 />
                             </View>
+                        </View>
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
+
+    openReviewsModal = async (mintUrl: string) => {
+        const { CashuStore } = this.props;
+
+        this.setState({
+            showReviewsModal: true,
+            reviewsMintUrl: mintUrl
+        });
+
+        // Get reviews for this mint and fetch profiles
+        const reviews = CashuStore.mintReviews.get(mintUrl) || [];
+        const pubkeys = reviews.map((r) => r.pubkey);
+        await CashuStore.fetchReviewerProfiles(pubkeys);
+    };
+
+    copyToClipboard = (text: string) => {
+        Clipboard.setString(text);
+    };
+
+    renderStarRating = (rating: MintReviewRating) => {
+        const stars = [];
+        for (let i = 1; i <= rating.max; i++) {
+            const isFilled = i <= rating.score;
+            stars.push(
+                <Text
+                    key={i}
+                    style={{
+                        color: isFilled
+                            ? themeColor('text')
+                            : themeColor('secondaryText'),
+                        fontSize: 14,
+                        marginRight: 2
+                    }}
+                >
+                    {isFilled ? '★' : '☆'}
+                </Text>
+            );
+        }
+        return <View style={styles.starContainer}>{stars}</View>;
+    };
+
+    renderReviewItem = ({
+        item,
+        index
+    }: {
+        item: MintReview;
+        index: number;
+    }) => {
+        const { CashuStore } = this.props;
+        const profile = CashuStore.reviewerProfiles.get(item.pubkey);
+
+        const displayName = profile?.name || localeString('general.anonymous');
+        const npub = profile?.npub || item.pubkey;
+        const truncatedNpub = `${npub.slice(0, 12)}...${npub.slice(-8)}`;
+        const formattedDate = item.createdAt
+            ? DateTimeUtils.listFormattedDateShort(item.createdAt)
+            : '';
+
+        return (
+            <View style={styles.reviewItem} key={`review-${index}`}>
+                <View style={styles.reviewHeader}>
+                    {profile?.picture ? (
+                        <Image
+                            source={{ uri: profile.picture }}
+                            style={styles.profileImage}
+                        />
+                    ) : (
+                        <View
+                            style={[
+                                styles.profilePlaceholder,
+                                { backgroundColor: themeColor('secondary') }
+                            ]}
+                        >
+                            <Text
+                                style={[
+                                    styles.profilePlaceholderText,
+                                    { color: themeColor('text') }
+                                ]}
+                            >
+                                {displayName.charAt(0).toUpperCase()}
+                            </Text>
+                        </View>
+                    )}
+                    <View style={styles.reviewHeaderText}>
+                        <View style={styles.reviewNameRow}>
+                            <Text
+                                style={[
+                                    styles.reviewerName,
+                                    { color: themeColor('text') }
+                                ]}
+                            >
+                                {displayName}
+                            </Text>
+                            {formattedDate ? (
+                                <Text
+                                    style={[
+                                        styles.reviewDate,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
+                                    {formattedDate}
+                                </Text>
+                            ) : null}
+                        </View>
+                        {item.rating && this.renderStarRating(item.rating)}
+                        <TouchableOpacity
+                            onPress={() => this.copyToClipboard(npub)}
+                        >
+                            <Text
+                                style={[
+                                    styles.reviewerNpub,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {truncatedNpub}{' '}
+                                <Text
+                                    style={[
+                                        styles.copyHint,
+                                        { color: themeColor('highlight') }
+                                    ]}
+                                >
+                                    {localeString('general.tapToCopy')}
+                                </Text>
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+                <Text
+                    style={[
+                        styles.reviewContent,
+                        {
+                            color: item.content
+                                ? themeColor('text')
+                                : themeColor('secondaryText'),
+                            fontStyle: item.content ? 'normal' : 'italic'
+                        }
+                    ]}
+                >
+                    {item.content ||
+                        localeString('views.Cashu.AddMint.noReviewContent')}
+                </Text>
+            </View>
+        );
+    };
+
+    renderReviewsModal = () => {
+        const { CashuStore } = this.props;
+        const { showReviewsModal, reviewsMintUrl } = this.state;
+
+        const reviews = CashuStore.mintReviews.get(reviewsMintUrl) || [];
+        const isLoading = CashuStore.loadingReviews;
+
+        return (
+            <ModalBox
+                isOpen={showReviewsModal}
+                style={{
+                    backgroundColor: 'transparent',
+                    minHeight: 300,
+                    maxHeight: '80%'
+                }}
+                swipeToClose={false}
+                onClosed={() =>
+                    this.setState({
+                        showReviewsModal: false,
+                        reviewsMintUrl: ''
+                    })
+                }
+            >
+                <View style={styles.modalContainer}>
+                    <View
+                        style={[
+                            styles.reviewsModalContent,
+                            { backgroundColor: themeColor('secondary') }
+                        ]}
+                    >
+                        <View style={styles.reviewsModalHeader}>
+                            <Text
+                                style={[
+                                    styles.modalTitle,
+                                    { color: themeColor('text') }
+                                ]}
+                            >
+                                {localeString('views.Cashu.AddMint.reviews')}
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.reviewsMintUrl,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {reviewsMintUrl}
+                            </Text>
+                        </View>
+
+                        <View style={styles.reviewsModalBody}>
+                            {isLoading ? (
+                                <View style={styles.loadingContainer}>
+                                    <LoadingIndicator />
+                                </View>
+                            ) : reviews.length === 0 ? (
+                                <Text
+                                    style={[
+                                        styles.noReviews,
+                                        { color: themeColor('secondaryText') }
+                                    ]}
+                                >
+                                    {localeString(
+                                        'views.Cashu.AddMint.noReviews'
+                                    )}
+                                </Text>
+                            ) : (
+                                <FlatList
+                                    data={reviews}
+                                    renderItem={this.renderReviewItem}
+                                    keyExtractor={(_, index) =>
+                                        `review-${index}`
+                                    }
+                                    style={styles.reviewsList}
+                                    ItemSeparatorComponent={() => (
+                                        <View
+                                            style={[
+                                                styles.reviewSeparator,
+                                                {
+                                                    backgroundColor:
+                                                        themeColor('separator')
+                                                }
+                                            ]}
+                                        />
+                                    )}
+                                />
+                            )}
+                        </View>
+
+                        <View style={styles.reviewsModalFooter}>
+                            <Button
+                                title={localeString('general.close')}
+                                onPress={() =>
+                                    this.setState({
+                                        showReviewsModal: false,
+                                        reviewsMintUrl: ''
+                                    })
+                                }
+                                secondary
+                            />
                         </View>
                     </View>
                 </View>
@@ -609,22 +965,21 @@ export default class AddMint extends React.Component<
                             >
                                 <Button
                                     title={localeString(
-                                        'views.Cashu.AddMint.reviews'
+                                        'views.Cashu.AddMint.viewReviews'
                                     )}
                                     onPress={() => {
-                                        UrlUtils.goToUrl(
-                                            mintUrl
-                                                ? `https://bitcoinmints.com/?tab=reviews&mintUrl=${mintUrl}`
-                                                : 'https://bitcoinmints.com/'
-                                        );
+                                        if (mintUrl) {
+                                            this.openReviewsModal(mintUrl);
+                                        }
                                     }}
-                                    disabled={loading}
+                                    disabled={loading || !mintUrl}
                                     tertiary
                                 />
                             </View>
                         )}
                 </View>
                 {this.renderDiscoverModal()}
+                {this.renderReviewsModal()}
             </Screen>
         );
     }
@@ -677,7 +1032,6 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     modalContent: {
-        backgroundColor: themeColor('modalBackground') || '#1a1a1a',
         borderRadius: 20,
         padding: 20,
         width: '95%',
@@ -686,14 +1040,12 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontFamily: font('marlideBold'),
         fontSize: 22,
-        color: themeColor('text'),
         textAlign: 'center',
         marginBottom: 10
     },
     modalSubtitle: {
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 14,
-        color: themeColor('secondaryText'),
         textAlign: 'center',
         marginBottom: 20
     },
@@ -702,19 +1054,16 @@ const styles = StyleSheet.create({
         alignItems: 'flex-start',
         padding: 15,
         borderRadius: 10,
-        marginBottom: 10,
-        backgroundColor: themeColor('secondary') || '#2a2a2a'
+        marginBottom: 10
     },
     optionItemSelected: {
-        borderWidth: 2,
-        borderColor: themeColor('highlight') || '#FFD93D'
+        borderWidth: 2
     },
     radioOuter: {
         width: 22,
         height: 22,
         borderRadius: 11,
         borderWidth: 2,
-        borderColor: themeColor('highlight') || '#FFD93D',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
@@ -723,8 +1072,7 @@ const styles = StyleSheet.create({
     radioInner: {
         width: 12,
         height: 12,
-        borderRadius: 6,
-        backgroundColor: themeColor('highlight') || '#FFD93D'
+        borderRadius: 6
     },
     optionTextContainer: {
         flex: 1
@@ -732,13 +1080,11 @@ const styles = StyleSheet.create({
     optionTitle: {
         fontFamily: 'PPNeueMontreal-Medium',
         fontSize: 16,
-        color: themeColor('text'),
         marginBottom: 4
     },
     optionDescription: {
         fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 13,
-        color: themeColor('secondaryText')
+        fontSize: 13
     },
     npubInputContainer: {
         marginTop: 10,
@@ -747,13 +1093,11 @@ const styles = StyleSheet.create({
     npubLabel: {
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 14,
-        color: themeColor('secondaryText'),
         marginBottom: 8
     },
     npubError: {
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 12,
-        color: themeColor('error') || '#ff4444',
         marginTop: 5
     },
     modalButtons: {
@@ -761,5 +1105,112 @@ const styles = StyleSheet.create({
     },
     cancelButton: {
         marginTop: 10
+    },
+    // Reviews modal styles
+    reviewsModalContent: {
+        borderRadius: 20,
+        padding: 20,
+        width: '95%',
+        maxWidth: 400,
+        maxHeight: '80%',
+        flex: 1
+    },
+    reviewsModalHeader: {
+        marginBottom: 10
+    },
+    reviewsModalBody: {
+        flex: 1,
+        minHeight: 100
+    },
+    reviewsModalFooter: {
+        marginTop: 'auto',
+        paddingTop: 15
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    reviewsMintUrl: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 12,
+        textAlign: 'center',
+        marginBottom: 15
+    },
+    reviewsList: {
+        flexGrow: 1,
+        flexShrink: 1
+    },
+    reviewItem: {
+        paddingVertical: 12
+    },
+    reviewHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8
+    },
+    profileImage: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 12
+    },
+    profilePlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        marginRight: 12,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    profilePlaceholderText: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        fontSize: 18
+    },
+    reviewHeaderText: {
+        flex: 1
+    },
+    reviewNameRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 2
+    },
+    starContainer: {
+        flexDirection: 'row',
+        marginBottom: 2
+    },
+    reviewerName: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        fontSize: 14,
+        flex: 1
+    },
+    reviewDate: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 11,
+        marginLeft: 8
+    },
+    reviewerNpub: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 11
+    },
+    copyHint: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 10
+    },
+    reviewContent: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14,
+        fontStyle: 'normal'
+    },
+    reviewSeparator: {
+        height: 1
+    },
+    noReviews: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14,
+        textAlign: 'center',
+        marginTop: 20,
+        marginBottom: 20
     }
 });

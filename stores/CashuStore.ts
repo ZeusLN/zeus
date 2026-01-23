@@ -81,6 +81,55 @@ interface MintRecommendation {
     url: string;
 }
 
+export interface MintReviewRating {
+    score: number;
+    max: number;
+}
+
+export interface MintReview {
+    pubkey: string;
+    content: string;
+    createdAt: number;
+    mintUrl: string;
+    rating?: MintReviewRating;
+}
+
+/**
+ * Parses a rating from review content in format [n/m] at the beginning.
+ * Returns the rating object and the remaining content with the rating stripped.
+ */
+const parseReviewRating = (
+    content: string
+): { rating?: MintReviewRating; cleanContent: string } => {
+    if (!content) {
+        return { cleanContent: '' };
+    }
+
+    const ratingRegex = /^\s*\[(\d+)\/(\d+)\]\s*/;
+    const match = content.match(ratingRegex);
+
+    if (match) {
+        const score = parseInt(match[1], 10);
+        const max = parseInt(match[2], 10);
+
+        if (score >= 0 && max > 0 && score <= max) {
+            return {
+                rating: { score, max },
+                cleanContent: content.replace(ratingRegex, '').trim()
+            };
+        }
+    }
+
+    return { cleanContent: content };
+};
+
+export interface ReviewerProfile {
+    pubkey: string;
+    npub: string;
+    name?: string;
+    picture?: string;
+}
+
 interface ClaimTokenResponse {
     success: boolean;
     errorMessage: string;
@@ -131,7 +180,11 @@ export default class CashuStore {
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable public trustedMintRecommendations?: MintRecommendation[];
+    @observable public mintReviews: Map<string, MintReview[]> = new Map();
+    @observable public reviewerProfiles: Map<string, ReviewerProfile> =
+        new Map();
     @observable public loadingTrustedMints = false;
+    @observable public loadingReviews = false;
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
 
@@ -281,6 +334,7 @@ export default class CashuStore {
             sub.stop();
 
             const mintCounts = new Map<string, number>();
+            const mintReviewsMap = new Map<string, MintReview[]>();
 
             for (const event of events) {
                 if (event.tagValue('k') === '38172' && event.tagValue('u')) {
@@ -293,6 +347,23 @@ export default class CashuStore {
                             mintUrl,
                             (mintCounts.get(mintUrl) || 0) + 1
                         );
+
+                        // Store review data with parsed rating
+                        const { rating, cleanContent } = parseReviewRating(
+                            event.content || ''
+                        );
+                        const review: MintReview = {
+                            pubkey: event.pubkey,
+                            content: cleanContent,
+                            createdAt: event.created_at || 0,
+                            mintUrl,
+                            rating
+                        };
+
+                        const existingReviews =
+                            mintReviewsMap.get(mintUrl) || [];
+                        existingReviews.push(review);
+                        mintReviewsMap.set(mintUrl, existingReviews);
                     }
                 }
             }
@@ -303,6 +374,7 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.mintRecommendations = mintUrlsCounted;
+                this.mintReviews = mintReviewsMap;
                 this.loading = false;
             });
 
@@ -429,6 +501,7 @@ export default class CashuStore {
             sub.stop();
 
             const mintCounts = new Map<string, number>();
+            const mintReviewsMap = new Map<string, MintReview[]>();
 
             for (const event of events) {
                 if (event.tagValue('k') === '38172' && event.tagValue('u')) {
@@ -441,6 +514,23 @@ export default class CashuStore {
                             mintUrl,
                             (mintCounts.get(mintUrl) || 0) + 1
                         );
+
+                        // Store review data with parsed rating
+                        const { rating, cleanContent } = parseReviewRating(
+                            event.content || ''
+                        );
+                        const review: MintReview = {
+                            pubkey: event.pubkey,
+                            content: cleanContent,
+                            createdAt: event.created_at || 0,
+                            mintUrl,
+                            rating
+                        };
+
+                        const existingReviews =
+                            mintReviewsMap.get(mintUrl) || [];
+                        existingReviews.push(review);
+                        mintReviewsMap.set(mintUrl, existingReviews);
                     }
                 }
             }
@@ -451,6 +541,7 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.trustedMintRecommendations = mintUrlsCounted;
+                this.mintReviews = mintReviewsMap;
                 this.loadingTrustedMints = false;
             });
 
@@ -463,6 +554,89 @@ export default class CashuStore {
                 this.error_msg = localeString(
                     'stores.CashuStore.errorDiscoveringMints'
                 );
+            });
+        }
+    };
+
+    @action
+    public fetchReviewerProfiles = async (pubkeys: string[]) => {
+        if (!pubkeys.length) return;
+
+        try {
+            runInAction(() => {
+                this.loadingReviews = true;
+            });
+
+            // Filter out pubkeys we already have profiles for
+            const newPubkeys = pubkeys.filter(
+                (pk) => !this.reviewerProfiles.has(pk)
+            );
+
+            if (!newPubkeys.length) {
+                runInAction(() => {
+                    this.loadingReviews = false;
+                });
+                return;
+            }
+
+            // Initialize NDK if not already done
+            if (!this.ndk) {
+                this.ndk = new NDK({
+                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                });
+                await this.ndk.connect();
+            }
+
+            // Fetch profiles (kind 0)
+            const profileFilter: NDKFilter = {
+                kinds: [0 as NDKKind],
+                authors: newPubkeys,
+                limit: newPubkeys.length
+            };
+
+            const events = await this.ndk.fetchEvents(profileFilter);
+
+            const profilesMap = new Map<string, ReviewerProfile>();
+
+            // Initialize all pubkeys with basic info
+            for (const pubkey of newPubkeys) {
+                const npub = NostrUtils.hexToNpub(pubkey);
+                profilesMap.set(pubkey, {
+                    pubkey,
+                    npub: npub || pubkey
+                });
+            }
+
+            // Update with profile data where available
+            for (const event of events) {
+                try {
+                    const content = JSON.parse(event.content);
+                    const npub = NostrUtils.hexToNpub(event.pubkey);
+                    profilesMap.set(event.pubkey, {
+                        pubkey: event.pubkey,
+                        npub: npub || event.pubkey,
+                        name:
+                            content.display_name ||
+                            content.name ||
+                            content.username,
+                        picture: content.picture
+                    });
+                } catch (e) {
+                    console.error('Error parsing profile:', e);
+                }
+            }
+
+            runInAction(() => {
+                // Merge new profiles with existing ones
+                for (const [pubkey, profile] of profilesMap) {
+                    this.reviewerProfiles.set(pubkey, profile);
+                }
+                this.loadingReviews = false;
+            });
+        } catch (e: any) {
+            console.error('Error fetching reviewer profiles:', e);
+            runInAction(() => {
+                this.loadingReviews = false;
             });
         }
     };
