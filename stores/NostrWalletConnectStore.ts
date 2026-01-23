@@ -1755,7 +1755,6 @@ export default class NostrWalletConnectStore {
                         created_at: timestamp,
                         expires_at: expiresAt
                     });
-                    console.log(result);
                     return {
                         result,
                         error: undefined
@@ -1820,7 +1819,6 @@ export default class NostrWalletConnectStore {
                             activity
                         )
                     )
-                    .filter((tx) => tx.amount > 0)
                     .sort((a, b) => b.created_at - a.created_at);
             } else {
                 await Promise.all([
@@ -2109,7 +2107,7 @@ export default class NostrWalletConnectStore {
                     )
                 )
                     await this.recordFailedPayment(
-                        paymentHash || paymentRequest,
+                        paymentRequest || paymentHash,
                         connection,
                         'pay_invoice',
                         amountSats,
@@ -2256,7 +2254,7 @@ export default class NostrWalletConnectStore {
                     )
                 )
                     await this.recordFailedPayment(
-                        paymentHash || paymentRequest,
+                        paymentRequest || paymentHash,
                         connection,
                         'pay_invoice',
                         amount,
