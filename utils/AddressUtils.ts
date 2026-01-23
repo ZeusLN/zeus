@@ -7,6 +7,7 @@ bitcoin.initEccLib(ecc);
 import { nodeInfoStore } from '../stores/Stores';
 
 import Base64Utils from '../utils/Base64Utils';
+import NostrUtils from '../utils/NostrUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { walletrpc } from '../proto/lightning';
@@ -48,9 +49,6 @@ const lightningAddress =
     /^(?:[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$/;
 
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
-
-/* npub */
-const npubFormat = /^npub1[0-9a-z]{58}$/;
 
 /* xpub,ypub,zpub,vpub */
 const xpubFormat = /^(xpub|ypub|zpub|vpub|tpub)(.*)/;
@@ -206,7 +204,7 @@ class AddressUtils {
 
     isValidWithdrawalRequest = (input: string) => withdrawalRequest.test(input);
 
-    isValidNpub = (input: string) => npubFormat.test(input);
+    isValidNpub = (input: string) => NostrUtils.isValidNpub(input);
 
     isValidXpub = (input: string) => xpubFormat.test(input);
 
