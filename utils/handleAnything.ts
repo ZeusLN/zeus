@@ -179,11 +179,22 @@ export function strictUriEncode(
     );
 }
 
+/**
+ * Checks if the input matches a known merchant QR code pattern.
+ */
+function isMerchantQR(input: string): boolean {
+    if (!input) return false;
+    return merchantConfigs.some((merchant) =>
+        merchant.identifierRegex.test(input)
+    );
+}
+
 function convertMerchantQRToLightningAddress(
     qrContent: string,
     network: 'mainnet' | 'signet' | 'regtest'
 ): string | null {
     if (!qrContent) return null;
+
     for (const merchant of merchantConfigs) {
         const match = qrContent.match(merchant.identifierRegex);
         if (match?.groups?.identifier) {
@@ -202,10 +213,6 @@ const handleAnything = async (
 ): Promise<any> => {
     data = data.trim();
     const network = getNetworkString();
-    const merchantLnAddr = convertMerchantQRToLightningAddress(data, network);
-    if (merchantLnAddr) {
-        data = merchantLnAddr;
-    }
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     let { value, satAmount, lightning, offer }: any =
@@ -954,6 +961,20 @@ const handleAnything = async (
                 bolt12: value
             }
         ];
+    } else if (isMerchantQR(data)) {
+        // Handle merchant QR codes by converting to lightning address
+        // and recursively processing through handleAnything to reuse
+        // all lightning address logic (Tor, BOLT 12, etc.)
+        const merchantLnAddr = convertMerchantQRToLightningAddress(
+            data,
+            network
+        );
+        if (merchantLnAddr) {
+            return handleAnything(merchantLnAddr, setAmount, isClipboardValue);
+        }
+        // If conversion failed, fall through to error
+        if (isClipboardValue) return false;
+        throw new Error(localeString('utils.handleAnything.notValid'));
     } else {
         try {
             const { isValid, error } = wifUtils.validateWIF(value);
@@ -974,5 +995,5 @@ const handleAnything = async (
     }
 };
 
-export { isClipboardValue, convertMerchantQRToLightningAddress };
+export { isClipboardValue, convertMerchantQRToLightningAddress, isMerchantQR };
 export default handleAnything;
