@@ -298,6 +298,90 @@ export default class CashuStore {
         );
         return this.totalBalanceSats;
     };
+
+    /**
+     * Helper: Subscribe to NDK and collect events with EOSE handling and timeout.
+     */
+    private subscribeAndCollectEvents = async (
+        filter: NDKFilter,
+        logPrefix: string
+    ): Promise<Set<NDKEvent>> => {
+        const events = new Set<NDKEvent>();
+        let eoseCount = 0;
+        const totalRelays = DEFAULT_NOSTR_RELAYS.length;
+        const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+
+        await new Promise<void>((resolve) => {
+            sub.on('event', (event: NDKEvent) => {
+                events.add(event);
+            });
+            sub.on('eose', () => {
+                eoseCount++;
+                if (eoseCount >= Math.ceil(totalRelays / 2)) {
+                    console.log(
+                        `${logPrefix}: EOSE received from majority of relays`
+                    );
+                    resolve();
+                }
+            });
+            setTimeout(() => {
+                console.log(`${logPrefix}: Timeout reached`);
+                resolve();
+            }, 10000);
+        });
+
+        sub.stop();
+        return events;
+    };
+
+    /**
+     * Helper: Process NIP-87 events into mint recommendations and reviews.
+     */
+    private processMintRecommendationEvents = (
+        events: Set<NDKEvent>
+    ): {
+        recommendations: MintRecommendation[];
+        reviews: Map<string, MintReview[]>;
+    } => {
+        const mintCounts = new Map<string, number>();
+        const mintReviewsMap = new Map<string, MintReview[]>();
+
+        for (const event of events) {
+            if (event.tagValue('k') === '38172' && event.tagValue('u')) {
+                const mintUrl = event.tagValue('u');
+                if (
+                    typeof mintUrl === 'string' &&
+                    mintUrl.startsWith('https://')
+                ) {
+                    const count = (mintCounts.get(mintUrl) || 0) + 1;
+                    mintCounts.set(mintUrl, count);
+
+                    // Store review data with parsed rating
+                    const { rating, cleanContent } = parseReviewRating(
+                        event.content || ''
+                    );
+                    const review: MintReview = {
+                        pubkey: event.pubkey,
+                        content: cleanContent,
+                        createdAt: event.created_at || 0,
+                        mintUrl,
+                        rating
+                    };
+
+                    const existingReviews = mintReviewsMap.get(mintUrl) || [];
+                    existingReviews.push(review);
+                    mintReviewsMap.set(mintUrl, existingReviews);
+                }
+            }
+        }
+
+        const recommendations = Array.from(mintCounts.entries())
+            .map(([url, count]) => ({ url, count }))
+            .sort((a, b) => b.count - a.count);
+
+        return { recommendations, reviews: mintReviewsMap };
+    };
+
     @action
     public fetchMints = async () => {
         try {
@@ -317,78 +401,21 @@ export default class CashuStore {
                 limit: 2000
             };
 
-            const events = new Set<NDKEvent>();
-            let eoseCount = 0;
-            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
-            const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+            const events = await this.subscribeAndCollectEvents(
+                filter,
+                'Mint discovery'
+            );
 
-            await new Promise<void>((resolve) => {
-                sub.on('event', (event: NDKEvent) => {
-                    events.add(event);
-                });
-                sub.on('eose', () => {
-                    eoseCount++;
-                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
-                        console.log(
-                            'Mint discovery: EOSE received from majority of relays'
-                        );
-                        resolve();
-                    }
-                });
-                setTimeout(() => {
-                    console.log('Mint discovery: Timeout reached');
-                    resolve();
-                }, 10000);
-            });
-
-            sub.stop();
-
-            const mintCounts = new Map<string, number>();
-            const mintReviewsMap = new Map<string, MintReview[]>();
-
-            for (const event of events) {
-                if (event.tagValue('k') === '38172' && event.tagValue('u')) {
-                    const mintUrl = event.tagValue('u');
-                    if (
-                        typeof mintUrl === 'string' &&
-                        mintUrl.startsWith('https://')
-                    ) {
-                        mintCounts.set(
-                            mintUrl,
-                            (mintCounts.get(mintUrl) || 0) + 1
-                        );
-
-                        // Store review data with parsed rating
-                        const { rating, cleanContent } = parseReviewRating(
-                            event.content || ''
-                        );
-                        const review: MintReview = {
-                            pubkey: event.pubkey,
-                            content: cleanContent,
-                            createdAt: event.created_at || 0,
-                            mintUrl,
-                            rating
-                        };
-
-                        const existingReviews =
-                            mintReviewsMap.get(mintUrl) || [];
-                        existingReviews.push(review);
-                        mintReviewsMap.set(mintUrl, existingReviews);
-                    }
-                }
-            }
-
-            const mintUrlsCounted = Array.from(mintCounts.entries())
-                .map(([url, count]) => ({ url, count }))
-                .sort((a, b) => b.count - a.count);
+            const { recommendations, reviews } =
+                this.processMintRecommendationEvents(events);
 
             runInAction(() => {
-                this.mintRecommendations = mintUrlsCounted;
-                this.mintReviews = mintReviewsMap;
+                this.mintRecommendations = recommendations;
+                this.mintReviews = reviews;
                 this.loading = false;
             });
 
-            return mintUrlsCounted;
+            return recommendations;
         } catch (e: any) {
             console.error('Error fetching mints:', e);
             runInAction(() => {
@@ -484,78 +511,21 @@ export default class CashuStore {
                 limit: 2000
             };
 
-            const events = new Set<NDKEvent>();
-            let eoseCount = 0;
-            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
-            const sub = this.ndk.subscribe(mintFilter, { closeOnEose: true });
+            const events = await this.subscribeAndCollectEvents(
+                mintFilter,
+                'Trusted mint discovery'
+            );
 
-            await new Promise<void>((resolve) => {
-                sub.on('event', (event: NDKEvent) => {
-                    events.add(event);
-                });
-                sub.on('eose', () => {
-                    eoseCount++;
-                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
-                        console.log(
-                            'Trusted mint discovery: EOSE received from majority of relays'
-                        );
-                        resolve();
-                    }
-                });
-                setTimeout(() => {
-                    console.log('Trusted mint discovery: Timeout reached');
-                    resolve();
-                }, 10000);
-            });
-
-            sub.stop();
-
-            const mintCounts = new Map<string, number>();
-            const mintReviewsMap = new Map<string, MintReview[]>();
-
-            for (const event of events) {
-                if (event.tagValue('k') === '38172' && event.tagValue('u')) {
-                    const mintUrl = event.tagValue('u');
-                    if (
-                        typeof mintUrl === 'string' &&
-                        mintUrl.startsWith('https://')
-                    ) {
-                        mintCounts.set(
-                            mintUrl,
-                            (mintCounts.get(mintUrl) || 0) + 1
-                        );
-
-                        // Store review data with parsed rating
-                        const { rating, cleanContent } = parseReviewRating(
-                            event.content || ''
-                        );
-                        const review: MintReview = {
-                            pubkey: event.pubkey,
-                            content: cleanContent,
-                            createdAt: event.created_at || 0,
-                            mintUrl,
-                            rating
-                        };
-
-                        const existingReviews =
-                            mintReviewsMap.get(mintUrl) || [];
-                        existingReviews.push(review);
-                        mintReviewsMap.set(mintUrl, existingReviews);
-                    }
-                }
-            }
-
-            const mintUrlsCounted = Array.from(mintCounts.entries())
-                .map(([url, count]) => ({ url, count }))
-                .sort((a, b) => b.count - a.count);
+            const { recommendations, reviews } =
+                this.processMintRecommendationEvents(events);
 
             runInAction(() => {
-                this.trustedMintRecommendations = mintUrlsCounted;
-                this.mintReviews = mintReviewsMap;
+                this.trustedMintRecommendations = recommendations;
+                this.mintReviews = reviews;
                 this.loadingTrustedMints = false;
             });
 
-            return mintUrlsCounted;
+            return recommendations;
         } catch (e: any) {
             console.error('Error fetching mints from follows:', e);
             runInAction(() => {
