@@ -1909,6 +1909,8 @@
     "views.Cashu.AddMint.viewReviews": "View reviews",
     "views.Cashu.AddMint.noReviews": "No reviews found for this mint",
     "views.Cashu.AddMint.noReviewContent": "No review content",
+    "views.Cashu.AddMint.tapToExpand": "Tap to expand",
+    "views.Cashu.AddMint.tapToCollapse": "Tap to collapse",
     "views.Mints.noMints": "No mints added yet",
     "views.Cashu.Mint.supportedNuts": "Supported Nuts",
     "views.Cashu.Mint.removeMint": "Remove mint",
