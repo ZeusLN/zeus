@@ -21,7 +21,6 @@ import Transaction from '../models/Transaction';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
-import Base64Utils from './Base64Utils';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -51,19 +50,6 @@ const PRESET_INDEX = {
 } as const;
 
 export default class NostrConnectUtils {
-    private static toEpochSeconds(value: unknown): number {
-        if (!value) return 0;
-        if (value instanceof Date) return Math.floor(value.getTime() / 1000);
-        if (typeof value === 'string') {
-            const d = new Date(value);
-            return isNaN(d.getTime()) ? 0 : Math.floor(d.getTime() / 1000);
-        }
-        if (typeof value === 'number') {
-            // Heuristic: < 1e12 is seconds; otherwise milliseconds.
-            return Math.floor(value < 1_000_000_000_000 ? value : value / 1000);
-        }
-        return 0;
-    }
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
     }
@@ -555,66 +541,6 @@ export default class NostrConnectUtils {
         };
     }
 
-    static convertPaymentHashToHex(
-        paymentHash: string | number[] | Uint8Array
-    ): string | undefined {
-        try {
-            if (paymentHash instanceof Uint8Array) {
-                return Base64Utils.bytesToHex(Array.from(paymentHash));
-            }
-
-            if (Array.isArray(paymentHash)) {
-                return Base64Utils.bytesToHex(paymentHash);
-            }
-
-            if (!paymentHash || typeof paymentHash !== 'string') {
-                console.warn(
-                    'convertPaymentHashToHex: Invalid payment hash input:',
-                    paymentHash
-                );
-                return undefined;
-            }
-            if (paymentHash.startsWith('{')) {
-                let hashObj;
-                if (paymentHash.includes('=>')) {
-                    const jsonString = paymentHash
-                        .replace(/=>/g, ':')
-                        .replace(/"(\d+)":/g, '$1:')
-                        .replace(/(\d+):/g, '"$1":');
-                    hashObj = JSON.parse(jsonString);
-                } else {
-                    hashObj = JSON.parse(paymentHash);
-                }
-
-                const hashArray = Object.keys(hashObj)
-                    .sort((a, b) => parseInt(a) - parseInt(b))
-                    .map((key) => hashObj[key])
-                    .filter((value) => value !== undefined && value !== null); // Filter out undefined/null values
-
-                if (hashArray.length === 0) {
-                    console.warn(
-                        'convertPaymentHashToHex: Empty hash array after filtering'
-                    );
-                    return undefined;
-                }
-
-                return Base64Utils.bytesToHex(hashArray);
-            }
-
-            if (
-                paymentHash.includes('+') ||
-                paymentHash.includes('/') ||
-                paymentHash.includes('=')
-            ) {
-                return Base64Utils.base64ToHex(paymentHash);
-            }
-
-            return paymentHash;
-        } catch (error) {
-            console.warn('Failed to convert payment hash to hex:', error);
-            return undefined;
-        }
-    }
     static isIgnorableError(error: string): boolean {
         const msg = error.toLowerCase();
         return (
@@ -699,36 +625,28 @@ export default class NostrConnectUtils {
                 return Number(invoiceObj.decoded.timestamp);
             }
             if (invoiceObj?.getTimestamp) {
-                return NostrConnectUtils.toEpochSeconds(
-                    invoiceObj.getTimestamp
-                );
+                return Number(invoiceObj.getTimestamp);
             }
             if (invoiceObj?.created_at) {
-                return NostrConnectUtils.toEpochSeconds(invoiceObj.created_at);
+                return Number(invoiceObj.created_at);
             }
             if (invoiceObj?.creation_date) {
-                return NostrConnectUtils.toEpochSeconds(
-                    invoiceObj.creation_date
-                );
+                return Number(invoiceObj.creation_date);
             }
         }
         if (activity.payment) {
             const paymentObj = activity.payment as any;
             if (paymentObj?.getTimestamp) {
-                return NostrConnectUtils.toEpochSeconds(
-                    paymentObj.getTimestamp
-                );
+                return Number(paymentObj.getTimestamp);
             }
             if (paymentObj?.created_at) {
-                return NostrConnectUtils.toEpochSeconds(paymentObj.created_at);
+                return Number(paymentObj.created_at);
             }
             if (paymentObj?.creation_date) {
-                return NostrConnectUtils.toEpochSeconds(
-                    paymentObj.creation_date
-                );
+                return Number(paymentObj.creation_date);
             }
             if (paymentObj?.timestamp) {
-                return NostrConnectUtils.toEpochSeconds(paymentObj.timestamp);
+                return Number(paymentObj.timestamp);
             }
         }
 
@@ -737,9 +655,7 @@ export default class NostrConnectUtils {
     private static extractExpiresAtFromActivity(
         activity: ConnectionActivity
     ): number {
-        const explicitExpiresAt = NostrConnectUtils.toEpochSeconds(
-            activity?.expiresAt
-        );
+        const explicitExpiresAt = Number(activity?.expiresAt);
         if (explicitExpiresAt > 0) {
             return explicitExpiresAt;
         }
@@ -747,6 +663,9 @@ export default class NostrConnectUtils {
         if (activity.invoice) {
             if (activity.invoice.expires_at) {
                 return Number(activity.invoice.expires_at);
+            }
+            if (activity.invoice.expiry) {
+                return Number(activity.invoice.expiry);
             }
             const invoiceObj = activity.invoice as any;
             if (invoiceObj?.decoded?.timeExpireDate) {
@@ -763,40 +682,36 @@ export default class NostrConnectUtils {
         if (activity.invoice) {
             const invoiceObj = activity.invoice as any;
             if (invoiceObj?.settled_at) {
-                return NostrConnectUtils.toEpochSeconds(invoiceObj.settled_at);
+                return Number(invoiceObj.settled_at);
             }
             if (invoiceObj?.settle_date) {
-                return NostrConnectUtils.toEpochSeconds(invoiceObj.settle_date);
+                return Number(invoiceObj.settle_date);
             }
             if (invoiceObj?.paid_at) {
-                return NostrConnectUtils.toEpochSeconds(invoiceObj.paid_at);
+                return Number(invoiceObj.paid_at);
             }
             if (invoiceObj?.settleDate) {
                 const settleDate = invoiceObj.settleDate;
                 if (settleDate instanceof Date) {
                     return Math.floor(settleDate.getTime() / 1000);
                 }
-                return NostrConnectUtils.toEpochSeconds(settleDate);
+                return Number(settleDate);
             }
         }
 
         if (activity.payment) {
             const paymentObj = activity.payment as any;
             if (paymentObj?.getTimestamp) {
-                return NostrConnectUtils.toEpochSeconds(
-                    paymentObj.getTimestamp
-                );
+                return Number(paymentObj.getTimestamp);
             }
             if (paymentObj?.created_at) {
-                return NostrConnectUtils.toEpochSeconds(paymentObj.created_at);
+                return Number(paymentObj.created_at);
             }
             if (paymentObj?.creation_date) {
-                return NostrConnectUtils.toEpochSeconds(
-                    paymentObj.creation_date
-                );
+                return Number(paymentObj.creation_date);
             }
             if (paymentObj?.timestamp) {
-                return NostrConnectUtils.toEpochSeconds(paymentObj.timestamp);
+                return Number(paymentObj.timestamp);
             }
         }
 
