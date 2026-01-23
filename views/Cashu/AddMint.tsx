@@ -53,7 +53,10 @@ interface AddMintState {
     npubError: string;
     error: boolean;
     error_msg: string;
+    expandedReviews: Set<number>;
 }
+
+const REVIEW_CONTENT_MAX_LENGTH = 150;
 
 @inject('CashuStore')
 @observer
@@ -75,7 +78,8 @@ export default class AddMint extends React.Component<
             npubError: '',
             loading: false,
             error: false,
-            error_msg: ''
+            error_msg: '',
+            expandedReviews: new Set()
         };
     }
 
@@ -461,6 +465,18 @@ export default class AddMint extends React.Component<
         Clipboard.setString(text);
     };
 
+    toggleReviewExpanded = (index: number) => {
+        this.setState((prevState) => {
+            const newExpanded = new Set(prevState.expandedReviews);
+            if (newExpanded.has(index)) {
+                newExpanded.delete(index);
+            } else {
+                newExpanded.add(index);
+            }
+            return { expandedReviews: newExpanded };
+        });
+    };
+
     renderStarRating = (rating: MintReviewRating) => {
         const stars = [];
         for (let i = 1; i <= rating.max; i++) {
@@ -569,21 +585,72 @@ export default class AddMint extends React.Component<
                         </TouchableOpacity>
                     </View>
                 </View>
+                {this.renderReviewContent(item.content, index)}
+            </View>
+        );
+    };
+
+    renderReviewContent = (content: string, index: number) => {
+        const { expandedReviews } = this.state;
+        const isExpanded = expandedReviews.has(index);
+        const isLongContent =
+            content && content.length > REVIEW_CONTENT_MAX_LENGTH;
+
+        if (!content) {
+            return (
                 <Text
                     style={[
                         styles.reviewContent,
                         {
-                            color: item.content
-                                ? themeColor('text')
-                                : themeColor('secondaryText'),
-                            fontStyle: item.content ? 'normal' : 'italic'
+                            color: themeColor('secondaryText'),
+                            fontStyle: 'italic'
                         }
                     ]}
                 >
-                    {item.content ||
-                        localeString('views.Cashu.AddMint.noReviewContent')}
+                    {localeString('views.Cashu.AddMint.noReviewContent')}
                 </Text>
-            </View>
+            );
+        }
+
+        const displayContent =
+            isLongContent && !isExpanded
+                ? `${content.slice(0, REVIEW_CONTENT_MAX_LENGTH)}...`
+                : content;
+
+        if (isLongContent) {
+            return (
+                <TouchableOpacity
+                    onPress={() => this.toggleReviewExpanded(index)}
+                    activeOpacity={0.7}
+                >
+                    <Text
+                        style={[
+                            styles.reviewContent,
+                            { color: themeColor('text') }
+                        ]}
+                    >
+                        {displayContent}
+                    </Text>
+                    <Text
+                        style={[
+                            styles.expandHint,
+                            { color: themeColor('highlight') }
+                        ]}
+                    >
+                        {localeString(
+                            isExpanded
+                                ? 'views.Cashu.AddMint.tapToCollapse'
+                                : 'views.Cashu.AddMint.tapToExpand'
+                        )}
+                    </Text>
+                </TouchableOpacity>
+            );
+        }
+
+        return (
+            <Text style={[styles.reviewContent, { color: themeColor('text') }]}>
+                {content}
+            </Text>
         );
     };
 
@@ -1202,6 +1269,11 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 14,
         fontStyle: 'normal'
+    },
+    expandHint: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 12,
+        marginTop: 4
     },
     reviewSeparator: {
         height: 1
