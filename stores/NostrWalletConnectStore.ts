@@ -535,6 +535,10 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
+
+            if (!this.walletServiceKeys?.privateKey) {
+                await this.loadWalletServiceKeys();
+            }
             const { nodeInfo } = this.nodeInfoStore;
             const nodePubkey = nodeInfo.nodeId;
             const { implementation } = this.settingsStore;
@@ -547,6 +551,34 @@ export default class NostrWalletConnectStore {
                     })
                 );
             }
+            if (!this.publishedRelays.has(params.relayUrl)) {
+                const nwcWalletService = this.nwcWalletServices.get(
+                    params.relayUrl
+                );
+                if (nwcWalletService && this.walletServiceKeys?.privateKey) {
+                    try {
+                        await this.retryWithBackoff(async () => {
+                            await nwcWalletService.publishWalletServiceInfoEvent(
+                                this.walletServiceKeys!.privateKey,
+                                NostrConnectUtils.getFullAccessPermissions(),
+                                NostrConnectUtils.getNotifications()
+                            );
+                            runInAction(() => {
+                                this.publishedRelays.add(params.relayUrl);
+                            });
+                        }, 3);
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, 500)
+                        );
+                    } catch (error) {
+                        console.warn(
+                            `NWC: Failed to publish wallet service info to relay ${params.relayUrl} before connection creation:`,
+                            error
+                        );
+                    }
+                }
+            }
+
             if (params.id) {
                 const connection = this.connections.find(
                     (c) => c.id === params.id
@@ -745,16 +777,22 @@ export default class NostrWalletConnectStore {
                 runInAction(() => {
                     const { nodeInfo } = this.nodeInfoStore;
                     const { implementation } = this.settingsStore;
-                    this.connections = connections
-                        .filter(
-                            (c: any) =>
-                                c.nodePubkey === nodeInfo.nodeId &&
-                                c.implementation === implementation
-                        )
-                        .map((data: any) => {
-                            const conn = new NWCConnection(data);
-                            return conn;
-                        });
+                    const currentNodeId = nodeInfo?.nodeId;
+                    const currentImpl = implementation;
+                    const shouldFilter = !!currentNodeId && !!currentImpl;
+
+                    const filtered = shouldFilter
+                        ? connections.filter(
+                              (c: any) =>
+                                  c.nodePubkey === currentNodeId &&
+                                  c.implementation === currentImpl
+                          )
+                        : connections;
+
+                    this.connections = filtered.map((data: any) => {
+                        const conn = new NWCConnection(data);
+                        return conn;
+                    });
                 });
                 await this.checkAndResetAllBudgets();
             } else {

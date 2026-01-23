@@ -51,6 +51,19 @@ const PRESET_INDEX = {
 } as const;
 
 export default class NostrConnectUtils {
+    private static toEpochSeconds(value: unknown): number {
+        if (!value) return 0;
+        if (value instanceof Date) return Math.floor(value.getTime() / 1000);
+        if (typeof value === 'string') {
+            const d = new Date(value);
+            return isNaN(d.getTime()) ? 0 : Math.floor(d.getTime() / 1000);
+        }
+        if (typeof value === 'number') {
+            // Heuristic: < 1e12 is seconds; otherwise milliseconds.
+            return Math.floor(value < 1_000_000_000_000 ? value : value / 1000);
+        }
+        return 0;
+    }
     static getNotifications(): Nip47NotificationType[] {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
     }
@@ -672,14 +685,12 @@ export default class NostrConnectUtils {
             ? satsToMillisats(Number(activity.payment.getFee) || 0)
             : 0;
 
-        const lastProcessAt = activity.lastprocessAt
-            ? Math.floor(activity.lastprocessAt.getTime() / 1000)
-            : Date.now() / 1000;
-        const expiresAt = activity.expiresAt
-            ? Math.floor(activity.expiresAt.getTime() / 1000)
-            : activity.invoice
-            ? Number(activity.invoice.expires_at) || 0
-            : 0;
+        const lastProcessAt =
+            NostrConnectUtils.toEpochSeconds(activity?.lastprocessAt) ||
+            Math.floor(Date.now() / 1000);
+        const expiresAt =
+            NostrConnectUtils.toEpochSeconds(activity?.expiresAt) ||
+            (activity.invoice ? Number(activity.invoice.expires_at) || 0 : 0);
 
         let description = '';
         if (activity.invoice) {

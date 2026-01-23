@@ -142,6 +142,21 @@ export default class NWCConnection extends BaseModel {
         this.normalizeDates();
     }
 
+    private coerceToDate(value: unknown): Date | undefined {
+        if (!value) return undefined;
+        if (value instanceof Date) return value;
+        if (typeof value === 'string') {
+            const d = new Date(value);
+            return isNaN(d.getTime()) ? undefined : d;
+        }
+        if (typeof value === 'number') {
+            const ms = value < 1_000_000_000_000 ? value * 1000 : value;
+            const d = new Date(ms);
+            return isNaN(d.getTime()) ? undefined : d;
+        }
+        return undefined;
+    }
+
     private normalizeDates(): void {
         const dateFields = [
             'createdAt',
@@ -152,10 +167,23 @@ export default class NWCConnection extends BaseModel {
 
         dateFields.forEach((field) => {
             const value = (this as any)[field];
-            if (value && typeof value === 'string') {
-                (this as any)[field] = new Date(value);
+            const coerced = this.coerceToDate(value);
+            if (coerced) {
+                (this as any)[field] = coerced;
             }
         });
+
+        if (Array.isArray(this.activity)) {
+            this.activity = this.activity.map((a: any) => {
+                const lastprocessAt = this.coerceToDate(a?.lastprocessAt);
+                const expiresAt = this.coerceToDate(a?.expiresAt);
+                return {
+                    ...a,
+                    ...(lastprocessAt ? { lastprocessAt } : {}),
+                    ...(expiresAt ? { expiresAt } : {})
+                };
+            });
+        }
     }
     @computed public get isExpired(): boolean {
         return this.expiresAt ? new Date() > this.expiresAt : false;
