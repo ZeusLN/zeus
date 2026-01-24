@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, NativeModules, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,7 +19,6 @@ import SettingsStore, {
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
-import { sleep } from '../../../utils/SleepUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import { stopLnd } from '../../../utils/LndMobileUtils';
@@ -81,8 +80,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
             feeEstimator,
             customFeeEstimator
         } = this.state;
-        const { updateSettings, embeddedLndNetwork, settings }: any =
-            SettingsStore;
+        const { updateSettings, settings }: any = SettingsStore;
         const { bimodalPathfinding } = settings;
 
         return (
@@ -186,64 +184,6 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-                        {false && (
-                            <>
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString('general.tor')}
-                                    </ListItem.Title>
-                                    <View
-                                        style={{
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-end'
-                                        }}
-                                    >
-                                        <Switch
-                                            value={embeddedTor}
-                                            onValueChange={async () => {
-                                                this.setState({
-                                                    embeddedTor: !embeddedTor
-                                                });
-                                                await updateSettings({
-                                                    embeddedTor: !embeddedTor
-                                                });
-                                                restartNeeded();
-                                            }}
-                                        />
-                                    </View>
-                                </ListItem>
-                                <View
-                                    style={{
-                                        margin: 10
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.Settings.EmbeddedNode.embeddedTor.subtitle'
-                                        )} ${localeString(
-                                            'views.Settings.EmbeddedNode.embeddedTor.clearnetWarning'
-                                        )} ${localeString(
-                                            'views.Settings.EmbeddedNode.restart'
-                                        )}`}
-                                    </Text>
-                                </View>
-                            </>
-                        )}
                         {Platform.OS === 'android' && (
                             <>
                                 <ListItem
@@ -479,56 +419,6 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                     color={themeColor('secondaryText')}
                                 />
                             </ListItem>
-                        </>
-                        <>
-                            <View style={{ marginTop: 20 }}>
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
-                                    )}
-                                    onPress={async () => {
-                                        try {
-                                            await NativeModules.LndMobile.stopLnd();
-                                            await sleep(5000); // Let lnd close down
-                                        } catch (e: any) {
-                                            // If lnd was closed down already
-                                            if (
-                                                e?.message?.includes?.('closed')
-                                            ) {
-                                                console.log('yes closed');
-                                            } else {
-                                                console.error(e.message, 10000);
-                                                return;
-                                            }
-                                        }
-
-                                        console.log(
-                                            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
-                                                embeddedLndNetwork === 'Mainnet'
-                                                    ? 'mainnet'
-                                                    : 'testnet'
-                                            )
-                                        );
-                                        restartNeeded();
-                                    }}
-                                />
-                            </View>
-                            <View
-                                style={{
-                                    margin: 10,
-                                    marginTop: 15
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
-                                    )}
-                                </Text>
-                            </View>
                         </>
                         {false && persistentMode && (
                             <View style={{ margin: 15 }}>

@@ -66,7 +66,8 @@ RCT_EXTERN_METHOD(
 )
 
 RCT_EXTERN_METHOD(
-  DEBUG_deleteNeutrinoFiles: (NSString)network
+  DEBUG_deleteNeutrinoFiles: (NSString)lndDir
+  network: (NSString)network
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )

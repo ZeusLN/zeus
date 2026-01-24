@@ -64,7 +64,8 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
             deleteNeutrinoSuccess,
             deleteNeutrinoError
         } = this.state;
-        const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+        const { updateSettings, embeddedLndNetwork, lndDir }: any =
+            SettingsStore;
 
         return (
             <Screen>
@@ -295,12 +296,8 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                         }
 
                                         try {
-                                            console.log(
-                                                embeddedLndNetwork === 'Mainnet'
-                                                    ? 'mainnet'
-                                                    : 'testnet'
-                                            );
                                             await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                lndDir || 'lnd',
                                                 embeddedLndNetwork === 'Mainnet'
                                                     ? 'mainnet'
                                                     : 'testnet'
