@@ -78,13 +78,15 @@ export default class SyncStore {
 
     private getBestBlockHeight = async () => {
         await new Promise((resolve, reject) => {
+            const networkPath =
+                this.settingsStore.embeddedLndNetwork === 'Testnet3'
+                    ? 'testnet/'
+                    : this.settingsStore.embeddedLndNetwork === 'Testnet4'
+                    ? 'testnet4/'
+                    : '';
             ReactNativeBlobUtil.fetch(
                 'get',
-                `https://mempool.space/${
-                    this.settingsStore.embeddedLndNetwork === 'Testnet'
-                        ? 'testnet/'
-                        : ''
-                }api/blocks/tip/height`
+                `https://mempool.space/${networkPath}api/blocks/tip/height`
             )
                 .then(async (response: any) => {
                     const status = response.info().status;

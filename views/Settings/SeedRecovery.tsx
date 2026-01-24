@@ -383,7 +383,7 @@ export default class SeedRecovery extends React.PureComponent<
 
             await stopLnd();
 
-            await optimizeNeutrinoPeers(network === 'testnet');
+            await optimizeNeutrinoPeers(network);
 
             const recoveryCipherSeed = seedArray.join(' ');
 
@@ -393,7 +393,7 @@ export default class SeedRecovery extends React.PureComponent<
                 const response = await createLndWallet({
                     lndDir,
                     seedMnemonic: recoveryCipherSeed,
-                    isTestnet: network === 'testnet',
+                    network,
                     channelBackupsBase64
                 });
 

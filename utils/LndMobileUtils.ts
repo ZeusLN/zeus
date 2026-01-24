@@ -32,6 +32,7 @@ import {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
     SECONDARY_NEUTRINO_PEERS_MAINNET,
     DEFAULT_NEUTRINO_PEERS_TESTNET,
+    DEFAULT_NEUTRINO_PEERS_TESTNET4,
     DEFAULT_FEE_ESTIMATOR,
     DEFAULT_SPEEDLOADER
 } from '../stores/SettingsStore';
@@ -90,15 +91,18 @@ export function checkLndStreamErrorResponse(
 
 const writeLndConfig = async ({
     lndDir = 'lnd',
-    isTestnet,
+    network,
     rescan,
     compactDb
 }: {
     lndDir: string;
-    isTestnet?: boolean;
+    network?: string;
     rescan?: boolean;
     compactDb?: boolean;
 }) => {
+    const isMainnet = !network || network === 'mainnet';
+    const isTestnet = network === 'testnet' || network === 'testnet3';
+    const isTestnet4 = network === 'testnet4';
     const { writeConfig } = lndMobile.index;
 
     const peerMode = settingsStore?.settings?.dontAllowOtherPeers
@@ -112,6 +116,41 @@ const writeLndConfig = async ({
 
     console.log('persistFilters', persistFilters);
 
+    // Get neutrino peers based on network
+    const getNeutrinoPeers = () => {
+        if (isMainnet) {
+            return settingsStore?.settings?.neutrinoPeersMainnet || [];
+        } else if (isTestnet4) {
+            return settingsStore?.settings?.neutrinoPeersTestnet4 || [];
+        } else {
+            return settingsStore?.settings?.neutrinoPeersTestnet || [];
+        }
+    };
+
+    const dbConfig = `[db]
+    db.no-graph-cache=false
+
+    [bolt]
+    db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
+    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}`;
+
+    const neutrinoConfig = `[Neutrino]
+    ${getNeutrinoPeers()
+        .map((peer: string) => `neutrino.${peerMode}=${peer}\n    `)
+        .join('')}
+    ${
+        isMainnet
+            ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
+            : ''
+    }
+    ${
+        isMainnet
+            ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
+            : ''
+    }
+    neutrino.broadcasttimeout=11s
+    neutrino.persistfilters=${persistFilters}`;
+
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -124,12 +163,7 @@ const writeLndConfig = async ({
     payments-expiration-grace-period=168h
     ${rescan ? 'reset-wallet-transactions=true' : ''}
 
-    [db]
-    db.no-graph-cache=false
-
-    [bolt]
-    db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
-    ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}
+    ${dbConfig}
 
     [Routing]
     routing.assumechanvalid=1
@@ -137,33 +171,13 @@ const writeLndConfig = async ({
 
     [Bitcoin]
     bitcoin.active=1
-    bitcoin.mainnet=${isTestnet ? 0 : 1}
-    bitcoin.testnet=${isTestnet ? 1 : 0}
+    bitcoin.mainnet=${isMainnet ? true : false}
+    bitcoin.testnet=${isTestnet ? true : false}
+    bitcoin.testnet4=${isTestnet4 ? true : false}
     bitcoin.node=neutrino
     bitcoin.defaultchanconfs=1
 
-    [Neutrino]
-    ${
-        !isTestnet
-            ? settingsStore?.settings?.neutrinoPeersMainnet
-                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
-                  .join('')
-            : settingsStore?.settings?.neutrinoPeersTestnet
-                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
-                  .join('')
-    }
-    ${
-        !isTestnet
-            ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
-            : ''
-    }
-    ${
-        !isTestnet
-            ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
-            : ''
-    }
-    neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=${persistFilters}
+    ${neutrinoConfig}
 
     [fee]
     fee.url=${
@@ -251,17 +265,17 @@ export async function expressGraphSync() {
 
 export async function initializeLnd({
     lndDir = 'lnd',
-    isTestnet,
+    network,
     rescan,
     compactDb
 }: {
     lndDir: string;
-    isTestnet?: boolean;
+    network?: string;
     rescan?: boolean;
     compactDb?: boolean;
 }) {
     const { initialize } = lndMobile.index;
-    await writeLndConfig({ lndDir, isTestnet, rescan, compactDb });
+    await writeLndConfig({ lndDir, network, rescan, compactDb });
     await initialize();
 }
 
@@ -402,13 +416,19 @@ export async function startLnd({
 }
 
 export async function optimizeNeutrinoPeers(
-    isTestnet?: boolean,
+    network?: string,
     peerTargetCount: number = 3
 ) {
     console.log('Optimizing Neutrino peers');
-    let peers = isTestnet
-        ? DEFAULT_NEUTRINO_PEERS_TESTNET
-        : DEFAULT_NEUTRINO_PEERS_MAINNET;
+    const isMainnet = !network || network === 'mainnet';
+    const isTestnet = network === 'testnet' || network === 'testnet3';
+    const isTestnet4 = network === 'testnet4';
+
+    let peers = isMainnet
+        ? DEFAULT_NEUTRINO_PEERS_MAINNET
+        : isTestnet4
+        ? DEFAULT_NEUTRINO_PEERS_TESTNET4
+        : DEFAULT_NEUTRINO_PEERS_TESTNET;
 
     const results: any = [];
     for (let i = 0; i < peers.length; i++) {
@@ -506,8 +526,8 @@ export async function optimizeNeutrinoPeers(
         console.log('Peers count:', selectedPeers.length);
     }
 
-    // Extra external peers
-    if (selectedPeers.length < peerTargetCount && !isTestnet) {
+    // Extra external peers (mainnet only)
+    if (selectedPeers.length < peerTargetCount && isMainnet) {
         console.log(
             `Selecting Neutrino peers with ping times <${NEUTRINO_PING_THRESHOLD_MS}ms from alternate set`
         );
@@ -562,17 +582,17 @@ export async function optimizeNeutrinoPeers(
     }
 
     if (selectedPeers.length > 0) {
-        if (isTestnet) {
-            await settingsStore.updateSettings({
-                neutrinoPeersTestnet: selectedPeers,
-                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
-            });
+        const settingsUpdate: any = {
+            dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+        };
+        if (isTestnet4) {
+            settingsUpdate.neutrinoPeersTestnet4 = selectedPeers;
+        } else if (isTestnet) {
+            settingsUpdate.neutrinoPeersTestnet = selectedPeers;
         } else {
-            await settingsStore.updateSettings({
-                neutrinoPeersMainnet: selectedPeers,
-                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
-            });
+            settingsUpdate.neutrinoPeersMainnet = selectedPeers;
         }
+        await settingsStore.updateSettings(settingsUpdate);
 
         console.log('Selected the following Neutrino peers:', selectedPeers);
     } else {
@@ -588,13 +608,13 @@ export async function createLndWallet({
     lndDir,
     seedMnemonic,
     walletPassphrase,
-    isTestnet,
+    network,
     channelBackupsBase64
 }: {
     lndDir: string;
     seedMnemonic?: string;
     walletPassphrase?: string;
-    isTestnet?: boolean;
+    network?: string;
     channelBackupsBase64?: string;
 }) {
     const {
@@ -610,7 +630,7 @@ export async function createLndWallet({
         await excludeLndICloudBackup(lndDir);
     }
 
-    await writeLndConfig({ lndDir, isTestnet });
+    await writeLndConfig({ lndDir, network });
     await initialize();
 
     let status = await checkStatus();
@@ -618,11 +638,13 @@ export async function createLndWallet({
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
+        // Native code expects isTestnet boolean - true for any non-mainnet network
+        const isTestnet = network === 'testnet' || network === 'testnet4';
         await startLnd({
             lndDir,
             walletPassword: '',
             isTorEnabled: false,
-            isTestnet: isTestnet || false
+            isTestnet
         });
     }
 
