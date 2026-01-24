@@ -1395,6 +1395,7 @@
     "stores.NostrWalletConnectStore.zeusWallet": "Zeus Wallet",
     "stores.NostrWalletConnectStore.keysendPayment": "Platba Keysend",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "Je vyžadován název připojení",
+    "stores.NostrWalletConnectStore.error.failedToCreateInvoice": "Failed to create invoice",
     "stores.NostrWalletConnectStore.receivedCashuToken": "Přijatý Cashu token",
     "stores.NostrWalletConnectStore.sentCashuToken": "Odeslaný Cashu token",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "Platba odeslána pomocí Nostr Wallet Connect",
