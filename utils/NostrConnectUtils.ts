@@ -21,7 +21,6 @@ import Transaction from '../models/Transaction';
 import { localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import bolt11 from 'bolt11';
-import Base64Utils from './Base64Utils';
 import BackendUtils from './BackendUtils';
 import { millisatsToSats, satsToMillisats } from './AmountUtils';
 
@@ -542,66 +541,6 @@ export default class NostrConnectUtils {
         };
     }
 
-    static convertPaymentHashToHex(
-        paymentHash: string | number[] | Uint8Array
-    ): string | undefined {
-        try {
-            if (paymentHash instanceof Uint8Array) {
-                return Base64Utils.bytesToHex(Array.from(paymentHash));
-            }
-
-            if (Array.isArray(paymentHash)) {
-                return Base64Utils.bytesToHex(paymentHash);
-            }
-
-            if (!paymentHash || typeof paymentHash !== 'string') {
-                console.warn(
-                    'convertPaymentHashToHex: Invalid payment hash input:',
-                    paymentHash
-                );
-                return undefined;
-            }
-            if (paymentHash.startsWith('{')) {
-                let hashObj;
-                if (paymentHash.includes('=>')) {
-                    const jsonString = paymentHash
-                        .replace(/=>/g, ':')
-                        .replace(/"(\d+)":/g, '$1:')
-                        .replace(/(\d+):/g, '"$1":');
-                    hashObj = JSON.parse(jsonString);
-                } else {
-                    hashObj = JSON.parse(paymentHash);
-                }
-
-                const hashArray = Object.keys(hashObj)
-                    .sort((a, b) => parseInt(a) - parseInt(b))
-                    .map((key) => hashObj[key])
-                    .filter((value) => value !== undefined && value !== null); // Filter out undefined/null values
-
-                if (hashArray.length === 0) {
-                    console.warn(
-                        'convertPaymentHashToHex: Empty hash array after filtering'
-                    );
-                    return undefined;
-                }
-
-                return Base64Utils.bytesToHex(hashArray);
-            }
-
-            if (
-                paymentHash.includes('+') ||
-                paymentHash.includes('/') ||
-                paymentHash.includes('=')
-            ) {
-                return Base64Utils.base64ToHex(paymentHash);
-            }
-
-            return paymentHash;
-        } catch (error) {
-            console.warn('Failed to convert payment hash to hex:', error);
-            return undefined;
-        }
-    }
     static isIgnorableError(error: string): boolean {
         const msg = error.toLowerCase();
         return (
@@ -615,6 +554,170 @@ export default class NostrConnectUtils {
         );
     }
 
+    private static extractInvoiceFromActivity(
+        activity: ConnectionActivity
+    ): string {
+        if (activity.invoice?.getPaymentRequest) {
+            return activity.invoice.getPaymentRequest;
+        }
+        if (activity.payment?.getPaymentRequest) {
+            return activity.payment.getPaymentRequest;
+        }
+        return activity.id || '';
+    }
+
+    private static extractPaymentHashFromActivity(
+        activity: ConnectionActivity
+    ): string {
+        if (activity.paymentHash) {
+            return activity.paymentHash;
+        }
+        if (activity.payment?.paymentHash) {
+            return activity.payment.paymentHash;
+        }
+        if (activity.invoice) {
+            const invoiceHash = (activity.invoice as Invoice).payment_hash;
+            if (invoiceHash) return invoiceHash;
+        }
+        return activity.id || '';
+    }
+
+    private static extractAmountFromActivity(
+        activity: ConnectionActivity
+    ): number {
+        if (activity.satAmount !== undefined) {
+            return satsToMillisats(activity.satAmount);
+        }
+
+        if (activity.payment?.getAmount !== undefined) {
+            return satsToMillisats(Number(activity.payment.getAmount) || 0);
+        }
+
+        if (activity.invoice) {
+            const invoiceAmount = activity.invoice.getAmount;
+            if (invoiceAmount !== undefined && invoiceAmount !== null) {
+                return satsToMillisats(Number(invoiceAmount));
+            }
+
+            const invoiceObj = activity.invoice as any;
+            if (invoiceObj?.decoded?.satoshis !== undefined) {
+                return satsToMillisats(Number(invoiceObj.decoded.satoshis));
+            }
+            if (invoiceObj?.decoded?.millisatoshis !== undefined) {
+                return Number(invoiceObj.decoded.millisatoshis);
+            }
+            if (invoiceObj?.amount !== undefined) {
+                return satsToMillisats(Number(invoiceObj.amount));
+            }
+        }
+
+        return 0;
+    }
+
+    private static extractCreatedAtFromActivity(
+        activity: ConnectionActivity
+    ): number {
+        const now = Math.floor(Date.now() / 1000);
+
+        if (activity.invoice) {
+            const invoiceObj = activity.invoice as any;
+            if (invoiceObj?.decoded?.timestamp !== undefined) {
+                return Number(invoiceObj.decoded.timestamp);
+            }
+            if (invoiceObj?.getTimestamp) {
+                return Number(invoiceObj.getTimestamp);
+            }
+            if (invoiceObj?.created_at) {
+                return Number(invoiceObj.created_at);
+            }
+            if (invoiceObj?.creation_date) {
+                return Number(invoiceObj.creation_date);
+            }
+        }
+        if (activity.payment) {
+            const paymentObj = activity.payment as any;
+            if (paymentObj?.getTimestamp) {
+                return Number(paymentObj.getTimestamp);
+            }
+            if (paymentObj?.created_at) {
+                return Number(paymentObj.created_at);
+            }
+            if (paymentObj?.creation_date) {
+                return Number(paymentObj.creation_date);
+            }
+            if (paymentObj?.timestamp) {
+                return Number(paymentObj.timestamp);
+            }
+        }
+
+        return now;
+    }
+    private static extractExpiresAtFromActivity(
+        activity: ConnectionActivity
+    ): number {
+        const explicitExpiresAt = Number(activity?.expiresAt);
+        if (explicitExpiresAt > 0) {
+            return explicitExpiresAt;
+        }
+
+        if (activity.invoice) {
+            if (activity.invoice.expires_at) {
+                return Number(activity.invoice.expires_at);
+            }
+            if (activity.invoice.expiry) {
+                return Number(activity.invoice.expiry);
+            }
+            const invoiceObj = activity.invoice as any;
+            if (invoiceObj?.decoded?.timeExpireDate) {
+                return Number(invoiceObj.decoded.timeExpireDate);
+            }
+        }
+
+        return 0;
+    }
+
+    private static extractSettledAtFromActivity(
+        activity: ConnectionActivity
+    ): number {
+        if (activity.invoice) {
+            const invoiceObj = activity.invoice as any;
+            if (invoiceObj?.settled_at) {
+                return Number(invoiceObj.settled_at);
+            }
+            if (invoiceObj?.settle_date) {
+                return Number(invoiceObj.settle_date);
+            }
+            if (invoiceObj?.paid_at) {
+                return Number(invoiceObj.paid_at);
+            }
+            if (invoiceObj?.settleDate) {
+                const settleDate = invoiceObj.settleDate;
+                if (settleDate instanceof Date) {
+                    return Math.floor(settleDate.getTime() / 1000);
+                }
+                return Number(settleDate);
+            }
+        }
+
+        if (activity.payment) {
+            const paymentObj = activity.payment as any;
+            if (paymentObj?.getTimestamp) {
+                return Number(paymentObj.getTimestamp);
+            }
+            if (paymentObj?.created_at) {
+                return Number(paymentObj.created_at);
+            }
+            if (paymentObj?.creation_date) {
+                return Number(paymentObj.creation_date);
+            }
+            if (paymentObj?.timestamp) {
+                return Number(paymentObj.timestamp);
+            }
+        }
+
+        return 0;
+    }
+
     /**
      * Converts a ConnectionActivity to a NIP-47 transaction
      * @param activity - Connection activity to convert
@@ -623,48 +726,24 @@ export default class NostrConnectUtils {
     static convertConnectionActivityToNip47Transaction(
         activity: ConnectionActivity
     ): Nip47Transaction {
-        let type: 'incoming' | 'outgoing' = 'outgoing';
-        if (activity.type === 'make_invoice') {
-            type = 'incoming';
-        } else if (
-            activity.type === 'pay_invoice' ||
-            activity.type === 'pay_keysend'
-        ) {
-            type = 'outgoing';
-        }
+        const type: 'incoming' | 'outgoing' =
+            activity.type === 'make_invoice' ? 'incoming' : 'outgoing';
 
-        let state: 'settled' | 'pending' | 'failed' = 'pending';
-        if (activity.status === 'success') {
-            state = 'settled';
-        } else if (activity.status === 'failed') {
-            state = 'failed';
-        }
+        const state: 'settled' | 'pending' | 'failed' =
+            activity.status === 'success'
+                ? 'settled'
+                : activity.status === 'failed'
+                ? 'failed'
+                : 'pending';
 
-        let invoice = '';
-        if (activity.invoice) {
-            invoice = activity.invoice.getPaymentRequest || '';
-        }
-
-        let paymentHash = activity.paymentHash || '';
-        if (!paymentHash && activity.payment) {
-            paymentHash = activity.payment.paymentHash || '';
-        }
-        if (!paymentHash && activity.invoice) {
-            paymentHash = (activity.invoice as Invoice).payment_hash || '';
-        }
-        if (!paymentHash) {
-            paymentHash = activity.id || '';
-        }
-
-        let amount = 0;
-        if (activity.satAmount) {
-            amount = satsToMillisats(activity.satAmount);
-        } else if (activity.payment) {
-            const paymentAmount = activity.payment.getAmount;
-            amount = satsToMillisats(Number(paymentAmount) || 0);
-        } else if (activity.invoice) {
-            amount = satsToMillisats(Number(activity.invoice.getAmount) || 0);
-        }
+        const invoice = NostrConnectUtils.extractInvoiceFromActivity(activity);
+        const paymentHash =
+            NostrConnectUtils.extractPaymentHashFromActivity(activity);
+        const amount = NostrConnectUtils.extractAmountFromActivity(activity);
+        const created_at =
+            NostrConnectUtils.extractCreatedAtFromActivity(activity);
+        const expires_at =
+            NostrConnectUtils.extractExpiresAtFromActivity(activity);
 
         const feesPaid = activity.fees_paid
             ? satsToMillisats(activity.fees_paid)
@@ -672,25 +751,17 @@ export default class NostrConnectUtils {
             ? satsToMillisats(Number(activity.payment.getFee) || 0)
             : 0;
 
-        const lastProcessAt = activity.lastprocessAt
-            ? Math.floor(activity.lastprocessAt.getTime() / 1000)
-            : Date.now() / 1000;
-        const expiresAt = activity.expiresAt
-            ? Math.floor(activity.expiresAt.getTime() / 1000)
-            : activity.invoice
-            ? Number(activity.invoice.expires_at) || 0
-            : 0;
-
-        let description = '';
-        if (activity.invoice) {
-            description = activity.invoice.getMemo || '';
-        } else if (activity.payment) {
-            description = activity.payment.getMemo || '';
-        }
+        const description =
+            activity.invoice?.getMemo || activity.payment?.getMemo || '';
 
         const preimage =
-            activity.preimage ||
-            (activity.payment ? activity.payment.getPreimage || '' : '');
+            activity.preimage || activity.payment?.getPreimage || '';
+
+        const settled_at =
+            state === 'settled'
+                ? NostrConnectUtils.extractSettledAtFromActivity(activity) ||
+                  created_at
+                : 0;
 
         return NostrConnectUtils.createNip47Transaction({
             type,
@@ -701,9 +772,9 @@ export default class NostrConnectUtils {
             description,
             preimage,
             fees_paid: feesPaid,
-            settled_at: state === 'settled' ? lastProcessAt : 0,
-            created_at: lastProcessAt,
-            expires_at: expiresAt
+            settled_at,
+            created_at,
+            expires_at
         });
     }
 

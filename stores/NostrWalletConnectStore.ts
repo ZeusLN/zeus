@@ -535,6 +535,10 @@ export default class NostrWalletConnectStore {
                     )
                 );
             }
+
+            if (!this.walletServiceKeys?.privateKey) {
+                await this.loadWalletServiceKeys();
+            }
             const { nodeInfo } = this.nodeInfoStore;
             const nodePubkey = nodeInfo.nodeId;
             const { implementation } = this.settingsStore;
@@ -547,6 +551,34 @@ export default class NostrWalletConnectStore {
                     })
                 );
             }
+            if (!this.publishedRelays.has(params.relayUrl)) {
+                const nwcWalletService = this.nwcWalletServices.get(
+                    params.relayUrl
+                );
+                if (nwcWalletService && this.walletServiceKeys?.privateKey) {
+                    try {
+                        await this.retryWithBackoff(async () => {
+                            await nwcWalletService.publishWalletServiceInfoEvent(
+                                this.walletServiceKeys!.privateKey,
+                                NostrConnectUtils.getFullAccessPermissions(),
+                                NostrConnectUtils.getNotifications()
+                            );
+                            runInAction(() => {
+                                this.publishedRelays.add(params.relayUrl);
+                            });
+                        }, 3);
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, 500)
+                        );
+                    } catch (error) {
+                        console.warn(
+                            `NWC: Failed to publish wallet service info to relay ${params.relayUrl} before connection creation:`,
+                            error
+                        );
+                    }
+                }
+            }
+
             if (params.id) {
                 const connection = this.connections.find(
                     (c) => c.id === params.id
@@ -745,16 +777,22 @@ export default class NostrWalletConnectStore {
                 runInAction(() => {
                     const { nodeInfo } = this.nodeInfoStore;
                     const { implementation } = this.settingsStore;
-                    this.connections = connections
-                        .filter(
-                            (c: any) =>
-                                c.nodePubkey === nodeInfo.nodeId &&
-                                c.implementation === implementation
-                        )
-                        .map((data: any) => {
-                            const conn = new NWCConnection(data);
-                            return conn;
-                        });
+                    const currentNodeId = nodeInfo?.nodeId;
+                    const currentImpl = implementation;
+                    const shouldFilter = !!currentNodeId && !!currentImpl;
+
+                    const filtered = shouldFilter
+                        ? connections.filter(
+                              (c: any) =>
+                                  c.nodePubkey === currentNodeId &&
+                                  c.implementation === currentImpl
+                          )
+                        : connections;
+
+                    this.connections = filtered.map((data: any) => {
+                        const conn = new NWCConnection(data);
+                        return conn;
+                    });
                 });
                 await this.checkAndResetAllBudgets();
             } else {
@@ -962,6 +1000,9 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
+        if (connection.activity.length === 0)
+            return { name: connection.name, activity: [] };
+
         const locale = this.settingsStore.settings.locale;
         const promises = connection.activity.map(async (activity) => {
             if (activity?.invoice) {
@@ -977,7 +1018,6 @@ export default class NostrWalletConnectStore {
                 activity.invoice.determineFormattedOriginalTimeUntilExpiry(
                     locale
                 );
-
                 if (
                     activity.type === 'make_invoice' &&
                     activity.status === 'pending'
@@ -1035,7 +1075,7 @@ export default class NostrWalletConnectStore {
             });
         });
         this.saveConnections();
-        return { name: connection.name, activity: connection.activity || [] };
+        return { name: connection.name, activity: connection.activity };
     };
     @action
     private markConnectionUsed = async (connectionId: string) => {
@@ -1552,10 +1592,11 @@ export default class NostrWalletConnectStore {
                 }
             );
 
+            const paymentRequest = this.invoicesStore.payment_request;
+
             if (
-                !invoiceResult ||
-                !invoiceResult.rHash ||
-                this.invoicesStore.creatingInvoiceError
+                this.invoicesStore.creatingInvoiceError ||
+                (!invoiceResult && !paymentRequest)
             ) {
                 const errorMessage =
                     this.invoicesStore.error_msg ||
@@ -1564,13 +1605,18 @@ export default class NostrWalletConnectStore {
                     );
                 throw new Error(errorMessage);
             }
-            const paymentRequest = this.invoicesStore.payment_request;
+
             if (!paymentRequest || typeof paymentRequest !== 'string') {
-                const errorMessage = localeString(
-                    'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
-                );
+                const errorMessage =
+                    this.invoicesStore.error_msg ||
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
+                    );
                 throw new Error(errorMessage);
             }
+
+            const rHash = invoiceResult?.rHash || '';
+            let paymentHash = rHash;
 
             await this.invoicesStore.getInvoices();
             const invoice = this.invoicesStore.invoices.find(
@@ -1578,29 +1624,7 @@ export default class NostrWalletConnectStore {
                     invoice.payment_hash === paymentHash ||
                     invoice.paymentRequest === paymentRequest
             );
-            if (invoice)
-                runInAction(() => {
-                    connection.activity.push({
-                        id: paymentRequest,
-                        invoice: new Invoice(invoice),
-                        status: 'pending',
-                        type: 'make_invoice',
-                        payment_source: 'lightning',
-                        lastprocessAt: new Date(),
-                        paymentHash,
-                        expiresAt: new Date(expiryTime),
-                        satAmount: millisatsToSats(request.amount)
-                    });
-                    this.findAndUpdateConnection(connection);
-                });
-            this.saveConnections();
-            this.showInvoiceCreatedNotification(
-                millisatsToSats(request.amount),
-                connection.name,
-                request.description
-            );
-            const rHash = invoiceResult.rHash || '';
-            let paymentHash = rHash;
+
             let descriptionHash = '';
             let expiryTime = 0;
 
@@ -1612,16 +1636,7 @@ export default class NostrWalletConnectStore {
                 descriptionHash = decoded.descriptionHash;
                 expiryTime =
                     decoded?.expiryTime || DEFAULT_INVOICE_EXPIRY_SECONDS;
-                if (!paymentHash) {
-                    console.warn(
-                        'handleMakeInvoice: Payment hash not found in invoice'
-                    );
-                }
             } catch (decodeError) {
-                console.error(
-                    'handleMakeInvoice: Failed to decode payment request',
-                    decodeError
-                );
                 if (!paymentHash && rHash) {
                     paymentHash = rHash;
                 }
@@ -1636,6 +1651,51 @@ export default class NostrWalletConnectStore {
                     dateTimeUtils.getCurrentTimestamp() +
                     (request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS);
             }
+
+            if (invoice) {
+                runInAction(() => {
+                    connection.activity.push({
+                        id: paymentRequest,
+                        invoice: new Invoice(invoice),
+                        status: 'pending',
+                        type: 'make_invoice',
+                        payment_source: 'lightning',
+                        paymentHash,
+                        satAmount: millisatsToSats(request.amount),
+                        createdAt: new Date()
+                    });
+                    this.findAndUpdateConnection(connection);
+                });
+            } else {
+                const invoiceData = {
+                    payment_request: paymentRequest,
+                    payment_hash: paymentHash,
+                    value: millisatsToSats(request.amount).toString(),
+                    memo: request.description || '',
+                    expiry: expiryTime.toString(),
+                    creation_date: Math.floor(Date.now() / 1000).toString(),
+                    settled: false
+                };
+                runInAction(() => {
+                    connection.activity.push({
+                        id: paymentRequest,
+                        invoice: new Invoice(invoiceData),
+                        status: 'pending',
+                        type: 'make_invoice',
+                        payment_source: 'lightning',
+                        paymentHash,
+                        satAmount: millisatsToSats(request.amount),
+                        createdAt: new Date()
+                    });
+                    this.findAndUpdateConnection(connection);
+                });
+            }
+            this.saveConnections();
+            this.showInvoiceCreatedNotification(
+                millisatsToSats(request.amount),
+                connection.name,
+                request.description
+            );
 
             const result = NostrConnectUtils.createNip47Transaction({
                 type: 'incoming',
@@ -1658,12 +1718,6 @@ export default class NostrWalletConnectStore {
                 localeString(
                     'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
                 );
-            console.error('handleMakeInvoice error', {
-                error: errorMessage,
-                stack: (error as Error).stack,
-                connection: connection.name,
-                request
-            });
             return this.handleError(errorMessage, ErrorCodes.INTERNAL_ERROR);
         }
     }
@@ -1717,7 +1771,6 @@ export default class NostrWalletConnectStore {
                         created_at: timestamp,
                         expires_at: expiresAt
                     });
-                    console.log(result);
                     return {
                         result,
                         error: undefined
@@ -2062,16 +2115,16 @@ export default class NostrWalletConnectStore {
         );
 
         if (paymentError) {
-            const { paymentHash, paymentRequest } =
+            const { paymentRequest } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
-            if (paymentHash || paymentRequest)
+            if (paymentRequest || request.invoice)
                 if (
                     !NostrConnectUtils.isIgnorableError(
                         paymentError.error?.message
                     )
                 )
                     await this.recordFailedPayment(
-                        paymentHash || paymentRequest,
+                        paymentRequest || request.invoice,
                         connection,
                         'pay_invoice',
                         amountSats,
@@ -2209,16 +2262,16 @@ export default class NostrWalletConnectStore {
             amount: amount.toString()
         });
         if (!cashuInvoice || this.cashuStore.paymentError) {
-            const { paymentHash, paymentRequest } =
+            const { paymentRequest } =
                 await NostrConnectUtils.decodeInvoiceTags(request.invoice);
-            if (paymentHash || paymentRequest)
+            if (paymentRequest || request.invoice)
                 if (
                     !NostrConnectUtils.isIgnorableError(
                         this.cashuStore.paymentErrorMsg || ''
                     )
                 )
                     await this.recordFailedPayment(
-                        paymentHash || paymentRequest,
+                        paymentRequest || request.invoice,
                         connection,
                         'pay_invoice',
                         amount,
@@ -2487,12 +2540,11 @@ export default class NostrWalletConnectStore {
                 type,
                 satAmount: amountSats,
                 status: 'failed',
-                lastprocessAt: new Date(),
                 payment_source,
                 error: errorMessage,
-                paymentHash
+                paymentHash,
+                createdAt: new Date()
             };
-
             if (index !== -1) {
                 connection.activity[index] = {
                     ...connection.activity[index],

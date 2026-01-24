@@ -163,4 +163,27 @@ describe('Base64Utils', () => {
             expect(Base64Utils.reverseMfpBytes('E65423A4')).toEqual('A42354E6');
         });
     });
+
+    describe('bytesToHex', () => {
+        it('Converts array of bytes to hexadecimal string', () => {
+            expect(Base64Utils.bytesToHex([0, 1, 2, 3])).toBe('00010203');
+            expect(Base64Utils.bytesToHex([255, 254, 253])).toBe('fffefd');
+        });
+
+        it('Handles empty array', () => {
+            expect(Base64Utils.bytesToHex([])).toBe('');
+        });
+
+        it('Pads single digit hex values with leading zero', () => {
+            expect(Base64Utils.bytesToHex([0, 1, 10, 15])).toBe('00010a0f');
+        });
+
+        it('Returns empty string for non-array inputs', () => {
+            expect(Base64Utils.bytesToHex(null as any)).toBe('');
+            expect(Base64Utils.bytesToHex(undefined as any)).toBe('');
+            expect(Base64Utils.bytesToHex('not an array' as any)).toBe('');
+            expect(Base64Utils.bytesToHex(123 as any)).toBe('');
+            expect(Base64Utils.bytesToHex({} as any)).toBe('');
+        });
+    });
 });

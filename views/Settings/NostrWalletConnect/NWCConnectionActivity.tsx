@@ -108,6 +108,8 @@ export default class NWCConnectionActivity extends React.Component<
                     localeString(
                         'views.Settings.NostrWalletConnect.error.failedToLoadActivity'
                     ),
+                activity: [],
+                filteredActivity: [],
                 loading: false
             });
         }
@@ -117,6 +119,9 @@ export default class NWCConnectionActivity extends React.Component<
         activities: ConnectionActivity[],
         filters: NWCFilterState
     ): ConnectionActivity[] => {
+        if (activities.length === 0) {
+            return [];
+        }
         const allFiltersActive = Object.values(filters).every(
             (value) => value === true
         );
@@ -157,10 +162,13 @@ export default class NWCConnectionActivity extends React.Component<
     };
 
     handleFilterChange = (newFilters: NWCFilterState) => {
-        this.setState((prevState) => ({
-            activeFilters: newFilters,
-            filteredActivity: this.applyFilters(prevState.activity, newFilters)
-        }));
+        this.setState((prevState) => {
+            const filtered = this.applyFilters(prevState.activity, newFilters);
+            return {
+                activeFilters: newFilters,
+                filteredActivity: filtered
+            };
+        });
     };
 
     handleRefresh = () => {
@@ -290,7 +298,7 @@ export default class NWCConnectionActivity extends React.Component<
             item.invoice?.getDisplayTimeShort ||
             item.payment?.getDisplayTimeShort ||
             dateTimeUtils.listFormattedDate(
-                item.lastprocessAt?.toString()!,
+                item.createdAt?.toString()!,
                 'HH:MM tt'
             );
         const note = item.payment?.getNote || item.invoice?.getNote;
@@ -422,8 +430,19 @@ export default class NWCConnectionActivity extends React.Component<
         />
     );
 
+    getSafeFilteredActivity = (): ConnectionActivity[] => {
+        const { filteredActivity } = this.state;
+        if (filteredActivity.length === 0) return [];
+        try {
+            return filteredActivity.slice().reverse();
+        } catch (e) {
+            console.error('Error processing filteredActivity:', e);
+            return [];
+        }
+    };
+
     renderContent = () => {
-        const { loading, filteredActivity, error } = this.state;
+        const { loading, error } = this.state;
 
         if (loading) {
             return (
@@ -437,16 +456,20 @@ export default class NWCConnectionActivity extends React.Component<
             return this.renderError();
         }
 
-        if (filteredActivity.length === 0) {
+        const safeFilteredActivity = this.getSafeFilteredActivity();
+
+        if (!safeFilteredActivity || safeFilteredActivity.length === 0) {
             return this.renderEmptyState();
         }
 
         return (
             <FlatList
-                data={filteredActivity.slice().reverse()}
+                data={safeFilteredActivity}
                 renderItem={this.renderActivityListItem}
                 keyExtractor={(item, index) =>
-                    `${item.type}-${item.lastprocessAt}-${index}`
+                    `${item.type}-${
+                        item.id || item.createdAt || index
+                    }-${index}`
                 }
                 ItemSeparatorComponent={this.renderSeparator}
                 refreshing={loading}

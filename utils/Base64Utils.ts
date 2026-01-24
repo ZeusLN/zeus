@@ -24,11 +24,13 @@ class Base64Utils {
             input.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
         );
     bytesToHex = (input: number[]) =>
-        input.reduce(
-            (memo: string, i: number) =>
-                memo + ('0' + i.toString(16)).slice(-2),
-            ''
-        );
+        input && Array.isArray(input)
+            ? input.reduce(
+                  (memo: string, i: number) =>
+                      memo + ('0' + i.toString(16)).slice(-2),
+                  ''
+              )
+            : '';
 
     bytesToUtf8 = (input: Uint8Array) => Buffer.from(input).toString('utf-8');
 
