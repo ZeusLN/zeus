@@ -149,9 +149,9 @@ export default class FeeStore {
         const baseFee = newBaseFee.replace(/,/g, '.');
         let feeRate = newFeeRate.replace(/,/g, '.');
 
-        // convert PPM to percentage for LND
-        if (feeRateMode === 'ppm' && BackendUtils.isLNDBased()) {
-            feeRate = new BigNumber(feeRate).dividedBy(10000).toString();
+        // convert PPM to decimal rate for LND
+        if (feeRateMode === 'ppm' && BackendUtils.isLNDBased() && feeRate) {
+            feeRate = new BigNumber(feeRate).dividedBy(1000000).toString();
         }
 
         const data: any = {
