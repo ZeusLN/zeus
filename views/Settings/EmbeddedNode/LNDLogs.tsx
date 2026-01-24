@@ -74,7 +74,10 @@ export default class LNDLogs extends React.Component<
             NativeModules.LndMobileTools.observeLndLogFile(
                 lndDir || 'lnd',
                 network
-            );
+            ).catch((e: any) => {
+                console.log('Could not observe log file:', e);
+            });
+
             this.setState({
                 log
             });

@@ -1,7 +1,9 @@
 import { action, observable, when, runInAction } from 'mobx';
+import { NativeModules } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import BackendUtils from '../utils/BackendUtils';
+import { LndMobileToolsEventEmitter } from '../utils/EventListenerUtils';
 import { sleep } from '../utils/SleepUtils';
 
 import NodeInfo from '../models/NodeInfo';
@@ -18,6 +20,14 @@ export default class SyncStore {
     @observable public currentProgress: number;
     @observable public numBlocksUntilSynced: number;
     @observable public error: boolean = false;
+    // rescan tracking
+    @observable public isRescanning: boolean = false;
+    @observable public rescanStartHeight: number | null = null;
+    @observable public rescanCurrentHeight: number | null = null;
+    @observable public rescanAddressCount: number | null = null;
+    @observable public rescanTxnsFound: number = 0;
+    private logListener: any = null;
+
     nodeInfo: any;
     settingsStore: SettingsStore;
 
@@ -31,6 +41,7 @@ export default class SyncStore {
         this.isRecovering = false;
         this.isInExpressGraphSync = false;
         this.error = false;
+        this.stopRescanTracking();
     };
 
     public setExpressGraphSyncStatus = (syncing: boolean) =>
@@ -178,6 +189,97 @@ export default class SyncStore {
         while (this.isRecovering) {
             await sleep(2000);
             await this.getRecoveryStatus();
+        }
+    };
+
+    // Rescan tracking methods
+    private getNetwork = (): string => {
+        const network = this.settingsStore.embeddedLndNetwork?.toLowerCase();
+        if (network === 'testnet3' || network === 'testnet') {
+            return 'testnet';
+        } else if (network === 'testnet4') {
+            return 'testnet4';
+        }
+        return 'mainnet';
+    };
+
+    @action
+    public startRescanTracking = (startHeight: number) => {
+        this.isRescanning = true;
+        this.rescanStartHeight = startHeight;
+        this.rescanCurrentHeight = startHeight;
+        this.rescanTxnsFound = 0;
+        this.rescanAddressCount = null;
+
+        const network = this.getNetwork();
+        const lndDir = this.settingsStore.lndDir || 'lnd';
+
+        // Add listener for log events
+        this.logListener = LndMobileToolsEventEmitter.addListener(
+            'lndlog',
+            (data: string) => this.parseRescanLog(data)
+        );
+
+        // Start observing log file (may fail if file doesn't exist yet)
+        NativeModules.LndMobileTools.observeLndLogFile(lndDir, network).catch(
+            (e: any) => {
+                console.log('Could not observe log file:', e);
+            }
+        );
+    };
+
+    @action
+    public stopRescanTracking = () => {
+        if (this.logListener) {
+            this.logListener.remove();
+            this.logListener = null;
+        }
+        runInAction(() => {
+            this.isRescanning = false;
+            this.rescanStartHeight = null;
+            this.rescanCurrentHeight = null;
+            this.rescanAddressCount = null;
+            this.rescanTxnsFound = 0;
+        });
+    };
+
+    private parseRescanLog = (logLine: string) => {
+        // Log lines have format: "2026-01-21 02:15:44.368 [INF] BTWL: Finished rescan..."
+        // Use regex that matches anywhere in the line
+
+        // Check for rescan start with height
+        // Pattern: "Started rescan from block ... (height 118957) for 9 addrs"
+        const startMatch = logLine.match(
+            /Started rescan from block.*\(height (\d+)\)/
+        );
+        if (startMatch) {
+            runInAction(() => {
+                this.rescanStartHeight = parseInt(startMatch[1], 10);
+                this.rescanCurrentHeight = parseInt(startMatch[1], 10);
+            });
+            return;
+        }
+
+        // Check for rescan completion
+        // Pattern: "Finished rescan for 9 addresses (synced to block ..., height 119438)"
+        const finishedMatch = logLine.match(
+            /Finished rescan for (\d+) addresses.*height (\d+)/
+        );
+        if (finishedMatch) {
+            runInAction(() => {
+                this.rescanCurrentHeight = parseInt(finishedMatch[2], 10);
+            });
+            this.stopRescanTracking();
+            return;
+        }
+
+        // Check for address count
+        // Pattern: "Rescan called for 9 addresses, 0 outpoints"
+        const addrMatch = logLine.match(/Rescan called for (\d+) addresses/);
+        if (addrMatch) {
+            runInAction(() => {
+                this.rescanAddressCount = parseInt(addrMatch[1], 10);
+            });
         }
     };
 }

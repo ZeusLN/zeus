@@ -61,11 +61,11 @@ export const unitsStore = new UnitsStore(settingsStore, fiatStore);
 export const paymentsStore = new PaymentsStore(settingsStore, channelsStore);
 export const lnurlPayStore = new LnurlPayStore(settingsStore, nodeInfoStore);
 export const feeStore = new FeeStore(settingsStore, nodeInfoStore);
-export const utxosStore = new UTXOsStore(settingsStore);
+export const syncStore = new SyncStore(settingsStore);
+export const utxosStore = new UTXOsStore(settingsStore, syncStore);
 export const messageSignStore = new MessageSignStore();
 export const notesStore = new NotesStore();
 export const contactStore = new ContactStore();
-export const syncStore = new SyncStore(settingsStore);
 export const cashuStore = new CashuStore(
     settingsStore,
     invoicesStore,
