@@ -1395,6 +1395,7 @@
     "stores.NostrWalletConnectStore.zeusWallet": "ZEUS 钱包",
     "stores.NostrWalletConnectStore.keysendPayment": "Keysend 支付",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "必须填写连接名称",
+    "stores.NostrWalletConnectStore.error.failedToCreateInvoice": "Failed to create invoice",
     "stores.NostrWalletConnectStore.receivedCashuToken": "接收 Cashu 代币",
     "stores.NostrWalletConnectStore.sentCashuToken": "发送 Cashu 代币",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "通过 Nostr 钱包连接来发送付款",
