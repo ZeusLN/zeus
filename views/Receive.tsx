@@ -358,10 +358,24 @@ export default class Receive extends React.Component<
             this.setState({ selectedIndex: this.getDefaultIndex() });
         }
 
-        const { expirySeconds, routeHints, ampInvoice, blindedPaths } =
-            this.state;
+        const expirySeconds = settings?.invoices?.expirySeconds || '3600';
+        const routeHints =
+            (settings?.invoices?.routeHints ||
+                !this.props.ChannelsStore.haveAnnouncedChannels) &&
+            !(
+                settings?.invoices?.blindedPaths &&
+                BackendUtils.supportsBolt11BlindedRoutes()
+            );
+        const ampInvoice =
+            (settings?.invoices?.ampInvoice && BackendUtils.supportsAMP()) ||
+            false;
+        const blindedPaths =
+            (settings?.invoices?.blindedPaths &&
+                BackendUtils.supportsBolt11BlindedRoutes()) ||
+            false;
 
-        const addressType = route.params?.addressType || this.state.addressType;
+        const addressType =
+            route.params?.addressType || settings?.invoices?.addressType || '0';
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
