@@ -1395,6 +1395,7 @@
     "stores.NostrWalletConnectStore.zeusWallet": "제우스 월렛",
     "stores.NostrWalletConnectStore.keysendPayment": "Keysend 결제",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "연결 이름이 필요합니다",
+    "stores.NostrWalletConnectStore.error.failedToCreateInvoice": "Failed to create invoice",
     "stores.NostrWalletConnectStore.receivedCashuToken": "받은 Cashu 토큰",
     "stores.NostrWalletConnectStore.sentCashuToken": "보낸 Cashu 토큰",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "Nostr Wallet Connect를 통해 결제 전송됨",

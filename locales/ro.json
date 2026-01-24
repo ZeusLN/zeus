@@ -1395,6 +1395,7 @@
     "stores.NostrWalletConnectStore.zeusWallet": "Zeus Wallet",
     "stores.NostrWalletConnectStore.keysendPayment": "Plată prin keysend",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "Numele conexiunii este obligatoriu",
+    "stores.NostrWalletConnectStore.error.failedToCreateInvoice": "Failed to create invoice",
     "stores.NostrWalletConnectStore.receivedCashuToken": "Token Cashu primit",
     "stores.NostrWalletConnectStore.sentCashuToken": "Token Cashu trimis",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "Plată trimisă prin Nostr Wallet Connect",

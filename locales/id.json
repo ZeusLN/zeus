@@ -1395,6 +1395,7 @@
     "stores.NostrWalletConnectStore.zeusWallet": "Zeus Wallet",
     "stores.NostrWalletConnectStore.keysendPayment": "Pembayaran Keysend",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "Nama koneksi diperlukan",
+    "stores.NostrWalletConnectStore.error.failedToCreateInvoice": "Failed to create invoice",
     "stores.NostrWalletConnectStore.receivedCashuToken": "Menerima token Cashu",
     "stores.NostrWalletConnectStore.sentCashuToken": "Mengirim token Cashu",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "Pembayaran dikirim melalui Nostr Wallet Connect",
