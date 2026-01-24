@@ -243,14 +243,15 @@ class LndMobileTools: RCTEventEmitter {
     resolve(true)
   }
 
-  @objc(DEBUG_deleteNeutrinoFiles:resolver:rejecter:)
-  func DEBUG_deleteNeutrinoFiles(network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(DEBUG_deleteNeutrinoFiles:network:resolver:rejecter:)
+  func DEBUG_deleteNeutrinoFiles(lndDir: String, network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    let chainPath = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
+    let folderName = lndDir.isEmpty ? "lnd" : lndDir
+    let chainPath = applicationSupport.appendingPathComponent(folderName, isDirectory: true)
                                       .appendingPathComponent("data", isDirectory: true)
                                       .appendingPathComponent("chain", isDirectory: true)
                                       .appendingPathComponent("bitcoin", isDirectory: true)
-                                      .appendingPathComponent(network ?? "mainnet", isDirectory: true)
+                                      .appendingPathComponent(network.isEmpty ? "mainnet" : network, isDirectory: true)
 
     let neutrinoDbPath = chainPath.appendingPathComponent("neutrino.db")
     let blockHeadersBinPath = chainPath.appendingPathComponent("block_headers.bin")

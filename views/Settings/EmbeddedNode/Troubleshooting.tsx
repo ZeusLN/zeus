@@ -6,6 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
+import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 import Switch from '../../../components/Switch';
 
@@ -28,6 +29,9 @@ interface EmbeddedNodeTroubleshootingState {
     resetExpressGraphSyncOnStartup: boolean | undefined;
     compactDb: boolean | undefined;
     resetMissionControlSuccess: boolean | undefined;
+    deleteNeutrinoLoading: boolean;
+    deleteNeutrinoSuccess: boolean;
+    deleteNeutrinoError: string | null;
 }
 
 @inject('SettingsStore')
@@ -43,7 +47,10 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
             this.props.SettingsStore.settings.resetExpressGraphSyncOnStartup ??
             false,
         compactDb: this.props.SettingsStore.settings.compactDb ?? false,
-        resetMissionControlSuccess: false
+        resetMissionControlSuccess: false,
+        deleteNeutrinoLoading: false,
+        deleteNeutrinoSuccess: false,
+        deleteNeutrinoError: null
     };
 
     render() {
@@ -52,9 +59,13 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
             expressGraphSync,
             resetExpressGraphSyncOnStartup,
             compactDb,
-            resetMissionControlSuccess
+            resetMissionControlSuccess,
+            deleteNeutrinoLoading,
+            deleteNeutrinoSuccess,
+            deleteNeutrinoError
         } = this.state;
-        const { updateSettings, embeddedLndNetwork }: any = SettingsStore;
+        const { updateSettings, embeddedLndNetwork, lndDir }: any =
+            SettingsStore;
 
         return (
             <Screen>
@@ -70,6 +81,13 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book'
                             }
                         }}
+                        rightComponent={
+                            deleteNeutrinoLoading ? (
+                                <View>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            ) : undefined
+                        }
                         navigation={navigation}
                     />
                     <ScrollView>
@@ -236,10 +254,23 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                         <>
                             <View style={{ marginTop: 25 }}>
                                 <Button
-                                    title={localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
-                                    )}
+                                    title={
+                                        deleteNeutrinoLoading
+                                            ? localeString('general.loading')
+                                            : deleteNeutrinoSuccess
+                                            ? localeString('general.success')
+                                            : localeString(
+                                                  'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
+                                              )
+                                    }
+                                    disabled={deleteNeutrinoLoading}
                                     onPress={async () => {
+                                        this.setState({
+                                            deleteNeutrinoLoading: true,
+                                            deleteNeutrinoError: null,
+                                            deleteNeutrinoSuccess: false
+                                        });
+
                                         try {
                                             await NativeModules.LndMobile.stopLnd();
                                             await sleep(5000); // Let lnd close down
@@ -250,26 +281,73 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                             ) {
                                                 console.log('yes closed');
                                             } else {
-                                                console.error(e.message, 10000);
+                                                console.error(e.message);
+                                                this.setState({
+                                                    deleteNeutrinoLoading:
+                                                        false,
+                                                    deleteNeutrinoError:
+                                                        e.message ||
+                                                        localeString(
+                                                            'general.error'
+                                                        )
+                                                });
                                                 return;
                                             }
                                         }
 
-                                        console.log(
+                                        try {
                                             await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                lndDir || 'lnd',
                                                 embeddedLndNetwork === 'Mainnet'
                                                     ? 'mainnet'
                                                     : 'testnet'
-                                            )
-                                        );
-                                        restartNeeded();
+                                            );
+                                            this.setState({
+                                                deleteNeutrinoLoading: false,
+                                                deleteNeutrinoSuccess: true
+                                            });
+
+                                            setTimeout(() => {
+                                                this.setState({
+                                                    deleteNeutrinoSuccess: false
+                                                });
+                                            }, 5000);
+
+                                            restartNeeded();
+                                        } catch (e: any) {
+                                            console.error(e.message);
+                                            this.setState({
+                                                deleteNeutrinoLoading: false,
+                                                deleteNeutrinoError:
+                                                    e.message ||
+                                                    localeString(
+                                                        'general.error'
+                                                    )
+                                            });
+                                        }
                                     }}
                                 />
                             </View>
+                            {deleteNeutrinoError && (
+                                <View
+                                    style={{
+                                        margin: 10,
+                                        marginTop: 10
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('error')
+                                        }}
+                                    >
+                                        {deleteNeutrinoError}
+                                    </Text>
+                                </View>
+                            )}
                             <View
                                 style={{
                                     margin: 10,
-                                    marginTop: 15
+                                    marginTop: deleteNeutrinoError ? 5 : 15
                                 }}
                             >
                                 <Text

@@ -112,7 +112,10 @@ export interface ILndMobileTools {
     DEBUG_deleteSpeedloaderLastrunFile(): Promise<boolean>;
     DEBUG_deleteSpeedloaderDgraphDirectory(): Promise<null>;
     deleteLndDirectory(lndDir: string): Promise<null>;
-    DEBUG_deleteNeutrinoFiles(network: string): Promise<boolean>;
+    DEBUG_deleteNeutrinoFiles(
+        lndDir: string,
+        network: string
+    ): Promise<boolean>;
 
     // Android-specific
     getIntentStringData(): Promise<string | null>;
