@@ -39,16 +39,27 @@ export default class LNDLogs extends React.Component<
         const { embeddedLndNetwork, lndDir } = SettingsStore;
         (async () => {
             const network =
-                embeddedLndNetwork === 'Testnet' ? 'testnet' : 'mainnet';
-            const tailLog = await NativeModules.LndMobileTools.tailLog(
-                100,
-                lndDir || 'lnd',
-                network
-            );
-            let log = tailLog
-                .split('\n')
-                .map((row) => row.slice(11))
-                .join('\n');
+                embeddedLndNetwork.toLowerCase() === 'testnet3'
+                    ? 'testnet'
+                    : embeddedLndNetwork.toLowerCase() === 'testnet4'
+                    ? 'testnet4'
+                    : 'mainnet';
+
+            let log = '';
+            try {
+                const tailLog = await NativeModules.LndMobileTools.tailLog(
+                    100,
+                    lndDir || 'lnd',
+                    network
+                );
+                log = tailLog
+                    .split('\n')
+                    .map((row: string) => row.slice(11))
+                    .join('\n');
+            } catch (e) {
+                console.log('Could not read log file:', e);
+                log = 'Log file not available yet. LND may not have started.';
+            }
 
             this.logListener = LndMobileToolsEventEmitter.addListener(
                 'lndlog',

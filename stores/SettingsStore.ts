@@ -191,9 +191,11 @@ export interface Settings {
     dontAllowOtherPeers: boolean;
     neutrinoPeersMainnet: Array<string>;
     neutrinoPeersTestnet: Array<string>;
+    neutrinoPeersTestnet4: Array<string>;
     zeroConfPeers: Array<string>;
     esploraMainnet: string;
     esploraTestnet: string;
+    esploraTestnet4: string;
     customEsplora: string;
     rescan: boolean;
     compactDb: boolean;
@@ -381,8 +383,22 @@ export type Implementations =
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
-    { key: 'Testnet', translateKey: 'network.testnet', value: 'testnet' }
+    { key: 'Testnet3', translateKey: 'network.testnet3', value: 'testnet' },
+    { key: 'Testnet4', translateKey: 'network.testnet4', value: 'testnet4' }
 ];
+
+// Helper to get display name for embedded LND network
+export const getNetworkDisplayName = (network: string): string => {
+    const networkDisplayMap: { [key: string]: string } = {
+        mainnet: 'Mainnet',
+        Mainnet: 'Mainnet',
+        testnet: 'Testnet3',
+        Testnet3: 'Testnet3',
+        testnet4: 'Testnet4',
+        Testnet4: 'Testnet4'
+    };
+    return networkDisplayMap[network] || network;
+};
 
 export const LNC_MAILBOX_KEYS = [
     {
@@ -1327,6 +1343,7 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
 
 export const DEFAULT_ESPLORA_MAINNET = 'https://mempool.space/api';
 export const DEFAULT_ESPLORA_TESTNET = 'https://mempool.space/testnet/api';
+export const DEFAULT_ESPLORA_TESTNET4 = 'https://mempool.space/testnet4/api';
 
 export const ESPLORA_MAINNET_KEYS = [
     {
@@ -1360,6 +1377,18 @@ export const ESPLORA_TESTNET_KEYS = [
     }
 ];
 
+export const ESPLORA_TESTNET4_KEYS = [
+    {
+        key: 'Mempool.space',
+        value: 'https://mempool.space/testnet4/api'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
+        value: 'Custom'
+    }
+];
+
 export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
     // friends
     [
@@ -1384,6 +1413,11 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
     'testnet.lnolymp.us',
     'btcd-testnet.lightning.computer',
     'testnet.blixtwallet.com'
+];
+
+export const DEFAULT_NEUTRINO_PEERS_TESTNET4 = [
+    'testnet4.lnolymp.us',
+    'testnet4.blixtwallet.com'
 ];
 
 export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
@@ -1468,9 +1502,11 @@ export default class SettingsStore {
         dontAllowOtherPeers: false,
         neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
         neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
+        neutrinoPeersTestnet4: DEFAULT_NEUTRINO_PEERS_TESTNET4,
         zeroConfPeers: [],
         esploraMainnet: DEFAULT_ESPLORA_MAINNET,
         esploraTestnet: DEFAULT_ESPLORA_TESTNET,
+        esploraTestnet4: DEFAULT_ESPLORA_TESTNET4,
         customEsplora: '',
         rescan: false,
         compactDb: false,

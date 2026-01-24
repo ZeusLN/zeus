@@ -56,8 +56,10 @@ export default class AlertStore {
     @action
     public checkNeutrinoPeers = async () => {
         const peers =
-            this.settingsStore.embeddedLndNetwork === 'Testnet'
+            this.settingsStore.embeddedLndNetwork === 'Testnet3'
                 ? this.settingsStore.settings.neutrinoPeersTestnet
+                : this.settingsStore.embeddedLndNetwork === 'Testnet4'
+                ? this.settingsStore.settings.neutrinoPeersTestnet4
                 : this.settingsStore.settings.neutrinoPeersMainnet;
 
         const results: any = [];

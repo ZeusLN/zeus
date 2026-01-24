@@ -43,7 +43,10 @@ import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
-import SettingsStore, { INTERFACE_KEYS } from '../stores/SettingsStore';
+import SettingsStore, {
+    INTERFACE_KEYS,
+    getNetworkDisplayName
+} from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import { version } from '../package.json';
@@ -127,7 +130,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
 
             if (selectedNode.implementation === 'embedded-lnd') {
                 if (selectedNode.embeddedLndNetwork) {
-                    nodeSubtitle += ` (${selectedNode.embeddedLndNetwork})`;
+                    nodeSubtitle += ` (${getNetworkDisplayName(
+                        selectedNode.embeddedLndNetwork
+                    )})`;
                 }
                 if (!selectedNode.isSqlite) {
                     nodeSubtitle += ' [Bolt]';

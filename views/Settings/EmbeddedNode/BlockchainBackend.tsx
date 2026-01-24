@@ -13,8 +13,10 @@ import TextInput from '../../../components/TextInput';
 import SettingsStore, {
     ESPLORA_MAINNET_KEYS,
     ESPLORA_TESTNET_KEYS,
+    ESPLORA_TESTNET4_KEYS,
     DEFAULT_ESPLORA_MAINNET,
-    DEFAULT_ESPLORA_TESTNET
+    DEFAULT_ESPLORA_TESTNET,
+    DEFAULT_ESPLORA_TESTNET4
 } from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
@@ -31,6 +33,7 @@ interface BlockchainBackendState {
     embeddedLndBackend: 'neutrino' | 'esplora';
     esploraMainnet: string;
     esploraTestnet: string;
+    esploraTestnet4: string;
     customEsplora: string;
     loading: boolean;
 }
@@ -62,6 +65,8 @@ export default class BlockchainBackend extends React.Component<
             embeddedLndBackend: settings.embeddedLndBackend || 'neutrino',
             esploraMainnet: settings.esploraMainnet || DEFAULT_ESPLORA_MAINNET,
             esploraTestnet: settings.esploraTestnet || DEFAULT_ESPLORA_TESTNET,
+            esploraTestnet4:
+                settings.esploraTestnet4 || DEFAULT_ESPLORA_TESTNET4,
             customEsplora: settings.customEsplora || '',
             loading: false
         };
@@ -73,6 +78,7 @@ export default class BlockchainBackend extends React.Component<
             embeddedLndBackend,
             esploraMainnet,
             esploraTestnet,
+            esploraTestnet4,
             customEsplora,
             loading
         } = this.state;
@@ -81,17 +87,27 @@ export default class BlockchainBackend extends React.Component<
         const {
             neutrinoPeersMainnet,
             neutrinoPeersTestnet,
+            neutrinoPeersTestnet4,
             dontAllowOtherPeers
         } = settings;
 
         const isMainnet = embeddedLndNetwork === 'Mainnet';
+        const isTestnet4 = embeddedLndNetwork === 'Testnet4';
         const neutrinoPeers = isMainnet
             ? neutrinoPeersMainnet
+            : isTestnet4
+            ? neutrinoPeersTestnet4
             : neutrinoPeersTestnet;
         const esploraKeys = isMainnet
             ? ESPLORA_MAINNET_KEYS
+            : isTestnet4
+            ? ESPLORA_TESTNET4_KEYS
             : ESPLORA_TESTNET_KEYS;
-        const currentEsploraUrl = isMainnet ? esploraMainnet : esploraTestnet;
+        const currentEsploraUrl = isMainnet
+            ? esploraMainnet
+            : isTestnet4
+            ? esploraTestnet4
+            : esploraTestnet;
 
         return (
             <Screen>
@@ -154,6 +170,8 @@ export default class BlockchainBackend extends React.Component<
                                             await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
                                                 isMainnet
                                                     ? 'mainnet'
+                                                    : isTestnet4
+                                                    ? 'testnet4'
                                                     : 'testnet'
                                             );
                                         } catch (e: any) {
@@ -302,6 +320,13 @@ export default class BlockchainBackend extends React.Component<
                                             await updateSettings({
                                                 esploraMainnet: value
                                             });
+                                        } else if (isTestnet4) {
+                                            this.setState({
+                                                esploraTestnet4: value
+                                            });
+                                            await updateSettings({
+                                                esploraTestnet4: value
+                                            });
                                         } else {
                                             this.setState({
                                                 esploraTestnet: value
@@ -336,6 +361,8 @@ export default class BlockchainBackend extends React.Component<
                                             placeholder={
                                                 isMainnet
                                                     ? DEFAULT_ESPLORA_MAINNET
+                                                    : isTestnet4
+                                                    ? DEFAULT_ESPLORA_TESTNET4
                                                     : DEFAULT_ESPLORA_TESTNET
                                             }
                                             onChangeText={async (
