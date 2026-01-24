@@ -1702,9 +1702,7 @@ export default class SettingsStore {
     public getSettings = async (silentUpdate: boolean = false) => {
         if (!silentUpdate) this.loading = true;
         try {
-            this.isMigrating = true;
             await MigrationsUtils.keychainCloudSyncMigration();
-            this.isMigrating = false;
 
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
 
