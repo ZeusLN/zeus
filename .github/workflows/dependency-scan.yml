@@ -1,0 +1,33 @@
+name: Dependency Security Scan
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The branch to scan'
+        required: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run GuardDog scan
+        run: |
+          pip install guarddog
+          guarddog --log-level debug npm verify package.json --exclude-rules potentially_compromised_email_domain --exclude-rules unclaimed_maintainer_email_domain --exit-non-zero-on-finding
+
+      - name: Run npm-scan heuristic scan
+        run: npx npm-scan
+
+      - name: Run Codebase Scanner (obfuscation detection)
+        run: npx @mathiscode/codebase-scanner@latest npm .
+
