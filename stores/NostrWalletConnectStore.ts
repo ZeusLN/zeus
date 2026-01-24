@@ -1000,16 +1000,11 @@ export default class NostrWalletConnectStore {
                 )
             );
         }
-        if (!connection.activity || !Array.isArray(connection.activity)) {
-            runInAction(() => {
-                connection.activity = [];
-            });
-        }
+        if (connection.activity.length === 0)
+            return { name: connection.name, activity: [] };
+
         const locale = this.settingsStore.settings.locale;
-        const safeActivity = Array.isArray(connection.activity)
-            ? connection.activity
-            : [];
-        const promises = safeActivity.map(async (activity) => {
+        const promises = connection.activity.map(async (activity) => {
             if (activity?.invoice) {
                 runInAction(() => {
                     activity.invoice =
@@ -1072,10 +1067,7 @@ export default class NostrWalletConnectStore {
         });
         await Promise.all(promises);
         runInAction(() => {
-            const currentActivity = Array.isArray(connection.activity)
-                ? connection.activity
-                : [];
-            connection.activity = currentActivity.filter((activity) => {
+            connection.activity = connection.activity.filter((activity) => {
                 const isInvalidFailure =
                     activity.status === 'failed' &&
                     NostrConnectUtils.isIgnorableError(activity.error || '');
@@ -1083,10 +1075,7 @@ export default class NostrWalletConnectStore {
             });
         });
         this.saveConnections();
-        const finalActivity = Array.isArray(connection.activity)
-            ? connection.activity
-            : [];
-        return { name: connection.name, activity: finalActivity };
+        return { name: connection.name, activity: connection.activity };
     };
     @action
     private markConnectionUsed = async (connectionId: string) => {
@@ -1840,15 +1829,13 @@ export default class NostrWalletConnectStore {
             let nip47Transactions: Nip47Transaction[] = [];
 
             if (connection.hasPaymentPermissions()) {
-                const safeActivity = Array.isArray(connection.activity)
-                    ? connection.activity
-                    : [];
-                nip47Transactions = safeActivity
+                nip47Transactions = connection.activity
                     .map((activity) =>
                         NostrConnectUtils.convertConnectionActivityToNip47Transaction(
                             activity
                         )
                     )
+                    .filter((tx) => tx.amount > 0)
                     .sort((a, b) => b.created_at - a.created_at);
             } else {
                 await Promise.all([
@@ -2542,14 +2529,11 @@ export default class NostrWalletConnectStore {
         errorMessage: string,
         paymentHash?: string
     ): Promise<void> {
-        const safeActivity = Array.isArray(connection.activity)
-            ? connection.activity
-            : [];
-        const activity = safeActivity.find((conn) => conn.id === id);
+        const activity = connection.activity.find((conn) => conn.id === id);
         if (activity?.status === 'success') {
             return;
         }
-        const index = safeActivity.findIndex((conn) => conn.id === id);
+        const index = connection.activity.findIndex((conn) => conn.id === id);
         runInAction(() => {
             const record: ConnectionActivity = {
                 id,
@@ -2561,10 +2545,6 @@ export default class NostrWalletConnectStore {
                 paymentHash,
                 createdAt: new Date()
             };
-
-            if (!Array.isArray(connection.activity)) {
-                connection.activity = [];
-            }
             if (index !== -1) {
                 connection.activity[index] = {
                     ...connection.activity[index],

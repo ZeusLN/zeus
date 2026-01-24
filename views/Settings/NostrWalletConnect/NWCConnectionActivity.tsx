@@ -90,17 +90,14 @@ export default class NWCConnectionActivity extends React.Component<
 
             const { name, activity } =
                 await NostrWalletConnectStore.getActivities(connectionId);
-            const safeActivity = Array.isArray(activity) ? activity : [];
             const filteredActivity = this.applyFilters(
-                safeActivity,
+                activity,
                 this.state.activeFilters
             );
 
             this.setState({
-                activity: safeActivity,
-                filteredActivity: Array.isArray(filteredActivity)
-                    ? filteredActivity
-                    : [],
+                activity,
+                filteredActivity,
                 connectionName: name,
                 loading: false
             });
@@ -122,7 +119,7 @@ export default class NWCConnectionActivity extends React.Component<
         activities: ConnectionActivity[],
         filters: NWCFilterState
     ): ConnectionActivity[] => {
-        if (!activities || !Array.isArray(activities)) {
+        if (activities.length === 0) {
             return [];
         }
         const allFiltersActive = Object.values(filters).every(
@@ -166,13 +163,10 @@ export default class NWCConnectionActivity extends React.Component<
 
     handleFilterChange = (newFilters: NWCFilterState) => {
         this.setState((prevState) => {
-            const safeActivity = Array.isArray(prevState.activity)
-                ? prevState.activity
-                : [];
-            const filtered = this.applyFilters(safeActivity, newFilters);
+            const filtered = this.applyFilters(prevState.activity, newFilters);
             return {
                 activeFilters: newFilters,
-                filteredActivity: Array.isArray(filtered) ? filtered : []
+                filteredActivity: filtered
             };
         });
     };
@@ -438,8 +432,7 @@ export default class NWCConnectionActivity extends React.Component<
 
     getSafeFilteredActivity = (): ConnectionActivity[] => {
         const { filteredActivity } = this.state;
-        if (!filteredActivity) return [];
-        if (!Array.isArray(filteredActivity)) return [];
+        if (filteredActivity.length === 0) return [];
         try {
             return filteredActivity.slice().reverse();
         } catch (e) {

@@ -172,7 +172,7 @@ export default class NWCConnection extends BaseModel {
             }
         });
 
-        if (this.activity && Array.isArray(this.activity)) {
+        if (this.activity && this.activity.length > 0) {
             this.activity = this.activity.map((a: any) => {
                 const createdAt = this.coerceToDate(a?.createdAt);
                 const expiresAt = this.coerceToDate(a?.expiresAt);
