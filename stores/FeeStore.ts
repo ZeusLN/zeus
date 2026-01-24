@@ -137,7 +137,8 @@ export default class FeeStore {
         channelPoint?: string,
         channelId?: string,
         minHtlc?: string,
-        maxHtlc?: string
+        maxHtlc?: string,
+        feeRateMode: 'percent' | 'ppm' = 'percent'
     ) => {
         this.loading = true;
         this.setFeesError = false;
@@ -146,7 +147,12 @@ export default class FeeStore {
 
         // handle commas in place of decimals
         const baseFee = newBaseFee.replace(/,/g, '.');
-        const feeRate = newFeeRate.replace(/,/g, '.');
+        let feeRate = newFeeRate.replace(/,/g, '.');
+
+        // convert PPM to percentage for LND
+        if (feeRateMode === 'ppm' && BackendUtils.isLNDBased()) {
+            feeRate = new BigNumber(feeRate).dividedBy(10000).toString();
+        }
 
         const data: any = {
             base_fee_msat: `${Number(baseFee) * 1000}`,
