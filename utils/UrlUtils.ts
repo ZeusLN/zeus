@@ -13,8 +13,15 @@ const goToBlockExplorer = (
         custom && privacy.customBlockExplorer
             ? privacy.customBlockExplorer
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
-    const network =
-        nodeInfoStore.nodeInfo.isTestNet || testnet ? 'testnet/' : '';
+
+    let network = '';
+    if (nodeInfoStore.nodeInfo.isTestNet4) {
+        network = 'testnet4/';
+    } else if (nodeInfoStore.nodeInfo.isTestNet || testnet) {
+        network = 'testnet/';
+    } else if (nodeInfoStore.nodeInfo.isSigNet) {
+        network = 'signet/';
+    }
 
     let path: string = type;
     if (type === 'block-height') {

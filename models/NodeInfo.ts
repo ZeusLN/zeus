@@ -29,13 +29,24 @@ export default class NodeInfo extends BaseModel {
         return this.id || this.pubkey || this.identity_pubkey || '';
     }
 
+    @computed public get isTestNet4(): boolean {
+        return (
+            this.network === 'testnet4' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'testnet4')
+        );
+    }
+
     @computed public get isTestNet(): boolean {
         return (
             this.testnet ||
             this.network === 'testnet' ||
+            this.network === 'testnet4' ||
             (this.chains &&
                 this.chains[0] &&
-                this.chains[0].network === 'testnet')
+                (this.chains[0].network === 'testnet' ||
+                    this.chains[0].network === 'testnet4'))
         );
     }
 

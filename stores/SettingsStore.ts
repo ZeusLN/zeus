@@ -46,6 +46,7 @@ export interface Node {
     adminMacaroon?: string;
     embeddedLndNetwork?: string;
     lndDir?: string;
+    isSqlite?: boolean;
 }
 
 interface PrivacySettings {
@@ -186,10 +187,16 @@ export interface Settings {
     bimodalPathfinding: boolean;
     graphSyncPromptNeverAsk: boolean;
     graphSyncPromptIgnoreOnce: boolean;
+    embeddedLndBackend: 'neutrino' | 'esplora';
     dontAllowOtherPeers: boolean;
     neutrinoPeersMainnet: Array<string>;
     neutrinoPeersTestnet: Array<string>;
+    neutrinoPeersTestnet4: Array<string>;
     zeroConfPeers: Array<string>;
+    esploraMainnet: string;
+    esploraTestnet: string;
+    esploraTestnet4: string;
+    customEsplora: string;
     rescan: boolean;
     compactDb: boolean;
     recovery: boolean;
@@ -376,8 +383,22 @@ export type Implementations =
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
-    { key: 'Testnet', translateKey: 'network.testnet', value: 'testnet' }
+    { key: 'Testnet3', translateKey: 'network.testnet3', value: 'testnet' },
+    { key: 'Testnet4', translateKey: 'network.testnet4', value: 'testnet4' }
 ];
+
+// Helper to get display name for embedded LND network
+export const getNetworkDisplayName = (network: string): string => {
+    const networkDisplayMap: { [key: string]: string } = {
+        mainnet: 'Mainnet',
+        Mainnet: 'Mainnet',
+        testnet: 'Testnet3',
+        Testnet3: 'Testnet3',
+        testnet4: 'Testnet4',
+        Testnet4: 'Testnet4'
+    };
+    return networkDisplayMap[network] || network;
+};
 
 export const LNC_MAILBOX_KEYS = [
     {
@@ -1320,6 +1341,54 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'noad.sathoarder.com'
 ];
 
+export const DEFAULT_ESPLORA_MAINNET = 'https://mempool.space/api';
+export const DEFAULT_ESPLORA_TESTNET = 'https://mempool.space/testnet/api';
+export const DEFAULT_ESPLORA_TESTNET4 = 'https://mempool.space/testnet4/api';
+
+export const ESPLORA_MAINNET_KEYS = [
+    {
+        key: 'Mempool.space',
+        value: 'https://mempool.space/api'
+    },
+    {
+        key: 'Blockstream.info',
+        value: 'https://blockstream.info/api'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
+        value: 'Custom'
+    }
+];
+
+export const ESPLORA_TESTNET_KEYS = [
+    {
+        key: 'Mempool.space',
+        value: 'https://mempool.space/testnet/api'
+    },
+    {
+        key: 'Blockstream.info',
+        value: 'https://blockstream.info/testnet/api'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
+        value: 'Custom'
+    }
+];
+
+export const ESPLORA_TESTNET4_KEYS = [
+    {
+        key: 'Mempool.space',
+        value: 'https://mempool.space/testnet4/api'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'general.custom',
+        value: 'Custom'
+    }
+];
+
 export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
     // friends
     [
@@ -1344,6 +1413,11 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
     'testnet.lnolymp.us',
     'btcd-testnet.lightning.computer',
     'testnet.blixtwallet.com'
+];
+
+export const DEFAULT_NEUTRINO_PEERS_TESTNET4 = [
+    'testnet4.lnolymp.us',
+    'testnet4.blixtwallet.com'
 ];
 
 export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
@@ -1424,10 +1498,16 @@ export default class SettingsStore {
         bimodalPathfinding: true,
         graphSyncPromptNeverAsk: false,
         graphSyncPromptIgnoreOnce: false,
+        embeddedLndBackend: 'neutrino',
         dontAllowOtherPeers: false,
         neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
         neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
+        neutrinoPeersTestnet4: DEFAULT_NEUTRINO_PEERS_TESTNET4,
         zeroConfPeers: [],
+        esploraMainnet: DEFAULT_ESPLORA_MAINNET,
+        esploraTestnet: DEFAULT_ESPLORA_TESTNET,
+        esploraTestnet4: DEFAULT_ESPLORA_TESTNET4,
+        customEsplora: '',
         rescan: false,
         compactDb: false,
         recovery: false,
@@ -1529,6 +1609,7 @@ export default class SettingsStore {
     @observable public adminMacaroon: string;
     @observable public embeddedLndNetwork: string;
     @observable public lndDir?: string;
+    @observable public isSqlite?: boolean;
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
     @observable public lndFolderMissing: boolean = false;
@@ -1694,6 +1775,7 @@ export default class SettingsStore {
             this.adminMacaroon = node.adminMacaroon;
             this.embeddedLndNetwork = node.embeddedLndNetwork;
             this.lndDir = node.lndDir || 'lnd';
+            this.isSqlite = node.isSqlite;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }

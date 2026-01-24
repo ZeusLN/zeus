@@ -426,6 +426,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             walletPassword,
             lndDir,
             embeddedLndNetwork,
+            isSqlite,
             updateSettings,
             fetchLock
         } = SettingsStore;
@@ -553,9 +554,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     try {
                         await initializeLnd({
                             lndDir: lndDir || 'lnd',
-                            isTestnet: embeddedLndNetwork === 'Testnet',
+                            network: embeddedLndNetwork?.toLowerCase(),
                             rescan,
-                            compactDb
+                            compactDb,
+                            isSqlite
                         });
                     } catch (initError: any) {
                         // During recovery, initializeLnd may fail because createLndWallet
@@ -615,11 +617,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
 
                 try {
+                    // Native code expects isTestnet boolean - true for any non-mainnet network
                     await startLnd({
                         lndDir: lndDir || 'lnd',
                         walletPassword: walletPassword || '',
                         isTorEnabled: embeddedTor,
-                        isTestnet: embeddedLndNetwork === 'Testnet',
+                        isTestnet:
+                            embeddedLndNetwork === 'Testnet3' ||
+                            embeddedLndNetwork === 'Testnet4',
                         isRecovery: recovery
                     });
                 } catch (error: any) {
