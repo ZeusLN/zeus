@@ -1395,6 +1395,7 @@
     "stores.NostrWalletConnectStore.zeusWallet": "Zeus Wallet",
     "stores.NostrWalletConnectStore.keysendPayment": "Pagamento Keysend",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "Il nome della connessione è obbligatorio",
+    "stores.NostrWalletConnectStore.error.failedToCreateInvoice": "Failed to create invoice",
     "stores.NostrWalletConnectStore.receivedCashuToken": "Token Cashu ricevuto",
     "stores.NostrWalletConnectStore.sentCashuToken": "Inviato token Cashu",
     "stores.NostrWalletConnectStore.paymentSentNotificationTitle": "Pagamento inviato tramite Nostr Wallet Connect",
