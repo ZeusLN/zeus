@@ -14,18 +14,29 @@ import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.Arguments;
 
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
+
 public class StealthMode extends ReactContextBaseJavaModule {
     private static final String TAG = "StealthMode";
     private static final String PREFS_NAME = "stealth_mode_prefs";
     private static final String PREF_STEALTH_APP = "stealth_app";
     private static final String PREF_STEALTH_ENABLED = "stealth_enabled";
 
-    // Activity and alias names - must match AndroidManifest.xml
+    // Activity name - must match AndroidManifest.xml
     private static final String MAIN_ACTIVITY = ".MainActivity";
-    private static final String ALIAS_CALCULATOR = ".StealthCalculatorActivity";
-    private static final String ALIAS_VPN = ".StealthVPNActivity";
-    private static final String ALIAS_QRSCANNER = ".StealthQRScannerActivity";
-    private static final String ALIAS_NOTEPAD = ".StealthNotepadActivity";
+
+    // Stealth app aliases - centralized configuration
+    private static final Map<String, String> STEALTH_APPS;
+    static {
+        Map<String, String> map = new HashMap<>();
+        map.put("calculator", ".StealthCalculatorActivity");
+        map.put("vpn", ".StealthVPNActivity");
+        map.put("qrscanner", ".StealthQRScannerActivity");
+        map.put("notepad", ".StealthNotepadActivity");
+        STEALTH_APPS = Collections.unmodifiableMap(map);
+    }
 
     public StealthMode(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -41,27 +52,11 @@ public class StealthMode extends ReactContextBaseJavaModule {
     }
 
     private String getAliasForApp(String stealthApp) {
-        switch (stealthApp) {
-            case "calculator":
-                return ALIAS_CALCULATOR;
-            case "vpn":
-                return ALIAS_VPN;
-            case "qrscanner":
-                return ALIAS_QRSCANNER;
-            case "notepad":
-                return ALIAS_NOTEPAD;
-            default:
-                return null; // null means use MainActivity directly
-        }
+        return STEALTH_APPS.get(stealthApp);
     }
 
     private String[] getStealthAliases() {
-        return new String[]{
-            ALIAS_CALCULATOR,
-            ALIAS_VPN,
-            ALIAS_QRSCANNER,
-            ALIAS_NOTEPAD
-        };
+        return STEALTH_APPS.values().toArray(new String[0]);
     }
 
     @ReactMethod
