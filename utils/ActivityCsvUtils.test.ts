@@ -10,7 +10,8 @@ import { Platform } from 'react-native';
 jest.mock('react-native-fs', () => ({
     DownloadDirectoryPath: '/mock/download/path',
     DocumentDirectoryPath: '/mock/document/path',
-    writeFile: jest.fn()
+    writeFile: jest.fn(),
+    exists: jest.fn()
 }));
 
 jest.mock('react-native', () => ({
@@ -153,6 +154,7 @@ describe('activityCsvUtils', () => {
     describe('saveCsvFile', () => {
         beforeEach(() => {
             jest.clearAllMocks();
+            (RNFS.exists as jest.Mock).mockResolvedValue(false);
         });
 
         it('writes the CSV file to the correct path on Android', async () => {
@@ -161,6 +163,9 @@ describe('activityCsvUtils', () => {
 
             await saveCsvFile('test.csv', 'mock,csv,data');
 
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/test.csv'
+            );
             expect(RNFS.writeFile).toHaveBeenCalledWith(
                 '/mock/download/path/test.csv',
                 'mock,csv,data',
@@ -174,8 +179,149 @@ describe('activityCsvUtils', () => {
 
             await saveCsvFile('test.csv', 'mock,csv,data');
 
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/document/path/test.csv'
+            );
             expect(RNFS.writeFile).toHaveBeenCalledWith(
                 '/mock/document/path/test.csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('appends (1) suffix when file already exists', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('test.csv', 'mock,csv,data');
+
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/test.csv'
+            );
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/test (1).csv'
+            );
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/test (1).csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('appends (2) suffix when file and (1) already exist', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('test.csv', 'mock,csv,data');
+
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/test.csv'
+            );
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/test (1).csv'
+            );
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/test (2).csv'
+            );
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/test (2).csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('handles uppercase CSV extension', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('test.CSV', 'mock,csv,data');
+
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/test (1).csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('handles filename with non-CSV extension correctly', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('export.txt', 'mock,csv,data');
+
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/export (1).csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('handles filename without extension', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('export', 'mock,csv,data');
+
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/export (1).csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('strips existing numbered suffix from filename', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('export (1).csv', 'mock,csv,data');
+
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/export (2).csv',
+                'mock,csv,data',
+                'utf8'
+            );
+        });
+
+        it('strips existing numbered suffix and finds next available number', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(true)
+                .mockResolvedValueOnce(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+
+            await saveCsvFile('export (1).csv', 'mock,csv,data');
+
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/export (1).csv'
+            );
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/export (2).csv'
+            );
+            expect(RNFS.exists).toHaveBeenCalledWith(
+                '/mock/download/path/export (3).csv'
+            );
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                '/mock/download/path/export (3).csv',
                 'mock,csv,data',
                 'utf8'
             );

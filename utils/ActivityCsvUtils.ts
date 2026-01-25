@@ -74,12 +74,18 @@ export const saveCsvFile = async (fileName: string, csvData: string) => {
                 ? RNFS.DownloadDirectoryPath
                 : RNFS.DocumentDirectoryPath;
 
-        const nameWithoutExt = fileName.replace(/\.csv$/i, '');
         let uniqueFileName = fileName;
-        let counter = 1;
 
-        while (await RNFS.exists(`${directory}/${uniqueFileName}`)) {
-            uniqueFileName = `${nameWithoutExt} (${counter++}).csv`;
+        if (await RNFS.exists(`${directory}/${uniqueFileName}`)) {
+            const baseName = (
+                fileName.substring(0, fileName.lastIndexOf('.')) || fileName
+            ).replace(/ \(\d+\)$/, '');
+            const match = fileName.match(/ \((\d+)\)\.csv$/i);
+            let counter = match ? parseInt(match[1], 10) + 1 : 1;
+
+            do {
+                uniqueFileName = `${baseName} (${counter++}).csv`;
+            } while (await RNFS.exists(`${directory}/${uniqueFileName}`));
         }
 
         const filePath = `${directory}/${uniqueFileName}`;
