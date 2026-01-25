@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">ZEUS</string>
+    <!-- Stealth Mode App Names -->
+    <string name="stealth_calculator">Calculator</string>
+    <string name="stealth_vpn">Edge VPN</string>
+    <string name="stealth_qrscanner">QR Scanner</string>
+    <string name="stealth_notepad">Notepad</string>
 </resources>
