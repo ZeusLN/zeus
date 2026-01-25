@@ -465,39 +465,34 @@ const handleAnything = async (
         ];
     } else if (AddressUtils.isValidLNDHubAddress(value)) {
         if (isClipboardValue) return true;
-        const { username, password, host } =
-            AddressUtils.processLNDHubAddress(value);
+        try {
+            const { username, password, host } =
+                AddressUtils.processLNDHubAddress(value);
 
-        const existingAccount = !!username;
+            const existingAccount = !!username;
 
-        let node;
-        if (host) {
-            node = {
-                implementation: 'lndhub',
-                username,
-                password,
-                lndhubUrl: host,
-                certVerification: true,
-                enableTor: host.includes('.onion'),
-                existingAccount
-            };
-        } else {
-            node = {
+            const node = {
                 implementation: 'lndhub',
                 username,
                 password,
                 certVerification: true,
-                existingAccount
+                existingAccount,
+                ...(host && {
+                    lndhubUrl: host,
+                    enableTor: host.includes('.onion')
+                })
             };
+            return [
+                'WalletConfiguration',
+                {
+                    node,
+                    newEntry: true,
+                    isValid: true
+                }
+            ];
+        } catch (error) {
+            throw new Error(localeString('utils.handleAnything.notValid'));
         }
-        return [
-            'WalletConfiguration',
-            {
-                node,
-                newEntry: true,
-                isValid: true
-            }
-        ];
     } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
         if (isClipboardValue) return true;
         const { pubkey, host } = NodeUriUtils.processNodeUri(value);
