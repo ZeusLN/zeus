@@ -66,7 +66,7 @@ export const convertActivityToCsv = async (
     }
 };
 
-//Adding this to detect if file alderdy exist or not!
+//Adding this to detect if file already exist or not!
 
 const getNonCollidingPath = async (filePath: string): Promise<string> => {
     const dotIndex = filePath.lastIndexOf('.');
@@ -85,7 +85,7 @@ const getNonCollidingPath = async (filePath: string): Promise<string> => {
 };
 
 
-//Saves CSV file to the device with proper naming!
+//Saves CSV file to this device, ensuring a unique filename to prevent overwrites.
  
 export const saveCsvFile = async (fileName: string, csvData: string) => {
     try {

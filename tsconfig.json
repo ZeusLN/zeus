@@ -22,5 +22,5 @@
     }
   },
   "exclude": ["node_modules", "zeus_modules"],
-  "include": ["**/*.ts", "**/*.tsx","src","src/types"]
+  "include": ["**/*.ts", "**/*.tsx","src"]
 }
