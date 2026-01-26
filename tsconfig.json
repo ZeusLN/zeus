@@ -6,14 +6,14 @@
     "experimentalDecorators": true,
     "isolatedModules": false,
     "jsx": "react-native",
-    "lib": ["es6"],
+    "lib": ["es2017","dom"],
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "noEmit": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "strict": true,
-    "target": "esnext",
+    "target": "es2017",
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
     "baseUrl": "./",
@@ -22,5 +22,5 @@
     }
   },
   "exclude": ["node_modules", "zeus_modules"],
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx","src","src/types"]
 }

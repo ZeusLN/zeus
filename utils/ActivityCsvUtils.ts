@@ -66,16 +66,39 @@ export const convertActivityToCsv = async (
     }
 };
 
-//Saves CSV file to the device.
+//Adding this to detect if file alderdy exist or not!
+
+const getNonCollidingPath = async (filePath: string): Promise<string> => {
+    const dotIndex = filePath.lastIndexOf('.');
+    const base = dotIndex !== -1 ? filePath.slice(0, dotIndex) : filePath;
+    const ext = dotIndex !== -1 ? filePath.slice(dotIndex) : '';
+
+    let counter = 1;
+    let candidatePath = filePath;
+
+    while (await RNFS.exists(candidatePath)) {
+        candidatePath = `${base} (${counter})${ext}`;
+        counter++;
+    }
+
+    return candidatePath;
+};
+
+
+//Saves CSV file to the device with proper naming!
+ 
 export const saveCsvFile = async (fileName: string, csvData: string) => {
     try {
-        const filePath =
+        const basePath =
             Platform.OS === 'android'
-                ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-                : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+                ? RNFS.DownloadDirectoryPath
+                : RNFS.DocumentDirectoryPath;
 
-        console.log(`Saving file to: ${filePath}`);
-        await RNFS.writeFile(filePath, csvData, 'utf8');
+        const initialPath = `${basePath}/${fileName}`;
+        const safePath = await getNonCollidingPath(initialPath);
+
+        console.log(`Saving file to: ${safePath}`);
+        await RNFS.writeFile(safePath, csvData, 'utf8');
     } catch (err) {
         console.error('Failed to save CSV file:', err);
         throw err;
