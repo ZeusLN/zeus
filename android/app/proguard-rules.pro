@@ -23,3 +23,7 @@
 -keep class com.swmansion.reanimated.** { *; }
 
 -keep class org.torproject.jni.** { *; }
+
+# Fresco animation cache classes (not included in public API)
+-dontwarn com.facebook.imagepipeline.cache.AnimatedCache
+-dontwarn com.facebook.imagepipeline.cache.AnimationFrames
