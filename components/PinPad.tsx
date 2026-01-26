@@ -100,193 +100,50 @@ export default function PinPad({
     };
 
     const triggerHapticFeedback = () => {
-        if (!amount) {
-            // effectClick is only available on Android
-            const type = Platform.OS === 'android' ? 'effectClick' : 'soft';
-            ReactNativeHapticFeedback.trigger(type);
-        }
+        // effectClick is only available on Android
+        const type = Platform.OS === 'android' ? 'effectClick' : 'soft';
+        ReactNativeHapticFeedback.trigger(type);
     };
 
     return (
         <View style={styles.pad}>
+            {/* Rows 1-3: Numbers 1-9 */}
+            {[
+                [1, 2, 3],
+                [4, 5, 6],
+                [7, 8, 9]
+            ].map((row, rowIndex) => (
+                <Row key={rowIndex} align="flex-end" style={styles.pinPadRow}>
+                    {row.map((num) => (
+                        <Touchable
+                            key={num}
+                            touch={() => {
+                                incrementPinValueLength();
+                                appendValue(pinNumbers[num]);
+                                triggerHapticFeedback();
+                            }}
+                            highlight={numberHighlight}
+                            style={styles.key}
+                        >
+                            <Text
+                                style={{
+                                    ...styles.pinPadNumber,
+                                    color: themeColor('text'),
+                                    fontSize: bigKeypadButtons
+                                        ? BIG_SIZE
+                                        : DEFAULT_SIZE
+                                }}
+                            >
+                                {pinNumbers[num]}
+                            </Text>
+                        </Touchable>
+                    ))}
+                </Row>
+            ))}
+
+            {/* Row 4: Special bottom row */}
             <Row align="flex-end" style={styles.pinPadRow}>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[1]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[1]}
-                    </Text>
-                </Touchable>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[2]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[2]}
-                    </Text>
-                </Touchable>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[3]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[3]}
-                    </Text>
-                </Touchable>
-            </Row>
-            <Row align="flex-end" style={styles.pinPadRow}>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[4]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[4]}
-                    </Text>
-                </Touchable>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[5]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[5]}
-                    </Text>
-                </Touchable>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[6]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[6]}
-                    </Text>
-                </Touchable>
-            </Row>
-            <Row align="flex-end" style={styles.pinPadRow}>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[7]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[7]}
-                    </Text>
-                </Touchable>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[8]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[8]}
-                    </Text>
-                </Touchable>
-                <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        appendValue(pinNumbers[9]);
-                        triggerHapticFeedback();
-                    }}
-                    highlight={numberHighlight}
-                    style={styles.key}
-                >
-                    <Text
-                        style={{
-                            ...styles.pinPadNumber,
-                            color: themeColor('text'),
-                            fontSize: bigKeypadButtons ? BIG_SIZE : DEFAULT_SIZE
-                        }}
-                    >
-                        {pinNumbers[9]}
-                    </Text>
-                </Touchable>
-            </Row>
-            <Row align="flex-end" style={styles.pinPadRow}>
+                {/* Left key: decimal point or back button */}
                 {amount ? (
                     <Touchable
                         touch={() => {
@@ -330,6 +187,8 @@ export default function PinPad({
                         </Text>
                     </Touchable>
                 )}
+
+                {/* Middle key: 0 */}
                 <Touchable
                     touch={() => {
                         incrementPinValueLength();
@@ -349,6 +208,8 @@ export default function PinPad({
                         {pinNumbers[0]}
                     </Text>
                 </Touchable>
+
+                {/* Right key: delete/clear/submit */}
                 {!hidePinLength &&
                     (amount ? (
                         <Touchable
@@ -359,6 +220,7 @@ export default function PinPad({
                             onLongPress={() => {
                                 clearPinValueLength();
                                 clearValue();
+                                triggerHapticFeedback();
                             }}
                             highlight={numberHighlight}
                             style={styles.key}
