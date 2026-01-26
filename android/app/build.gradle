@@ -166,9 +166,6 @@ android {
         pickFirst "lib/x86_64/libgojni.so"
 
         jniLibs {
-            // when useLegacyPackaging is false (default). Setting it to true would require
-            // compressed libraries which is not recommended for 16KB devices.
-            // Per official Android docs: https://developer.android.com/guide/practices/page-sizes
             useLegacyPackaging false
         }
     }
@@ -200,10 +197,8 @@ dependencies {
     implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01'
     implementation files("../../node_modules/react-native-tor/android/libs/sifir_android.aar")
     // gif
-    implementation 'com.facebook.fresco:fresco:3.1.3'
-
-    // NOTE: Fresco's animated-gif bundles `libgifimage.so`, which may be ELF-unaligned
-   // implementation 'com.facebook.fresco:animated-gif:3.1.3'
+    implementation 'com.facebook.fresco:fresco:3.6.0'
+    implementation 'com.facebook.fresco:animated-gif:3.6.0'
 
     // Pegasus
     // implementation(name:"Lndmobile", ext:"aar")
