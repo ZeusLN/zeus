@@ -8,7 +8,6 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-import dev.doubledot.doki.ui.DokiActivity
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileInputStream
@@ -104,10 +103,6 @@ class MainActivity : ReactActivity() {
                 Toast.makeText(this, "Error " + e.message, Toast.LENGTH_LONG).show()
             }
         }
-    }
-
-    fun showMsg() {
-        startActivity(Intent(this@MainActivity, DokiActivity::class.java))
     }
 
     companion object {
