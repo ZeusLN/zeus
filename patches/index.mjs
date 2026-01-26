@@ -6,6 +6,7 @@ import { patchNativeEventEmitter } from './patch-native-event-emitter.mjs';
 import { patchReactNativeNotifications } from './patch-react-native-notifications.mjs';
 import { patchNobleHashes } from './patch-noble-hashes.mjs';
 import { patchViewShot } from './patch-view-shot.mjs';
+import { patchVisionCamera } from './patch-vision-camera.mjs';
 
 console.log('Running postinstall patches...\n');
 
@@ -15,6 +16,7 @@ console.log('Running postinstall patches...\n');
     patchReactNativeNotifications();
     patchNobleHashes();
     patchViewShot();
+    patchVisionCamera();
 
     console.log('\nAll patches applied successfully.');
 })();
