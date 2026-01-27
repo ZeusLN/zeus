@@ -389,7 +389,7 @@ export default class CashuTokenView extends React.Component<
                                 />
                             )}
 
-                            {proofs?.length && (
+                            {proofs && proofs.length > 0 && (
                                 <KeyValue
                                     keyValue={localeString(
                                         'views.Cashu.CashuToken.proofCount'
@@ -399,7 +399,7 @@ export default class CashuTokenView extends React.Component<
                                 />
                             )}
 
-                            {getDisplayTime && (
+                            {getDisplayTime && getDisplayTime !== '' && (
                                 <KeyValue
                                     keyValue={localeString(
                                         sent
