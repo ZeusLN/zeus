@@ -8,6 +8,7 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import FeeUtils from '../utils/FeeUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
 export default class FeeStore {
@@ -151,7 +152,7 @@ export default class FeeStore {
 
         // convert PPM to decimal rate for LND
         if (feeRateMode === 'ppm' && BackendUtils.isLNDBased() && feeRate) {
-            feeRate = new BigNumber(feeRate).dividedBy(1000000).toString();
+            feeRate = FeeUtils.ppmToPercent(feeRate);
         }
 
         const data: any = {

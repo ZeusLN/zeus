@@ -3,6 +3,16 @@ import FeeUtils from './FeeUtils';
 const satoshisPerBTC = 100_000_000;
 
 describe('FeeUtils', () => {
+    describe('ppmToPercent', () => {
+        it('converts PPM to decimal rate', () => {
+            expect(FeeUtils.ppmToPercent(1000000)).toEqual('1');
+            expect(FeeUtils.ppmToPercent(500000)).toEqual('0.5');
+            expect(FeeUtils.ppmToPercent(100)).toEqual('0.0001');
+            expect(FeeUtils.ppmToPercent('250000')).toEqual('0.25');
+            expect(FeeUtils.ppmToPercent(0)).toEqual('0');
+        });
+    });
+
     describe('calculateDefaultRoutingFee', () => {
         it('Calculates a fee based on the amount', () => {
             expect(FeeUtils.calculateDefaultRoutingFee(0)).toEqual('0');
