@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.12.2",
+  "version": "0.13.0-prealpha",
   "private": true,
   "jest": {
     "preset": "react-native",
