@@ -57,8 +57,8 @@ export default class CashuInvoiceView extends React.Component<
                 mint: mintUrl
             });
 
-            if (!cashuWallets[mintUrl].wallet) {
-                await initializeWallet(mintUrl, true);
+            if (!cashuWallets[mintUrl]) {
+                await initializeWallet(mintUrl);
             }
 
             // Set up a periodic check every 5 seconds

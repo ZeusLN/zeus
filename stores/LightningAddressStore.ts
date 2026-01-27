@@ -373,8 +373,9 @@ export default class LightningAddressStore {
         try {
             const { verification, signature } = await this.getAuthData();
 
-            if (!this.cashuStore.cashuWallets[mint_url].wallet)
-                await this.cashuStore.initializeWallet(mint_url, true);
+            if (!this.cashuStore.cashuWallets[mint_url]) {
+                await this.cashuStore.initializeWallet(mint_url);
+            }
 
             const createResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -811,11 +812,21 @@ export default class LightningAddressStore {
                     );
 
                     const redeemData = redeemResponse.json();
+
                     if (
                         redeemResponse.info().status !== 200 ||
                         !redeemData.success
                     ) {
                         throw redeemData.error;
+                    }
+
+                    // If server returns a token, receive it
+                    if (redeemData.token) {
+                        console.log(
+                            'Receiving token from server:',
+                            redeemData.token
+                        );
+                        await this.cashuStore.receiveTokenCDK(redeemData.token);
                     }
 
                     this.redeeming = false;
