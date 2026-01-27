@@ -18,7 +18,7 @@ import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 import DeleteKey from '../assets/images/SVG/DeleteKey.svg';
 
 interface PinPadProps {
-    appendValue: (newValue: string) => void;
+    appendValue: (newValue: string) => boolean;
     clearValue: () => void;
     deleteValue: () => void;
     submitValue?: () => void;
@@ -105,6 +105,19 @@ export default function PinPad({
         ReactNativeHapticFeedback.trigger(type);
     };
 
+    const triggerErrorFeedback = () => {
+        ReactNativeHapticFeedback.trigger('notificationError');
+    };
+
+    const handleAppendWithFeedback = (value: string) => {
+        const wasAccepted = appendValue(value);
+        if (wasAccepted) {
+            triggerHapticFeedback();
+        } else {
+            triggerErrorFeedback();
+        }
+    };
+
     return (
         <View style={styles.pad}>
             {/* Rows 1-3: Numbers 1-9 */}
@@ -119,8 +132,7 @@ export default function PinPad({
                             key={num}
                             touch={() => {
                                 incrementPinValueLength();
-                                appendValue(pinNumbers[num]);
-                                triggerHapticFeedback();
+                                handleAppendWithFeedback(pinNumbers[num]);
                             }}
                             highlight={numberHighlight}
                             style={styles.key}
@@ -146,9 +158,7 @@ export default function PinPad({
                 {/* Left key: decimal point or back button */}
                 {amount ? (
                     <Touchable
-                        touch={() => {
-                            appendValue('.');
-                        }}
+                        touch={() => handleAppendWithFeedback('.')}
                         highlight={numberHighlight}
                         style={styles.key}
                     >
@@ -169,6 +179,11 @@ export default function PinPad({
                         touch={() => {
                             decrementPinValueLength();
                             deleteValue();
+                            triggerHapticFeedback();
+                        }}
+                        onLongPress={() => {
+                            clearPinValueLength();
+                            clearValue();
                             triggerHapticFeedback();
                         }}
                         highlight={numberHighlight}
@@ -192,8 +207,7 @@ export default function PinPad({
                 <Touchable
                     touch={() => {
                         incrementPinValueLength();
-                        appendValue(pinNumbers[0]);
-                        triggerHapticFeedback();
+                        handleAppendWithFeedback(pinNumbers[0]);
                     }}
                     highlight={numberHighlight}
                     style={styles.key}
@@ -216,6 +230,7 @@ export default function PinPad({
                             touch={() => {
                                 decrementPinValueLength();
                                 deleteValue();
+                                triggerHapticFeedback();
                             }}
                             onLongPress={() => {
                                 clearPinValueLength();
