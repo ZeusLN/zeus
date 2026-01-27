@@ -28,7 +28,11 @@ export default function Touchable({
                 </TouchableOpacity>
             )}
             {!highlight && (
-                <Pressable style={style} onPress={touch}>
+                <Pressable
+                    style={style}
+                    onPress={touch}
+                    onLongPress={onLongPress}
+                >
                     {children}
                 </Pressable>
             )}

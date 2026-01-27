@@ -131,33 +131,40 @@ export default class KeypadPane extends React.PureComponent<
         });
     }
 
-    appendValue = (value: string) => {
+    appendValue = (value: string): boolean => {
         const { amount } = this.state;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        let newAmount, decimalCount;
+        let newAmount;
 
-        // limit decimal places depending on units
-        if (units === 'fiat') {
-            const fiat = SettingsStore!.settings?.fiat || '';
-            const fiatProperties = FiatStore!.symbolLookup(fiat);
-            decimalCount =
-                fiatProperties?.decimalPlaces !== undefined
+        const getDecimalLimit = (): number | null => {
+            if (units === 'fiat') {
+                const fiat = SettingsStore!.settings?.fiat || '';
+                const fiatProperties = FiatStore!.symbolLookup(fiat);
+                return fiatProperties?.decimalPlaces !== undefined
                     ? fiatProperties.decimalPlaces
                     : 2;
-            if (
-                amount.split('.')[1] &&
-                amount.split('.')[1].length == decimalCount
-            )
-                return this.startShake();
+            }
+            if (units === 'sats') return 3;
+            if (units === 'BTC') return 8;
+            return null;
+        };
+
+        const decimalLimit = getDecimalLimit();
+        const [integerPart, decimalPart] = amount.split('.');
+
+        // limit decimal places depending on units
+        if (
+            decimalPart &&
+            decimalLimit !== null &&
+            decimalPart.length >= decimalLimit
+        ) {
+            this.startShake();
+            return false;
         }
-        if (units === 'sats') {
-            if (amount.split('.')[1] && amount.split('.')[1].length == 3)
-                return this.startShake();
-        }
+
         if (units === 'BTC') {
-            const [integerPart, decimalPart] = amount.split('.');
             // deny if trying to add more than 8 figures of Bitcoin
             if (
                 !decimalPart &&
@@ -165,25 +172,30 @@ export default class KeypadPane extends React.PureComponent<
                 integerPart.length == 8 &&
                 !amount.includes('.') &&
                 value !== '.'
-            )
-                return this.startShake();
-            // deny if trying to add more than 8 decimal places of satoshis
-            if (decimalPart && decimalPart.length == 8)
-                return this.startShake();
+            ) {
+                this.startShake();
+                return false;
+            }
         }
 
         // only allow one decimal, unless currency has zero decimal places
-        if (value === '.' && (amount.includes('.') || decimalCount === 0))
-            return this.startShake();
+        if (value === '.' && (amount.includes('.') || decimalLimit === 0)) {
+            this.startShake();
+            return false;
+        }
 
         const proposedNewAmountStr = `${amount}${value}`;
         const proposedNewAmount = new BigNumber(proposedNewAmountStr);
 
         // deny if exceeding BTC 21 million capacity
-        if (units === 'BTC' && proposedNewAmount.gt(21000000))
-            return this.startShake();
-        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0))
-            return this.startShake();
+        if (units === 'BTC' && proposedNewAmount.gt(21000000)) {
+            this.startShake();
+            return false;
+        }
+        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0)) {
+            this.startShake();
+            return false;
+        }
 
         if (amount === '0') {
             newAmount = value;
@@ -213,6 +225,8 @@ export default class KeypadPane extends React.PureComponent<
             needInbound,
             belowMinAmount
         });
+
+        return true;
     };
 
     clearValue = () => {
