@@ -20,6 +20,7 @@ import Conversion from '../../components/Conversion';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -30,7 +31,6 @@ import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 
 import LockIcon from '../../assets/images/SVG/Lock.svg';
-import { CHANNEL_MIGRATION_ACTIVE } from '../../views/Tools';
 
 const ErrorZeus = require('../../assets/images/errorZeus.png');
 
