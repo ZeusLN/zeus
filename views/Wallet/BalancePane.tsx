@@ -4,7 +4,8 @@ import {
     Text,
     View,
     StyleSheet,
-    TouchableOpacity
+    TouchableOpacity,
+    Alert
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { LinearProgress } from '@rneui/themed';
@@ -29,6 +30,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 
 import LockIcon from '../../assets/images/SVG/Lock.svg';
+import { CHANNEL_MIGRATION_ACTIVE } from '../../views/Tools';
 
 const ErrorZeus = require('../../assets/images/errorZeus.png');
 
@@ -40,6 +42,8 @@ interface BalancePaneProps {
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
     loading: boolean;
+    isChannelMigrating: boolean;
+    onUnlock: () => void;
 }
 
 interface BalancePaneState {
@@ -71,6 +75,37 @@ export default class BalancePane extends React.PureComponent<
         }
     }
 
+    handleCancelMigration = () => {
+        Alert.alert(
+            localeString('views.Wallet.BalancePane.migration.alert.title'),
+            `⚠️ ${
+                localeString('views.Wallet.BalancePane.migration.alert.text1') +
+                '\n\n'
+            }${
+                localeString('views.Wallet.BalancePane.migration.alert.text2') +
+                `\n\n`
+            }${localeString('views.Wallet.BalancePane.migration.alert.text3')}`,
+            [
+                {
+                    text: localeString(
+                        'views.Wallet.BalancePane.migration.alert.cancel'
+                    ),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString(
+                        'views.Wallet.BalancePane.migration.alert.confirm'
+                    ),
+                    style: 'destructive',
+                    onPress: async () => {
+                        await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
+                        this.props.onUnlock();
+                    }
+                }
+            ]
+        );
+    };
+
     render() {
         const {
             NodeInfoStore,
@@ -79,7 +114,8 @@ export default class BalancePane extends React.PureComponent<
             SettingsStore,
             SyncStore,
             navigation,
-            loading
+            loading,
+            isChannelMigrating
         } = this.props;
         const { showBackupPrompt } = this.state;
         const {
@@ -192,261 +228,7 @@ export default class BalancePane extends React.PureComponent<
                             marginBottom: 20
                         }}
                     >
-                        {isRecovering && recoveryProgress !== 1 && (
-                            <TouchableOpacity
-                                onPress={() => {
-                                    if (recoveryProgress) {
-                                        navigation.navigate('SyncRecovery');
-                                    }
-                                }}
-                            >
-                                <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('highlight'),
-                                        borderRadius: 10,
-                                        margin: 20,
-                                        marginBottom: 0,
-                                        padding: 15,
-                                        borderWidth: 0.5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            color: themeColor('background')
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.Wallet.BalancePane.recovery.title'
-                                        )}${
-                                            !recoveryProgress
-                                                ? ` - ${localeString(
-                                                      'views.Wallet.BalancePane.recovery.textAlt'
-                                                  ).replace('Zeus', 'ZEUS')}`
-                                                : ''
-                                        }`}
-                                    </Text>
-                                    {recoveryProgress && (
-                                        <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                color: themeColor('background'),
-                                                marginTop: 20
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.BalancePane.recovery.text'
-                                            ).replace('Zeus', 'ZEUS')}
-                                        </Text>
-                                    )}
-                                    {recoveryProgress && (
-                                        <View
-                                            style={{
-                                                marginTop: 30,
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                minWidth: '100%'
-                                            }}
-                                        >
-                                            <LinearProgress
-                                                value={
-                                                    Math.floor(
-                                                        recoveryProgress * 100
-                                                    ) / 100
-                                                }
-                                                variant="determinate"
-                                                color={themeColor('background')}
-                                                trackColor={themeColor(
-                                                    'secondaryBackground'
-                                                )}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
-                                                }}
-                                            />
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
-                                                    color: themeColor(
-                                                        'background'
-                                                    ),
-                                                    marginTop: -8,
-                                                    marginLeft: 14,
-                                                    height: 40
-                                                }}
-                                            >
-                                                {`${Math.floor(
-                                                    recoveryProgress * 100
-                                                ).toString()}%`}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                        {isSyncing && (
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Sync')}
-                            >
-                                <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 10,
-                                        margin: 20,
-                                        padding: 15,
-                                        borderWidth: 0.5
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.title'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            color: themeColor('text'),
-                                            marginTop: 20
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.text'
-                                        ).replace('Zeus', 'ZEUS')}
-                                    </Text>
-                                    {currentBlockHeight !== undefined &&
-                                        bestBlockHeight && (
-                                            <View
-                                                style={{
-                                                    marginTop: 30,
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    display: 'flex',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    minWidth: '100%'
-                                                }}
-                                            >
-                                                <LinearProgress
-                                                    value={
-                                                        Math.floor(
-                                                            (currentBlockHeight /
-                                                                bestBlockHeight) *
-                                                                100
-                                                        ) / 100
-                                                    }
-                                                    variant="determinate"
-                                                    color={themeColor(
-                                                        'highlight'
-                                                    )}
-                                                    trackColor={themeColor(
-                                                        'secondaryBackground'
-                                                    )}
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row'
-                                                    }}
-                                                />
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Medium',
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        marginTop: -8,
-                                                        marginLeft: 14,
-                                                        height: 40
-                                                    }}
-                                                >
-                                                    {`${Math.floor(
-                                                        (currentBlockHeight /
-                                                            bestBlockHeight) *
-                                                            100
-                                                    ).toString()}%`}
-                                                </Text>
-                                            </View>
-                                        )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                        {implementation === 'embedded-lnd' &&
-                            !isSyncing &&
-                            showBackupPrompt &&
-                            (BalanceStore.lightningBalance !== 0 ||
-                                BalanceStore.totalBlockchainBalance !== 0) &&
-                            !BalanceStore.loadingBlockchainBalance &&
-                            !BalanceStore.loadingLightningBalance && (
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('Seed')}
-                                >
-                                    <View
-                                        style={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 10,
-                                            borderColor:
-                                                themeColor('highlight'),
-                                            margin: 20,
-                                            padding: 15,
-                                            borderWidth: 1.5
-                                        }}
-                                    >
-                                        <View style={{ marginBottom: 10 }}>
-                                            <LockIcon
-                                                fill={themeColor('highlight')}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium',
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.BalancePane.backup.title'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                color: themeColor('text'),
-                                                marginTop: 20
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.BalancePane.backup.text'
-                                            )}
-                                        </Text>
-                                        <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontWeight: 'bold',
-                                                color: themeColor('text'),
-                                                marginTop: 20
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.BalancePane.backup.action'
-                                            )}
-                                        </Text>
-                                    </View>
-                                </TouchableOpacity>
-                            )}
-                        {implementation === 'embedded-lnd' && lndFolderMissing && (
+                        {isChannelMigrating ? (
                             <View
                                 style={{
                                     backgroundColor: themeColor('error'),
@@ -456,34 +238,41 @@ export default class BalancePane extends React.PureComponent<
                                     padding: 15
                                 }}
                             >
+                                <View style={{ marginBottom: 10 }}>
+                                    <LockIcon fill={themeColor('text')} />
+                                </View>
+
                                 <Text
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Medium',
                                         color: '#fff',
-                                        fontSize: 16,
+                                        fontSize: 18,
                                         marginBottom: 10
                                     }}
                                 >
                                     {localeString(
-                                        'views.Wallet.lndFolderMissing.title'
+                                        'views.Wallet.BalancePane.migration.title'
                                     )}
                                 </Text>
                                 <Text
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Book',
                                         color: '#fff',
-                                        marginBottom: 20
+                                        fontSize: 15,
+                                        lineHeight: 22,
+                                        marginBottom: 25
                                     }}
                                 >
                                     {localeString(
-                                        'views.Wallet.lndFolderMissing.message'
+                                        'views.Wallet.BalancePane.migration.text1'
+                                    )}
+                                    {'\n\n'}
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.text2'
                                     )}
                                 </Text>
-                                <View
-                                    style={{
-                                        flexDirection: 'row'
-                                    }}
-                                >
+
+                                <View style={{ gap: 10 }}>
                                     <Button
                                         title={localeString(
                                             'views.Wallet.lndFolderMissing.deleteWallet'
@@ -493,43 +282,420 @@ export default class BalancePane extends React.PureComponent<
                                         }
                                         quaternary
                                         buttonStyle={{
-                                            minHeight: 80
+                                            minHeight: 55,
+                                            backgroundColor:
+                                                'rgba(255,255,255,0.2)'
                                         }}
-                                        containerStyle={{
-                                            flex: 1,
-                                            marginRight: 5
-                                        }}
+                                        titleStyle={{ color: '#fff' }}
                                     />
+
                                     <Button
                                         title={localeString(
-                                            'views.Tools.clearStorage.title'
+                                            'views.Wallet.BalancePane.migration.action.unlock'
                                         )}
-                                        onPress={() =>
-                                            navigation.navigate('Tools', {
-                                                showClearDataModal: true
-                                            })
-                                        }
+                                        onPress={this.handleCancelMigration}
                                         quaternary
                                         buttonStyle={{
-                                            minHeight: 80
+                                            minHeight: 55,
+                                            backgroundColor: 'rgba(0,0,0,0.2)'
                                         }}
-                                        containerStyle={{
-                                            flex: 1,
-                                            marginLeft: 5
-                                        }}
+                                        titleStyle={{ color: '#fff' }}
                                     />
                                 </View>
                             </View>
-                        )}
-                        {implementation === 'lndhub' ||
-                        implementation === 'nostr-wallet-connect' ? (
-                            <View style={{ marginTop: 40 }}>
-                                <LightningBalance />
-                            </View>
                         ) : (
-                            <View style={{ marginTop: 40 }}>
-                                <BalanceViewCombined />
-                            </View>
+                            <>
+                                {isRecovering &&
+                                    recoveryProgress !== null &&
+                                    recoveryProgress !== 1 && (
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                if (recoveryProgress) {
+                                                    navigation.navigate(
+                                                        'SyncRecovery'
+                                                    );
+                                                }
+                                            }}
+                                        >
+                                            <View
+                                                style={{
+                                                    backgroundColor:
+                                                        themeColor('highlight'),
+                                                    borderRadius: 10,
+                                                    margin: 20,
+                                                    marginBottom: 0,
+                                                    padding: 15,
+                                                    borderWidth: 0.5
+                                                }}
+                                            >
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'background'
+                                                        )
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'views.Wallet.BalancePane.recovery.title'
+                                                    )}${
+                                                        !recoveryProgress
+                                                            ? ` - ${localeString(
+                                                                  'views.Wallet.BalancePane.recovery.textAlt'
+                                                              ).replace(
+                                                                  'Zeus',
+                                                                  'ZEUS'
+                                                              )}`
+                                                            : ''
+                                                    }`}
+                                                </Text>
+                                                {recoveryProgress && (
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            color: themeColor(
+                                                                'background'
+                                                            ),
+                                                            marginTop: 20
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Wallet.BalancePane.recovery.text'
+                                                        ).replace(
+                                                            'Zeus',
+                                                            'ZEUS'
+                                                        )}
+                                                    </Text>
+                                                )}
+                                                {recoveryProgress && (
+                                                    <View
+                                                        style={{
+                                                            marginTop: 30,
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'row',
+                                                            display: 'flex',
+                                                            justifyContent:
+                                                                'space-between',
+                                                            minWidth: '100%'
+                                                        }}
+                                                    >
+                                                        <LinearProgress
+                                                            value={
+                                                                Math.floor(
+                                                                    recoveryProgress *
+                                                                        100
+                                                                ) / 100
+                                                            }
+                                                            variant="determinate"
+                                                            color={themeColor(
+                                                                'background'
+                                                            )}
+                                                            trackColor={themeColor(
+                                                                'secondaryBackground'
+                                                            )}
+                                                            style={{
+                                                                flex: 1,
+                                                                flexDirection:
+                                                                    'row'
+                                                            }}
+                                                        />
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Medium',
+                                                                color: themeColor(
+                                                                    'background'
+                                                                ),
+                                                                marginTop: -8,
+                                                                marginLeft: 14,
+                                                                height: 40
+                                                            }}
+                                                        >
+                                                            {`${Math.floor(
+                                                                recoveryProgress *
+                                                                    100
+                                                            ).toString()}%`}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
+                                {isSyncing && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate('Sync')
+                                        }
+                                    >
+                                        <View
+                                            style={{
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 10,
+                                                margin: 20,
+                                                padding: 15,
+                                                borderWidth: 0.5
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Wallet.BalancePane.sync.title'
+                                                )}
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    color: themeColor('text'),
+                                                    marginTop: 20
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Wallet.BalancePane.sync.text'
+                                                ).replace('Zeus', 'ZEUS')}
+                                            </Text>
+                                            {currentBlockHeight !== undefined &&
+                                                bestBlockHeight && (
+                                                    <View
+                                                        style={{
+                                                            marginTop: 30,
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'row',
+                                                            display: 'flex',
+                                                            justifyContent:
+                                                                'space-between',
+                                                            minWidth: '100%'
+                                                        }}
+                                                    >
+                                                        <LinearProgress
+                                                            value={
+                                                                Math.floor(
+                                                                    (currentBlockHeight /
+                                                                        bestBlockHeight) *
+                                                                        100
+                                                                ) / 100
+                                                            }
+                                                            variant="determinate"
+                                                            color={themeColor(
+                                                                'highlight'
+                                                            )}
+                                                            trackColor={themeColor(
+                                                                'secondaryBackground'
+                                                            )}
+                                                            style={{
+                                                                flex: 1,
+                                                                flexDirection:
+                                                                    'row'
+                                                            }}
+                                                        />
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Medium',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                marginTop: -8,
+                                                                marginLeft: 14,
+                                                                height: 40
+                                                            }}
+                                                        >
+                                                            {`${Math.floor(
+                                                                (currentBlockHeight /
+                                                                    bestBlockHeight) *
+                                                                    100
+                                                            ).toString()}%`}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                {implementation === 'embedded-lnd' &&
+                                    !isSyncing &&
+                                    showBackupPrompt &&
+                                    (BalanceStore.lightningBalance !== 0 ||
+                                        BalanceStore.totalBlockchainBalance !==
+                                            0) &&
+                                    !BalanceStore.loadingBlockchainBalance &&
+                                    !BalanceStore.loadingLightningBalance && (
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                navigation.navigate('Seed')
+                                            }
+                                        >
+                                            <View
+                                                style={{
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderRadius: 10,
+                                                    borderColor:
+                                                        themeColor('highlight'),
+                                                    margin: 20,
+                                                    padding: 15,
+                                                    borderWidth: 1.5
+                                                }}
+                                            >
+                                                <View
+                                                    style={{ marginBottom: 10 }}
+                                                >
+                                                    <LockIcon
+                                                        fill={themeColor(
+                                                            'highlight'
+                                                        )}
+                                                    />
+                                                </View>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Wallet.BalancePane.backup.title'
+                                                    )}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        marginTop: 20
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Wallet.BalancePane.backup.text'
+                                                    )}
+                                                </Text>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book',
+                                                        fontWeight: 'bold',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        marginTop: 20
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Wallet.BalancePane.backup.action'
+                                                    )}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    )}
+                                {implementation === 'embedded-lnd' &&
+                                    lndFolderMissing && (
+                                        <View
+                                            style={{
+                                                backgroundColor:
+                                                    themeColor('error'),
+                                                borderRadius: 10,
+                                                margin: 20,
+                                                marginBottom: 0,
+                                                padding: 15
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
+                                                    color: '#fff',
+                                                    fontSize: 16,
+                                                    marginBottom: 10
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Wallet.lndFolderMissing.title'
+                                                )}
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    color: '#fff',
+                                                    marginBottom: 20
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Wallet.lndFolderMissing.message'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    flexDirection: 'row'
+                                                }}
+                                            >
+                                                <Button
+                                                    title={localeString(
+                                                        'views.Wallet.lndFolderMissing.deleteWallet'
+                                                    )}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'Wallets'
+                                                        )
+                                                    }
+                                                    quaternary
+                                                    buttonStyle={{
+                                                        minHeight: 80
+                                                    }}
+                                                    containerStyle={{
+                                                        flex: 1,
+                                                        marginRight: 5
+                                                    }}
+                                                />
+                                                <Button
+                                                    title={localeString(
+                                                        'views.Tools.clearStorage.title'
+                                                    )}
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'Tools',
+                                                            {
+                                                                showClearDataModal:
+                                                                    true
+                                                            }
+                                                        )
+                                                    }
+                                                    quaternary
+                                                    buttonStyle={{
+                                                        minHeight: 80
+                                                    }}
+                                                    containerStyle={{
+                                                        flex: 1,
+                                                        marginLeft: 5
+                                                    }}
+                                                />
+                                            </View>
+                                        </View>
+                                    )}
+                                {implementation === 'lndhub' ||
+                                implementation === 'nostr-wallet-connect' ? (
+                                    <View style={{ marginTop: 40 }}>
+                                        <LightningBalance />
+                                    </View>
+                                ) : (
+                                    <View style={{ marginTop: 40 }}>
+                                        <BalanceViewCombined />
+                                    </View>
+                                )}
+                            </>
                         )}
                     </View>
                 </View>
