@@ -80,7 +80,8 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
             feeEstimator,
             customFeeEstimator
         } = this.state;
-        const { updateSettings, settings }: any = SettingsStore;
+        const { updateSettings, isSqlite, settings }: SettingsStore =
+            SettingsStore;
         const { bimodalPathfinding } = settings;
 
         return (
@@ -343,60 +344,62 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-                        <>
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
+                        {!isSqlite && (
+                            <>
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.compactDb'
-                                    )}
-                                </ListItem.Title>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.compactDb'
+                                        )}
+                                    </ListItem.Title>
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            flexDirection: 'row',
+                                            justifyContent: 'flex-end'
+                                        }}
+                                    >
+                                        <Switch
+                                            value={compactDb}
+                                            onValueChange={async () => {
+                                                this.setState({
+                                                    compactDb: !compactDb
+                                                });
+                                                await updateSettings({
+                                                    compactDb: !compactDb
+                                                });
+                                                restartNeeded();
+                                            }}
+                                        />
+                                    </View>
+                                </ListItem>
                                 <View
                                     style={{
-                                        flex: 1,
-                                        flexDirection: 'row',
-                                        justifyContent: 'flex-end'
+                                        margin: 10
                                     }}
                                 >
-                                    <Switch
-                                        value={compactDb}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                compactDb: !compactDb
-                                            });
-                                            await updateSettings({
-                                                compactDb: !compactDb
-                                            });
-                                            restartNeeded();
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
                                         }}
-                                    />
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.compactDb.subtitle'
+                                        )}
+                                    </Text>
                                 </View>
-                            </ListItem>
-                            <View
-                                style={{
-                                    margin: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.compactDb.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
+                            </>
+                        )}
                         <>
                             <ListItem
                                 containerStyle={{
