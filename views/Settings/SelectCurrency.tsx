@@ -156,9 +156,9 @@ export default class SelectCurrency extends React.Component<
                                             newFiats.push(item.value);
                                         }
 
+                                        // fiat is auto-synced via updateSettings
                                         await updateSettings({
-                                            fiats: newFiats,
-                                            fiat: newFiats[0] || item.value
+                                            fiats: newFiats
                                         }).then(() => {
                                             getSettings();
                                         });

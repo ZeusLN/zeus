@@ -1723,6 +1723,11 @@ export default class SettingsStore {
                 if (parsedSettings.preferredFiatIndex === undefined) {
                     parsedSettings.preferredFiatIndex = 0;
                 }
+                // Consolidate: fiat is always derived from fiats[preferredFiatIndex]
+                parsedSettings.fiat =
+                    parsedSettings.fiats[parsedSettings.preferredFiatIndex] ||
+                    parsedSettings.fiats[0] ||
+                    DEFAULT_FIAT;
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
@@ -1775,6 +1780,13 @@ export default class SettingsStore {
             ...existingSettings,
             ...newSetting
         };
+
+        // Consolidate: keep fiat in sync with fiats[preferredFiatIndex]
+        if (newSetting.fiats || newSetting.preferredFiatIndex !== undefined) {
+            const fiats = newSettings.fiats || [DEFAULT_FIAT];
+            const index = newSettings.preferredFiatIndex ?? 0;
+            newSettings.fiat = fiats[index] || fiats[0] || DEFAULT_FIAT;
+        }
 
         if (
             newSetting.pos?.posEnabled &&
