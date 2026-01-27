@@ -78,7 +78,7 @@ export default class SelectCurrency extends React.Component<
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { selectedCurrency, search, fiatRatesSource } = this.state;
+        const { search, fiatRatesSource } = this.state;
         const currencies = this.state.currencies
             .sort((a, b) => a.key.localeCompare(b.key))
             .filter((c) => c.supportedSources?.includes(fiatRatesSource));
@@ -143,11 +143,24 @@ export default class SelectCurrency extends React.Component<
                                             selectedCurrency: item.value
                                         });
                                     } else {
+                                        let newFiats = [
+                                            ...SettingsStore.settings.fiats
+                                        ];
+                                        if (newFiats.includes(item.value)) {
+                                            if (newFiats.length > 1) {
+                                                newFiats = newFiats.filter(
+                                                    (f) => f !== item.value
+                                                );
+                                            }
+                                        } else {
+                                            newFiats.push(item.value);
+                                        }
+
                                         await updateSettings({
-                                            fiat: item.value
+                                            fiats: newFiats,
+                                            fiat: newFiats[0] || item.value
                                         }).then(() => {
                                             getSettings();
-                                            navigation.goBack();
                                         });
                                     }
                                 }}
@@ -157,9 +170,11 @@ export default class SelectCurrency extends React.Component<
                                         style={{
                                             color:
                                                 (!currencyConverter &&
-                                                    selectedCurrency ===
-                                                        item.value) ||
-                                                (!selectedCurrency &&
+                                                    SettingsStore.settings.fiats.includes(
+                                                        item.value
+                                                    )) ||
+                                                (!SettingsStore.settings
+                                                    .fiats &&
                                                     item.value === DEFAULT_FIAT)
                                                     ? themeColor('highlight')
                                                     : themeColor('text'),
@@ -173,8 +188,10 @@ export default class SelectCurrency extends React.Component<
                                         }`}
                                     </ListItem.Title>
                                 </ListItem.Content>
-                                {(selectedCurrency === item.value ||
-                                    (!selectedCurrency &&
+                                {(SettingsStore.settings.fiats.includes(
+                                    item.value
+                                ) ||
+                                    (!SettingsStore.settings.fiats &&
                                         item.value === DEFAULT_FIAT)) &&
                                     !currencyConverter && (
                                         <View>

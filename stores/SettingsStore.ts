@@ -168,6 +168,8 @@ export interface Settings {
     authenticationAttempts?: number;
     fiatEnabled?: boolean;
     fiat?: string;
+    fiats: string[];
+    preferredFiatIndex: number;
     fiatRatesSource: 'Zeus' | 'Yadio';
     locale?: string;
     privacy: PrivacySettings;
@@ -1416,6 +1418,8 @@ export default class SettingsStore {
         loginBackground: false,
         fiatEnabled: false,
         fiat: DEFAULT_FIAT,
+        fiats: [DEFAULT_FIAT],
+        preferredFiatIndex: 0,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         // embedded node
         automaticDisasterRecoveryBackup: true,
@@ -1710,7 +1714,16 @@ export default class SettingsStore {
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
-                this.settings = JSON.parse(modernSettings);
+                const parsedSettings = JSON.parse(modernSettings);
+                if (!parsedSettings.fiats) {
+                    parsedSettings.fiats = [
+                        parsedSettings.fiat || DEFAULT_FIAT
+                    ];
+                }
+                if (parsedSettings.preferredFiatIndex === undefined) {
+                    parsedSettings.preferredFiatIndex = 0;
+                }
+                this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
 
@@ -1748,7 +1761,9 @@ export default class SettingsStore {
     public async setSettings(settings: any) {
         this.loading = true;
         await Storage.setItem(STORAGE_KEY, settings);
-        this.settings = settings;
+        runInAction(() => {
+            this.settings = settings;
+        });
         this.loading = false;
         return settings;
     }
@@ -1775,6 +1790,24 @@ export default class SettingsStore {
         this.updateNodeProperties(newSettings);
         this.settingsUpdateInProgress = false;
         return newSettings;
+    };
+
+    public cycleFiat = () => {
+        const { fiats, preferredFiatIndex } = this.settings;
+
+        if (!fiats || fiats.length <= 1) return;
+
+        const newIndex = (preferredFiatIndex + 1) % fiats.length;
+
+        // Update in-memory only - no storage save to avoid re-renders
+        // Just update the observable directly
+        runInAction(() => {
+            this.settings.preferredFiatIndex = newIndex;
+            this.settings.fiat = fiats[newIndex];
+        });
+
+        // Save to storage in background (don't await)
+        Storage.setItem(STORAGE_KEY, this.settings);
     };
 
     // LNDHub

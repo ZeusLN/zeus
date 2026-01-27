@@ -2,7 +2,7 @@ import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
-import SettingsStore from './SettingsStore';
+import SettingsStore, { DEFAULT_FIAT } from './SettingsStore';
 import {
     SATS_PER_BTC,
     numberWithCommas,
@@ -619,14 +619,14 @@ export default class FiatStore {
         }
     };
 
-    public getSymbol = () => {
+    public getSymbol = (currencyCode?: string) => {
         const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const fiat = currencyCode || settings.fiat;
         if (fiat) {
             return this.symbolLookup(fiat);
         } else {
             return {
-                symbol: fiat,
+                symbol: fiat || '',
                 space: true,
                 rtl: true,
                 separatorSwap: false,
@@ -635,18 +635,17 @@ export default class FiatStore {
         }
     };
 
-    public getRate = (sats: boolean = false) => {
+    public getRate = (sats: boolean = false, currencyCode?: string) => {
         const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const fiat = currencyCode || settings.fiat;
 
         if (fiat && this.fiatRates) {
-            const fiatEntry = this.fiatRates.filter(
+            const fiatEntry = this.fiatRates.find(
                 (entry) => entry.code === fiat
-            )[0];
-            const rate = (fiatEntry && fiatEntry.rate) || 0;
-            const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
-                fiatEntry && fiatEntry.code
             );
+            const rate = (fiatEntry && fiatEntry.rate) || 0;
+            const { symbol, space, rtl, separatorSwap } =
+                this.symbolLookup(fiat);
 
             const moscowTime = new BigNumber(1)
                 .div(rate)
@@ -694,29 +693,37 @@ export default class FiatStore {
                 this.fiatRates != null &&
                 this.sourceOfCurrentFiatRates != settings.fiatRatesSource
             ) {
-                // clear rates to display loading indicator after rates source switch
-                this.fiatRates = undefined;
+                // Keep rates to avoid flickering, will be replaced once new ones load
             }
 
             if (settings.fiatRatesSource.toLowerCase() === 'zeus') {
-                this.fiatRates = await this.getFiatRatesFromZeus();
-            } else if (settings.fiat != null) {
-                const rate = await this.getSelectedFiatRateFromYadio(
-                    settings.fiat
+                const allRates = await this.getFiatRatesFromZeus();
+                if (allRates) {
+                    runInAction(() => {
+                        this.fiatRates = allRates;
+                    });
+                }
+            } else {
+                // Fetch rates for all selected fiats + the primary one
+                const currencyList = Array.from(
+                    new Set([
+                        ...(settings.fiats || []),
+                        settings.fiat || DEFAULT_FIAT
+                    ])
                 );
 
-                runInAction(() => {
-                    if (this.fiatRates) {
-                        this.fiatRates = this.fiatRates.filter(
-                            (r) => r.code !== settings.fiat
-                        );
-                        if (rate != null) {
-                            this.fiatRates = this.fiatRates.concat([rate]);
-                        }
-                    } else if (rate) {
-                        this.fiatRates = [rate];
-                    }
-                });
+                const rates = await Promise.all(
+                    currencyList.map((f) =>
+                        this.getSelectedFiatRateFromYadio(f)
+                    )
+                );
+
+                const validRates = rates.filter((r) => r != null);
+                if (validRates.length > 0) {
+                    runInAction(() => {
+                        this.fiatRates = validRates as any;
+                    });
+                }
             }
 
             this.sourceOfCurrentFiatRates = settings.fiatRatesSource;
@@ -725,8 +732,12 @@ export default class FiatStore {
         }
     };
 
-    public formatAmountForDisplay = (input: string | number) => {
-        const { symbol, space, rtl, separatorSwap } = this.getSymbol();
+    public formatAmountForDisplay = (
+        input: string | number,
+        currencyCode?: string
+    ) => {
+        const { symbol, space, rtl, separatorSwap } =
+            this.getSymbol(currencyCode);
         const amount = separatorSwap
             ? numberWithDecimals(input)
             : numberWithCommas(input);
