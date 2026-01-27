@@ -5,9 +5,18 @@ import {
     StyleSheet,
     Text,
     View,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
+import Share from 'react-native-share';
 import { inject, observer } from 'mobx-react';
+import RNFS from 'react-native-fs';
+import {
+    pick,
+    types,
+    isErrorWithCode,
+    errorCodes
+} from '@react-native-documents/picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import RNRestart from 'react-native-restart';
@@ -26,6 +35,7 @@ import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -33,18 +43,37 @@ import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+
 import { Icon } from '@rneui/themed';
+import Feather from '@react-native-vector-icons/feather';
+
+import Storage from '../../storage';
+
+export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
 interface ToolsProps {
     navigation: StackNavigationProp<any, any>;
     route: RouteProp<{ Tools: { showClearDataModal?: boolean } }, 'Tools'>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
-@inject('SettingsStore')
+interface ToolsState {
+    isLoading: boolean;
+}
+
+@inject('SettingsStore', 'NodeInfoStore')
 @observer
-export default class Tools extends React.Component<ToolsProps, {}> {
+export default class Tools extends React.Component<ToolsProps, ToolsState> {
     focusListener: any = null;
+
+    constructor(props: ToolsProps) {
+        super(props);
+        this.state = {
+            isLoading: false
+        };
+    }
 
     componentDidMount() {
         const { navigation, route } = this.props;
@@ -94,6 +123,238 @@ export default class Tools extends React.Component<ToolsProps, {}> {
         );
     };
 
+    handleExportChannels = () => {
+        Alert.alert(
+            localeString('views.Tools.migration.export.title'),
+
+            `${localeString('views.Tools.migration.export.text1')}\n\n` +
+                `⚠️ ${localeString('views.Tools.migration.export.text2')}`,
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.Tools.migration.export.confirm'),
+                    style: 'default',
+                    onPress: async () => {
+                        await this.exportWallet();
+                    }
+                }
+            ]
+        );
+    };
+
+    getChannelDbPath = async (
+        lndDir: string,
+        isTestnet: boolean,
+        isSqlite: boolean
+    ) => {
+        const network = isTestnet ? 'testnet' : 'mainnet';
+
+        const rootPath = Platform.select({
+            android: RNFS.DocumentDirectoryPath,
+            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
+        });
+
+        const basePath = `${rootPath}/${lndDir}/data/graph/${network}`;
+
+        const fileName = isSqlite ? 'channel.sqlite' : 'channel.db';
+        const fullPath = `${basePath}/${fileName}`;
+
+        console.log(`DB using: ${isSqlite ? 'SQLite' : 'BoltDB'}`);
+        console.log(`Looking for: ${fullPath}`);
+
+        if (await RNFS.exists(fullPath)) {
+            return {
+                path: fullPath,
+                type: isSqlite ? 'sqlite' : 'bolt'
+            };
+        } else {
+            console.error(`Database not found!`);
+            return null;
+        }
+    };
+
+    exportWallet = async () => {
+        try {
+            this.setState({ isLoading: true });
+            console.log('Starting channel export..');
+
+            const { isSqlite }: any = this.props.SettingsStore;
+            const isTestnet = this.props.NodeInfoStore!.nodeInfo.isTestNet;
+            const getLndDir = () => this.props.SettingsStore.lndDir || 'lnd';
+
+            const dbPath = await this.getChannelDbPath(
+                getLndDir(),
+                isTestnet,
+                isSqlite
+            );
+            if (!dbPath) {
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Tools.migration.databaseNotFound')
+                );
+                return;
+            }
+
+            const { path, type } = dbPath;
+
+            const stats = await RNFS.stat(path);
+            const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+            console.log(`File Size: ${sizeMB} MB`);
+
+            const extension = type === 'sqlite' ? 'sqlite' : 'db';
+            const backupFileName = `zeus-channels-${
+                isTestnet ? 'testnet' : 'mainnet'
+            }-${Date.now()}.${extension}`;
+            const stagingPath = `${RNFS.DocumentDirectoryPath}/${backupFileName}`;
+
+            if (await RNFS.exists(stagingPath)) {
+                await RNFS.unlink(stagingPath);
+            }
+
+            await RNFS.copyFile(path, stagingPath);
+
+            this.setState({ isLoading: false });
+
+            console.log('Opening Share Sheet...');
+
+            const shareResult = await Share.open({
+                title: 'Save Channel Backup',
+                url: `file://${stagingPath}`,
+                type: 'application/octet-stream',
+                filename: backupFileName,
+                failOnCancel: false
+            });
+
+            const isDismissed =
+                shareResult.dismissedAction || shareResult.success === false;
+
+            if (isDismissed) {
+                await RNFS.unlink(stagingPath);
+                return;
+            }
+
+            console.log(' Export successful. Locking wallet...');
+
+            await Storage.setItem(
+                CHANNEL_MIGRATION_ACTIVE,
+                JSON.stringify({ migrationStatus: true, lndDir: getLndDir() })
+            );
+            await RNFS.unlink(stagingPath);
+
+            Alert.alert(
+                localeString('views.Tools.migration.export.success'),
+                localeString('views.Tools.migration.export.success.text'),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+        } catch (error) {
+            console.error('Export Failed:', error);
+            this.setState({ isLoading: false });
+            Alert.alert(localeString('general.error'));
+            RNRestart.Restart();
+        }
+    };
+
+    importWallet = async () => {
+        try {
+            this.setState({ isLoading: true });
+
+            const [result] = await pick({
+                type: [types.allFiles],
+                mode: 'import'
+            });
+
+            const sourceUri = result.uri;
+            if (!sourceUri) {
+                throw new Error('No file selected');
+            }
+
+            console.log(sourceUri);
+
+            await this.handleRestoreWallet(
+                sourceUri,
+                result.name ?? 'channel.sqlite'
+            );
+        } catch (error) {
+            if (
+                isErrorWithCode(error) &&
+                error.code === errorCodes.OPERATION_CANCELED
+            ) {
+                this.setState({ isLoading: false });
+            } else {
+                console.error(error);
+                this.setState({ isLoading: false });
+            }
+        }
+    };
+
+    private handleRestoreWallet = async (
+        sourceUri: string,
+        fileName: string
+    ) => {
+        try {
+            console.log(`Restoring from: ${sourceUri}`);
+
+            const isSqliteBackup = fileName.toLowerCase().endsWith('.sqlite');
+            const dbName = isSqliteBackup ? 'channel.sqlite' : 'channel.db';
+
+            const lndDir = this.props.SettingsStore.lndDir || 'lnd';
+            const isTestnet = this.props.NodeInfoStore!.nodeInfo.isTestNet;
+
+            const rootPath = Platform.select({
+                android: RNFS.DocumentDirectoryPath,
+                ios: `${RNFS.LibraryDirectoryPath}/Application Support`
+            });
+
+            const destFolder = `${rootPath}/${lndDir}/data/graph/${
+                isTestnet ? 'testnet' : 'mainnet'
+            }`;
+            const destPath = `${destFolder}/${dbName}`;
+
+            console.log(` Target Destination: ${destPath}`);
+
+            if (await RNFS.exists(destPath)) {
+                await RNFS.unlink(destPath);
+            }
+
+            await RNFS.copyFile(sourceUri, destPath);
+
+            this.setState({ isLoading: false });
+
+            Alert.alert(
+                localeString(
+                    'views.Tools.nodeConfigExportImport.importSuccess'
+                ),
+                `${localeString(
+                    'views.Tools.migration.import.success.text1'
+                )}\n\n` +
+                    `ⓘ ${localeString(
+                        'views.Tools.migration.import.success.text2'
+                    )}`,
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+        } catch (error) {
+            console.error('Import Failed:', error);
+            this.setState({ isLoading: false });
+            Alert.alert(localeString('general.error'));
+            RNRestart.Restart();
+        }
+    };
+
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
@@ -117,6 +378,11 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        this.state.isLoading ? (
+                            <LoadingIndicator size={34} />
+                        ) : undefined
+                    }
                     navigation={navigation}
                 />
                 <ScrollView
@@ -603,6 +869,77 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </View>
                         </TouchableOpacity>
                     </View>
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() => this.handleExportChannels()}
+                        >
+                            <View style={styles.icon}>
+                                <Feather
+                                    name="upload"
+                                    size={24}
+                                    color={themeColor('text')}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Tools.migration.export')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
+
+                    {true && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => this.importWallet()}
+                            >
+                                <View style={styles.icon}>
+                                    <Feather
+                                        name="upload"
+                                        size={24}
+                                        color={themeColor('text')}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Tools.migration.import'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {BackendUtils.supportsWithdrawalRequests() && (
                         <View
