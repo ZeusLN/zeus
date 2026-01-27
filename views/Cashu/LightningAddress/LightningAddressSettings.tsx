@@ -53,12 +53,13 @@ export default class CashuLightningAddressSettings extends React.Component<
 
         const { SettingsStore, CashuStore } = this.props;
         const { settings } = SettingsStore;
-        const { selectedMintUrl, mintUrls, cashuWallets } = CashuStore;
+        const { selectedMintUrl, mintUrls, mintInfos } = CashuStore;
 
         const mintList: Array<MintItem> = mintUrls
             ? mintUrls.map((mintUrl) => {
+                  const mintInfo = mintInfos[mintUrl];
                   return {
-                      key: cashuWallets[mintUrl].mintInfo.name,
+                      key: mintInfo?.name || mintUrl,
                       value: mintUrl
                   };
               })
@@ -248,8 +249,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     title={localeString('cashu.mint')}
                                     titleColor={themeColor('text')}
                                     selectedValue={
-                                        CashuStore?.cashuWallets[mintUrl]
-                                            ?.mintInfo?.name ||
+                                        CashuStore?.mintInfos[mintUrl]?.name ||
                                         mintUrl ||
                                         ''
                                     }

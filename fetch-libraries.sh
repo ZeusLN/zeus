@@ -71,3 +71,97 @@ rm -rf ios/LncMobile/$IOS_FILE
 
 # unzip LND library file
 unzip ios/LndMobileLibZipFile/$IOS_FILE.zip -d ios/LncMobile
+
+###############
+# CashuDevKit #
+###############
+
+CDK_VERSION=0.14.2
+# Local filename (what we save as)
+CDK_ANDROID_FILE=cashudevkit.aar
+CDK_IOS_FILE=cdkFFI.xcframework
+# Remote filename (what's on GitHub releases)
+CDK_ANDROID_REMOTE=cdk-kotlin-$CDK_VERSION.aar
+
+# Checksums
+CDK_ANDROID_SHA256='e8e9ee354cf21546e49946d351a6c482355f8b3800c60a8a9348c4ae40f529cb'
+CDK_IOS_SHA256='5c4a152cdcd6aaa6bbd1aef65c43eaeeb6ebde3f0f365fb2254cefbc49d5ea49'
+
+CDK_FILE_PATH=https://github.com/cashubtc/cdk-kotlin/releases/download/v$CDK_VERSION/
+CDK_IOS_PATH=https://github.com/cashubtc/cdk-swift/releases/download/v$CDK_VERSION/
+
+CDK_ANDROID_LINK=$CDK_FILE_PATH$CDK_ANDROID_REMOTE
+CDK_IOS_LINK=$CDK_IOS_PATH$CDK_IOS_FILE.zip
+
+# Android CDK
+mkdir -p android/cdk
+
+NEED_CDK_ANDROID=false
+if [ ! -f "android/cdk/$CDK_ANDROID_FILE" ]; then
+    NEED_CDK_ANDROID=true
+elif [ -n "$CDK_ANDROID_SHA256" ]; then
+    if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c - 2>/dev/null; then
+        NEED_CDK_ANDROID=true
+    fi
+fi
+
+if [ "$NEED_CDK_ANDROID" = true ]; then
+    echo "Downloading CDK Android library..." >&2
+    rm -f android/cdk/$CDK_ANDROID_FILE
+    curl -L $CDK_ANDROID_LINK > android/cdk/$CDK_ANDROID_FILE
+
+    if [ -n "$CDK_ANDROID_SHA256" ]; then
+        if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
+            echo "CDK Android checksum failed" >&2
+            exit 1
+        fi
+    else
+        echo "CDK Android downloaded (checksum verification skipped)"
+        echo "SHA256: $(sha256sum android/cdk/$CDK_ANDROID_FILE | cut -d' ' -f1)"
+    fi
+fi
+
+# iOS CDK
+mkdir -p ios/CashuDevKitLibZipFile
+mkdir -p ios/Cdk
+
+NEED_CDK_IOS=false
+if [ ! -f "ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" ]; then
+    NEED_CDK_IOS=true
+elif [ -n "$CDK_IOS_SHA256" ]; then
+    if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256sum -c - 2>/dev/null; then
+        NEED_CDK_IOS=true
+    fi
+fi
+
+if [ "$NEED_CDK_IOS" = true ]; then
+    echo "Downloading CDK iOS library..." >&2
+    rm -f ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip
+    curl -L $CDK_IOS_LINK > ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip
+
+    if [ -n "$CDK_IOS_SHA256" ]; then
+        if ! echo "$CDK_IOS_SHA256 ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip" | sha256sum -c -; then
+            echo "CDK iOS checksum failed" >&2
+            exit 1
+        fi
+    else
+        echo "CDK iOS downloaded (checksum verification skipped)"
+        echo "SHA256: $(sha256sum ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip | cut -d' ' -f1)"
+    fi
+fi
+
+# Extract to ios/Cdk directory (used by Podfile)
+rm -rf ios/Cdk/$CDK_IOS_FILE
+
+unzip ios/CashuDevKitLibZipFile/$CDK_IOS_FILE.zip -d ios/Cdk
+
+echo "CashuDevKit iOS framework installed to ios/Cdk/$CDK_IOS_FILE"
+
+# Download matching Swift bindings from cdk-swift repo
+CDK_SWIFT_BINDINGS_URL="https://raw.githubusercontent.com/cashubtc/cdk-swift/v$CDK_VERSION/Sources/CashuDevKit/CashuDevKit.swift"
+mkdir -p ios/CashuDevKit
+
+echo "Downloading CDK Swift bindings..." >&2
+curl -L "$CDK_SWIFT_BINDINGS_URL" > ios/CashuDevKit/CashuDevKit.swift
+
+echo "CashuDevKit Swift bindings updated to v$CDK_VERSION"

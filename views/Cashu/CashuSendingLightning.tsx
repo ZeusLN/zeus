@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     BackHandler,
     Dimensions,
+    InteractionManager,
     NativeEventSubscription,
     StyleSheet,
     Text,
@@ -56,6 +57,7 @@ interface CashuSendingLightningProps {
         {
             donationAmount?: string;
             enableDonations: boolean;
+            paymentAmount?: string;
         }
     >;
 }
@@ -98,7 +100,16 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentDidMount() {
-        const { CashuStore, navigation } = this.props;
+        const { CashuStore, navigation, route } = this.props;
+        const { paymentAmount } = route.params || {};
+
+        // Reset payment state and start payment after navigation completes
+        CashuStore.resetPaymentState();
+        InteractionManager.runAfterInteractions(() => {
+            CashuStore.payLnInvoiceFromEcash({
+                amount: paymentAmount
+            });
+        });
 
         navigation.addListener('focus', () => {
             const noteKey: string = CashuStore.noteKey!!;
@@ -418,7 +429,7 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     private successfullySent(cashuStore: CashuStore): boolean {
-        return !!cashuStore.paymentPreimage;
+        return !!cashuStore.paymentSuccess;
     }
 
     render() {
@@ -426,6 +437,7 @@ export default class CashuSendingLightning extends React.Component<
         const {
             loading,
             paymentError,
+            paymentSuccess,
             error_msg,
             payReq,
             paymentPreimage,
@@ -439,6 +451,36 @@ export default class CashuSendingLightning extends React.Component<
 
         const success = this.successfullySent(CashuStore);
         const windowSize = Dimensions.get('window');
+
+        // Show loading animation until we have a result (success or error)
+        const showLoading = !paymentSuccess && !paymentError;
+
+        if (showLoading) {
+            return (
+                <Screen>
+                    <View
+                        style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <LightningLoadingPattern />
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                paddingBottom: windowSize.height / 10,
+                                fontSize:
+                                    windowSize.width * windowSize.scale * 0.014
+                            }}
+                        >
+                            {localeString('views.SendingLightning.sending')}
+                        </Text>
+                    </View>
+                </Screen>
+            );
+        }
 
         return (
             <Screen>
@@ -463,29 +505,6 @@ export default class CashuSendingLightning extends React.Component<
                 />
                 {this.renderZaplockerWarningModal()}
                 {this.renderInfoModal()}
-                {loading && (
-                    <View
-                        style={{
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '100%'
-                        }}
-                    >
-                        <LightningLoadingPattern />
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                // paddingBottom for centering
-                                paddingBottom: windowSize.height / 10,
-                                fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
-                            }}
-                        >
-                            {localeString('views.SendingLightning.sending')}
-                        </Text>
-                    </View>
-                )}
                 {paymentType === 'donation' && (
                     <View
                         style={{

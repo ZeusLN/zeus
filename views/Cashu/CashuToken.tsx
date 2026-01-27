@@ -101,8 +101,8 @@ export default class CashuTokenView extends React.Component<
                 decoded
             });
 
-            if (!cashuWallets[mint].wallet) {
-                await initializeWallet(mint, true);
+            if (!cashuWallets[mint]) {
+                await initializeWallet(mint);
             }
             // Set up a periodic check every 5 seconds
             const checkInterval = setInterval(async () => {
@@ -175,8 +175,14 @@ export default class CashuTokenView extends React.Component<
             cashuFrameIndex,
             cashuBcurPart
         } = this.state;
-        const { mintUrls, addMint, claimToken, loading, errorAddingMint } =
-            CashuStore!!;
+        const {
+            mintUrls,
+            addMint,
+            claimToken,
+            loading,
+            errorAddingMint,
+            error_msg: storeErrorMsg
+        } = CashuStore!!;
         const decoded = updatedToken || route.params?.decoded;
         const {
             memo,
@@ -318,7 +324,9 @@ export default class CashuTokenView extends React.Component<
                         />
                     )}
 
-                    {errorMessage && <ErrorMessage message={errorMessage} />}
+                    {(errorMessage || storeErrorMsg) && (
+                        <ErrorMessage message={errorMessage || storeErrorMsg} />
+                    )}
 
                     {errorAddingMint && (
                         <ErrorMessage
@@ -525,8 +533,12 @@ export default class CashuTokenView extends React.Component<
                                             errorMessage: ''
                                         });
 
+                                        // Use encodedToken from decoded (clean, no cashu: prefix)
                                         const { success, errorMessage } =
-                                            await claimToken(token!!, decoded);
+                                            await claimToken(
+                                                encodedToken!,
+                                                decoded
+                                            );
                                         if (errorMessage) {
                                             this.setState({
                                                 errorMessage
