@@ -915,7 +915,7 @@
     "views.Tools.migration.export.title": "Export Channels Backup",
     "views.Tools.migration.export.text1": "This will export your active channel database. You can use this file to restore your channels on a different device.",
     "views.Tools.migration.export.text2": "WARNING: After exporting, this wallet will be locked, as restoring the same wallet on a new device will force close the existing channels.",
-    "views.Tools.migration.databaseNotFound": "Could not find wallet database.",
+    "views.Tools.migration.databaseNotFound": "Could not find channel database.",
     "views.Tools.migration.export.confirm": "Export",
     "views.Tools.migration.export.success": "Backup Successful",
     "views.Tools.migration.import.success": "Import Successful",

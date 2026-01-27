@@ -25,6 +25,7 @@ import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
 
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import {
     SWAPS_KEY,
@@ -35,6 +36,7 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
+import { exportChannelDb } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -44,6 +46,7 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface SeedProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     route: Route<
         'Seed',
         {
@@ -56,6 +59,7 @@ interface SeedState {
     understood: boolean;
     showModal: boolean;
     isDeleteModalVisible: boolean;
+    isChannelExporting: boolean;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -106,13 +110,14 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
         understood: false,
         showModal: false,
-        isDeleteModalVisible: false
+        isDeleteModalVisible: false,
+        isChannelExporting: false
     };
 
     componentDidMount() {
@@ -185,6 +190,41 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     </View>
                 </View>
             </ModalBox>
+        );
+    };
+
+    handleExportChannels = () => {
+        Alert.alert(
+            localeString('views.Tools.migration.export.title'),
+
+            `${localeString('views.Tools.migration.export.text1')}\n\n` +
+                `⚠️ ${localeString('views.Tools.migration.export.text2')}`,
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.Tools.migration.export.confirm'),
+                    style: 'default',
+                    onPress: async () => {
+                        const { SettingsStore, NodeInfoStore } = this.props;
+                        const { isSqlite }: any = SettingsStore;
+                        const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
+                        const lndDir = () =>
+                            this.props.SettingsStore.lndDir || 'lnd';
+                        console.log(lndDir(), isTestnet, isSqlite);
+
+                        await exportChannelDb(
+                            lndDir(),
+                            isTestnet,
+                            isSqlite,
+                            (loading) =>
+                                this.setState({ isChannelExporting: loading })
+                        );
+                    }
+                }
+            ]
         );
     };
 
@@ -282,6 +322,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     <></>
                                 )}
                                 <DangerouslyCopySeed />
+
                                 {isRefundRescueKey ? <></> : <QRExport />}
                             </Row>
                         ) : undefined
@@ -519,6 +560,16 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 }
                                 containerStyle={{ marginBottom: 10 }}
                             />
+                            {!isRefundRescueKey && (
+                                <Button
+                                    onPress={this.handleExportChannels}
+                                    title={localeString(
+                                        'views.Tools.migration.export'
+                                    )}
+                                    secondary
+                                    containerStyle={{ marginBottom: 15 }}
+                                />
+                            )}
                             {isRefundRescueKey && (
                                 <Button
                                     onPress={() =>

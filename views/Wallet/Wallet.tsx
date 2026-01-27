@@ -62,6 +62,7 @@ import {
     loadPendingPaymentData,
     clearPendingPaymentData
 } from '../../utils/GraphSyncUtils';
+import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -99,7 +100,6 @@ import Temple from '../../assets/images/SVG/Temple.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
 
 import { version } from '../../package.json';
-import { CHANNEL_MIGRATION_ACTIVE } from '../../views/Tools';
 
 const Tab = createBottomTabNavigator();
 
