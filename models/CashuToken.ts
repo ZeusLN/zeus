@@ -1,7 +1,20 @@
 import { computed } from 'mobx';
-import { Proof } from '@cashu/cashu-ts';
 
 import BaseModel from './BaseModel';
+
+// Proof type compatible with both cashu-ts and CDK
+// cashu-ts uses: { id, amount, secret, C }
+// CDK uses: { keyset_id, amount, secret, c }
+export interface Proof {
+    amount: number;
+    secret: string;
+    // cashu-ts style
+    id?: string;
+    C?: string;
+    // CDK style
+    keyset_id?: string;
+    c?: string;
+}
 
 import { contactStore } from '../stores/Stores';
 
@@ -20,6 +33,7 @@ export default class CashuToken extends BaseModel {
     public spent?: boolean; // only for sent tokens
     public encodedToken?: string;
     public proofs: Proof[];
+    public value?: number; // cached value from CDK
     public created_at?: number;
     public received_at?: number;
 
@@ -28,6 +42,10 @@ export default class CashuToken extends BaseModel {
     }
 
     @computed public get getAmount(): number {
+        // Use cached value if proofs are not available
+        if (!this.proofs || this.proofs.length === 0) {
+            return this.value || 0;
+        }
         return CashuUtils.sumProofsValue(this.proofs);
     }
 

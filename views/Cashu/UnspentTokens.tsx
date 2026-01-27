@@ -23,6 +23,7 @@ interface UnspentTokensProps {
 
 interface UnspentTokensState {
     unspentTokens: any;
+    loading: boolean;
 }
 
 @inject('CashuStore')
@@ -32,7 +33,8 @@ export default class UnspentTokens extends React.PureComponent<
     UnspentTokensState
 > {
     state = {
-        unspentTokens: []
+        unspentTokens: [],
+        loading: true
     };
 
     componentDidMount() {
@@ -45,15 +47,21 @@ export default class UnspentTokens extends React.PureComponent<
             this.props.navigation.removeListener('focus', this.loadTokens);
     }
 
-    loadTokens = () => {
-        const { sentTokens } = this.props.CashuStore;
+    loadTokens = async () => {
+        this.setState({ loading: true });
 
-        const unspentTokens = sentTokens
-            ? sentTokens.filter((token: any) => !token.spent)
+        const { CashuStore } = this.props;
+
+        // Check spent status of tokens before filtering
+        await CashuStore.checkSentTokensSpentStatus();
+
+        const unspentTokens = CashuStore.sentTokens
+            ? CashuStore.sentTokens.filter((token: any) => !token.spent)
             : [];
 
         this.setState({
-            unspentTokens
+            unspentTokens,
+            loading: false
         });
     };
 
@@ -72,9 +80,8 @@ export default class UnspentTokens extends React.PureComponent<
     };
 
     render() {
-        const { navigation, CashuStore } = this.props;
-        const { unspentTokens } = this.state;
-        const { loading } = CashuStore;
+        const { navigation } = this.props;
+        const { unspentTokens, loading } = this.state;
 
         return (
             <Screen>

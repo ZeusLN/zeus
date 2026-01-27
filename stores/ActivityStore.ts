@@ -317,16 +317,25 @@ export default class ActivityStore {
             BackendUtils.supportsCashuWallet() &&
             this.settingsStore.settings?.ecash?.enableCashu
         ) {
-            const cashuInvoices = this.cashuStore.invoices;
-            const cashuPayments = this.cashuStore.payments;
-            const cashuReceivedTokens = this.cashuStore.receivedTokens;
-            const cashuSentTokens = this.cashuStore.sentTokens;
+            // CDK transaction history (completed)
+            additions = additions.concat(this.cashuStore.cdkInvoices);
+            additions = additions.concat(this.cashuStore.cdkPayments);
 
-            additions = additions
-                .concat(cashuInvoices)
-                .concat(cashuPayments)
-                .concat(cashuReceivedTokens)
-                .concat(cashuSentTokens);
+            // Include pending/unpaid Cashu invoices (from local storage)
+            const pendingCashuInvoices = this.cashuStore.invoices?.filter(
+                (invoice) => !invoice.isPaid
+            );
+            if (pendingCashuInvoices) {
+                additions = additions.concat(pendingCashuInvoices);
+            }
+
+            // Include Cashu tokens (sent and received)
+            if (this.cashuStore.sentTokens) {
+                additions = additions.concat(this.cashuStore.sentTokens);
+            }
+            if (this.cashuStore.receivedTokens) {
+                additions = additions.concat(this.cashuStore.receivedTokens);
+            }
         }
 
         // push payments, txs, invoices to one array
@@ -461,6 +470,9 @@ export default class ActivityStore {
         locale: string | undefined,
         filters: Filter = this.filters
     ) => {
+        // Check pending Cashu items (invoices and tokens) in background
+        this.cashuStore.checkPendingItems();
+
         await this.getActivity();
         await this.setFilters(filters, locale);
     };
