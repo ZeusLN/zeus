@@ -2,6 +2,10 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+// NOTE: cashu-ts is intentionally used here for legacy seed recovery
+// Legacy recovery uses a different seed derivation (bytes 32-64 from LND seed)
+// and requires cashu-ts's batch restore with start/count parameters.
+// CDK's restore method uses a different approach and won't recover legacy proofs.
 import {
     CashuMint,
     CashuWallet,
