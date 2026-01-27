@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
-import { inject } from 'mobx-react';
+import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -32,30 +32,24 @@ interface CashuInvoiceProps {
 
 interface CashuInvoiceState {
     updatedInvoice?: any;
-    storedNote: string;
 }
 
 @inject('CashuStore', 'SettingsStore')
+@observer
 export default class CashuInvoiceView extends React.Component<
     CashuInvoiceProps,
     CashuInvoiceState
 > {
     state = {
-        updatedInvoice: undefined,
-        storedNote: ''
+        updatedInvoice: undefined
     };
 
     async componentDidMount() {
-        const { CashuStore, navigation, route } = this.props;
+        const { CashuStore, route } = this.props;
         const { checkInvoicePaid, initializeWallet, cashuWallets } =
             CashuStore!!;
         const invoice = route.params?.invoice;
-        const { mintUrl, quote, getNote, isPaid } = invoice;
-
-        navigation.addListener('focus', () => {
-            const note = getNote;
-            this.setState({ storedNote: note });
-        });
+        const { mintUrl, quote, isPaid } = invoice;
 
         if (!isPaid) {
             console.log('invoice not paid last time checked, checking...', {
@@ -89,7 +83,7 @@ export default class CashuInvoiceView extends React.Component<
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { updatedInvoice, storedNote } = this.state;
+        const { updatedInvoice } = this.state;
         const invoice = updatedInvoice || route.params?.invoice;
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
@@ -102,6 +96,7 @@ export default class CashuInvoiceView extends React.Component<
             formattedTimeUntilExpiry,
             getPaymentRequest,
             getNoteKey,
+            getNote,
             getAmount,
             mintUrl
         } = invoice;
@@ -222,10 +217,10 @@ export default class CashuInvoiceView extends React.Component<
                             />
                         )}
 
-                        {storedNote && (
+                        {getNote && (
                             <KeyValue
                                 keyValue={localeString('general.note')}
-                                value={storedNote}
+                                value={getNote}
                                 sensitive
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
@@ -240,7 +235,7 @@ export default class CashuInvoiceView extends React.Component<
                     {getNoteKey && (
                         <Button
                             title={
-                                storedNote
+                                getNote
                                     ? localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )
