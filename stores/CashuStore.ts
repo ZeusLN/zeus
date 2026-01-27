@@ -3,24 +3,23 @@ import { Alert, InteractionManager } from 'react-native';
 import bolt11 from 'bolt11';
 import url from 'url';
 import querystring from 'querystring-es3';
-import {
-    CashuMint,
-    CashuWallet,
-    MeltQuoteResponse,
-    MeltQuoteState,
-    MintQuoteResponse,
-    GetInfoResponse,
-    Proof,
-    getEncodedToken
-} from '@cashu/cashu-ts';
+
+// CDK Bridge - Native Cashu Development Kit bindings
+import CashuDevKit, {
+    CDKMintInfo,
+    CDKMintQuote,
+    CDKMeltQuote,
+    CDKMelted,
+    CDKToken,
+    CDKSpendingConditions
+} from '../cashu-cdk';
+
 import { LNURLWithdrawParams } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import BigNumber from 'bignumber.js';
-import reject from 'lodash/reject';
-import { schnorr } from '@noble/curves/secp256k1';
-import { bytesToHex } from '@noble/hashes/utils';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
+import { HDKey } from '@scure/bip32';
+import { bytesToHex } from '@noble/hashes/utils';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -47,8 +46,6 @@ import NavigationService from '../NavigationService';
 
 const bip39 = require('bip39');
 
-const BATCH_SIZE = 100;
-const MAX_GAP = 3;
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
 
 const UPGRADE_THRESHOLDS = [10000, 25000, 50000, 100000];
@@ -60,12 +57,7 @@ const UPGRADE_MESSAGES: { [key: number]: string } = {
 };
 
 interface Wallet {
-    wallet?: CashuWallet;
     walletId: string;
-    mintInfo: any;
-    counter: number;
-    proofs: Array<Proof>;
-    balanceSats: number;
     pubkey: string;
     errorConnecting: boolean;
 }
@@ -85,10 +77,16 @@ export default class CashuStore {
     @observable public selectedMintUrl: string;
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
+    // Per-mint data fetched from CDK
+    @observable public mintBalances: { [key: string]: number } = {};
+    @observable public mintInfos: { [key: string]: CDKMintInfo } = {};
     @observable public invoices?: Array<CashuInvoice>;
     @observable public payments?: Array<CashuPayment>;
     @observable public receivedTokens?: Array<CashuToken>;
     @observable public sentTokens?: Array<CashuToken>;
+    // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
+    @observable public cdkInvoices: Array<CashuInvoice> = [];
+    @observable public cdkPayments: Array<CashuPayment> = [];
     @observable public seedVersion?: string;
     @observable public seedPhrase?: Array<string>;
     @observable public seed?: Uint8Array;
@@ -113,12 +111,19 @@ export default class CashuStore {
     @observable public payReq?: Invoice;
     @observable public paymentRequest?: string; // bolt11 invoice
     @observable public paymentPreimage?: string;
+    @observable public paymentSuccess?: boolean; // true when payment completed successfully
     @observable public getPayReqError?: string;
     @observable public paymentError?: boolean;
     @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
-    @observable public proofsToUse?: Proof[];
-    @observable public meltQuote?: MeltQuoteResponse;
+    @observable public meltQuote?: {
+        quote: string;
+        amount: number;
+        fee_reserve: number;
+        state: string;
+        expiry: number;
+        payment_preimage?: string | null;
+    };
     @observable public noteKey?: string;
     @observable public paymentStartTime?: number;
     @observable public paymentDuration?: number;
@@ -126,6 +131,13 @@ export default class CashuStore {
     @observable public mintRecommendations?: MintRecommendation[];
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
+
+    // CDK integration state
+    @observable public cdkInitialized: boolean = false;
+    // Cache of mints that have been added to CDK this session
+    private addedMintsCache: Set<string> = new Set();
+    // Cache for derived Cashu HD key (NUT-10 path m/129372'/0'/0'/0'/0')
+    private cashuHDKeyCache: HDKey | null = null;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -146,6 +158,657 @@ export default class CashuStore {
         this.modalStore = modalStore;
     }
 
+    // =========================================================================
+    // CDK Integration Methods
+    // =========================================================================
+
+    /**
+     * Set loading state
+     */
+    @action
+    public setLoading = (loading: boolean) => {
+        this.loading = loading;
+    };
+
+    /**
+     * Reset payment state before starting a new payment
+     */
+    @action
+    public resetPaymentState = () => {
+        this.paymentPreimage = '';
+        this.paymentSuccess = false;
+        this.paymentError = false;
+        this.paymentErrorMsg = '';
+        this.paymentStartTime = undefined;
+    };
+
+    /**
+     * Initialize CDK wallet with mnemonic
+     * Call this after seed phrase is available
+     */
+    @action
+    public initializeCDK = async (): Promise<boolean> => {
+        if (!CashuDevKit.isAvailable()) {
+            console.log('CDK: Not available');
+            return false;
+        }
+
+        try {
+            // Get mnemonic from seed derivation
+            const mnemonic = this.getCDKMnemonic();
+            if (!mnemonic) {
+                console.error('CDK: Unable to derive mnemonic');
+                return false;
+            }
+
+            await CashuDevKit.initializeWallet(mnemonic, 'sat');
+
+            runInAction(() => {
+                this.cdkInitialized = true;
+            });
+
+            console.log('CDK: Initialized successfully');
+            return true;
+        } catch (e) {
+            console.error('CDK: Initialization failed:', e);
+            return false;
+        }
+    };
+
+    /**
+     * Normalize mint URL for consistent comparison
+     */
+    private normalizeMintUrl = (url: string): string => {
+        // Remove trailing slash for consistent format
+        return url.replace(/\/+$/, '');
+    };
+
+    /**
+     * Ensure a mint is added to CDK, using cache to avoid redundant calls.
+     * This is an optimization since addMint is called frequently before operations.
+     */
+    private ensureMintAdded = async (mintUrl: string): Promise<void> => {
+        const normalizedUrl = this.normalizeMintUrl(mintUrl);
+        if (this.addedMintsCache.has(normalizedUrl)) {
+            return;
+        }
+
+        try {
+            await CashuDevKit.addMint(normalizedUrl);
+            this.addedMintsCache.add(normalizedUrl);
+        } catch (e) {
+            // Mint might already be added (from previous session), cache it anyway
+            this.addedMintsCache.add(normalizedUrl);
+        }
+    };
+
+    /**
+     * Get or derive the Cashu HD key at NUT-10 path m/129372'/0'/0'/0'/0'
+     * Caches the result to avoid repeated derivation.
+     */
+    private getCashuHDKey = (): HDKey | null => {
+        if (this.cashuHDKeyCache) {
+            return this.cashuHDKeyCache;
+        }
+
+        if (!this.seedPhrase || this.seedPhrase.length === 0) {
+            return null;
+        }
+
+        try {
+            const mnemonic = this.seedPhrase.join(' ');
+            const seed = bip39.mnemonicToSeedSync(mnemonic);
+            const hdKey = HDKey.fromMasterSeed(seed);
+            // Cashu NUT-10 derivation path: m/129372'/0'/0'/0'/0'
+            this.cashuHDKeyCache = hdKey.derive("m/129372'/0'/0'/0'/0'");
+            return this.cashuHDKeyCache;
+        } catch (error) {
+            console.error('Error deriving Cashu HD key:', error);
+            return null;
+        }
+    };
+
+    /**
+     * Get mnemonic string for CDK from existing seed
+     */
+    private getCDKMnemonic = (): string | null => {
+        // First check for stored cashu seed phrase
+        if (this.seedPhrase && this.seedPhrase.length > 0) {
+            const mnemonic = this.seedPhrase.join(' ');
+            // Validate it's a proper BIP-39 mnemonic
+            if (bip39scure.validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
+                return mnemonic;
+            }
+            console.warn('CDK: Stored cashu seed is not valid BIP-39');
+        }
+
+        // No valid stored cashu seed - derive from LND seed
+        const lndSeedPhrase = this.settingsStore.seedPhrase;
+        if (!lndSeedPhrase || lndSeedPhrase.length === 0) {
+            console.warn('CDK: No LND seed phrase available');
+            return null;
+        }
+
+        const lndMnemonic = lndSeedPhrase.join(' ');
+
+        // Derive cashu seed from LND seed (v2-bip39 style)
+        const seedFromMnemonic = bip39scure.mnemonicToSeedSync(lndMnemonic);
+        const entropy = seedFromMnemonic.slice(48, 64);
+        const cashuSeedPhrase = bip39scure.entropyToMnemonic(
+            entropy,
+            BIP39_WORD_LIST
+        );
+
+        // Store derived seed for future use
+        const derivedSeedPhrase = cashuSeedPhrase.split(' ');
+        Storage.setItem(
+            `${this.getLndDir()}-cashu-seed-phrase`,
+            derivedSeedPhrase
+        );
+        this.seedPhrase = derivedSeedPhrase;
+        this.seedVersion = 'v2-bip39';
+        Storage.setItem(`${this.getLndDir()}-cashu-seed-version`, 'v2-bip39');
+
+        console.log('CDK: Derived and stored cashu seed from LND seed');
+        return cashuSeedPhrase;
+    };
+
+    /**
+     * Sync balances from CDK to local state
+     * @param includeTransactions - Whether to also reload transaction history (default: false)
+     */
+    @action
+    public syncCDKBalances = async (includeTransactions: boolean = false) => {
+        if (!this.cdkInitialized) return;
+
+        try {
+            const balances = await CashuDevKit.getBalances();
+            const totalBalance = await CashuDevKit.getTotalBalance();
+
+            runInAction(() => {
+                this.mintBalances = balances;
+                this.totalBalanceSats = totalBalance;
+            });
+
+            // Only load transactions when explicitly requested
+            if (includeTransactions) {
+                await this.loadTransactions();
+            }
+        } catch (e) {
+            console.error('CDK: Failed to sync balances:', e);
+        }
+    };
+
+    /**
+     * Load transaction history from CDK
+     * Converts to CashuInvoice (incoming) or CashuPayment (outgoing)
+     */
+    @action
+    public loadTransactions = async () => {
+        if (!this.cdkInitialized) return;
+
+        try {
+            const cdkTransactions =
+                (await CashuDevKit.listTransactions()) || [];
+            runInAction(() => {
+                this.cdkInvoices = cdkTransactions
+                    .filter((tx) => tx.direction === 'incoming')
+                    .map((tx) => CashuInvoice.fromCDKTransaction(tx));
+                this.cdkPayments = cdkTransactions
+                    .filter((tx) => tx.direction === 'outgoing')
+                    .map((tx) => CashuPayment.fromCDKTransaction(tx));
+            });
+        } catch (e) {
+            console.error('CDK: Failed to load transactions:', e);
+        }
+    };
+
+    /**
+     * Fetch mint info from CDK for a specific mint
+     */
+    @action
+    public fetchMintInfo = async (mintUrl: string) => {
+        try {
+            const mintInfo = await CashuDevKit.fetchMintInfo(mintUrl);
+            if (mintInfo) {
+                runInAction(() => {
+                    this.mintInfos[mintUrl] = mintInfo;
+                });
+            }
+            return mintInfo;
+        } catch (e) {
+            console.error(`CDK: Failed to fetch mint info for ${mintUrl}:`, e);
+            return null;
+        }
+    };
+
+    /**
+     * CDK: Create mint quote (receive ecash via Lightning)
+     */
+    public createMintQuoteCDK = async (
+        mintUrl: string,
+        amount: number,
+        description?: string
+    ): Promise<CDKMintQuote> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        await this.ensureMintAdded(mintUrl);
+        return await CashuDevKit.createMintQuote(mintUrl, amount, description);
+    };
+
+    /**
+     * CDK: Check mint quote status and mint proofs if paid
+     */
+    public checkAndMintCDK = async (
+        mintUrl: string,
+        quoteId: string
+    ): Promise<{
+        isPaid: boolean;
+        amount?: number;
+        quote?: CDKMintQuote;
+        isLegacy?: boolean;
+        externalQuote?: any;
+    }> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        await this.ensureMintAdded(mintUrl);
+
+        console.log('CDK checkAndMintCDK: Checking quote', {
+            mintUrl,
+            quoteId,
+            quoteIdLength: quoteId?.length,
+            quoteIdType: typeof quoteId
+        });
+
+        try {
+            const quote = await CashuDevKit.checkMintQuote(mintUrl, quoteId);
+            console.log('CDK checkAndMintCDK: Quote state', {
+                quoteId,
+                state: quote.state,
+                amount: quote.amount
+            });
+
+            if (quote.state === 'Paid') {
+                // Mint the proofs - CDK handles storage internally
+                console.log(
+                    'CDK checkAndMintCDK: Quote is paid, minting proofs'
+                );
+                await CashuDevKit.mint(mintUrl, quoteId);
+                await this.syncCDKBalances();
+
+                return { isPaid: true, amount: quote.amount, quote };
+            }
+
+            // Also check for 'Issued' state (proofs already minted)
+            if (quote.state === 'Issued') {
+                console.log('CDK checkAndMintCDK: Quote already issued');
+                await this.syncCDKBalances();
+                return { isPaid: true, amount: quote.amount, quote };
+            }
+
+            // Handle 'Pending' state - payment in progress, try to mint anyway
+            // Some mints may allow minting while payment is pending
+            if (quote.state === 'Pending') {
+                console.log(
+                    'CDK checkAndMintCDK: Quote is pending, attempting to mint'
+                );
+                try {
+                    await CashuDevKit.mint(mintUrl, quoteId);
+                    await this.syncCDKBalances();
+                    return { isPaid: true, amount: quote.amount, quote };
+                } catch (mintError: any) {
+                    console.log(
+                        'CDK checkAndMintCDK: Mint failed while pending:',
+                        mintError?.message
+                    );
+                    // Return pending state info for better error message
+                    return { isPaid: false, quote };
+                }
+            }
+
+            console.log(
+                `CDK checkAndMintCDK: Quote state is ${quote.state}, not redeemable`
+            );
+            return { isPaid: false, quote };
+        } catch (e: any) {
+            // Handle "Unknown quote" error - this is likely an external quote
+            const errorMsg = e?.message || '';
+            console.log('CDK checkAndMintCDK: checkMintQuote error:', {
+                message: errorMsg,
+                type: e?.type,
+                fullError: JSON.stringify(e)
+            });
+
+            if (errorMsg.includes('Unknown quote')) {
+                console.log(
+                    `CDK checkAndMintCDK: Quote ${quoteId} not in local DB, checking external...`
+                );
+
+                // Check external quote status directly from mint's HTTP API
+                try {
+                    const externalQuote =
+                        await CashuDevKit.checkExternalMintQuote(
+                            mintUrl,
+                            quoteId
+                        );
+                    console.log(
+                        'CDK checkAndMintCDK: External quote status:',
+                        externalQuote
+                    );
+
+                    // NUT-04 states are uppercase: "UNPAID", "PAID", "PENDING", "ISSUED"
+                    const state = externalQuote.state?.toUpperCase();
+
+                    if (state === 'PAID') {
+                        console.log(
+                            `CDK checkAndMintCDK: External quote ${quoteId} is PAID, adding to database and minting...`
+                        );
+
+                        try {
+                            // Derive the secret key for P2PK-locked quotes
+                            // This is needed because ZeusPay locks quotes to our cashu pubkey
+                            const secretKey = this.deriveCashuSecretKey();
+                            if (secretKey) {
+                                console.log(
+                                    'CDK checkAndMintCDK: Using P2PK secret key for minting'
+                                );
+                            }
+
+                            // First, add the external quote to CDK's database with secret key
+                            await CashuDevKit.addExternalMintQuote(
+                                mintUrl,
+                                quoteId,
+                                externalQuote.amount || 0,
+                                externalQuote.request || '',
+                                externalQuote.state || 'PAID',
+                                externalQuote.expiry || 0,
+                                secretKey || undefined
+                            );
+                            console.log(
+                                `CDK checkAndMintCDK: Added quote ${quoteId} to database`
+                            );
+
+                            // Now mint - the quote is in the database
+                            await CashuDevKit.mintExternal(
+                                mintUrl,
+                                quoteId,
+                                externalQuote.amount || 0
+                            );
+                            await this.syncCDKBalances();
+                            console.log(
+                                `CDK checkAndMintCDK: External mint succeeded for ${quoteId}`
+                            );
+                            return {
+                                isPaid: true,
+                                amount: externalQuote.amount,
+                                externalQuote
+                            };
+                        } catch (mintError: any) {
+                            console.log(
+                                `CDK checkAndMintCDK: External mint failed: ${mintError?.message}`
+                            );
+
+                            // Return info for the UI
+                            return {
+                                isPaid: false,
+                                isLegacy: true,
+                                externalQuote,
+                                amount: externalQuote.amount
+                            };
+                        }
+                    } else if (state === 'ISSUED') {
+                        console.log(
+                            `CDK checkAndMintCDK: External quote ${quoteId} already ISSUED`
+                        );
+                        // Proofs were already minted, try restore to claim them
+                        try {
+                            const restored = await CashuDevKit.restore(mintUrl);
+                            console.log(
+                                `CDK checkAndMintCDK: Restored ${restored} sats`
+                            );
+                            await this.syncCDKBalances();
+                            if (restored > 0) {
+                                return {
+                                    isPaid: true,
+                                    amount: restored,
+                                    externalQuote
+                                };
+                            }
+                        } catch (restoreError: any) {
+                            console.log(
+                                `CDK checkAndMintCDK: Restore failed: ${restoreError?.message}`
+                            );
+                        }
+                        return {
+                            isPaid: true,
+                            amount: externalQuote.amount,
+                            externalQuote
+                        };
+                    } else {
+                        console.log(
+                            `CDK checkAndMintCDK: External quote state is ${state}, not redeemable yet`
+                        );
+                        return { isPaid: false, externalQuote };
+                    }
+                } catch (externalError: any) {
+                    console.log(
+                        `CDK checkAndMintCDK: External quote check failed: ${externalError?.message}`
+                    );
+                    // Quote truly doesn't exist
+                    return { isPaid: false, isLegacy: true };
+                }
+            }
+            throw e;
+        }
+    };
+
+    /**
+     * CDK: Create melt quote (pay Lightning invoice with ecash)
+     */
+    public createMeltQuoteCDK = async (
+        mintUrl: string,
+        bolt11Invoice: string
+    ): Promise<CDKMeltQuote> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        await this.ensureMintAdded(mintUrl);
+        return await CashuDevKit.createMeltQuote(mintUrl, bolt11Invoice);
+    };
+
+    /**
+     * CDK: Execute melt (pay Lightning invoice)
+     */
+    public meltCDK = async (
+        mintUrl: string,
+        bolt11: string
+    ): Promise<CDKMelted> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        await this.ensureMintAdded(mintUrl);
+
+        // Create melt quote first, then execute melt with quote ID
+        const quote = await CashuDevKit.createMeltQuote(mintUrl, bolt11);
+        const result = await CashuDevKit.melt(mintUrl, quote.id);
+        await this.syncCDKBalances();
+
+        return result;
+    };
+
+    /**
+     * Enrich tokens with value if missing (migration for old tokens)
+     */
+    private enrichTokensWithProofs = async () => {
+        const lndDir = this.getLndDir();
+        let updated = false;
+
+        // Enrich sent tokens
+        if (this.sentTokens) {
+            for (const token of this.sentTokens) {
+                if (!token.value && token.encodedToken) {
+                    try {
+                        const decoded = await CashuDevKit.decodeToken(
+                            token.encodedToken
+                        );
+                        if (decoded.value) {
+                            token.value = decoded.value;
+                            updated = true;
+                        }
+                    } catch (e) {
+                        console.warn(
+                            'Failed to decode token for enrichment:',
+                            e
+                        );
+                    }
+                }
+            }
+            if (updated) {
+                await Storage.setItem(
+                    `${lndDir}-cashu-sent-tokens`,
+                    this.sentTokens
+                );
+            }
+        }
+
+        // Enrich received tokens
+        updated = false;
+        if (this.receivedTokens) {
+            for (const token of this.receivedTokens) {
+                if (!token.value && token.encodedToken) {
+                    try {
+                        const decoded = await CashuDevKit.decodeToken(
+                            token.encodedToken
+                        );
+                        if (decoded.value) {
+                            token.value = decoded.value;
+                            updated = true;
+                        }
+                    } catch (e) {
+                        console.warn(
+                            'Failed to decode token for enrichment:',
+                            e
+                        );
+                    }
+                }
+            }
+            if (updated) {
+                await Storage.setItem(
+                    `${lndDir}-cashu-received-tokens`,
+                    this.receivedTokens
+                );
+            }
+        }
+    };
+
+    /**
+     * CDK: Send ecash token
+     */
+    public sendTokenCDK = async (
+        mintUrl: string,
+        amount: number,
+        memo?: string,
+        p2pkPubkey?: string,
+        locktime?: number
+    ): Promise<CDKToken> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        let conditions: CDKSpendingConditions | undefined;
+        if (p2pkPubkey) {
+            conditions = {
+                kind: 'P2PK',
+                data: {
+                    pubkey: p2pkPubkey,
+                    locktime
+                }
+            };
+        }
+
+        const token = await CashuDevKit.send(mintUrl, amount, memo, conditions);
+        await this.syncCDKBalances();
+
+        return token;
+    };
+
+    /**
+     * CDK: Receive ecash token
+     */
+    public receiveTokenCDK = async (
+        encodedToken: string,
+        signingKey?: string
+    ): Promise<number> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        const options = signingKey
+            ? { p2pk_signing_keys: [signingKey] }
+            : undefined;
+
+        const amount = await CashuDevKit.receive(encodedToken, options);
+        await this.syncCDKBalances();
+
+        return amount;
+    };
+
+    /**
+     * CDK: Restore proofs from seed
+     */
+    public restoreCDK = async (mintUrl: string): Promise<number> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        const normalizedUrl = this.normalizeMintUrl(mintUrl);
+        await this.ensureMintAdded(normalizedUrl);
+
+        const amount = await CashuDevKit.restore(normalizedUrl);
+        await this.syncCDKBalances();
+
+        return amount;
+    };
+
+    /**
+     * CDK: Decode token without receiving
+     */
+    public decodeTokenCDK = async (encodedToken: string): Promise<CDKToken> => {
+        return await CashuDevKit.decodeToken(encodedToken);
+    };
+
+    /**
+     * CDK: Pay to human-readable address (BOLT12/BIP353)
+     */
+    public payToAddressCDK = async (
+        mintUrl: string,
+        address: string,
+        amountSats: number
+    ): Promise<CDKMelted> => {
+        if (!this.cdkInitialized) {
+            throw new Error('CDK not initialized');
+        }
+
+        const result = await CashuDevKit.payToAddress(
+            mintUrl,
+            address,
+            amountSats
+        );
+        await this.syncCDKBalances();
+
+        return result;
+    };
+
+    // =========================================================================
+    // End CDK Integration Methods
+    // =========================================================================
+
     @action
     public reset = () => {
         this.cashuWallets = {};
@@ -162,6 +825,8 @@ export default class CashuStore {
         this.clearInvoice();
         this.clearPayReq();
         this.shownThresholdModals = [];
+        this.addedMintsCache.clear();
+        this.cashuHDKeyCache = null;
     };
 
     @action
@@ -187,7 +852,6 @@ export default class CashuStore {
         this.paymentPreimage = undefined;
         this.getPayReqError = undefined;
         this.feeEstimate = undefined;
-        this.proofsToUse = undefined;
         this.meltQuote = undefined;
         this.noteKey = undefined;
         this.error = false;
@@ -215,16 +879,13 @@ export default class CashuStore {
     }
 
     calculateTotalBalance = async () => {
-        let newTotalBalance = 0;
-        Object.keys(this.cashuWallets).forEach((mintUrl: string) => {
-            newTotalBalance =
-                newTotalBalance + this.cashuWallets[mintUrl].balanceSats;
-        });
-        this.totalBalanceSats = newTotalBalance;
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-totalBalanceSats`,
-            newTotalBalance
-        );
+        if (this.cdkInitialized) {
+            try {
+                this.totalBalanceSats = await CashuDevKit.getTotalBalance();
+            } catch (e) {
+                console.error('CDK: Failed to calculate total balance:', e);
+            }
+        }
         return this.totalBalanceSats;
     };
     @action
@@ -337,6 +998,10 @@ export default class CashuStore {
         this.error_msg = undefined;
 
         try {
+            // Ensure CDK is initialized
+            if (!this.cdkInitialized) {
+                await this.initializeCDK();
+            }
             if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
                 const seedVersion = 'v2-bip39';
                 await Storage.setItem(
@@ -346,8 +1011,13 @@ export default class CashuStore {
                 this.seedVersion = seedVersion;
             }
 
-            const wallet = await this.initializeWallet(mintUrl, true);
-            if (wallet.errorConnecting) {
+            // Add mint to CDK (CDK persists mints internally)
+            try {
+                await CashuDevKit.addMint(mintUrl);
+                this.addedMintsCache.add(this.normalizeMintUrl(mintUrl));
+                console.log(`CDK: Added mint ${mintUrl}`);
+            } catch (e: any) {
+                console.error(`CDK: Failed to add mint ${mintUrl}:`, e);
                 runInAction(() => {
                     this.loading = false;
                     this.errorAddingMint = true;
@@ -358,25 +1028,35 @@ export default class CashuStore {
                 });
                 return;
             }
+
+            // Initialize wallet UI state
+            await this.initializeWallet(mintUrl);
+
+            // Fetch mint info
+            await this.fetchMintInfo(mintUrl);
+
             if (checkForExistingProofs) {
                 await this.restoreMintProofs(mintUrl);
-                await this.calculateTotalBalance();
             }
 
-            const newMintUrls = this.mintUrls;
-            newMintUrls.push(mintUrl);
+            // Sync balances from CDK
+            await this.syncCDKBalances();
+
+            // Update local mintUrls from CDK (source of truth)
+            this.mintUrls = await CashuDevKit.getMintUrls();
+
+            // Backup to local storage for migration on restart
             await Storage.setItem(
                 `${this.getLndDir()}-cashu-mintUrls`,
-                this.mintUrls
+                JSON.stringify(this.mintUrls)
             );
 
             // set mint as selected if it's the first one
-            if (newMintUrls.length === 1) {
+            if (this.mintUrls.length === 1) {
                 await this.setSelectedMint(mintUrl);
             }
 
             runInAction(() => {
-                this.mintUrls = newMintUrls;
                 this.loading = false;
             });
             return this.cashuWallets;
@@ -396,34 +1076,42 @@ export default class CashuStore {
     @action
     public removeMint = async (mintUrl: string) => {
         this.loading = true;
-        const newMintUrls = this.mintUrls.filter((item) => item !== mintUrl);
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-mintUrls`,
-            newMintUrls
-        );
+
+        // Remove from CDK (CDK is source of truth for mints)
+        try {
+            await CashuDevKit.removeMint(mintUrl);
+            console.log(`CDK: Removed mint ${mintUrl}`);
+        } catch (e) {
+            console.warn(`CDK: Failed to remove mint ${mintUrl}:`, e);
+        }
+
+        // Remove from local wallet state
         delete this.cashuWallets[mintUrl];
+
+        // Update local mintUrls from CDK
+        this.mintUrls = await CashuDevKit.getMintUrls();
 
         // if selected mint is deleted, set the next in line
         if (this.selectedMintUrl === mintUrl) {
-            let newSelectedMintUrl = '';
-            if (newMintUrls[0]) {
-                newSelectedMintUrl = newMintUrls[0];
-                await this.setSelectedMint(newSelectedMintUrl);
+            if (this.mintUrls[0]) {
+                await this.setSelectedMint(this.mintUrls[0]);
             } else {
+                this.selectedMintUrl = '';
                 await Storage.removeItem(
                     `${this.getLndDir()}-cashu-selectedMintUrl`
                 );
             }
         }
 
+        // Clean up any legacy local storage for this mint
         const walletId = `${this.getLndDir()}==${mintUrl}`;
         await Storage.removeItem(`${walletId}-counter`);
         await Storage.removeItem(`${walletId}-proofs`);
         await Storage.removeItem(`${walletId}-balance`);
+        await Storage.removeItem(`${walletId}-pubkey`);
 
         await this.calculateTotalBalance();
         runInAction(() => {
-            this.mintUrls = newMintUrls;
             this.loading = false;
         });
         return this.cashuWallets;
@@ -432,7 +1120,7 @@ export default class CashuStore {
     private getSeed = () => {
         if (this.seed) return this.seed;
 
-        if (this.seedVersion === 'v2-bip39') {
+        if (true || this.seedVersion === 'v2-bip39') {
             const lndSeedPhrase = this.settingsStore.seedPhrase;
             const mnemonic = lndSeedPhrase.join(' ');
 
@@ -470,151 +1158,8 @@ export default class CashuStore {
         return this.seed;
     };
 
-    private getSeedString = () => {
-        const bip39seed = this.getSeed();
-        const bip39seedString = Base64Utils.base64ToHex(
-            Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
-        );
-        return bip39seedString;
-    };
-
-    @action
-    public startWallet = async (
-        mintUrl: string
-    ): Promise<{
-        wallet: CashuWallet;
-        pubkey: string;
-        mintInfo: GetInfoResponse;
-    }> => {
-        this.loading = true;
-        console.log('starting wallet for URL', mintUrl);
-
-        const bip39seed = this.getSeed();
-
-        let pubkey: string;
-        const walletId = `${this.getLndDir()}==${mintUrl}`;
-        if (!this.cashuWallets[mintUrl].pubkey) {
-            const privkey = Base64Utils.base64ToHex(
-                Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
-            );
-
-            pubkey = '02' + bytesToHex(schnorr.getPublicKey(privkey));
-
-            this.cashuWallets[mintUrl].pubkey = pubkey;
-            await Storage.setItem(`${walletId}-pubkey`, pubkey);
-        } else {
-            pubkey = this.cashuWallets[mintUrl].pubkey;
-        }
-
-        // Give wallet 10 seconds to startup
-        const mint = new CashuMint(mintUrl);
-        const mintInfoPromise = mint.getInfo();
-        const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout exceeded')), 10000)
-        );
-
-        try {
-            // update the latest mint info anytime we start a wallet
-            const mintInfo: any = await Promise.race([
-                mintInfoPromise,
-                timeoutPromise
-            ]);
-
-            await Storage.setItem(`${walletId}-mintInfo`, mintInfo);
-
-            const keysets = (await mint.getKeySets()).keysets.filter(
-                (ks) => ks.unit === 'sat' && ks.active
-            );
-            const keys = (await mint.getKeys()).keysets.find(
-                (ks) => ks.unit === 'sat'
-            );
-
-            const wallet = new CashuWallet(mint, {
-                bip39seed,
-                mintInfo,
-                unit: 'sat',
-                keys,
-                keysets
-            });
-
-            // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
-            await wallet.loadMint();
-            await wallet.getKeys();
-
-            return { wallet, pubkey, mintInfo };
-        } catch (error: any) {
-            console.error(
-                `Error connecting to mint ${mintUrl}:`,
-                error.message
-            );
-            throw error; // or handle the timeout error as you see fit
-        }
-    };
-
-    setMintCounter = async (mintUrl: string, count: number) => {
-        await Storage.setItem(
-            `${this.cashuWallets[mintUrl].walletId}-counter`,
-            count
-        );
-
-        runInAction(() => {
-            this.cashuWallets[mintUrl].counter = count;
-        });
-
-        return count;
-    };
-
-    addMintProofs = async (mintUrl: string, newMintProofs: Proof[]) => {
-        const allProofs =
-            this.cashuWallets[mintUrl].proofs.concat(newMintProofs);
-        await this.setMintProofs(mintUrl, allProofs);
-        return allProofs;
-    };
-
-    removeMintProofs = async (mintUrl: string, proofsToRemove: Proof[]) => {
-        let newProofs = this.cashuWallets[mintUrl].proofs;
-        proofsToRemove.forEach((proofToRemove: Proof) => {
-            newProofs = reject(
-                newProofs,
-                (proof: Proof) => proof == proofToRemove
-            );
-        });
-        await this.setMintProofs(mintUrl, newProofs);
-        return newProofs;
-    };
-
-    setMintProofs = async (mintUrl: string, mintProofs: Proof[]) => {
-        await Storage.setItem(
-            `${this.cashuWallets[mintUrl].walletId}-proofs`,
-            mintProofs
-        );
-
-        runInAction(() => {
-            this.cashuWallets[mintUrl].proofs = mintProofs;
-        });
-
-        return mintProofs;
-    };
-
-    setMintBalance = async (mintUrl: string, balanceSats: number) => {
-        await Storage.setItem(
-            `${this.cashuWallets[mintUrl].walletId}-balance`,
-            balanceSats
-        );
-
-        runInAction(() => {
-            this.cashuWallets[mintUrl].balanceSats = balanceSats;
-        });
-
-        return balanceSats;
-    };
-
     setTotalBalance = async (newTotalBalanceSats: number) => {
         const previousBalance = this.totalBalanceSats || 0;
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-totalBalanceSats`,
-            newTotalBalanceSats
-        );
 
         runInAction(() => {
             this.totalBalanceSats = newTotalBalanceSats;
@@ -684,21 +1229,14 @@ export default class CashuStore {
 
     @action
     public checkPendingItems = async () => {
-        console.log('CashuStore: Checking pending invoices and tokens...');
         InteractionManager.runAfterInteractions(async () => {
             // Check pending invoices
             const pendingInvoices = this.invoices?.filter(
                 (invoice) => !invoice.isPaid && !invoice.isExpired
             );
             if (pendingInvoices && pendingInvoices.length > 0) {
-                console.log(
-                    `CashuStore: Found ${pendingInvoices.length} pending invoices to check.`
-                );
                 for (const invoice of pendingInvoices) {
                     try {
-                        console.log(
-                            `CashuStore: Checking invoice ${invoice.quote}`
-                        );
                         await this.checkInvoicePaid(
                             invoice.quote,
                             invoice.mintUrl
@@ -710,29 +1248,20 @@ export default class CashuStore {
                         );
                     }
                 }
-            } else {
-                console.log('CashuStore: No pending invoices to check.');
             }
 
             // Check unspent sent tokens
             const unspentSentTokens = this.sentTokens?.filter(
                 (token) => !token.spent
             );
+            let tokensUpdated = false;
             if (unspentSentTokens && unspentSentTokens.length > 0) {
-                console.log(
-                    `CashuStore: Found ${unspentSentTokens.length} unspent sent tokens to check.`
-                );
                 for (const token of unspentSentTokens) {
                     try {
-                        console.log(
-                            `CashuStore: Checking token from mint ${token.mint}`
-                        );
                         const isSpent = await this.checkTokenSpent(token);
                         if (isSpent) {
-                            console.log(
-                                `CashuStore: Marking token from mint ${token.mint} as spent.`
-                            );
                             await this.markTokenSpent(token);
+                            tokensUpdated = true;
                         }
                     } catch (e) {
                         console.error(
@@ -741,11 +1270,43 @@ export default class CashuStore {
                         );
                     }
                 }
-            } else {
-                console.log('CashuStore: No unspent sent tokens to check.');
             }
-            console.log('CashuStore: Finished checking pending items.');
+
+            // Refresh activity list if any tokens were updated
+            if (tokensUpdated) {
+                activityStore.getSortedActivity();
+            }
         });
+    };
+
+    /**
+     * Check sent tokens spent status (awaitable, for use in views)
+     */
+    @action
+    public checkSentTokensSpentStatus = async (): Promise<boolean> => {
+        const unspentSentTokens = this.sentTokens?.filter(
+            (token) => !token.spent
+        );
+
+        let tokensUpdated = false;
+        if (unspentSentTokens && unspentSentTokens.length > 0) {
+            for (const token of unspentSentTokens) {
+                try {
+                    const isSpent = await this.checkTokenSpent(token);
+                    if (isSpent) {
+                        await this.markTokenSpent(token);
+                        tokensUpdated = true;
+                    }
+                } catch (e) {
+                    console.error(
+                        `CashuStore: Error checking token from mint ${token.mint}:`,
+                        e
+                    );
+                }
+            }
+        }
+
+        return tokensUpdated;
     };
 
     @action
@@ -759,10 +1320,10 @@ export default class CashuStore {
         });
         const lndDir = this.getLndDir();
 
+        // Load app-specific data from local storage (activity, preferences, seed)
         const [
-            storedMintUrls,
+            storedMintUrls, // Only needed for migration to CDK
             storedselectedMintUrl,
-            storedTotalBalanceSats,
             storedInvoices,
             storedPayments,
             storedReceivedTokens,
@@ -773,7 +1334,6 @@ export default class CashuStore {
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
-            Storage.getItem(`${lndDir}-cashu-totalBalanceSats`),
             Storage.getItem(`${lndDir}-cashu-invoices`),
             Storage.getItem(`${lndDir}-cashu-payments`),
             Storage.getItem(`${lndDir}-cashu-received-tokens`),
@@ -783,11 +1343,8 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-seed`)
         ]);
 
-        this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
+        // Parse app-specific stored data
         this.selectedMintUrl = storedselectedMintUrl || '';
-        this.totalBalanceSats = storedTotalBalanceSats
-            ? JSON.parse(storedTotalBalanceSats)
-            : 0;
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
                   (invoice: any) => new CashuInvoice(invoice)
@@ -816,18 +1373,135 @@ export default class CashuStore {
             ? Base64Utils.base64ToBytes(storedSeed)
             : undefined;
 
-        // Non-blocking parallel wallet initialization
-        await Promise.all(
-            this.mintUrls.map((mintUrl) => this.initializeWallet(mintUrl))
-        );
+        // Run Cashu specific migrations before CDK init
+        await MigrationsUtils.migrateCashuSeedVersion(this);
+
+        // Initialize CDK and use it as the source of truth for mints/balances
+        if (CashuDevKit.isAvailable()) {
+            try {
+                const cdkInitialized = await this.initializeCDK();
+                if (!cdkInitialized) {
+                    throw new Error('CDK wallet initialization returned false');
+                }
+                console.log('CDK initialized during wallet startup');
+
+                // Migrate any mints from local storage to CDK
+                const localMintUrls = storedMintUrls
+                    ? JSON.parse(storedMintUrls)
+                    : [];
+                const cdkMintUrls = await CashuDevKit.getMintUrls();
+
+                for (const mintUrl of localMintUrls) {
+                    if (!cdkMintUrls.includes(mintUrl)) {
+                        try {
+                            await CashuDevKit.addMint(mintUrl);
+                            this.addedMintsCache.add(
+                                this.normalizeMintUrl(mintUrl)
+                            );
+                            console.log(
+                                `CDK: Migrated mint from local storage: ${mintUrl}`
+                            );
+
+                            // Restore any existing funds for this mint
+                            runInAction(() => {
+                                this.loadingMsg = localeString(
+                                    'stores.CashuStore.restoringFunds'
+                                );
+                            });
+                            const restored = await CashuDevKit.restore(mintUrl);
+                            if (restored > 0) {
+                                console.log(
+                                    `CDK: Restored ${restored} sats from ${mintUrl}`
+                                );
+                            }
+                        } catch (e) {
+                            console.warn(
+                                `CDK: Failed to migrate mint ${mintUrl}:`,
+                                e
+                            );
+                        }
+                    }
+                }
+
+                // Get mint URLs from CDK (source of truth) and populate cache
+                this.mintUrls = await CashuDevKit.getMintUrls();
+                this.mintUrls.forEach((url) =>
+                    this.addedMintsCache.add(this.normalizeMintUrl(url))
+                );
+
+                // Initialize wallet UI state for each mint
+                await Promise.all(
+                    this.mintUrls.map((mintUrl) =>
+                        this.initializeWallet(mintUrl)
+                    )
+                );
+
+                // Sync balances and fetch mint info from CDK
+                await this.syncCDKBalances(true); // Include transactions on init
+                await Promise.all(
+                    this.mintUrls.map((mintUrl) => this.fetchMintInfo(mintUrl))
+                );
+
+                // Enrich tokens with proofs if missing (migration for old tokens)
+                await this.enrichTokensWithProofs();
+
+                // Clean up legacy local storage (mint URLs now in CDK)
+                await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
+                await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
+
+                // Clean up legacy per-wallet storage keys (now handled by CDK)
+                for (const mintUrl of this.mintUrls) {
+                    const walletId = `${lndDir}==${mintUrl}`;
+                    // Remove keys that CDK now manages internally
+                    await Storage.removeItem(`${walletId}-mintInfo`);
+                    await Storage.removeItem(`${walletId}-proofs`);
+                    await Storage.removeItem(`${walletId}-balance`);
+                    // Keep -counter for legacy restore tool
+                    // Keep -pubkey for display purposes
+                }
+
+                // Clean up legacy seed bytes if we have a valid seed phrase
+                // (seed bytes were used by old cashu-ts, CDK uses mnemonic directly)
+                if (this.seedPhrase && this.seedPhrase.length > 0) {
+                    await Storage.removeItem(`${lndDir}-cashu-seed`);
+                }
+            } catch (e) {
+                console.warn('CDK initialization failed:', e);
+                // Fallback: use local storage mint URLs if CDK fails
+                this.mintUrls = storedMintUrls
+                    ? JSON.parse(storedMintUrls)
+                    : [];
+                await Promise.all(
+                    this.mintUrls.map((mintUrl) =>
+                        this.initializeWallet(mintUrl)
+                    )
+                );
+            }
+        } else {
+            // CDK not available - use local storage (should not happen in production)
+            console.warn('CDK not available, using local storage');
+            this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
+            await Promise.all(
+                this.mintUrls.map((mintUrl) => this.initializeWallet(mintUrl))
+            );
+        }
+
+        // Ensure selected mint is valid
+        if (
+            this.selectedMintUrl &&
+            !this.mintUrls.includes(this.selectedMintUrl)
+        ) {
+            this.selectedMintUrl = this.mintUrls[0] || '';
+            await Storage.setItem(
+                `${lndDir}-cashu-selectedMintUrl`,
+                this.selectedMintUrl
+            );
+        }
 
         runInAction(() => {
             this.loadingMsg = undefined;
             this.initializing = false;
         });
-
-        // Run Cashu specific migrations
-        await MigrationsUtils.migrateCashuSeedVersion(this);
 
         // Check status of pending items after initialization
         this.checkPendingItems();
@@ -837,92 +1511,68 @@ export default class CashuStore {
         console.log('Cashu start-up time:', completionTime);
     };
 
-    @action
-    public initializeWallet = async (
-        mintUrl: string,
-        startWallet?: boolean
-    ): Promise<Wallet> => {
-        runInAction(() => {
-            this.loading = true;
-            this.loadingMsg = `${localeString(
-                'stores.CashuStore.startingWallet'
-            )}: ${mintUrl}`;
-        });
+    /**
+     * Derive a P2PK pubkey from the Cashu mnemonic
+     * Uses BIP-32 derivation path m/129372'/0'/0'/0'/0' per Cashu NUT-10
+     */
+    private deriveCashuPubkey = (): string | null => {
+        const childKey = this.getCashuHDKey();
+        if (!childKey?.publicKey) {
+            console.warn(
+                'Cannot derive pubkey: no seed phrase or key available'
+            );
+            return null;
+        }
+        // Return compressed public key as hex (33 bytes)
+        return bytesToHex(childKey.publicKey);
+    };
 
+    /**
+     * Derive the P2PK secret key from the Cashu mnemonic
+     * Uses BIP-32 derivation path m/129372'/0'/0'/0'/0' per Cashu NUT-10
+     * This key is used to sign when minting from P2PK-locked quotes
+     */
+    public deriveCashuSecretKey = (): string | null => {
+        const childKey = this.getCashuHDKey();
+        if (!childKey?.privateKey) {
+            console.warn(
+                'Cannot derive secret key: no seed phrase or key available'
+            );
+            return null;
+        }
+        // Return private key as hex (32 bytes)
+        return bytesToHex(childKey.privateKey);
+    };
+
+    @action
+    public initializeWallet = async (mintUrl: string): Promise<Wallet> => {
         console.log('initializing wallet for URL', mintUrl);
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;
 
-        const [
-            storedMintInfo,
-            storedCounter,
-            storedProofs,
-            storedBalanceSats,
-            storedPubkey
-        ] = await Promise.all([
-            Storage.getItem(`${walletId}-mintInfo`),
-            Storage.getItem(`${walletId}-counter`),
-            Storage.getItem(`${walletId}-proofs`),
-            Storage.getItem(`${walletId}-balance`),
-            Storage.getItem(`${walletId}-pubkey`)
-        ]);
+        // Load stored pubkey or derive from seed
+        let pubkey = await Storage.getItem(`${walletId}-pubkey`);
 
-        const mintInfo = storedMintInfo ? JSON.parse(storedMintInfo) : [];
-        const counter = storedCounter ? JSON.parse(storedCounter) : 0;
-        const proofs = storedProofs ? JSON.parse(storedProofs) : [];
-        const balanceSats = storedBalanceSats
-            ? JSON.parse(storedBalanceSats)
-            : 0;
-        const pubkey: string = storedPubkey || '';
-
-        runInAction(() => {
-            this.cashuWallets[mintUrl] = {
-                pubkey,
-                walletId,
-                mintInfo,
-                counter,
-                proofs,
-                balanceSats,
-                errorConnecting: false
-            };
-        });
-
-        if (startWallet) {
-            runInAction(() => {
-                this.loadingMsg = `${localeString(
-                    'stores.CashuStore.startingWallet'
-                )}: ${mintUrl}`;
-            });
-
-            try {
-                const {
-                    wallet,
-                    pubkey,
-                    mintInfo
-                }: {
-                    wallet: CashuWallet;
-                    pubkey: string;
-                    mintInfo: GetInfoResponse;
-                } = await this.startWallet(mintUrl);
-
-                runInAction(() => {
-                    this.cashuWallets[mintUrl].wallet = wallet;
-                    this.cashuWallets[mintUrl].pubkey = pubkey;
-                    this.cashuWallets[mintUrl].mintInfo = mintInfo;
-                });
-            } catch (e) {
-                runInAction(() => {
-                    this.cashuWallets[mintUrl].errorConnecting = true;
-                    this.loadingMsg = undefined;
-                    this.loading = false;
-                });
-                throw e;
+        if (!pubkey) {
+            // Derive pubkey from mnemonic if not stored
+            const derivedPubkey = this.deriveCashuPubkey();
+            if (derivedPubkey) {
+                pubkey = derivedPubkey;
+                // Store for future use
+                await Storage.setItem(`${walletId}-pubkey`, pubkey);
+                console.log('Derived and stored Cashu pubkey for', mintUrl);
+            } else {
+                pubkey = '';
+                console.warn('Could not derive pubkey for', mintUrl);
             }
         }
 
         runInAction(() => {
-            this.loadingMsg = undefined;
-            this.loading = false;
+            this.cashuWallets[mintUrl] = {
+                walletId,
+                pubkey,
+                errorConnecting: false
+            };
         });
 
         return this.cashuWallets[mintUrl];
@@ -950,13 +1600,18 @@ export default class CashuStore {
                 );
             }
 
-            if (!this.cashuWallets[this.selectedMintUrl].wallet) {
-                await this.initializeWallet(this.selectedMintUrl, true);
-            }
-
-            const mintQuote = await this.cashuWallets[
-                this.selectedMintUrl
-            ].wallet!!.createMintQuote(value ? Number(value) : 0, memo);
+            // Create mint quote via CDK
+            const cdkQuote = await this.createMintQuoteCDK(
+                this.selectedMintUrl,
+                value ? Number(value) : 0,
+                memo
+            );
+            const mintQuote = {
+                quote: cdkQuote.id,
+                request: cdkQuote.request,
+                state: cdkQuote.state,
+                expiry: cdkQuote.expiry
+            };
 
             let invoice: any;
             if (mintQuote) {
@@ -976,9 +1631,7 @@ export default class CashuStore {
                 invoice = new CashuInvoice({
                     ...mintQuote,
                     decoded,
-                    mintUrl:
-                        this.cashuWallets[this.selectedMintUrl].wallet!!.mint
-                            .mintUrl
+                    mintUrl: this.selectedMintUrl
                 });
                 this.invoices?.push(invoice);
                 await Storage.setItem(
@@ -1043,7 +1696,7 @@ export default class CashuStore {
             };
         } catch (e: any) {
             console.log('Cashu createInvoice err', e);
-            const error_msg = e?.toString();
+            const error_msg = e?.message || e?.toString() || 'Unknown error';
             runInAction(() => {
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
@@ -1064,10 +1717,18 @@ export default class CashuStore {
     public checkInvoicePaid = async (
         quoteId?: string,
         quoteMintUrl?: string,
-        lockedQuote?: boolean,
+        _lockedQuote?: boolean,
         skipMintCheck?: boolean
     ) => {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
+
+        console.log('checkInvoicePaid called with:', {
+            quoteId,
+            quoteMintUrl,
+            mintUrl,
+            _lockedQuote,
+            skipMintCheck
+        });
 
         if (!this.isProperlyConfigured()) {
             throw new Error(
@@ -1075,367 +1736,119 @@ export default class CashuStore {
             );
         }
 
-        if (this.cashuWallets[mintUrl].errorConnecting) return;
-        if (!this.cashuWallets[mintUrl].wallet) {
-            if (!this.mintUrls.includes(mintUrl)) {
-                await this.addMint(mintUrl, true);
-            } else {
-                await this.initializeWallet(mintUrl, true);
-            }
-        }
-
         const invoiceQuoteId: string = quoteId || this.quoteId || '';
 
-        const quote: MintQuoteResponse | undefined = await this.cashuWallets[
-            mintUrl
-        ].wallet?.checkMintQuote(invoiceQuoteId);
+        console.log('checkInvoicePaid invoiceQuoteId:', invoiceQuoteId);
 
-        // decode bolt11 for metadata
-        let decoded;
-        if (quote) {
-            try {
-                decoded = bolt11.decode(quote.request);
-            } catch (e) {
-                console.log('error decoding Cashu bolt11', quote.request);
-            }
-        }
+        // Check and mint via CDK
+        const result = await this.checkAndMintCDK(mintUrl, invoiceQuoteId);
 
-        const updatedInvoice = new CashuInvoice({
-            ...quote,
-            decoded,
-            mintUrl
-        });
+        console.log('checkAndMintCDK result:', result);
 
-        if (quote?.state === 'PAID') {
-            // try up to 100 counters in case we get out of sync (DEBUG)
-            let attempts = 0;
-            let retries = 100;
-            let success = false;
+        if (result.isPaid) {
+            // CDK handles storage internally, just update local state
+            await this.syncCDKBalances(true); // Include transactions for activity
 
-            const amtSat = updatedInvoice.getAmount;
+            let updatedInvoice: CashuInvoice | undefined;
 
-            const paymentRequest = this.invoice || '';
-
-            while (attempts < retries && !success) {
+            // If we have quote info, create invoice record
+            if (result.quote) {
+                const cdkQuote = result.quote;
+                let decoded;
                 try {
-                    const counter =
-                        this.cashuWallets[mintUrl].counter + attempts;
-                    const newProofs: Proof[] = await this.cashuWallets[
-                        mintUrl
-                    ].wallet!!.mintProofs(
-                        amtSat,
-                        // @ts-ignore:next-line
-                        lockedQuote && quote ? quote : invoiceQuoteId,
-                        lockedQuote
-                            ? {
-                                  counter,
-                                  privateKey: this.getSeedString()
-                              }
-                            : {
-                                  counter
-                              }
+                    decoded = bolt11.decode(cdkQuote.request);
+                } catch (e) {
+                    console.log(
+                        'error decoding Cashu bolt11',
+                        cdkQuote.request
                     );
-                    success = true;
+                }
 
-                    const totalBalanceSats = new BigNumber(
-                        this.totalBalanceSats || 0
-                    )
-                        .plus(amtSat || 0)
-                        .toNumber();
-                    const balanceSats = new BigNumber(
-                        this.cashuWallets[mintUrl].balanceSats || 0
-                    )
-                        .plus(amtSat || 0)
-                        .toNumber();
-                    const newCounter = new BigNumber(counter || 0)
-                        .plus(newProofs.length)
-                        .toNumber();
+                updatedInvoice = new CashuInvoice({
+                    quote: cdkQuote.id,
+                    request: cdkQuote.request,
+                    state: 'PAID',
+                    paid: true,
+                    expiry: cdkQuote.expiry,
+                    decoded,
+                    mintUrl
+                });
 
-                    // update proofs, counter, balance
-                    this.cashuWallets[mintUrl].proofs.push(...newProofs);
-                    await this.setMintProofs(
-                        mintUrl,
-                        this.cashuWallets[mintUrl].proofs
-                    );
-
-                    await this.setMintCounter(mintUrl, newCounter);
-                    await this.setMintBalance(mintUrl, balanceSats);
-                    await this.setTotalBalance(totalBalanceSats);
-
-                    // Update or add the invoice in the store
+                // Update or add the invoice in the store
+                runInAction(() => {
                     const invoiceIndex = this.invoices?.findIndex(
-                        (item) => item.quote === quote.quote
+                        (item) => item.quote === invoiceQuoteId
                     );
                     if (invoiceIndex !== undefined && invoiceIndex > -1) {
-                        this.invoices!![invoiceIndex] = updatedInvoice;
+                        this.invoices!![invoiceIndex] = updatedInvoice!;
                     } else {
-                        this.invoices?.push(updatedInvoice);
+                        this.invoices?.push(updatedInvoice!);
                     }
-                    await Storage.setItem(
-                        `${this.getLndDir()}-cashu-invoices`,
-                        this.invoices
-                    );
+                });
 
-                    // update Activity list
-                    activityStore.getSortedActivity();
+                await Storage.setItem(
+                    `${this.getLndDir()}-cashu-invoices`,
+                    this.invoices
+                );
 
-                    // We use this flag to ensure we don't call the check repeatedly
-                    // if rapidly redeeming from ZEUS Pay on open
-                    if (!skipMintCheck) {
-                        this.checkAndSweepMints(mintUrl);
-                    }
-
-                    return {
-                        isPaid: true,
-                        amtSat,
-                        paymentRequest,
-                        updatedInvoice
-                    };
-                } catch (e) {
-                    attempts++;
-                    console.log(`Attempt ${attempts} failed: ${e}`);
-                    if (attempts === retries) {
-                        console.log('Max retries reached');
-                        return {
-                            isPaid: false,
-                            amtSat,
-                            paymentRequest,
-                            updatedInvoice
-                        };
-                    }
-                }
+                activityStore.getSortedActivity();
             }
-        } else {
-            return { isPaid: false, updatedInvoice };
+
+            if (!skipMintCheck) {
+                this.checkAndSweepMints(mintUrl);
+            }
+
+            return {
+                isPaid: true,
+                amtSat: result.amount,
+                paymentRequest: this.invoice || '',
+                updatedInvoice
+            };
         }
+
+        // Return quote state info for better error messages
+        return {
+            isPaid: false,
+            quoteState: result.quote?.state,
+            isLegacy: result.isLegacy
+        };
     };
 
     @action
     public restoreMintProofs = async (mintUrl: string) => {
+        if (!this.cdkInitialized) {
+            console.error('CDK not initialized, cannot restore proofs');
+            return null;
+        }
+
         try {
             this.restorationProgress = 0;
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `CDK: Starting restore for mint: "${mintUrl}"`
+            );
 
-            console.log(RESTORE_PROOFS_EVENT_NAME, 'Loading mint keysets...');
+            const restoredAmount = await this.restoreCDK(mintUrl);
 
-            if (!this.cashuWallets[mintUrl].wallet) {
-                await this.initializeWallet(mintUrl, true);
-            }
+            this.restorationProgress = 100;
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `CDK: Restored ${restoredAmount} sats`
+            );
 
-            const mint = this.cashuWallets[mintUrl].wallet!!.mint;
-            const allKeysets = await mint.getKeySets();
-            const keysets = allKeysets.keysets;
-
-            this.restorationProgress = 5;
-
-            let highestCount = 0;
-            const ksLen = keysets.length;
-            const hexDigitsRegex = /^[0-9A-Fa-f]+$/;
-
-            for (const [i, keyset] of keysets.entries()) {
-                // Hex keyset validation
-                if (!hexDigitsRegex.test(keyset.id)) {
-                    console.log(
-                        RESTORE_PROOFS_EVENT_NAME,
-                        `Skipping ${keyset.id}. Not a hex keyset.`
-                    );
-                    continue;
-                }
-
-                const statusMessage = `Keyset ${i + 1} of ${ksLen}`;
-                console.log(RESTORE_PROOFS_EVENT_NAME, statusMessage);
-
-                // Restore keyset proofs
-                const { restoredProofs, count } = await this.restoreKeyset(
-                    mint,
-                    keyset
-                );
-                console.log(`Keyset ${i + 1} of ${ksLen}`, {
-                    restoredProofs,
-                    count
-                });
-                this.restorationProgress = Math.floor(((i + 1) / ksLen) * 100);
-
-                // Only update highestCount, don't set counter yet
-                if (count > highestCount) {
-                    highestCount = count;
-                }
-
-                const restoredAmount =
-                    CashuUtils.sumProofsValue(restoredProofs);
-                if (restoredAmount > 0) {
-                    console.log(
-                        RESTORE_PROOFS_EVENT_NAME,
-                        `Restored ${restoredAmount} for keyset ${keyset.id} (${this.restorationProgress}%)`
-                    );
-                }
-            }
-
-            // Set counter only once at the end with the highest count
-            if (highestCount > 0) {
-                console.log('SETTING FINAL COUNT', highestCount);
-                await this.setMintCounter(mintUrl, highestCount);
-            }
-
-            console.log(RESTORE_PROOFS_EVENT_NAME, 'end');
             this.restorationProgress = undefined;
             this.restorationKeyset = undefined;
             return true;
         } catch (error: any) {
-            console.error('Error restoring proofs:', error);
-            console.log(RESTORE_PROOFS_EVENT_NAME, `Error: ${error.message}`);
+            console.error('CDK restore error:', error);
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `CDK Error: ${error.message}`
+            );
+            this.restorationProgress = undefined;
+            this.restorationKeyset = undefined;
             return null;
         }
-    };
-
-    // Separate function for restoring a single keyset
-    restoreKeyset = async (mint: CashuMint, keyset: any) => {
-        try {
-            const keys = await mint.getKeys(keyset.id);
-            const mintInfo = await mint.getInfo();
-
-            const wallet = new CashuWallet(mint, {
-                bip39seed: this.getSeed(),
-                mintInfo,
-                unit: 'sat',
-                keys: keys.keysets,
-                keysets: [keyset]
-            });
-
-            this.restorationKeyset = keyset.id;
-
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `Loading keys for keyset ${keyset.id}`
-            );
-
-            const { keysetProofs, count } = await this.restoreBatch(
-                wallet,
-                keyset.id
-            );
-
-            let restoredProofs: any[] = [];
-
-            // Check proof states similar to the original
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `Checking proof states for keyset ${keyset.id}`
-            );
-
-            // Process proofs in batches to avoid potential issues with large sets
-            for (let i = 0; i < keysetProofs.length; i += BATCH_SIZE) {
-                const batchProofs = keysetProofs.slice(i, i + BATCH_SIZE);
-                if (batchProofs.length === 0) continue;
-
-                const proofStates = await wallet.checkProofsStates(batchProofs);
-
-                const unspentProofs = batchProofs.filter((_, idx) => {
-                    const state = proofStates[idx];
-                    return state && state.state === 'UNSPENT';
-                });
-
-                // Store only new proofs
-                const existingProofSecrets = this.cashuWallets[
-                    mint.mintUrl
-                ].proofs.map((p) => p.secret);
-                const newProofs = unspentProofs.filter(
-                    (p) => !existingProofSecrets.includes(p.secret)
-                );
-
-                if (newProofs.length > 0) {
-                    const mintProofs =
-                        this.cashuWallets[mint.mintUrl].proofs.concat(
-                            newProofs
-                        );
-                    const balanceSats = CashuUtils.sumProofsValue(mintProofs);
-                    await this.setMintProofs(mint.mintUrl, mintProofs);
-                    await this.setMintBalance(mint.mintUrl, balanceSats);
-
-                    // Populate restoredProofs
-                    restoredProofs.push(...newProofs);
-                }
-            }
-
-            return { restoredProofs, count };
-        } catch (error: any) {
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `Error restoring keyset ${keyset.id}: ${error.message}`
-            );
-            throw error;
-        }
-    };
-
-    restoreBatch = async (wallet: CashuWallet, keysetId: string) => {
-        let keysetProofs = [];
-        try {
-            let newProofs = [];
-            let start = 0;
-            let lastFound = 0;
-            let noProofsFoundCounter = 0;
-            const noProofsFoundLimit = MAX_GAP;
-
-            do {
-                console.log(
-                    RESTORE_PROOFS_EVENT_NAME,
-                    `Restoring ${start} through ${start + BATCH_SIZE}`
-                );
-
-                const { proofs } = await wallet.restore(start, BATCH_SIZE, {
-                    keysetId
-                });
-                newProofs = [...proofs];
-                keysetProofs.push(...proofs);
-
-                if (newProofs.length) {
-                    const proofsSum = CashuUtils.sumProofsValue(proofs);
-                    console.log(
-                        `> Restored ${proofs.length} proofs with sum ${proofsSum} - starting at ${start}`
-                    );
-                    noProofsFoundCounter = 0;
-                    lastFound = start + proofs.length;
-                } else {
-                    noProofsFoundCounter++;
-                    console.log(
-                        `No proofs found in batch starting at ${start}`
-                    );
-                }
-
-                start = start + BATCH_SIZE;
-            } while (noProofsFoundCounter < noProofsFoundLimit);
-
-            console.log(lastFound, 'setting count');
-            return { keysetProofs, count: lastFound };
-        } catch (error: any) {
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `Error restoring batch: ${error.message}`
-            );
-            throw error;
-        }
-    };
-
-    getProofsToUse = (
-        proofsAvailable: Proof[],
-        amount: number,
-        order = 'desc'
-    ) => {
-        const proofsToSend: Proof[] = [];
-        let amountAvailable = 0;
-        const sortedProofs =
-            order === 'desc'
-                ? proofsAvailable.slice().sort((a, b) => b.amount - a.amount)
-                : proofsAvailable.slice().sort((a, b) => a.amount - b.amount);
-
-        sortedProofs.forEach((proof) => {
-            if (amountAvailable >= amount) {
-                return;
-            }
-
-            amountAvailable = amountAvailable + proof.amount;
-
-            proofsToSend.push(proof);
-        });
-        return { proofsToUse: proofsToSend };
     };
 
     @action
@@ -1443,6 +1856,11 @@ export default class CashuStore {
         bolt11Invoice: string,
         isDonationPayment: boolean = false
     ) => {
+        console.log('getPayReq: Starting', {
+            bolt11Invoice: bolt11Invoice?.substring(0, 20),
+            isDonationPayment
+        });
+
         if (!isDonationPayment) {
             this.loading = true;
         }
@@ -1451,117 +1869,80 @@ export default class CashuStore {
         this.feeEstimate = undefined;
 
         try {
+            console.log('getPayReq: Checking isProperlyConfigured');
             if (!this.isProperlyConfigured()) {
                 throw new Error(
                     localeString('stores.CashuStore.notProperlyConfigured')
                 );
             }
+            console.log('getPayReq: isProperlyConfigured passed');
 
-            const data = await new Promise((resolve) => {
-                const decoded: any = bolt11.decode(bolt11Invoice || '');
-                for (let i = 0; i < decoded.tags.length; i++) {
-                    const tag = decoded.tags[i];
-                    switch (tag.tagName) {
-                        case 'purpose_commit_hash':
-                            decoded.description_hash = tag.data;
-                            break;
-                        case 'payment_hash':
-                            decoded.payment_hash = tag.data;
-                            break;
-                        case 'expire_time':
-                            decoded.expiry = tag.data;
-                            break;
-                        case 'description':
-                            decoded.description = tag.data;
-                            break;
+            console.log('getPayReq: Decoding bolt11');
+            const data = await new Promise((resolve, reject) => {
+                try {
+                    const decoded: any = bolt11.decode(bolt11Invoice || '');
+                    for (let i = 0; i < decoded.tags.length; i++) {
+                        const tag = decoded.tags[i];
+                        switch (tag.tagName) {
+                            case 'purpose_commit_hash':
+                                decoded.description_hash = tag.data;
+                                break;
+                            case 'payment_hash':
+                                decoded.payment_hash = tag.data;
+                                break;
+                            case 'expire_time':
+                                decoded.expiry = tag.data;
+                                break;
+                            case 'description':
+                                decoded.description = tag.data;
+                                break;
+                        }
                     }
+                    resolve(decoded);
+                } catch (err) {
+                    reject(err);
                 }
-                resolve(decoded);
             });
+            console.log('getPayReq: bolt11 decoded');
 
-            if (!this.cashuWallets[this.selectedMintUrl].wallet) {
-                await this.initializeWallet(this.selectedMintUrl, true);
-            }
-            const cashuWallet = this.cashuWallets[this.selectedMintUrl];
-
-            const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
+            // Create melt quote via CDK
+            console.log('getPayReq: About to call createMeltQuoteCDK');
+            const cdkQuote = await this.createMeltQuoteCDK(
+                this.selectedMintUrl,
                 bolt11Invoice
             );
-            const { proofsToUse }: { proofsToUse: Proof[] } =
-                this.getProofsToUse(
-                    cashuWallet.proofs,
-                    meltQuote.amount + meltQuote.fee_reserve,
-                    'desc'
-                );
+            console.log('getPayReq: createMeltQuoteCDK completed', cdkQuote);
+            const meltQuote = {
+                quote: cdkQuote.id,
+                amount: cdkQuote.amount,
+                fee_reserve: cdkQuote.fee_reserve,
+                state: cdkQuote.state as any,
+                expiry: cdkQuote.expiry,
+                payment_preimage: cdkQuote.payment_preimage
+            };
 
             runInAction(() => {
                 this.payReq = new Invoice(data);
                 this.getPayReqError = undefined;
-                if (!isDonationPayment) {
-                    this.loading = false;
-                }
+                this.meltQuote = meltQuote;
+                this.feeEstimate = meltQuote.fee_reserve || 0;
             });
-
-            this.proofsToUse = proofsToUse;
-            this.meltQuote = meltQuote;
-            this.feeEstimate = this.meltQuote.fee_reserve || 0;
-
-            return;
+            console.log('getPayReq: Success, setting loading = false');
         } catch (e: any) {
+            console.log('getPayReq: Error caught', e?.message || e);
             const errorMsg = errorToUserFriendly(e);
             runInAction(() => {
                 this.payReq = undefined;
                 this.getPayReqError = errorMsg;
-                this.loading = false;
             });
-        }
-    };
-
-    getSpendingProofsWithPreciseCounter = async (
-        wallet: CashuWallet,
-        amountToPay: number,
-        proofs: Proof[],
-        currentCounter: number,
-        swap?: boolean,
-        p2pk?: { pubkey: string; locktime?: number; refundKeys?: Array<string> }
-    ) => {
-        try {
-            const { keep: proofsToKeep, send: proofsToSend } = swap
-                ? await wallet.swap(amountToPay, proofs, {
-                      keysetId: wallet.keysetId,
-                      counter: p2pk ? undefined : currentCounter,
-                      includeFees: true,
-                      p2pk
-                  })
-                : await wallet.send(amountToPay, proofs, {
-                      keysetId: wallet.keysetId,
-                      counter: p2pk ? undefined : currentCounter,
-                      includeFees: true,
-                      p2pk
-                  });
-
-            const existingProofsIds = proofs.map((p) => p.secret);
-            const newKeepProofsCount = proofsToKeep.filter(
-                (p) => !existingProofsIds.includes(p.secret)
-            ).length;
-            const newSendProofsCount = proofsToSend.filter(
-                (p) => !existingProofsIds.includes(p.secret)
-            ).length;
-
-            console.log(newKeepProofsCount, 'NEW PROOFS KEEP COUNT');
-            console.log(newSendProofsCount, 'NEW PROOFS SEND COUNT');
-
-            const newCounterValue =
-                currentCounter + newKeepProofsCount + newSendProofsCount;
-
-            return {
-                proofsToSend,
-                proofsToKeep,
-                newCounterValue
-            };
-        } catch (err) {
-            console.error('Error in getSpendingProofsWithPreciseCounter:', err);
-            throw err;
+        } finally {
+            // ALWAYS set loading = false when done
+            console.log('getPayReq: Finally block, setting loading = false');
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.loading = false;
+                });
+            }
         }
     };
 
@@ -1573,214 +1954,105 @@ export default class CashuStore {
         amount?: string;
         isDonationPayment?: boolean;
     }) => {
+        // Reset payment state (don't set loading=true here as it triggers LoadingIndicator on CashuPaymentRequest)
         if (isDonationPayment) {
-            console.log('STARTING DONATION PAYMENT PROCESS');
+            console.log('CDK payLnInvoiceFromEcash: Starting donation payment');
         } else {
-            this.loading = true;
+            this.paymentPreimage = '';
+            this.paymentSuccess = false;
+            this.paymentError = false;
+            this.paymentErrorMsg = '';
             this.paymentStartTime = Date.now();
         }
 
         const mintUrl = this.selectedMintUrl;
 
-        if (!this.cashuWallets[mintUrl].wallet) {
-            await this.initializeWallet(mintUrl, true);
+        if (!this.meltQuote) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = 'No melt quote available';
+                this.loading = false;
+            });
+            return;
         }
 
-        const wallet = this.cashuWallets[mintUrl].wallet;
-        let proofs = this.proofsToUse;
-
-        const paymentAmt = this.payReq?.getRequestAmount
-            ? this.payReq?.getRequestAmount
-            : Number(amount);
-        const amountToPay = this.feeEstimate
-            ? this.feeEstimate + paymentAmt
-            : paymentAmt;
-        const totalProofsValue = CashuUtils.sumProofsValue(proofs);
-
-        console.log('ecash quote fee reserve:', this.feeEstimate);
-        console.log('Proofs before send', proofs);
-        console.log(totalProofsValue, amountToPay);
-
         try {
-            if (totalProofsValue < amountToPay) {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.notEnoughFunds'
-                );
-                this.loading = false;
+            const paymentAmt = this.payReq?.getRequestAmount
+                ? this.payReq?.getRequestAmount
+                : Number(amount);
+
+            // Check balance via CDK
+            const balance = await CashuDevKit.getMintBalance(mintUrl);
+            const amountToPay = this.feeEstimate
+                ? this.feeEstimate + paymentAmt
+                : paymentAmt;
+
+            if (balance < amountToPay) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.notEnoughFunds'
+                    );
+                    this.loading = false;
+                });
                 return;
             }
 
-            console.log('[payLnInvoce] use send ', {
-                amountToPay,
-                amount,
-                fee: this.feeEstimate,
-                totalProofsValue
-            });
-
-            let currentCount = this.cashuWallets[mintUrl].counter;
-            let proofsToSend: Proof[] | undefined;
-            let proofsToKeep: Proof[] | undefined;
-            let newCounterValue: number | undefined;
-            let success = false;
-            const maxAttempts = 100;
-
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const attemptCounter = currentCount + attempt;
-                console.log(
-                    `payLnInvoiceFromEcash: Attempt ${
-                        attempt + 1
-                    }/${maxAttempts} with counter ${attemptCounter}`
-                );
-                try {
-                    const result =
-                        await this.getSpendingProofsWithPreciseCounter(
-                            wallet!!,
-                            amountToPay,
-                            this.proofsToUse!!,
-                            attemptCounter
-                        );
-                    proofsToSend = result.proofsToSend;
-                    proofsToKeep = result.proofsToKeep;
-                    newCounterValue = result.newCounterValue;
-                    if (!isDonationPayment) {
-                        success = true;
-                    }
-                    console.log(
-                        `payLnInvoiceFromEcash: Attempt ${
-                            attempt + 1
-                        } successful with counter ${attemptCounter}`
-                    );
-                    break;
-                } catch (e: any) {
-                    console.warn(
-                        `payLnInvoiceFromEcash: Attempt ${
-                            attempt + 1
-                        } failed with counter ${attemptCounter}: ${e.message}`
-                    );
-                    if (attempt === maxAttempts - 1) {
-                        throw e; // Re-throw error after last attempt
-                    }
-                }
-            }
-
-            if (
-                (!isDonationPayment && !success) ||
-                proofsToSend === undefined ||
-                proofsToKeep === undefined ||
-                newCounterValue === undefined
-            ) {
-                // This case should ideally be caught by the re-throw in the loop
-                throw new Error(
-                    localeString('stores.CashuStore.errorPayingInvoice') +
-                        ' (failed all attempts to get spending proofs)'
-                );
-            }
-
-            console.log('PROOFS TO SEND:', proofsToSend);
-            console.log('PROOFS TO KEEP:', proofsToKeep);
-
-            proofs = proofsToSend;
-
-            if (proofsToKeep.length)
-                await this.addMintProofs(mintUrl, proofsToKeep);
-
-            let meltResponse = await wallet!!.meltProofs(
-                this.meltQuote!!,
-                proofsToSend,
-                {
-                    counter: newCounterValue + 1
-                }
-            );
-            console.log('melt response', meltResponse);
-
-            if (meltResponse?.change?.length) {
-                await this.setMintCounter(
-                    mintUrl,
-                    newCounterValue + meltResponse.change.length + 1
-                );
-                await this.addMintProofs(mintUrl, meltResponse.change);
-            } else {
-                await this.setMintCounter(mintUrl, newCounterValue + 1);
-            }
-
-            const realFee = Math.max(
-                0,
-                meltResponse.quote?.fee_reserve -
-                    CashuUtils.sumProofsValue(meltResponse?.change)
+            const meltResult = await this.meltCDK(
+                mintUrl,
+                this.paymentRequest!
             );
 
-            const paymentPreimage = meltResponse.quote.payment_preimage!!;
-
-            if (!isDonationPayment) {
-                this.paymentPreimage = paymentPreimage;
-            }
-
-            if (this.paymentStartTime) {
-                this.paymentDuration =
-                    (Date.now() - this.paymentStartTime) / 1000;
-            }
+            const realFee = meltResult.fee_paid;
+            const paymentPreimage = meltResult.preimage || '';
 
             const payment = new CashuPayment({
                 ...this.payReq,
-                proofs: proofsToSend,
                 bolt11: this.paymentRequest,
-                meltResponse,
-                amount: meltResponse.quote.amount,
+                meltResponse: {
+                    quote: this.meltQuote,
+                    change: meltResult.change
+                },
+                amount: meltResult.amount,
                 fee: realFee,
                 payment_preimage: paymentPreimage,
                 mintUrl
             });
 
-            if (!isDonationPayment) {
-                this.noteKey = payment.getNoteKey;
-            }
-
-            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
-            // store Ecash payment
+            // Store the payment
             this.payments?.push(payment);
+
             await Storage.setItem(
                 `${this.getLndDir()}-cashu-payments`,
                 this.payments
             );
 
-            // update balances
-            await this.setTotalBalance(this.totalBalanceSats - amountToPay);
-            await this.setMintBalance(
-                mintUrl,
-                this.cashuWallets[mintUrl].balanceSats - amountToPay
-            );
+            // CDK handles balance updates internally
+            await this.syncCDKBalances(true); // Include transactions for activity
 
-            if (!isDonationPayment) {
-                this.loading = false;
-            }
+            // Set payment result
+            runInAction(() => {
+                if (!isDonationPayment) {
+                    this.paymentPreimage = paymentPreimage;
+                    this.paymentSuccess = true;
+                    this.noteKey = payment.getNoteKey;
+                    this.loading = false;
+                }
+
+                if (this.paymentStartTime) {
+                    this.paymentDuration =
+                        (Date.now() - this.paymentStartTime) / 1000;
+                }
+            });
 
             return payment;
         } catch (err: any) {
-            console.log('paying ln invoice from ecash error', err);
-            const mintQuote = await wallet!!.checkMeltQuote(
-                this.meltQuote!!.quote
-            );
-            if (mintQuote.state == MeltQuoteState.PAID) {
+            console.error('CDK payLnInvoiceFromEcash error:', err);
+            runInAction(() => {
                 this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.alreadyPaid'
-                );
+                this.paymentErrorMsg = String(err.message);
                 this.loading = false;
-                return;
-            } else if (mintQuote.state == MeltQuoteState.PENDING) {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.pending'
-                );
-                this.loading = false;
-                return;
-            }
-            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
-            await this.addMintProofs(mintUrl, proofs!!);
-            this.paymentError = true;
-            this.paymentErrorMsg = String(err.message);
-            this.loading = false;
+            });
             return;
         }
     };
@@ -1789,24 +2061,70 @@ export default class CashuStore {
     public checkTokenSpent = async (decoded: CashuToken) => {
         const { mint } = decoded;
 
-        if (this.cashuWallets[mint].errorConnecting) return;
-        if (!this.cashuWallets[mint].wallet) {
-            await this.initializeWallet(mint, true);
+        if (this.cashuWallets[mint]?.errorConnecting) {
+            return false;
         }
 
-        const wallet = this.cashuWallets[mint].wallet;
-
-        const states = await wallet!!.checkProofsStates(decoded.proofs);
-
-        let alreadySpent = false;
-        states.forEach((state) => {
-            if (alreadySpent) return;
-            if (state.state !== 'UNSPENT') {
-                alreadySpent = true;
+        try {
+            // Get proofs - decode from encodedToken if not available
+            let proofs = decoded.proofs;
+            if (
+                (!proofs || !Array.isArray(proofs) || proofs.length === 0) &&
+                decoded.encodedToken
+            ) {
+                try {
+                    // Use cashu-ts sync decode which returns proofs directly
+                    const decodedToken = CashuUtils.decodeCashuToken(
+                        decoded.encodedToken
+                    );
+                    proofs = decodedToken.proofs || [];
+                } catch (e) {
+                    console.error('Error decoding token for spent check:', e);
+                    return false;
+                }
             }
-        });
 
-        return alreadySpent;
+            if (!proofs || !Array.isArray(proofs) || proofs.length === 0) {
+                return false;
+            }
+
+            // Map proofs to CDK format
+            const cdkProofs = proofs.map((p: any) => ({
+                amount: p.amount,
+                keyset_id: p.id || p.keyset_id || '',
+                secret: p.secret,
+                c: p.C || p.c || ''
+            }));
+
+            await this.ensureMintAdded(mint);
+
+            // Use CDK to check proofs state
+            const states = await CashuDevKit.checkProofsState(mint, cdkProofs);
+
+            if (!states || !Array.isArray(states)) {
+                return false;
+            }
+
+            let alreadySpent = false;
+            states.forEach((state) => {
+                if (alreadySpent) return;
+                // CDK uses 'Unspent', 'Pending', 'Spent' (capitalized)
+                if (state.state !== 'Unspent') {
+                    alreadySpent = true;
+                }
+            });
+
+            return alreadySpent;
+        } catch (error: any) {
+            console.error('Error checking token spent status:', error);
+            runInAction(() => {
+                this.error = true;
+                this.error_msg =
+                    error.message ||
+                    localeString('stores.CashuStore.checkSpentError');
+            });
+            return false;
+        }
     };
 
     @action
@@ -1841,25 +2159,25 @@ export default class CashuStore {
 
         const mintUrl = decoded.mint;
 
-        if (!this.cashuWallets[mintUrl]?.wallet) {
-            await this.initializeWallet(mintUrl, true);
-        }
-
         try {
-            const alreadySpent = await this.checkTokenSpent(decoded);
-            if (alreadySpent) {
+            // Ensure CDK is initialized
+            if (!this.cdkInitialized) {
+                await this.initializeCDK();
+            }
+
+            // Check if token is valid
+            const isValid = await CashuDevKit.isValidToken(encodedToken);
+            if (!isValid) {
                 this.loading = false;
                 return {
                     success: false,
-                    errorMessage: localeString('stores.CashuStore.alreadySpent')
+                    errorMessage: localeString('stores.CashuStore.invalidToken')
                 };
             }
 
-            const wallet = this.cashuWallets[mintUrl].wallet!!;
-
             if (toSelfCustody) {
+                // For toSelfCustody, receive the token first then sweep via melt
                 const tokenAmt = decoded.getAmount;
-                const initialAssumedFeeSat = 0;
 
                 const memo = `${localeString(
                     'views.Cashu.CashuToken.tokenSweep'
@@ -1871,20 +2189,35 @@ export default class CashuStore {
                     noLsp: true
                 };
 
+                // First receive the token via CDK
+                const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
+                let signingKey: string | undefined;
+                if (isLocked) {
+                    const bip39seed = this.getSeed();
+                    if (bip39seed) {
+                        signingKey = Base64Utils.base64ToHex(
+                            Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
+                        );
+                    }
+                }
+                await this.receiveTokenCDK(encodedToken, signingKey);
+                await this.syncCDKBalances();
+
+                // Create invoice for sweeping
                 let invoice = await this.invoicesStore.createInvoice({
                     ...invoiceParams,
                     memo,
                     value: String(tokenAmt)
                 });
 
-                let meltQuote = await wallet.createMeltQuote(
+                // Create melt quote via CDK
+                const meltQuote = await this.createMeltQuoteCDK(
+                    mintUrl,
                     invoice.paymentRequest
                 );
 
-                if (initialAssumedFeeSat !== meltQuote.fee_reserve) {
-                    const receiveAmtSat: number =
-                        tokenAmt - meltQuote.fee_reserve;
-
+                if (meltQuote.fee_reserve > 0) {
+                    const receiveAmtSat = tokenAmt - meltQuote.fee_reserve;
                     if (receiveAmtSat <= 0) {
                         this.loading = false;
                         return {
@@ -1895,6 +2228,7 @@ export default class CashuStore {
                         };
                     }
 
+                    // Recreate invoice with adjusted amount
                     invoice = await this.invoicesStore.createInvoice({
                         ...invoiceParams,
                         memo: `${memo} [${localeString(
@@ -1902,105 +2236,29 @@ export default class CashuStore {
                         )}]`,
                         value: receiveAmtSat.toString()
                     });
-
-                    meltQuote = await wallet.createMeltQuote(
-                        invoice.paymentRequest
-                    );
                 }
 
-                const amountToSend = meltQuote.amount + meltQuote.fee_reserve;
+                // Melt via CDK to pay the invoice
+                await this.meltCDK(mintUrl, invoice.paymentRequest);
 
-                const { send: proofsToSend } = await wallet.send(
-                    amountToSend,
-                    decoded.proofs,
-                    {
-                        includeFees: true
-                    }
-                );
-
-                await wallet.meltProofs(meltQuote, proofsToSend);
+                await this.syncCDKBalances(true); // Include transactions for activity
             } else {
+                // Regular receive via CDK
                 const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
-                const walletPubkey = this.cashuWallets[mintUrl].pubkey;
-                let isLockedToWallet = false;
+                let signingKey: string | undefined;
+
                 if (isLocked) {
-                    const firstLockedPubkey = CashuUtils.getP2PKPubkeySecret(
-                        decoded.proofs[0].secret
-                    );
-                    const allProofsLockedToSamePubkey = decoded.proofs.every(
-                        (proof) => {
-                            const proofPubkey = CashuUtils.getP2PKPubkeySecret(
-                                proof.secret
-                            );
-                            return proofPubkey === firstLockedPubkey;
-                        }
-                    );
-                    if (!allProofsLockedToSamePubkey) {
-                        this.loading = false;
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.CashuStore.claimError.inconsistentLocking'
-                            )
-                        };
-                    }
-                    isLockedToWallet = firstLockedPubkey === walletPubkey;
-                    if (!isLockedToWallet) {
-                        this.loading = false;
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.CashuStore.claimError.lockedToWallet'
-                            )
-                        };
+                    const bip39seed = this.getSeed();
+                    if (bip39seed) {
+                        signingKey = Base64Utils.base64ToHex(
+                            Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
+                        );
                     }
                 }
-                const counter =
-                    this.cashuWallets[mintUrl].counter + decoded.proofs.length;
-                const currentSeed = this.getSeed();
-                const currentPrivkey = Base64Utils.base64ToHex(
-                    Base64Utils.bytesToBase64(currentSeed.slice(0, 32))
-                );
-                const currentDerivedPubkey =
-                    '02' + bytesToHex(schnorr.getPublicKey(currentPrivkey));
 
-                if (currentDerivedPubkey !== walletPubkey) {
-                    this.loading = false;
-                    return {
-                        success: false,
-                        errorMessage: localeString(
-                            'stores.CashuStore.claimError.keyMismatch'
-                        )
-                    };
-                }
+                await this.receiveTokenCDK(encodedToken, signingKey);
 
-                const newProofs = await wallet.receive(encodedToken, {
-                    keysetId: wallet.keysetId,
-                    privkey: currentPrivkey,
-                    counter
-                });
-                const amtSat = CashuUtils.sumProofsValue(newProofs);
-                const totalBalanceSats = new BigNumber(
-                    this.totalBalanceSats || 0
-                )
-                    .plus(amtSat || 0)
-                    .toNumber();
-                const balanceSats = new BigNumber(
-                    this.cashuWallets[mintUrl].balanceSats || 0
-                )
-                    .plus(amtSat || 0)
-                    .toNumber();
-                const newCounter = new BigNumber(counter || 0)
-                    .plus(newProofs.length)
-                    .toNumber();
-
-                // update proofs, counter, balance
-                this.cashuWallets[mintUrl].proofs.push(...newProofs);
-                await this.setMintProofs(
-                    mintUrl,
-                    this.cashuWallets[mintUrl].proofs
-                );
-                // record received token activity
+                // Record received token activity
                 this.receivedTokens?.push(
                     new CashuToken({
                         ...decoded,
@@ -2014,24 +2272,28 @@ export default class CashuStore {
                     this.receivedTokens
                 );
 
-                await this.setMintCounter(mintUrl, newCounter);
-                await this.setMintBalance(mintUrl, balanceSats);
-                await this.setTotalBalance(totalBalanceSats);
+                // CDK handles balance updates internally
+                await this.syncCDKBalances(true); // Include transactions for activity
 
                 this.checkAndSweepMints(mintUrl);
             }
 
             this.loading = false;
-
             return { success: true, errorMessage: '' };
-        } catch (e) {
-            console.log('claimToken error', { e });
-            const error_msg = e?.toString();
+        } catch (e: any) {
+            console.error('CDK claimToken error:', e);
+            if (e.message?.includes('spent') || e.message?.includes('Spent')) {
+                this.loading = false;
+                return {
+                    success: false,
+                    errorMessage: localeString('stores.CashuStore.alreadySpent')
+                };
+            }
             this.loading = false;
             return {
                 success: false,
                 errorMessage:
-                    error_msg || localeString('stores.CashuStore.claimError')
+                    e.message || localeString('stores.CashuStore.claimError')
             };
         }
     };
@@ -2059,17 +2321,11 @@ export default class CashuStore {
             : this.mintUrls;
 
         for (const mintUrl of mintsToCheck) {
-            const walletData = this.cashuWallets[mintUrl];
-            if (!walletData) {
-                console.warn(
-                    `Cashu sweep check: Wallet data not found for mint ${mintUrl}`
-                );
-                continue;
-            }
+            const balance = this.mintBalances[mintUrl] || 0;
 
-            if (walletData.balanceSats > sweepThresholdSats) {
+            if (balance > sweepThresholdSats) {
                 console.log(
-                    `Cashu sweep triggered for ${mintUrl}: Balance ${walletData.balanceSats} > Threshold ${sweepThresholdSats}`
+                    `Cashu sweep triggered for ${mintUrl}: Balance ${balance} > Threshold ${sweepThresholdSats}`
                 );
                 try {
                     await this.sweepMint(mintUrl);
@@ -2078,7 +2334,7 @@ export default class CashuStore {
                 }
             } else {
                 console.log(
-                    `Cashu sweep check for ${mintUrl}: Balance ${walletData.balanceSats} <= Threshold ${sweepThresholdSats}`
+                    `Cashu sweep check for ${mintUrl}: Balance ${balance} <= Threshold ${sweepThresholdSats}`
                 );
             }
         }
@@ -2090,26 +2346,13 @@ export default class CashuStore {
         this.loading = true;
 
         try {
-            if (!this.cashuWallets[mintUrl]?.wallet) {
-                console.log(`Initializing wallet for sweep: ${mintUrl}`);
-                await this.initializeWallet(mintUrl, true);
-            }
-
-            const wallet = this.cashuWallets[mintUrl].wallet;
-            if (!wallet) {
-                throw new Error(
-                    `Wallet for mint ${mintUrl} could not be initialized.`
-                );
-            }
-
-            const amountToSweep = this.cashuWallets[mintUrl].balanceSats;
+            // Get balance from CDK
+            const amountToSweep = await CashuDevKit.getMintBalance(mintUrl);
             if (amountToSweep <= 0) {
                 console.log(`Sweep skipped for ${mintUrl}: Zero balance.`);
                 this.loading = false;
                 return true;
             }
-
-            const allProofs = [...this.cashuWallets[mintUrl].proofs];
 
             const memo = `${localeString(
                 'stores.CashuStore.autoSweep'
@@ -2134,11 +2377,12 @@ export default class CashuStore {
                     'Failed to create initial invoice for fee estimation.'
                 );
 
-            // 2. Get melt quote for fee
+            // 2. Get melt quote from CDK for fee estimation
             console.log(
                 `Sweep ${mintUrl}: Getting melt quote for fee estimation`
             );
-            const initialMeltQuote = await wallet.createMeltQuote(
+            const initialMeltQuote = await CashuDevKit.createMeltQuote(
+                mintUrl,
                 initialInvoice.paymentRequest
             );
             const feeReserve = initialMeltQuote.fee_reserve;
@@ -2169,128 +2413,28 @@ export default class CashuStore {
             if (!finalInvoice?.paymentRequest)
                 throw new Error('Failed to create final invoice for sweep.');
 
-            // 4. Get final melt quote
-            console.log(`Sweep ${mintUrl}: Getting final melt quote`);
-            const finalMeltQuote = await wallet.createMeltQuote(
+            // 4. Execute melt via CDK (handles quote creation internally)
+            console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
+            const meltResponse = await CashuDevKit.melt(
+                mintUrl,
                 finalInvoice.paymentRequest
-            );
-            const amountToSend =
-                finalMeltQuote.amount + finalMeltQuote.fee_reserve;
-
-            console.log(
-                `Sweep ${mintUrl}: Preparing proofs for sending ${amountToSend} sats`
-            );
-            const currentCounter = this.cashuWallets[mintUrl].counter;
-            let proofsToSend: Proof[] | undefined;
-            let proofsToKeep: Proof[] | undefined;
-            let newCounterValue: number | undefined;
-            let success = false;
-            const maxAttempts = 100;
-
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const attemptCounter = currentCounter + attempt;
-                console.log(
-                    `sweepMint: Attempt ${
-                        attempt + 1
-                    }/${maxAttempts} to get spending proofs with counter ${attemptCounter}`
-                );
-                try {
-                    const result =
-                        await this.getSpendingProofsWithPreciseCounter(
-                            wallet,
-                            amountToSend,
-                            allProofs,
-                            attemptCounter
-                        );
-                    proofsToSend = result.proofsToSend;
-                    proofsToKeep = result.proofsToKeep;
-                    newCounterValue = result.newCounterValue;
-                    success = true;
-                    console.log(
-                        `sweepMint: Attempt ${
-                            attempt + 1
-                        } successful with counter ${attemptCounter}`
-                    );
-                    break;
-                } catch (e: any) {
-                    console.warn(
-                        `sweepMint: Attempt ${
-                            attempt + 1
-                        } failed with counter ${attemptCounter}: ${e.message}`
-                    );
-                    if (attempt === maxAttempts - 1) {
-                        throw e; // Re-throw error after last attempt
-                    }
-                }
-            }
-
-            if (
-                !success ||
-                proofsToSend === undefined ||
-                proofsToKeep === undefined ||
-                newCounterValue === undefined
-            ) {
-                throw new Error(
-                    `${localeString(
-                        'stores.CashuStore.sweepError'
-                    )} (${mintUrl}): Failed to get spending proofs after ${maxAttempts} attempts.`
-                );
-            }
-
-            console.log(
-                `Sweep ${mintUrl}: Melting ${proofsToSend.length} proofs`
-            );
-            const meltResponse = await wallet.meltProofs(
-                finalMeltQuote,
-                proofsToSend,
-                {
-                    counter: newCounterValue + 1
-                }
             );
             console.log(
                 `Sweep ${mintUrl}: Melt response received`,
                 meltResponse
             );
 
-            await this.removeMintProofs(mintUrl, allProofs);
-
-            if (proofsToKeep.length > 0) {
-                console.log(
-                    `Sweep ${mintUrl}: Adding back ${proofsToKeep.length} kept proofs`
-                );
-                await this.addMintProofs(mintUrl, proofsToKeep);
-            }
-
-            // 3. Add back any change proofs from the melt operation
-            if (meltResponse?.change?.length) {
-                console.log(
-                    `Sweep ${mintUrl}: Adding back ${meltResponse.change.length} change proofs`
-                );
-                await this.addMintProofs(mintUrl, meltResponse.change);
-                await this.setMintCounter(
-                    mintUrl,
-                    newCounterValue + meltResponse.change.length + 1
-                );
-            } else {
-                await this.setMintCounter(mintUrl, newCounterValue + 1);
-            }
-
-            // 4. Recalculate and update balances
-            const finalMintProofs = this.cashuWallets[mintUrl].proofs;
-            const finalMintBalance = CashuUtils.sumProofsValue(finalMintProofs);
-            await this.setMintBalance(mintUrl, finalMintBalance);
-            await this.calculateTotalBalance(); // Recalculate total across all mints
+            // 6. Update balances from CDK
+            await this.calculateTotalBalance();
 
             console.log(
-                `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats. Final mint balance: ${finalMintBalance}`
+                `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats.`
             );
             this.loading = false;
             return true;
         } catch (e: any) {
             const error = e;
             console.error(`Sweep failed for mint ${mintUrl}:`, error);
-            // Attempt to restore original proofs if sweep failed mid-way? Complex.
-            // For now, just log the error and stop loading.
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
@@ -2319,157 +2463,70 @@ export default class CashuStore {
             this.mintingTokenError = false;
             this.error_msg = undefined;
         });
-        const p2pk = pubkey
-            ? {
-                  pubkey,
-                  ...(lockTime && { locktime: lockTime })
-              }
-            : undefined;
 
         const mintUrl = this.selectedMintUrl;
-        if (!this.cashuWallets[mintUrl].wallet) {
-            await this.initializeWallet(mintUrl, true);
-        }
-
-        const { wallet, proofs, counter, balanceSats } =
-            this.cashuWallets[mintUrl];
-
-        if (balanceSats < Number(value)) {
-            runInAction(() => {
-                this.mintingTokenError = true;
-                this.mintingToken = false;
-                this.error_msg = localeString(
-                    'stores.CashuStore.insufficientBalance'
-                );
-            });
-            return;
-        }
-        const { proofsToUse } = this.getProofsToUse(proofs, Number(value));
 
         try {
-            let proofsToSend: Proof[] | undefined;
-            let proofsToKeep: Proof[] | undefined;
-            let newCounterValue: number | undefined;
-            let success = false;
-            const maxAttempts = 100;
-            const baseCounterForLoop = counter + proofsToUse.length + 1;
-
-            for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                const attemptCounter = baseCounterForLoop + attempt;
-                console.log(
-                    `mintToken: Attempt ${
-                        attempt + 1
-                    }/${maxAttempts} with counter ${attemptCounter}`
-                );
-                try {
-                    const result =
-                        await this.getSpendingProofsWithPreciseCounter(
-                            wallet!!,
-                            Number(value),
-                            proofsToUse!!,
-                            attemptCounter,
-                            true,
-                            p2pk
-                        );
-                    proofsToSend = result.proofsToSend;
-                    proofsToKeep = result.proofsToKeep;
-                    newCounterValue = result.newCounterValue;
-                    success = true;
-                    console.log(
-                        `mintToken: Attempt ${
-                            attempt + 1
-                        } successful with counter ${attemptCounter}`
+            // Check balance via CDK
+            const balance = await CashuDevKit.getMintBalance(mintUrl);
+            if (balance < Number(value)) {
+                runInAction(() => {
+                    this.mintingTokenError = true;
+                    this.mintingToken = false;
+                    this.error_msg = localeString(
+                        'stores.CashuStore.insufficientBalance'
                     );
-                    break;
-                } catch (e: any) {
-                    console.warn(
-                        `mintToken: Attempt ${
-                            attempt + 1
-                        } failed with counter ${attemptCounter}: ${e.message}`
-                    );
-                    if (attempt === maxAttempts - 1) {
-                        throw e; // Re-throw error after last attempt
-                    }
-                }
+                });
+                return;
             }
 
-            if (
-                !success ||
-                proofsToSend === undefined ||
-                proofsToKeep === undefined ||
-                newCounterValue === undefined
-            ) {
-                // This case should ideally be caught by the re-throw in the loop
-                throw new Error(
-                    localeString('stores.CashuStore.errorMintingToken') +
-                        ' (failed all attempts)'
-                );
-            }
-
-            // Ensure there are proofs to send before creating the token
-            if (!proofsToSend || proofsToSend.length === 0) {
-                console.error(
-                    'mintToken: No proofs to send, cannot create a valid token.'
-                );
-                throw new Error(
-                    localeString('stores.CashuStore.errorMintingToken') +
-                        ' (no proofs to create token)'
-                );
-            }
-
-            if (proofsToKeep.length) {
-                await this.addMintProofs(mintUrl, proofsToKeep);
-            }
-
-            await this.setMintCounter(mintUrl, newCounterValue + 1);
-
-            await this.removeMintProofs(mintUrl, proofsToUse);
-
-            // update balances
-            await this.setTotalBalance(this.totalBalanceSats - Number(value));
-            await this.setMintBalance(
+            // Send token via CDK
+            const cdkToken = await this.sendTokenCDK(
                 mintUrl,
-                this.cashuWallets[mintUrl].balanceSats - Number(value)
+                Number(value),
+                memo,
+                pubkey,
+                lockTime
             );
 
-            const tokenObj = {
-                mint: mintUrl,
-                proofs: proofsToSend,
-                memo,
-                unit: 'sat'
-            };
-            const token = getEncodedToken(tokenObj);
+            const token = cdkToken.encoded;
 
             const decoded = new CashuToken({
-                ...tokenObj,
+                mint: mintUrl,
+                memo,
+                unit: 'sat',
                 sent: true,
                 encodedToken: token,
                 created_at: Date.now() / 1000,
-                spent: false
+                spent: false,
+                value: cdkToken.value
             });
 
-            // record received token activity
+            // Record sent token activity
             this.sentTokens?.push(decoded);
             await Storage.setItem(
                 `${this.getLndDir()}-cashu-sent-tokens`,
                 this.sentTokens
             );
 
+            // CDK handles balance updates internally
+            await this.syncCDKBalances();
+
             runInAction(() => {
                 this.mintingToken = false;
             });
 
             return { token, decoded };
-        } catch (e) {
-            console.log('Cashu mintToken err', e);
-            const error = e;
+        } catch (e: any) {
+            console.error('CDK mintToken error:', e);
             runInAction(() => {
                 this.mintingTokenError = true;
                 this.mintingToken = false;
-                this.error_msg = error
-                    ? error.toString()
-                    : localeString('stores.CashuStore.errorMintingToken');
+                this.error_msg =
+                    e.message ||
+                    localeString('stores.CashuStore.errorMintingToken');
             });
+            return;
         }
     };
 
@@ -2479,7 +2536,16 @@ export default class CashuStore {
         const lndDir = this.getLndDir();
 
         try {
+            // Remove all mints from CDK
             for (const mintUrl of this.mintUrls) {
+                try {
+                    await CashuDevKit.removeMint(mintUrl);
+                    console.log(`CDK: Removed mint ${mintUrl}`);
+                } catch (e) {
+                    console.warn(`CDK: Failed to remove mint ${mintUrl}:`, e);
+                }
+
+                // Clean up legacy local storage for this mint
                 const walletId = `${lndDir}==${mintUrl}`;
                 await Storage.removeItem(`${walletId}-mintInfo`);
                 await Storage.removeItem(`${walletId}-counter`);
@@ -2488,9 +2554,12 @@ export default class CashuStore {
                 await Storage.removeItem(`${walletId}-pubkey`);
             }
 
+            // Clean up legacy storage keys (may exist from migration)
             await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
-            await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
             await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
+
+            // Clean up app-specific storage
+            await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
             await Storage.removeItem(`${lndDir}-cashu-invoices`);
             await Storage.removeItem(`${lndDir}-cashu-payments`);
             await Storage.removeItem(`${lndDir}-cashu-received-tokens`);
@@ -2505,6 +2574,7 @@ export default class CashuStore {
 
             // Reset store state
             this.reset();
+            this.cdkInitialized = false;
 
             runInAction(() => {
                 this.loading = false;

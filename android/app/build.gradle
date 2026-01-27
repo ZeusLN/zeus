@@ -4,8 +4,6 @@ apply plugin: "com.facebook.react"
 
 apply plugin: "com.google.protobuf"
 
-apply plugin: "kotlin-android"
-
 // LN address notifications
 apply plugin: "com.google.gms.google-services"
 
@@ -165,6 +163,12 @@ android {
         pickFirst "lib/x86/libgojni.so"
         pickFirst "lib/x86_64/libgojni.so"
 
+        // CashuDevKit native libraries (Rust FFI)
+        pickFirst "lib/armeabi-v7a/libcdk_ffi.so"
+        pickFirst "lib/arm64-v8a/libcdk_ffi.so"
+        pickFirst "lib/x86/libcdk_ffi.so"
+        pickFirst "lib/x86_64/libcdk_ffi.so"
+
         jniLibs {
             useLegacyPackaging true
         }
@@ -189,7 +193,15 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
-    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation fileTree(dir: "libs", include: ["*.jar", "*.aar"])
+
+    // CashuDevKit - Cashu wallet FFI bindings
+    implementation files("../cdk/cashudevkit.aar")
+    // CDK dependencies
+    implementation "net.java.dev.jna:jna:5.14.0@aar"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation project(':react-native-randombytes')
     implementation 'androidx.core:core-ktx:1.9.0'

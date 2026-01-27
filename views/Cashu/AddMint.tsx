@@ -4,7 +4,8 @@ import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { CashuMint } from '@cashu/cashu-ts';
+
+import CashuDevKit from '../../cashu-cdk';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -80,15 +81,25 @@ export default class AddMint extends React.Component<
             error_msg: ''
         });
         try {
-            const mint = new CashuMint(mintUrl);
-            const mintInfo = await mint.getInfo();
+            // Use CDK to fetch mint info
+            console.log('AddMint: Fetching mint info for', mintUrl);
+            const mintInfo = await CashuDevKit.fetchMintInfo(mintUrl);
+            console.log('AddMint: Got mint info', mintInfo);
             this.props.navigation.navigate('Mint', {
                 mint: { ...mintInfo, mintUrl },
                 lookup: true
             });
-        } catch (e) {
+        } catch (e: any) {
+            console.error('AddMint: Failed to fetch mint info', {
+                mintUrl,
+                error: e,
+                message: e?.message,
+                code: e?.code,
+                stack: e?.stack
+            });
             this.setState({
-                error: true
+                error: true,
+                error_msg: e?.message || 'Failed to fetch mint info'
             });
         } finally {
             this.setState({
