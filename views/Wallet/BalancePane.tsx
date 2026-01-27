@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     ImageBackground,
     Modal,
     ScrollView,
@@ -23,6 +24,7 @@ import RescanStatus from '../../components/RescanStatus';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -46,6 +48,8 @@ interface BalancePaneProps {
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
     loading: boolean;
+    isChannelMigrating: boolean;
+    onUnlock: () => void;
 }
 
 interface BalancePaneState {
@@ -81,6 +85,37 @@ export default class BalancePane extends React.PureComponent<
         }
     }
 
+    handleCancelMigration = () => {
+        Alert.alert(
+            localeString('views.Wallet.BalancePane.migration.alert.title'),
+            `⚠️ ${
+                localeString('views.Wallet.BalancePane.migration.alert.text1') +
+                '\n\n'
+            }${
+                localeString('views.Wallet.BalancePane.migration.alert.text2') +
+                '\n\n'
+            }${localeString('views.Wallet.BalancePane.migration.alert.text3')}`,
+            [
+                {
+                    text: localeString(
+                        'views.Wallet.BalancePane.migration.alert.cancel'
+                    ),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString(
+                        'views.Wallet.BalancePane.migration.alert.confirm'
+                    ),
+                    style: 'destructive',
+                    onPress: async () => {
+                        await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
+                        this.props.onUnlock();
+                    }
+                }
+            ]
+        );
+    };
+
     render() {
         const {
             NodeInfoStore,
@@ -89,7 +124,8 @@ export default class BalancePane extends React.PureComponent<
             SettingsStore,
             SyncStore,
             navigation,
-            loading
+            loading,
+            isChannelMigrating
         } = this.props;
         const {
             showBackupPrompt,
@@ -205,6 +241,68 @@ export default class BalancePane extends React.PureComponent<
                         loading={loading}
                     />
                     <View style={styles.contentContainer}>
+                        {isChannelMigrating ? (
+                            <View
+                                style={[
+                                    styles.errorCard,
+                                    { backgroundColor: themeColor('error') }
+                                ]}
+                            >
+                                <View style={styles.lockIconContainer}>
+                                    <LockIcon fill="#fff" />
+                                </View>
+
+                                <Text style={styles.errorTitleText}>
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.title'
+                                    )}
+                                </Text>
+
+                                <Text style={styles.errorBodyText}>
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.text1'
+                                    )}
+                                    {'\n\n'}
+                                    {localeString(
+                                        'views.Wallet.BalancePane.migration.text2'
+                                    )}
+                                </Text>
+
+                                <View style={styles.errorButtonRow}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Wallet.lndFolderMissing.deleteWallet'
+                                        )}
+                                        onPress={() =>
+                                            navigation.navigate('Wallets')
+                                        }
+                                        quaternary
+                                        buttonStyle={{
+                                            minHeight: 80
+                                        }}
+                                        containerStyle={{
+                                            flex: 1,
+                                            marginRight: 5
+                                        }}
+                                    />
+                                    <Button
+                                        title={localeString(
+                                            'views.Wallet.BalancePane.migration.action.unlock'
+                                        )}
+                                        onPress={this.handleCancelMigration}
+                                        quaternary
+                                        buttonStyle={{
+                                            minHeight: 80
+                                        }}
+                                        containerStyle={{
+                                            flex: 1,
+                                            marginLeft: 5
+                                        }}
+                                    />
+                                </View>
+                            </View>
+                        ) : (
+                            <>
                         <RecoveryStatus navigation={navigation} />
                         <RescanStatus navigation={navigation} />
                         {(SyncStore.isSyncing ||
@@ -917,17 +1015,17 @@ export default class BalancePane extends React.PureComponent<
                                         </Modal>
                                     </>
                                 )}
-                            </View>
-                        )}
-                        {implementation === 'lndhub' ||
-                        implementation === 'nostr-wallet-connect' ? (
-                            <View style={styles.balanceContainer}>
-                                <LightningBalance />
-                            </View>
-                        ) : (
-                            <View style={styles.balanceContainer}>
-                                <BalanceViewCombined />
-                            </View>
+                                {implementation === 'lndhub' ||
+                                implementation === 'nostr-wallet-connect' ? (
+                                    <View style={styles.balanceContainer}>
+                                        <LightningBalance />
+                                    </View>
+                                ) : (
+                                    <View style={styles.balanceContainer}>
+                                        <BalanceViewCombined />
+                                    </View>
+                                )}
+                            </>
                         )}
                     </View>
                 </View>
