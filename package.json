@@ -95,6 +95,7 @@
     "js-lnurl": "0.5.1",
     "js-sha256": "0.9.0",
     "lodash": "4.17.23",
+    "lnmessage": "^0.2.7",
     "long": "5.2.3",
     "lottie-react-native": "7.3.4",
     "message-port-polyfill": "0.2.0",
