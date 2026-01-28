@@ -49,6 +49,9 @@ const lightningAddress =
 
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
+/* ZEUS ecash gift URL */
+const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
+
 /* npub */
 const npubFormat = /^npub1[0-9a-z]{58}$/;
 
@@ -502,3 +505,4 @@ class AddressUtils {
 
 const addressUtils = new AddressUtils();
 export default addressUtils;
+export { ZEUS_ECASH_GIFT_URL };

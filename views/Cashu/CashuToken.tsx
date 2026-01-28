@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View } from 'react-native';
+import { StyleSheet, ScrollView, View, Share } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -25,6 +25,7 @@ import CollapsedQR from '../../components/CollapsedQR';
 
 import CashuToken from '../../models/CashuToken';
 
+import { ZEUS_ECASH_GIFT_URL } from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -129,6 +130,17 @@ export default class CashuTokenView extends React.Component<
             clearInterval(this.qrAnimationInterval);
         }
     }
+
+    shareGiftLink = async (token: string) => {
+        const giftUrl = `${ZEUS_ECASH_GIFT_URL}${token}`;
+        try {
+            await Share.share({
+                message: giftUrl
+            });
+        } catch (error) {
+            console.log('Error sharing gift link:', error);
+        }
+    };
 
     generateCashuInfo = (token: string) => {
         const MAX_TOKEN_LENGTH = 1000;
@@ -507,6 +519,9 @@ export default class CashuTokenView extends React.Component<
                                             }
                                         );
                                     }}
+                                    onShareGiftLink={() =>
+                                        this.shareGiftLink(token)
+                                    }
                                 />
                             </View>
                         </>
