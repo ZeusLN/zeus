@@ -384,6 +384,10 @@ export async function startLnd({
                 } else if (state.state === lnrpc.WalletState.RPC_ACTIVE) {
                     log.d('Got lnrpc.WalletState.RPC_ACTIVE');
                     syncStore.startSyncing();
+                    // Start rescan tracking if rescan setting is enabled
+                    if (settingsStore?.settings?.rescan) {
+                        syncStore.startRescanTracking(0);
+                    }
                     res(true);
                     LndMobileEventEmitter.removeAllListeners('SubscribeState');
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
