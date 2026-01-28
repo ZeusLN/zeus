@@ -60,9 +60,13 @@ export default class Conversion extends React.Component<
         const { showRate } = this.state;
         const { units } = UnitsStore!;
         const { settings } = SettingsStore!;
-        const { fiatEnabled } = settings;
+        const { fiatEnabled, fiats, preferredFiatIndex, fiat } = settings;
+
+        // Get current fiat from multi-select array or fallback to single fiat
+        const currentFiat = fiats?.[preferredFiatIndex] || fiat || 'USD';
 
         const { getRate }: any = FiatStore;
+        const { cycleFiat } = SettingsStore!;
 
         let satAmount: string | number;
         if (sats) {
@@ -85,7 +89,7 @@ export default class Conversion extends React.Component<
             <Row align="flex-end">
                 <Amount
                     sats={satAmount}
-                    fixedUnits={units}
+                    fixedUnits={units === 'fiat' ? currentFiat : units}
                     sensitive={sensitive}
                     color="secondaryText"
                     colorOverride={colorOverride}
@@ -99,7 +103,8 @@ export default class Conversion extends React.Component<
                             }}
                         >
                             {` | ${getRate(
-                                this.props.UnitsStore?.units === 'sats'
+                                this.props.UnitsStore?.units === 'sats',
+                                currentFiat
                             )}`}
                         </Text>
                     </>
@@ -117,7 +122,7 @@ export default class Conversion extends React.Component<
             <Row align="flex-end">
                 <Amount
                     sats={satAmount}
-                    fixedUnits={units}
+                    fixedUnits={units === 'fiat' ? currentFiat : units}
                     sensitive={sensitive}
                     color="secondaryText"
                     colorOverride={colorOverride}
@@ -132,7 +137,7 @@ export default class Conversion extends React.Component<
                 />
                 <Amount
                     sats={satsPending}
-                    fixedUnits={units}
+                    fixedUnits={units === 'fiat' ? currentFiat : units}
                     sensitive={sensitive}
                     color="secondaryText"
                     colorOverride={colorOverride}
@@ -146,7 +151,8 @@ export default class Conversion extends React.Component<
                             }}
                         >
                             {` | ${getRate(
-                                this.props.UnitsStore?.units === 'sats'
+                                this.props.UnitsStore?.units === 'sats',
+                                currentFiat
                             )}`}
                         </Text>
                     </>
@@ -178,7 +184,14 @@ export default class Conversion extends React.Component<
                 )}
                 {units !== 'fiat' && (
                     <TouchableOpacity
-                        onPress={() => this.toggleShowRate()}
+                        onPress={() => {
+                            // Cycle through fiats when tapping conversion
+                            if (fiats && fiats.length > 1) {
+                                cycleFiat();
+                            } else {
+                                this.toggleShowRate();
+                            }
+                        }}
                         disabled={FiatStore?.loading}
                     >
                         {satsPending ? (
