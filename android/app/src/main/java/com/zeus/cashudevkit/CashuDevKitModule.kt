@@ -167,7 +167,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         return JSONObject().apply {
             put("encoded", token.encode())
             put("value", token.value().value)
-            put("mint_url", token.mintUrl().toString())
+            put("mint_url", token.mintUrl().url)
             put("memo", token.memo() ?: "")
             put("unit", token.unit()?.let { currencyUnitToString(it) } ?: "sat")
         }
@@ -866,13 +866,48 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val amt = Amount(amount.toLong().toULong())
 
                 // Parse options if provided
-                val includeFee = optionsJson?.let {
-                    JSONObject(it).optBoolean("include_fee", false)
-                } ?: false
+                var includeFee = false
+                var conditions: SpendingConditions? = null
+                if (optionsJson != null) {
+                    val parsed = JSONObject(optionsJson)
+                    includeFee = parsed.optBoolean("include_fee", false)
+
+                    // Parse spending conditions (P2PK) if provided
+                    if (parsed.has("conditions") && !parsed.isNull("conditions")) {
+                        val cond = parsed.getJSONObject("conditions")
+                        val kind = cond.optString("kind")
+                        if (kind == "P2PK" && cond.has("data")) {
+                            val data = cond.getJSONObject("data")
+                            val pubkeyHex = data.getString("pubkey")
+                            val locktime =
+                                if (data.has("locktime") && !data.isNull("locktime"))
+                                    data.getLong("locktime").toULong()
+                                else null
+                            val refundKeysJson = data.optJSONArray("refund_keys")
+                            val refundKeys = refundKeysJson?.let { arr ->
+                                (0 until arr.length()).mapNotNull { i ->
+                                    try { arr.getString(i) } catch (e: Exception) { null }
+                                }
+                            }
+
+                            conditions = SpendingConditions.P2pk(
+                                pubkey = pubkeyHex,
+                                conditions = Conditions(
+                                    locktime = locktime ?: 0UL,
+                                    pubkeys = emptyList(),
+                                    refundKeys = refundKeys ?: emptyList(),
+                                    numSigs = 0UL,
+                                    sigFlag = 0.toUByte(),
+                                    numSigsRefund = 0UL
+                                )
+                            )
+                        }
+                    }
+                }
 
                 val innerSendOptions = SendOptions(
                     memo = null,
-                    conditions = null,
+                    conditions = conditions,
                     amountSplitTarget = SplitTarget.None,
                     sendKind = SendKind.OnlineExact,
                     includeFee = includeFee,
