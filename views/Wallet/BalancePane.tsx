@@ -95,8 +95,25 @@ export default class BalancePane extends React.PureComponent<
             bestBlockHeight,
             recoveryProgress,
             isSyncing,
-            isRecovering
+            isRecovering,
+            isRescanning,
+            rescanStartHeight,
+            rescanCurrentHeight
         } = SyncStore;
+
+        // Calculate rescan progress (clamped to max 1 in case current exceeds best)
+        // Use explicit null checks since rescanStartHeight can be 0 for genesis rescans
+        const rescanProgress =
+            rescanCurrentHeight !== null &&
+            rescanStartHeight !== null &&
+            bestBlockHeight !== null &&
+            bestBlockHeight > rescanStartHeight
+                ? Math.min(
+                      1,
+                      (rescanCurrentHeight - rescanStartHeight) /
+                          (bestBlockHeight - rescanStartHeight)
+                  )
+                : null;
 
         const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
             .plus(unconfirmedBlockchainBalance)
@@ -181,17 +198,13 @@ export default class BalancePane extends React.PureComponent<
 
         if (!error) {
             balancePane = (
-                <View style={{ minHeight: 200 }}>
+                <View style={styles.balancePaneContainer}>
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
                         loading={loading}
                     />
-                    <View
-                        style={{
-                            marginBottom: 20
-                        }}
-                    >
+                    <View style={styles.contentContainer}>
                         {isRecovering && recoveryProgress !== 1 && (
                             <TouchableOpacity
                                 onPress={() => {
@@ -201,21 +214,19 @@ export default class BalancePane extends React.PureComponent<
                                 }}
                             >
                                 <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('highlight'),
-                                        borderRadius: 10,
-                                        margin: 20,
-                                        marginBottom: 0,
-                                        padding: 15,
-                                        borderWidth: 0.5
-                                    }}
+                                    style={[
+                                        styles.card,
+                                        {
+                                            backgroundColor:
+                                                themeColor('highlight')
+                                        }
+                                    ]}
                                 >
                                     <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            color: themeColor('background')
-                                        }}
+                                        style={[
+                                            styles.cardTitleText,
+                                            { color: themeColor('background') }
+                                        ]}
                                     >
                                         {`${localeString(
                                             'views.Wallet.BalancePane.recovery.title'
@@ -229,12 +240,14 @@ export default class BalancePane extends React.PureComponent<
                                     </Text>
                                     {recoveryProgress && (
                                         <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                color: themeColor('background'),
-                                                marginTop: 20
-                                            }}
+                                            style={[
+                                                styles.cardBodyText,
+                                                {
+                                                    color: themeColor(
+                                                        'background'
+                                                    )
+                                                }
+                                            ]}
                                         >
                                             {localeString(
                                                 'views.Wallet.BalancePane.recovery.text'
@@ -242,16 +255,7 @@ export default class BalancePane extends React.PureComponent<
                                         </Text>
                                     )}
                                     {recoveryProgress && (
-                                        <View
-                                            style={{
-                                                marginTop: 30,
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                minWidth: '100%'
-                                            }}
-                                        >
+                                        <View style={styles.progressContainer}>
                                             <LinearProgress
                                                 value={
                                                     Math.floor(
@@ -263,25 +267,87 @@ export default class BalancePane extends React.PureComponent<
                                                 trackColor={themeColor(
                                                     'secondaryBackground'
                                                 )}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
-                                                }}
+                                                style={styles.progressBar}
                                             />
                                             <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
-                                                    color: themeColor(
-                                                        'background'
-                                                    ),
-                                                    marginTop: -8,
-                                                    marginLeft: 14,
-                                                    height: 40
-                                                }}
+                                                style={[
+                                                    styles.progressText,
+                                                    {
+                                                        color: themeColor(
+                                                            'background'
+                                                        )
+                                                    }
+                                                ]}
                                             >
                                                 {`${Math.floor(
                                                     recoveryProgress * 100
+                                                ).toString()}%`}
+                                            </Text>
+                                        </View>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                        {isRescanning && (
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('LNDLogs')}
+                            >
+                                <View
+                                    style={[
+                                        styles.card,
+                                        {
+                                            backgroundColor:
+                                                themeColor('secondary')
+                                        }
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.cardTitleText,
+                                            { color: themeColor('text') }
+                                        ]}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.BalancePane.rescan.title'
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.cardBodyText,
+                                            { color: themeColor('text') }
+                                        ]}
+                                    >
+                                        {localeString(
+                                            'views.Wallet.BalancePane.rescan.text'
+                                        )}
+                                    </Text>
+                                    {rescanProgress !== null && (
+                                        <View style={styles.progressContainer}>
+                                            <LinearProgress
+                                                value={
+                                                    Math.floor(
+                                                        rescanProgress * 100
+                                                    ) / 100
+                                                }
+                                                variant="determinate"
+                                                color={themeColor('highlight')}
+                                                trackColor={themeColor(
+                                                    'secondaryBackground'
+                                                )}
+                                                style={styles.progressBar}
+                                            />
+                                            <Text
+                                                style={[
+                                                    styles.progressText,
+                                                    {
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }
+                                                ]}
+                                            >
+                                                {`${Math.floor(
+                                                    rescanProgress * 100
                                                 ).toString()}%`}
                                             </Text>
                                         </View>
@@ -294,31 +360,30 @@ export default class BalancePane extends React.PureComponent<
                                 onPress={() => navigation.navigate('Sync')}
                             >
                                 <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderRadius: 10,
-                                        margin: 20,
-                                        padding: 15,
-                                        borderWidth: 0.5
-                                    }}
+                                    style={[
+                                        styles.card,
+                                        {
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            marginBottom: 20
+                                        }
+                                    ]}
                                 >
                                     <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            color: themeColor('text')
-                                        }}
+                                        style={[
+                                            styles.cardTitleText,
+                                            { color: themeColor('text') }
+                                        ]}
                                     >
                                         {localeString(
                                             'views.Wallet.BalancePane.sync.title'
                                         )}
                                     </Text>
                                     <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            color: themeColor('text'),
-                                            marginTop: 20
-                                        }}
+                                        style={[
+                                            styles.cardBodyText,
+                                            { color: themeColor('text') }
+                                        ]}
                                     >
                                         {localeString(
                                             'views.Wallet.BalancePane.sync.text'
@@ -327,15 +392,7 @@ export default class BalancePane extends React.PureComponent<
                                     {currentBlockHeight !== undefined &&
                                         bestBlockHeight && (
                                             <View
-                                                style={{
-                                                    marginTop: 30,
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    display: 'flex',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    minWidth: '100%'
-                                                }}
+                                                style={styles.progressContainer}
                                             >
                                                 <LinearProgress
                                                     value={
@@ -352,22 +409,17 @@ export default class BalancePane extends React.PureComponent<
                                                     trackColor={themeColor(
                                                         'secondaryBackground'
                                                     )}
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row'
-                                                    }}
+                                                    style={styles.progressBar}
                                                 />
                                                 <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Medium',
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        marginTop: -8,
-                                                        marginLeft: 14,
-                                                        height: 40
-                                                    }}
+                                                    style={[
+                                                        styles.progressText,
+                                                        {
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }
+                                                    ]}
                                                 >
                                                     {`${Math.floor(
                                                         (currentBlockHeight /
@@ -391,53 +443,46 @@ export default class BalancePane extends React.PureComponent<
                                     onPress={() => navigation.navigate('Seed')}
                                 >
                                     <View
-                                        style={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 10,
-                                            borderColor:
-                                                themeColor('highlight'),
-                                            margin: 20,
-                                            padding: 15,
-                                            borderWidth: 1.5
-                                        }}
+                                        style={[
+                                            styles.backupCard,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderColor:
+                                                    themeColor('highlight')
+                                            }
+                                        ]}
                                     >
-                                        <View style={{ marginBottom: 10 }}>
+                                        <View style={styles.lockIconContainer}>
                                             <LockIcon
                                                 fill={themeColor('highlight')}
                                             />
                                         </View>
                                         <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium',
-                                                color: themeColor('text')
-                                            }}
+                                            style={[
+                                                styles.cardTitleText,
+                                                { color: themeColor('text') }
+                                            ]}
                                         >
                                             {localeString(
                                                 'views.Wallet.BalancePane.backup.title'
                                             )}
                                         </Text>
                                         <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                color: themeColor('text'),
-                                                marginTop: 20
-                                            }}
+                                            style={[
+                                                styles.cardBodyText,
+                                                { color: themeColor('text') }
+                                            ]}
                                         >
                                             {localeString(
                                                 'views.Wallet.BalancePane.backup.text'
                                             )}
                                         </Text>
                                         <Text
-                                            style={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontWeight: 'bold',
-                                                color: themeColor('text'),
-                                                marginTop: 20
-                                            }}
+                                            style={[
+                                                styles.cardBodyTextBold,
+                                                { color: themeColor('text') }
+                                            ]}
                                         >
                                             {localeString(
                                                 'views.Wallet.BalancePane.backup.action'
@@ -448,42 +493,22 @@ export default class BalancePane extends React.PureComponent<
                             )}
                         {implementation === 'embedded-lnd' && lndFolderMissing && (
                             <View
-                                style={{
-                                    backgroundColor: themeColor('error'),
-                                    borderRadius: 10,
-                                    margin: 20,
-                                    marginBottom: 0,
-                                    padding: 15
-                                }}
+                                style={[
+                                    styles.errorCard,
+                                    { backgroundColor: themeColor('error') }
+                                ]}
                             >
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Medium',
-                                        color: '#fff',
-                                        fontSize: 16,
-                                        marginBottom: 10
-                                    }}
-                                >
+                                <Text style={styles.errorTitleText}>
                                     {localeString(
                                         'views.Wallet.lndFolderMissing.title'
                                     )}
                                 </Text>
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        color: '#fff',
-                                        marginBottom: 20
-                                    }}
-                                >
+                                <Text style={styles.errorBodyText}>
                                     {localeString(
                                         'views.Wallet.lndFolderMissing.message'
                                     )}
                                 </Text>
-                                <View
-                                    style={{
-                                        flexDirection: 'row'
-                                    }}
-                                >
+                                <View style={styles.errorButtonRow}>
                                     <Button
                                         title={localeString(
                                             'views.Wallet.lndFolderMissing.deleteWallet'
@@ -523,11 +548,11 @@ export default class BalancePane extends React.PureComponent<
                         )}
                         {implementation === 'lndhub' ||
                         implementation === 'nostr-wallet-connect' ? (
-                            <View style={{ marginTop: 40 }}>
+                            <View style={styles.balanceContainer}>
                                 <LightningBalance />
                             </View>
                         ) : (
-                            <View style={{ marginTop: 40 }}>
+                            <View style={styles.balanceContainer}>
                                 <BalanceViewCombined />
                             </View>
                         )}
@@ -537,29 +562,17 @@ export default class BalancePane extends React.PureComponent<
         } else {
             balancePane = (
                 <View
-                    style={{
-                        backgroundColor: themeColor('error'),
-                        paddingTop: 20,
-                        paddingLeft: 10,
-                        flex: 1
-                    }}
+                    style={[
+                        styles.errorPane,
+                        { backgroundColor: themeColor('error') }
+                    ]}
                 >
                     <ImageBackground
                         source={ErrorZeus}
                         resizeMode="cover"
-                        style={{
-                            flex: 1
-                        }}
+                        style={styles.errorBackground}
                     >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: '#fff',
-                                fontSize: 20,
-                                marginTop: 20,
-                                marginBottom: 25
-                            }}
-                        >
+                        <Text style={styles.errorText}>
                             {SettingsStore.errorMsg
                                 ? SettingsStore.errorMsg
                                 : NodeInfoStore.errorMsg
@@ -586,5 +599,95 @@ const styles = StyleSheet.create({
     conversionSecondary: {
         top: 3,
         alignItems: 'center'
+    },
+    balancePaneContainer: {
+        minHeight: 200
+    },
+    contentContainer: {
+        marginBottom: 20
+    },
+    card: {
+        borderRadius: 10,
+        margin: 20,
+        marginBottom: 0,
+        padding: 15,
+        borderWidth: 0.5
+    },
+    backupCard: {
+        borderRadius: 10,
+        margin: 20,
+        padding: 15,
+        borderWidth: 1.5
+    },
+    cardTitleText: {
+        fontFamily: 'PPNeueMontreal-Medium'
+    },
+    cardBodyText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        marginTop: 20
+    },
+    cardBodyTextBold: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontWeight: 'bold',
+        marginTop: 20
+    },
+    progressContainer: {
+        marginTop: 30,
+        flex: 1,
+        flexDirection: 'row',
+        display: 'flex',
+        justifyContent: 'space-between',
+        minWidth: '100%'
+    },
+    progressBar: {
+        flex: 1,
+        flexDirection: 'row'
+    },
+    progressText: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        marginTop: -8,
+        marginLeft: 14,
+        height: 40
+    },
+    lockIconContainer: {
+        marginBottom: 10
+    },
+    errorCard: {
+        borderRadius: 10,
+        margin: 20,
+        marginBottom: 0,
+        padding: 15
+    },
+    errorTitleText: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        color: '#fff',
+        fontSize: 16,
+        marginBottom: 10
+    },
+    errorBodyText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        color: '#fff',
+        marginBottom: 20
+    },
+    errorButtonRow: {
+        flexDirection: 'row'
+    },
+    balanceContainer: {
+        marginTop: 40
+    },
+    errorPane: {
+        paddingTop: 20,
+        paddingLeft: 10,
+        flex: 1
+    },
+    errorBackground: {
+        flex: 1
+    },
+    errorText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        color: '#fff',
+        fontSize: 20,
+        marginTop: 20,
+        marginBottom: 25
     }
 });
