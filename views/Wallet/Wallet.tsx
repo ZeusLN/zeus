@@ -1112,15 +1112,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                             <Animated.View
                                 style={{
-                                    flex: 1,
-                                    maxHeight: 80,
-                                    justifyContent: 'flex-end',
-                                    alignSelf: 'center',
+                                    position: 'absolute',
                                     bottom: 10,
-                                    paddingTop: 40,
-                                    paddingBottom: 35,
                                     width: '100%',
+                                    height: 80,
                                     transform: [{ translateY: this.pan.y }],
+                                    justifyContent: 'center',
                                     alignItems: 'center'
                                 }}
                                 {...this.panResponder.panHandlers}
@@ -1135,7 +1132,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     accessibilityLabel={localeString(
                                         'general.activity'
                                     )}
-                                    style={{ alignItems: 'center' }}
+                                    style={{
+                                        alignItems: 'center',
+                                        padding: 10
+                                    }}
                                 >
                                     <CaretUp fill={themeColor('text')} />
                                     <Text
