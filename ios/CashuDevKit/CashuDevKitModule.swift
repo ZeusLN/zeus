@@ -769,17 +769,37 @@ class CashuDevKitModule: RCTEventEmitter {
 
                 // Parse options if provided
                 var includeFee = false
+                var spendingConditions: SpendingConditions? = nil
                 if let json = optionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     if let fee = parsed["include_fee"] as? Bool {
                         includeFee = fee
                     }
+
+                    // Parse spending conditions (P2PK) if provided
+                    if let cond = parsed["conditions"] as? [String: Any],
+                       let kind = cond["kind"] as? String,
+                       kind == "P2PK",
+                       let condData = cond["data"] as? [String: Any],
+                       let pubkey = condData["pubkey"] as? String {
+                        let locktime = condData["locktime"] as? UInt64
+                        let refundKeys = condData["refund_keys"] as? [String] ?? []
+                        let inner = Conditions(
+                            locktime: locktime,
+                            pubkeys: [],
+                            refundKeys: refundKeys,
+                            numSigs: nil,
+                            sigFlag: 0,
+                            numSigsRefund: nil
+                        )
+                        spendingConditions = .p2pk(pubkey: pubkey, conditions: inner)
+                    }
                 }
 
                 let innerSendOptions = SendOptions(
                     memo: nil,
-                    conditions: nil,
+                    conditions: spendingConditions,
                     amountSplitTarget: .none,
                     sendKind: .onlineExact,
                     includeFee: includeFee,
