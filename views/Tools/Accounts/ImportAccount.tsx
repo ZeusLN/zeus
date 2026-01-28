@@ -187,30 +187,24 @@ export default class ImportAccount extends React.Component<
                         </View>
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                margin: 10,
-                                fontSize: 20
+                                ...styles.warningText,
+                                color: themeColor('text')
                             }}
                         >
                             {localeString('views.ImportAccount.Warning.text1')}
                         </Text>
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                margin: 10,
-                                fontSize: 20
+                                ...styles.warningText,
+                                color: themeColor('text')
                             }}
                         >
                             {localeString('views.ImportAccount.Warning.text2')}
                         </Text>
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                margin: 10,
-                                fontSize: 20
+                                ...styles.warningText,
+                                color: themeColor('text')
                             }}
                         >
                             {localeString(
@@ -220,10 +214,8 @@ export default class ImportAccount extends React.Component<
                         {implementation !== 'embedded-lnd' && (
                             <Text
                                 style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    margin: 10,
-                                    fontSize: 20
+                                    ...styles.warningText,
+                                    color: themeColor('text')
                                 }}
                             >
                                 {localeString(
@@ -496,6 +488,11 @@ export default class ImportAccount extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    warningText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        margin: 10,
+        fontSize: 20
+    },
     content: {
         flex: 1,
         paddingTop: 20,
