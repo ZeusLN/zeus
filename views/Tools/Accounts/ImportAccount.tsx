@@ -176,75 +176,61 @@ export default class ImportAccount extends React.Component<
 
         if (!understood) {
             return (
-                <>
-                    <View style={{ marginLeft: 10, marginRight: 10 }}>
-                        <ErrorMessage
-                            message={localeString(
-                                'general.warning'
-                            ).toUpperCase()}
-                        />
-                    </View>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book',
-                            margin: 10,
-                            fontSize: 20
-                        }}
-                    >
-                        {localeString('views.ImportAccount.Warning.text1')}
-                    </Text>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book',
-                            margin: 10,
-                            fontSize: 20
-                        }}
-                    >
-                        {localeString('views.ImportAccount.Warning.text2')}
-                    </Text>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book',
-                            margin: 10,
-                            fontSize: 20
-                        }}
-                    >
-                        {localeString(
-                            'views.ImportAccount.Warning.text3'
-                        ).replace('Zeus', 'ZEUS')}
-                    </Text>
-                    {implementation !== 'embedded-lnd' && (
+                <View style={{ flex: 1 }}>
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <View style={{ marginHorizontal: 10 }}>
+                            <ErrorMessage
+                                message={localeString(
+                                    'general.warning'
+                                ).toUpperCase()}
+                            />
+                        </View>
                         <Text
                             style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                margin: 10,
-                                fontSize: 20
+                                ...styles.warningText,
+                                color: themeColor('text')
                             }}
                         >
-                            {localeString('views.ImportAccount.note').replace(
-                                'Zeus',
-                                'ZEUS'
-                            )}
+                            {localeString('views.ImportAccount.Warning.text1')}
                         </Text>
-                    )}
-                    <View
-                        style={{
-                            alignSelf: 'center',
-                            position: 'absolute',
-                            bottom: 10,
-                            width: '100%'
-                        }}
-                    >
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.ImportAccount.Warning.text2')}
+                        </Text>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString(
+                                'views.ImportAccount.Warning.text3'
+                            ).replace('Zeus', 'ZEUS')}
+                        </Text>
+                        {implementation !== 'embedded-lnd' && (
+                            <Text
+                                style={{
+                                    ...styles.warningText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.ImportAccount.note'
+                                ).replace('Zeus', 'ZEUS')}
+                            </Text>
+                        )}
+                    </ScrollView>
+                    <View style={{ paddingVertical: 10 }}>
                         <Button
                             onPress={() => this.setState({ understood: true })}
                             title={localeString('general.iUnderstand')}
                         />
                     </View>
-                </>
+                </View>
             );
         }
 
@@ -502,6 +488,11 @@ export default class ImportAccount extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    warningText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        margin: 10,
+        fontSize: 20
+    },
     content: {
         flex: 1,
         paddingTop: 20,
