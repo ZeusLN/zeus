@@ -2013,7 +2013,7 @@ export default class NostrWalletConnectStore {
                 const selectedMintUrl = this.cashuStore.selectedMintUrl;
                 const wallet = this.cashuStore.cashuWallets[selectedMintUrl];
 
-                if (!wallet || !wallet.wallet) {
+                if (!wallet) {
                     return this.handleError(
                         localeString(
                             'stores.NostrWalletConnectStore.error.cashuWalletNotInitialized'
