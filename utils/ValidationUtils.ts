@@ -73,6 +73,17 @@ const hasValidMacaroonChars = (macaroon: string): boolean => {
     return /^[0-9a-fA-F]+$/.test(macaroon);
 };
 
+const hasProtocolPrefix = (input: string): boolean => {
+    return /^https?:\/\//i.test(input);
+};
+
+const isValidOnionAddress = (address: string): boolean => {
+    // V2: 16 chars + .onion, V3: 56 chars + .onion
+    const onionRegex =
+        /^(?:[a-z2-7]{16}|[a-z2-7]{56})\.onion$/i;
+    return onionRegex.test(address);
+};
+
 const hasValidPairingPhraseCharsAndWordcount = (phrase: string): boolean => {
     const normalizedPhrase = phrase.trim().replace(/\s+/g, ' ');
     if (!/^[a-zA-Z\s]+$/.test(normalizedPhrase)) return false;
@@ -159,6 +170,8 @@ const ValidationUtils = {
     isValidPort,
     hasValidRuneChars,
     hasValidMacaroonChars,
+    hasProtocolPrefix,
+    isValidOnionAddress,
     hasValidPairingPhraseCharsAndWordcount,
     validateNodePubkey,
     validateNodeHost
