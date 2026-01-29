@@ -1,7 +1,5 @@
-import { observer } from 'mobx-react';
-import { PureComponent, ReactNode } from 'react';
-import { ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { ReactNode } from 'react';
+import { View, ViewStyle } from 'react-native';
 import LinearGradient from './LinearGradient';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -11,24 +9,21 @@ interface ScreenProps {
     style?: ViewStyle;
 }
 
-@observer
-export default class Screen extends PureComponent<ScreenProps> {
-    render() {
-        return (
-            <LinearGradient
-                colors={
-                    themeColor('gradientBackground')
-                        ? themeColor('gradientBackground')
-                        : [themeColor('background'), themeColor('background')]
-                }
-                style={{
-                    flex: 1
-                }}
-            >
-                <SafeAreaView style={{ flex: 1 }}>
-                    {this.props.children}
-                </SafeAreaView>
-            </LinearGradient>
-        );
-    }
-}
+const Screen: React.FC<ScreenProps> = ({ children }) => {
+    return (
+        <LinearGradient
+            colors={
+                themeColor('gradientBackground')
+                    ? themeColor('gradientBackground')
+                    : [themeColor('background'), themeColor('background')]
+            }
+            style={{
+                flex: 1
+            }}
+        >
+            <View style={{ flex: 1 }}>{children}</View>
+        </LinearGradient>
+    );
+};
+
+export default Screen;

@@ -366,7 +366,10 @@ export default class App extends React.PureComponent {
                 <AppContainer>
                     <PushNotificationManager>
                         <GestureHandlerRootView style={{ flex: 1 }}>
-                            <SafeAreaView style={{ height: '100%' }}>
+                            <SafeAreaView
+                                style={{ height: '100%' }}
+                                edges={['bottom', 'left', 'right']}
+                            >
                                 <Observer>
                                     {() => (
                                         <>

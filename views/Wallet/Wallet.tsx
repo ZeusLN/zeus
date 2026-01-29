@@ -1287,6 +1287,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         tabBarStyle: {
                                             paddingBottom: 12
                                         },
+                                        // Disable top safe area - WalletHeader handles it
+                                        safeAreaInsets: { top: 0 },
                                         // TODO re-enable for iOS once ZEUS-3514 is resolved
                                         animation:
                                             Platform.OS === 'android'

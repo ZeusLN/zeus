@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Badge } from '@rneui/themed';
+import { initialWindowMetrics } from 'react-native-safe-area-context';
+
+const insets = initialWindowMetrics?.insets ?? {
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0
+};
 import {
     Animated,
     Dimensions,
@@ -168,7 +176,7 @@ const MenuBadge = ({
             })
         }
         accessibilityLabel={localeString('views.Settings.title')}
-        style={{ left: 4 }}
+        style={{ marginLeft: 4 }}
     >
         <Menu fill={themeColor('text')} width={38} height={38} />
     </TouchableOpacity>
@@ -577,6 +585,7 @@ export default class WalletHeader extends React.Component<
         return (
             <>
                 <Header
+                    containerStyle={{ marginTop: insets.top }}
                     leftComponent={
                         <Row style={{ flex: 1 }}>
                             <MenuBadge navigation={navigation} />
@@ -771,8 +780,8 @@ const styles = StyleSheet.create({
     },
     photo: {
         alignSelf: 'center',
-        width: 42,
-        height: 42,
+        width: 40,
+        height: 40,
         borderRadius: 68
     }
 });
