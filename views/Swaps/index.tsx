@@ -141,6 +141,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     };
 
     private isNavigatingToLSPFees = false;
+    private isNavigatingToQRScanner = false;
     private _unsubscribe?: () => void;
 
     checkIsValid = () => {
@@ -259,6 +260,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 this.isNavigatingToLSPFees = false;
                 return;
             }
+            if (this.isNavigatingToQRScanner) {
+                this.isNavigatingToQRScanner = false;
+                return;
+            }
             this.resetFields();
         });
         const unsubFocus = this.props.navigation.addListener(
@@ -328,93 +333,104 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             const { initialInvoice, initialAmountSats, initialReverse } =
                 route.params;
 
-            if (
-                initialInvoice !== undefined &&
-                initialAmountSats !== undefined &&
-                initialReverse !== undefined
-            ) {
-                this.setState({ paramsProcessed: true }, async () => {
-                    // Use callback to ensure paramsProcessed is set before further calcs
-                    const { units } = UnitsStore;
-                    const { fiatRates } = FiatStore;
-                    const { fiat } = settings;
-                    const fiatEntry =
-                        fiat && fiatRates
-                            ? fiatRates.filter(
-                                  (entry: any) => entry.code === fiat
-                              )[0]
-                            : null;
-                    const rate =
-                        fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
-
-                    const info: any = initialReverse
-                        ? SwapStore.reverseInfo
-                        : SwapStore.subInfo;
-                    const serviceFeePct = info?.fees?.percentage || 0;
-                    const networkFeeBigNum = initialReverse
-                        ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                              info?.fees?.minerFees?.lockup || 0
-                          )
-                        : new BigNumber(info?.fees?.minerFees || 0);
-                    const networkFee = networkFeeBigNum.toNumber();
-
-                    const newOutputSats = new BigNumber(initialAmountSats || 0);
-                    let newOutputFiat = '';
-                    if (
-                        units === 'fiat' &&
-                        rate > 0 &&
-                        newOutputSats.isGreaterThan(0)
-                    ) {
-                        newOutputFiat = newOutputSats
-                            .div(SATS_PER_BTC)
-                            .times(rate)
-                            .toFixed(2);
-                    }
-
-                    const newInputSats = calculateSendAmount(
-                        newOutputSats,
-                        serviceFeePct,
-                        networkFee,
-                        this.state.reverse
-                    );
-                    let newInputFiat = '';
-                    if (
-                        units === 'fiat' &&
-                        rate > 0 &&
-                        newInputSats.isGreaterThan(0)
-                    ) {
-                        newInputFiat = newInputSats
-                            .div(SATS_PER_BTC)
-                            .times(rate)
-                            .toFixed(2);
-                    }
-
-                    const newServiceFeeSats = calculateServiceFeeOnSend(
-                        newInputSats,
-                        serviceFeePct,
-                        networkFee,
-                        this.state.reverse
-                    );
-
+            if (initialInvoice !== undefined && initialReverse !== undefined) {
+                if (initialAmountSats === undefined) {
                     this.setState(
                         {
+                            paramsProcessed: true,
                             invoice: initialInvoice,
-                            reverse: initialReverse,
-                            outputSats: newOutputSats,
-                            outputFiat:
-                                units === 'fiat'
-                                    ? newOutputFiat
-                                    : this.state.outputFiat,
-                            inputSats: newInputSats,
-                            inputFiat:
-                                units === 'fiat'
-                                    ? newInputFiat
-                                    : this.state.inputFiat,
-                            serviceFeeSats: newServiceFeeSats
+                            reverse: initialReverse
                         },
                         () => this.checkIsValid()
                     );
-                });
+                } else {
+                    this.setState({ paramsProcessed: true }, async () => {
+                        // Use callback to ensure paramsProcessed is set before further calcs
+                        const { units } = UnitsStore;
+                        const { fiatRates } = FiatStore;
+                        const { fiat } = settings;
+                        const fiatEntry =
+                            fiat && fiatRates
+                                ? fiatRates.filter(
+                                      (entry: any) => entry.code === fiat
+                                  )[0]
+                                : null;
+                        const rate =
+                            fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+                        const info: any = initialReverse
+                            ? SwapStore.reverseInfo
+                            : SwapStore.subInfo;
+                        const serviceFeePct = info?.fees?.percentage || 0;
+                        const networkFeeBigNum = initialReverse
+                            ? new BigNumber(
+                                  info?.fees?.minerFees?.claim || 0
+                              ).plus(info?.fees?.minerFees?.lockup || 0)
+                            : new BigNumber(info?.fees?.minerFees || 0);
+                        const networkFee = networkFeeBigNum.toNumber();
+
+                        const newOutputSats = new BigNumber(
+                            initialAmountSats || 0
+                        );
+                        let newOutputFiat = '';
+                        if (newOutputSats.isGreaterThan(0)) {
+                            if (units === 'fiat' && rate > 0) {
+                                newOutputFiat = newOutputSats
+                                    .div(SATS_PER_BTC)
+                                    .times(rate)
+                                    .toFixed(2);
+                            } else if (units === 'BTC') {
+                                newOutputFiat = newOutputSats
+                                    .div(SATS_PER_BTC)
+                                    .toFixed(8);
+                            } else if (units === 'sats') {
+                                newOutputFiat = newOutputSats.toFixed(0);
+                            }
+                        }
+
+                        const newInputSats = calculateSendAmount(
+                            newOutputSats,
+                            serviceFeePct,
+                            networkFee,
+                            this.state.reverse
+                        );
+                        let newInputFiat = '';
+                        if (newInputSats.isGreaterThan(0)) {
+                            if (units === 'fiat' && rate > 0) {
+                                newInputFiat = newInputSats
+                                    .div(SATS_PER_BTC)
+                                    .times(rate)
+                                    .toFixed(2);
+                            } else if (units === 'BTC') {
+                                newInputFiat = newInputSats
+                                    .div(SATS_PER_BTC)
+                                    .toFixed(8);
+                            } else if (units === 'sats') {
+                                newInputFiat = newInputSats.toFixed(0);
+                            }
+                        }
+
+                        const newServiceFeeSats = calculateServiceFeeOnSend(
+                            newInputSats,
+                            serviceFeePct,
+                            networkFee,
+                            this.state.reverse
+                        );
+
+                        this.setState(
+                            {
+                                invoice: initialInvoice,
+                                reverse: initialReverse,
+                                outputSats: newOutputSats,
+                                outputFiat: newOutputFiat,
+                                inputSats: newInputSats,
+                                inputFiat: newInputFiat,
+                                serviceFeeSats: newServiceFeeSats
+                            },
+                            () => this.checkIsValid()
+                        );
+                    });
+                }
             }
         }
         // Call checkIsValid whenever relevant state that it depends on might have changed.
@@ -1809,12 +1825,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             () => this.checkIsValid()
                                         );
                                     }}
-                                    onScan={() =>
+                                    onScan={() => {
+                                        this.isNavigatingToQRScanner = true;
                                         navigation.navigate(
                                             'HandleAnythingQRScanner',
                                             { view: 'Swaps' }
-                                        )
-                                    }
+                                        );
+                                    }}
                                     placeholder={
                                         fetchingInvoice
                                             ? ''
