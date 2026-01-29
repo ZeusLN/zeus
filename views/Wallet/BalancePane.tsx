@@ -31,6 +31,7 @@ import CashuStore from '../../stores/CashuStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
+import ModalStore from '../../stores/ModalStore';
 
 import AlertIcon from '../../assets/images/SVG/Alert.svg';
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
@@ -45,6 +46,7 @@ interface BalancePaneProps {
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
+    ModalStore: ModalStore;
     loading: boolean;
 }
 
@@ -59,7 +61,8 @@ interface BalancePaneState {
     'CashuStore',
     'NodeInfoStore',
     'SettingsStore',
-    'SyncStore'
+    'SyncStore',
+    'ModalStore'
 )
 @observer
 export default class BalancePane extends React.PureComponent<
@@ -88,6 +91,7 @@ export default class BalancePane extends React.PureComponent<
             CashuStore,
             SettingsStore,
             SyncStore,
+            ModalStore,
             navigation,
             loading
         } = this.props;
@@ -137,6 +141,16 @@ export default class BalancePane extends React.PureComponent<
                             jumboText
                             toggleable
                             pending
+                            onPendingPress={() =>
+                                ModalStore.toggleInfoModal({
+                                    title: localeString(
+                                        'views.Wallet.pendingBalanceIcon.title'
+                                    ),
+                                    text: localeString(
+                                        'views.Wallet.pendingBalanceIcon.explainer'
+                                    )
+                                })
+                            }
                         />
                         <View style={styles.conversion}>
                             <Conversion
@@ -170,6 +184,16 @@ export default class BalancePane extends React.PureComponent<
                             jumboText
                             toggleable
                             pending
+                            onPendingPress={() =>
+                                ModalStore.toggleInfoModal({
+                                    title: localeString(
+                                        'views.Wallet.pendingBalanceIcon.title'
+                                    ),
+                                    text: localeString(
+                                        'views.Wallet.pendingBalanceIcon.explainer'
+                                    )
+                                })
+                            }
                         />
                         <View style={styles.conversionSecondary}>
                             <Conversion
