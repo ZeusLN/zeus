@@ -23,7 +23,8 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore, {
     INTERFACE_KEYS,
-    Node
+    Node,
+    getNetworkDisplayName
 } from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -275,11 +276,12 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         item.implementation
                                     ];
 
-                                if (
-                                    item.implementation === 'embedded-lnd' &&
-                                    item.embeddedLndNetwork
-                                ) {
-                                    nodeSubtitle += ` (${item.embeddedLndNetwork})`;
+                                if (item.implementation === 'embedded-lnd') {
+                                    if (item.embeddedLndNetwork) {
+                                        nodeSubtitle += ` (${getNetworkDisplayName(
+                                            item.embeddedLndNetwork
+                                        )})`;
+                                    }
                                 }
 
                                 return (

@@ -714,14 +714,14 @@ export default class WalletConfiguration extends React.Component<
 
         await stopLnd();
 
-        await optimizeNeutrinoPeers(network === 'Testnet');
+        await optimizeNeutrinoPeers(network?.toLowerCase());
 
         const lndDir = uuidv4();
 
         const response = await createLndWallet({
             lndDir,
             seedMnemonic: recoveryCipherSeed,
-            isTestnet: network === 'Testnet',
+            network: network?.toLowerCase(),
             channelBackupsBase64
         });
 
@@ -2303,7 +2303,7 @@ export default class WalletConfiguration extends React.Component<
                                                     embeddedLndNetwork ===
                                                         'mainnet'
                                                         ? undefined
-                                                        : 'Testnet'
+                                                        : embeddedLndNetwork
                                                 );
                                             }}
                                             tertiary

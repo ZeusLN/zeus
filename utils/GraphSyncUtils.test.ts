@@ -125,7 +125,7 @@ describe('GraphSyncUtils', () => {
 
         it('should return true and not show prompt on testnet', () => {
             // Temporarily set to testnet
-            (mockSettingsStore as any).embeddedLndNetwork = 'Testnet';
+            (mockSettingsStore as any).embeddedLndNetwork = 'Testnet3';
 
             const result = checkGraphSyncBeforePayment(
                 mockSettings,

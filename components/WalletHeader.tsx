@@ -390,7 +390,15 @@ export default class WalletHeader extends React.Component<
         const nodeAddress = SettingsStore!.host || SettingsStore!.url;
 
         let infoValue: string;
-        if (NodeInfoStore!.nodeInfo.isTestNet) {
+        // Check Testnet4 first (more specific), then fall back to generic Testnet
+        // For embedded LND, also check embeddedLndNetwork setting
+        const isTestNet4 =
+            NodeInfoStore!.nodeInfo.isTestNet4 ||
+            (implementation === 'embedded-lnd' &&
+                SettingsStore!.embeddedLndNetwork === 'Testnet4');
+        if (isTestNet4) {
+            infoValue = localeString('network.testnet4');
+        } else if (NodeInfoStore!.nodeInfo.isTestNet) {
             infoValue = localeString('views.Wallet.MainPane.testnet');
         } else if (NodeInfoStore!.nodeInfo.isRegTest) {
             infoValue = localeString('views.Wallet.MainPane.regnet');
