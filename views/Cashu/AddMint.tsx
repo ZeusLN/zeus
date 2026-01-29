@@ -407,12 +407,18 @@ export default class AddMint extends React.Component<
                                     onChangeText={this.validateAndSetNpub}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    error={!!npubError}
+                                    textColor={
+                                        npubError
+                                            ? themeColor('warning')
+                                            : undefined
+                                    }
                                 />
                                 {npubError ? (
                                     <Text
                                         style={[
                                             styles.npubError,
-                                            { color: themeColor('error') }
+                                            { color: themeColor('warning') }
                                         ]}
                                     >
                                         {npubError}
