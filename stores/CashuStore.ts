@@ -71,6 +71,8 @@ const UPGRADE_MESSAGES: { [key: number]: string } = {
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
     'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
+const SMALL_TOKEN_THRESHOLD = 20;
+const MIN_SMALL_TOKENS_COUNT = 10;
 
 interface Wallet {
     wallet?: CashuWallet;
@@ -2464,6 +2466,7 @@ export default class CashuStore {
                 await this.setTotalBalance(totalBalanceSats);
 
                 this.checkAndSweepMints(mintUrl);
+                this.checkSmallTokensConsolidation(mintUrl);
             }
 
             this.loading = false;
@@ -2526,6 +2529,40 @@ export default class CashuStore {
                     `Cashu sweep check for ${mintUrl}: Balance ${walletData.balanceSats} <= Threshold ${sweepThresholdSats}`
                 );
             }
+        }
+    };
+
+    @action
+    public checkSmallTokensConsolidation = (mintUrl: string) => {
+        const walletData = this.cashuWallets[mintUrl];
+        if (
+            !walletData ||
+            !walletData.proofs ||
+            walletData.proofs.length === 0
+        ) {
+            return;
+        }
+
+        const smallTokens = walletData.proofs.filter(
+            (proof) => proof.amount <= SMALL_TOKEN_THRESHOLD
+        );
+
+        if (smallTokens.length >= MIN_SMALL_TOKENS_COUNT) {
+            setTimeout(() => {
+                Alert.alert(
+                    localeString('stores.CashuStore.smallTokensAlert.title'),
+                    localeString('stores.CashuStore.smallTokensAlert.message', {
+                        count: smallTokens.length.toString(),
+                        threshold: SMALL_TOKEN_THRESHOLD.toString()
+                    }),
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            style: 'default'
+                        }
+                    ]
+                );
+            }, 100);
         }
     };
 
