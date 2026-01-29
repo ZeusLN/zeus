@@ -41,8 +41,6 @@ interface PosKeypadPaneState {
     amount: string;
 }
 
-const MAX_LENGTH = 10;
-
 @inject('ChannelsStore', 'FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class PosKeypadPane extends React.PureComponent<
@@ -55,52 +53,83 @@ export default class PosKeypadPane extends React.PureComponent<
         amount: '0'
     };
 
-    appendValue = (value: string) => {
+    appendValue = (value: string): boolean => {
         const { amount } = this.state;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        let newAmount, decimalCount;
+        let newAmount;
 
-        // limit decimal places depending on units
-        if (units === 'fiat') {
-            const fiat = SettingsStore!.settings?.fiat || '';
-            const fiatProperties = FiatStore!.symbolLookup(fiat);
-            decimalCount =
-                fiatProperties?.decimalPlaces !== undefined
+        const getDecimalLimit = (): number | null => {
+            if (units === 'fiat') {
+                const fiat = SettingsStore!.settings?.fiat || '';
+                const fiatProperties = FiatStore!.symbolLookup(fiat);
+                return fiatProperties?.decimalPlaces !== undefined
                     ? fiatProperties.decimalPlaces
                     : 2;
-            if (
-                amount.split('.')[1] &&
-                amount.split('.')[1].length == decimalCount
-            )
-                return this.startShake();
+            }
+            if (units === 'sats') return 3;
+            if (units === 'BTC') return 8;
+            return null;
+        };
+
+        const decimalLimit = getDecimalLimit();
+        const [integerPart, decimalPart] = amount.split('.');
+
+        // limit decimal places depending on units
+        if (
+            decimalPart &&
+            decimalLimit !== null &&
+            decimalPart.length >= decimalLimit
+        ) {
+            this.startShake();
+            return false;
         }
-        if (units === 'sats') {
-            if (amount.split('.')[1] && amount.split('.')[1].length == 3)
-                return this.startShake();
-        }
+
         if (units === 'BTC') {
-            if (amount.split('.')[1] && amount.split('.')[1].length == 8)
-                return this.startShake();
+            // deny if trying to add more than 8 figures of Bitcoin
+            if (
+                !decimalPart &&
+                integerPart &&
+                integerPart.length == 8 &&
+                !amount.includes('.') &&
+                value !== '.'
+            ) {
+                this.startShake();
+                return false;
+            }
         }
 
         // only allow one decimal, unless currency has zero decimal places
-        if (value === '.' && (amount.includes('.') || decimalCount === 0))
-            return this.startShake();
+        if (value === '.' && (amount.includes('.') || decimalLimit === 0)) {
+            this.startShake();
+            return false;
+        }
 
-        if (amount.length >= MAX_LENGTH) {
-            newAmount = amount;
-            return this.startShake();
-        } else if (amount === '0') {
+        const proposedNewAmountStr = `${amount}${value}`;
+        const proposedNewAmount = new BigNumber(proposedNewAmountStr);
+
+        // deny if exceeding BTC 21 million capacity
+        if (units === 'BTC' && proposedNewAmount.gt(21000000)) {
+            this.startShake();
+            return false;
+        }
+        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0)) {
+            this.startShake();
+            return false;
+        }
+
+        if (amount === '0') {
             newAmount = value;
         } else {
-            newAmount = `${amount}${value}`;
+            newAmount = proposedNewAmountStr;
         }
 
         this.setState({
             amount: newAmount
         });
+
+        return true;
     };
 
     clearValue = () => {
