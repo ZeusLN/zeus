@@ -1121,7 +1121,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             CashuStore,
             SettingsStore,
             SyncStore,
-            navigation
+            navigation,
+            ModalStore
         } = this.props;
         const { isSyncing, isInExpressGraphSync } = SyncStore;
         const { nodeInfo } = NodeInfoStore;
@@ -1168,6 +1169,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         CashuStore={CashuStore}
                         SettingsStore={SettingsStore}
                         SyncStore={SyncStore}
+                        ModalStore={ModalStore}
                         loading={loading}
                     />
 
