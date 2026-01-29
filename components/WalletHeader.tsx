@@ -387,7 +387,7 @@ export default class WalletHeader extends React.Component<
                 ) : (
                     <NodeIdenticon
                         selectedNode={selectedNode}
-                        width={31}
+                        width={38}
                         rounded
                     />
                 )}
@@ -780,8 +780,8 @@ const styles = StyleSheet.create({
     },
     photo: {
         alignSelf: 'center',
-        width: 40,
-        height: 40,
+        width: 38,
+        height: 38,
         borderRadius: 68
     }
 });
