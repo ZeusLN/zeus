@@ -728,6 +728,7 @@ export default class AddMint extends React.Component<
                                         `review-${index}`
                                     }
                                     style={styles.reviewsList}
+                                    showsVerticalScrollIndicator={false}
                                     ItemSeparatorComponent={() => (
                                         <View
                                             style={[
