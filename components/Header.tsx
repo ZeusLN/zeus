@@ -71,12 +71,13 @@ function ZeusHeader(props: HeaderProps) {
                 props.navigation!.goBack();
             }}
             accessibilityLabel={localeString('general.close')}
+            style={{ marginLeft: 4 }}
         >
             <Close
                 fill={themeColor('text')}
                 width="30"
                 height="30"
-                style={{ alignSelf: 'center', marginLeft: 5 }}
+                style={{ alignSelf: 'center', marginTop: 4 }}
             />
         </TouchableOpacity>
     );
