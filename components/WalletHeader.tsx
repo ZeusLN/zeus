@@ -279,8 +279,7 @@ interface WalletHeaderState {
     'PosStore',
     'SyncStore',
     'NostrWalletConnectStore',
-    'TransactionsStore',
-    'SyncStore'
+    'TransactionsStore'
 )
 @observer
 export default class WalletHeader extends React.Component<
