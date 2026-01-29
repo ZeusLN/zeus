@@ -108,6 +108,7 @@ interface WalletConfigurationState {
     index: number | null;
     newEntry: boolean;
     suggestImport: string;
+    importError: string;
     showLndHubModal: boolean;
     showCertModal: boolean;
     enableTor: boolean;
@@ -173,6 +174,7 @@ export default class WalletConfiguration extends React.Component<
         enableTor: false,
         existingAccount: false,
         suggestImport: '',
+        importError: '',
         lndhubUrl: '',
         showLndHubModal: false,
         showCertModal: false,
@@ -232,29 +234,41 @@ export default class WalletConfiguration extends React.Component<
             suggestImport.includes('lndhub://') ||
             suggestImport.includes('bluewallet:')
         ) {
-            const { username, password, host } =
-                AddressUtils.processLNDHubAddress(suggestImport);
-
-            const existingAccount = !!username;
-
-            if (host) {
+            if (!AddressUtils.isValidLNDHubAddress(suggestImport)) {
                 this.setState({
+                    suggestImport: '',
+                    importError: localeString('utils.handleAnything.notValid')
+                });
+                Clipboard.setString('');
+                return;
+            }
+
+            try {
+                const { username, password, host } =
+                    AddressUtils.processLNDHubAddress(suggestImport);
+
+                const existingAccount = !!username;
+
+                const stateUpdate: any = {
                     username,
                     password,
-                    lndhubUrl: host,
                     implementation: 'lndhub',
                     suggestImport: '',
-                    enableTor: host.includes('.onion'),
-                    existingAccount
-                });
-            } else {
+                    importError: '',
+                    existingAccount,
+                    ...(host && {
+                        lndhubUrl: host,
+                        enableTor: host.includes('.onion')
+                    })
+                };
+                this.setState(stateUpdate);
+            } catch (error) {
                 this.setState({
-                    username,
-                    password,
-                    implementation: 'lndhub',
                     suggestImport: '',
-                    existingAccount
+                    importError: localeString('utils.handleAnything.notValid')
                 });
+                Clipboard.setString('');
+                return;
             }
         } else if (
             suggestImport.includes('clnrest://') ||
@@ -289,7 +303,8 @@ export default class WalletConfiguration extends React.Component<
 
     clearImportSuggestion = () => {
         this.setState({
-            suggestImport: ''
+            suggestImport: '',
+            importError: ''
         });
     };
 
@@ -774,6 +789,7 @@ export default class WalletConfiguration extends React.Component<
             interfaceKeys,
             existingAccount,
             suggestImport,
+            importError,
             showLndHubModal,
             showCertModal,
             pairingPhrase,
@@ -1110,6 +1126,10 @@ export default class WalletConfiguration extends React.Component<
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.form}>
+                        {!!importError && (
+                            <ErrorMessage message={importError} />
+                        )}
+
                         {!!createAccountError &&
                             implementation === 'lndhub' &&
                             !loading && (
