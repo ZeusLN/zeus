@@ -19,7 +19,6 @@ import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
-import Invoice from '../models/Invoice';
 import CashuToken from '../models/CashuToken';
 
 // Nostr
@@ -32,42 +31,40 @@ const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
 
 const checkAutoPayAndRedirect = async (paymentRequest: string) => {
-    if (AutoPayUtils.shouldTryAutoPay(paymentRequest)) {
+    const shouldTryAutoPay = AutoPayUtils.shouldTryAutoPay(paymentRequest);
+
+    if (shouldTryAutoPay) {
         try {
-            const decodedInvoice = await BackendUtils.decodePaymentRequest([
-                paymentRequest
-            ]);
-            console.log('[AutoPayUtils] : decoded invoice', decodedInvoice);
-            if (decodedInvoice) {
-                const invoiceModel = new Invoice(decodedInvoice);
-                const amount = invoiceModel.getAmount;
+            const { shouldAutoPay, enableDonations, amount } =
+                await AutoPayUtils.checkShouldAutoPay(
+                    paymentRequest,
+                    settingsStore
+                );
 
-                const { payments } = settingsStore.settings;
-                const autoPayThreshold = payments?.autoPayThreshold || 0;
+            if (shouldAutoPay) {
+                const pay_req = invoicesStore.pay_req;
+                const finalPaymentParams =
+                    await AutoPayUtils.buildPaymentParams(
+                        paymentRequest,
+                        amount,
+                        settingsStore,
+                        pay_req
+                    );
 
-                if (
-                    payments?.autoPayEnabled &&
-                    amount > 0 &&
-                    amount <= autoPayThreshold
-                ) {
-                    transactionsStore.sendPayment({
-                        payment_request: paymentRequest
-                    });
+                transactionsStore.sendPayment(finalPaymentParams);
 
-                    return [
-                        'SendingLightning',
-                        {
-                            enableDonations: payments?.enableDonations || false
-                        }
-                    ];
-                }
+                return [
+                    'SendingLightning',
+                    {
+                        enableDonations
+                    }
+                ];
             }
         } catch (error) {
             console.error('Auto-pay check failed:', error);
         }
     }
 
-    // Auto-pay didn't trigger or failed, continue with normal flow
     return ['PaymentRequest', {}];
 };
 
