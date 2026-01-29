@@ -13,6 +13,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import QR from '../../assets/images/SVG/QR.svg';
 import TextSVG from '../../assets/images/SVG/Text.svg';
+import Gift from '../../assets/images/SVG/gift.svg';
 
 interface ShareModalProps {
     ModalStore: ModalStore;
@@ -28,6 +29,8 @@ export default class ShareModal extends React.Component<ShareModalProps, {}> {
             toggleShareModal,
             shareQR,
             shareText,
+            shareGiftLink,
+            onShareGiftLink,
             closeVisibleModalDialog
         } = ModalStore;
 
@@ -35,7 +38,8 @@ export default class ShareModal extends React.Component<ShareModalProps, {}> {
             <ModalBox
                 style={{
                     ...styles.modal,
-                    backgroundColor: themeColor('background')
+                    backgroundColor: themeColor('background'),
+                    height: onShareGiftLink ? 330 : 250
                 }}
                 swipeToClose={true}
                 backButtonClose={true}
@@ -121,6 +125,40 @@ export default class ShareModal extends React.Component<ShareModalProps, {}> {
                             </Text>
                         </Row>
                     </TouchableOpacity>
+                    {onShareGiftLink && (
+                        <TouchableOpacity
+                            key="share-gift-link"
+                            onPress={async () => {
+                                shareGiftLink();
+                                closeVisibleModalDialog();
+                            }}
+                            style={{
+                                ...styles.sendOption,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        >
+                            <Row>
+                                <View style={{ marginRight: 15 }}>
+                                    <Gift
+                                        fill={
+                                            themeColor('action') ||
+                                            themeColor('highlight')
+                                        }
+                                        width={28}
+                                        height={28}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.sendOptionLabel,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('general.giftLink')}
+                                </Text>
+                            </Row>
+                        </TouchableOpacity>
+                    )}
                 </View>
             </ModalBox>
         );

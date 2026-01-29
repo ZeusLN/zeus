@@ -26,6 +26,7 @@ let mockSupportsOnchainSends = true;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
 
+const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
 jest.mock('./AddressUtils', () => ({
     processBIP21Uri: (...args: string[]) => mockProcessBIP21Uri(...args),
     isValidBitcoinAddress: () => mockIsValidBitcoinAddress,
@@ -37,7 +38,8 @@ jest.mock('./AddressUtils', () => ({
     processLNDHubAddress: (...args: any[]) => mockProcessLNDHubAddress(...args),
     isValidNpub: () => false,
     isPsbt: () => false,
-    isValidTxHex: () => false
+    isValidTxHex: () => false,
+    ZEUS_ECASH_GIFT_URL
 }));
 jest.mock('./TorUtils', () => ({}));
 jest.mock('./BackendUtils', () => ({
@@ -46,6 +48,13 @@ jest.mock('./BackendUtils', () => ({
     supportsCashuWallet: () => false,
     supportsWithdrawalRequests: () => false,
     supportsLnurlAuth: () => false
+}));
+
+let mockIsValidCashuToken = false;
+let mockDecodedCashuToken = {};
+jest.mock('./CashuUtils', () => ({
+    isValidCashuToken: () => mockIsValidCashuToken,
+    decodeCashuToken: () => mockDecodedCashuToken
 }));
 
 const mockProcessLndConnectUrl = jest.fn();
@@ -99,6 +108,8 @@ describe('handleAnything', () => {
         mockIsValidLightningOffer = false;
         mockIsValidLNDHubAddress = false;
         mockIsValidNodeUri = false;
+        mockIsValidCashuToken = false;
+        mockDecodedCashuToken = {};
     });
 
     describe('input sanitization', () => {
@@ -1532,6 +1543,173 @@ describe('handleAnything', () => {
                     'lnurl1dp68gurn8ghj7um9wfmxjcm99e3k7mf0v9cxj0m385ekvcenxc6r2c35xvukxefcv5mkvv34x5ekzd3ev56nyd3hxqurzepexejxxepnxscrvwfnv9nxzcn9xq6xyefhvgcxxcmyxymnserxfq5fns'
                 )
             ).toBe(false);
+        });
+    });
+
+    // IMPORTANT: zeusln.com/e/ URLs must be checked BEFORE the lnurl block in handleAnything,
+    // because findlnurl() from js-lnurl can match patterns in Cashu tokens that look like bech32 lnurls.
+    // These tests verify the correct route is returned when findlnurl might otherwise match.
+    describe('zeusln.com ecash gift URLs', () => {
+        const validCashuToken =
+            'cashuBo2FteCJodHRwczovL21pbnQubWluaWJpdHMuY2FzaC9CaXRjb2luYXVjc2F0YXSComFpSAAQeTfbDMhlYXCCpGFhCGFzeEAxOWQ3YmRiNTIwMzRmOWQ5OGQwZTU5OTEwM2FkMTlmZTAyODc1ODQ2MThlYmViYTFkNzExM2FiMjI4MDM0YjNlYWNYIQI5u9Nss3cyYXJoLTwRMY4qgCNL7-J7EtBFnGOIeq6tcWFko2FlWCBYlzHfzFSuLuI31zvZGHme0QGeeEjNoGhIs6l2fbbHH2FzWCA2ecAUKZWjtQagWP7wOUVRgsHYlyOG7CUhUFdQjUed2GFyWCC67afI6qoB6bISgCWK24JOdD_-gxUyaSrgfrZJmHsBh6RhYQRhc3hANWYzMGRlMDA1NjVkYTRhZDg2Yzk1MzljYzYzMGE3NTBlYWU2OTJiY2Q5ODgwMWI0OTI0NDA1ZDAxN2UzNGE5MWFjWCECN8hTvJgIFBwN0QY3prfyf4z7BxPVLBPptzKcnb_OupNhZKNhZVggcx4XGwTyM4riizWgckD44KUJQtKHUGGjHIJHFKdPE31hc1ggqASxqD7ZTbA59c7SAHgQvLdLq_xYLL2rAVr2ziIGfkRhclgg-bTi6nbDj8Mdq9rnKhAGgrQ4w6ihk9pvu9xUommg6V-iYWlIAFAFUPBJQUZhcIGkYWEEYXN4QDBlMzhhZWIxYzIxMTk1N2U5Njg4YTdlY2YzNzQ4Y2E2MTA0MDMzNmZjZWJmMzE4M2EwMDAwOWFiYzJiMjcxNWFhY1ghAu0yuRBFejZTitq8LJufeiB2CUAEk-pHTIWqYtFcqtCSYWSjYWVYIDhNUWOMw2xaCZT4Ob8bdV5CxkErkHh-m2XUUqCKZS3WYXNYIBUltNlKIUTrHi4M1Z8SL3l3_EPp-5eOPltdS648bpVGYXJYIFZdUQc6c-waYIhOMSS_-cS19HiHZn4xZe4s65dGN8u5';
+
+        it('should route to CashuToken view for valid zeusln.com/e/ URL', async () => {
+            const url = `${ZEUS_ECASH_GIFT_URL}${validCashuToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.minibits.cash/Bitcoin',
+                        proofs: [{ amount: 8 }, { amount: 4 }, { amount: 4 }]
+                    }
+                ],
+                unit: 'sat'
+            };
+
+            const result = await handleAnything(url);
+
+            expect(result).toEqual([
+                'CashuToken',
+                {
+                    token: validCashuToken,
+                    decoded: expect.any(Object)
+                }
+            ]);
+        });
+
+        it('should route to CashuToken even when findlnurl would match token content', async () => {
+            // This test simulates the bug where findlnurl matched patterns in Cashu tokens
+            const url = `${ZEUS_ECASH_GIFT_URL}${validCashuToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.minibits.cash/Bitcoin',
+                        proofs: [{ amount: 16 }]
+                    }
+                ],
+                unit: 'sat'
+            };
+            // Simulate findlnurl returning a match (which would happen with some Cashu tokens)
+            mockFindLnurl.mockReturnValue('lnurl1somefalsepositive');
+
+            const result = await handleAnything(url);
+
+            // Should still route to CashuToken, NOT to lnurl handling
+            expect(result).toEqual([
+                'CashuToken',
+                {
+                    token: validCashuToken,
+                    decoded: expect.any(Object)
+                }
+            ]);
+        });
+
+        it('should return true for valid zeusln.com/e/ URL from clipboard', async () => {
+            const url = `${ZEUS_ECASH_GIFT_URL}${validCashuToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.minibits.cash/Bitcoin',
+                        proofs: [{ amount: 16 }]
+                    }
+                ],
+                unit: 'sat'
+            };
+
+            const result = await handleAnything(url, undefined, true);
+
+            expect(result).toBe(true);
+        });
+
+        it('should route to CashuToken for V3 token (cashuA prefix)', async () => {
+            const simpleToken =
+                'cashuAeyJ0b2tlbiI6IFt7InByb29mcyI6IFtdLCAibWludCI6ICJodHRwczovL21pbnQuZXhhbXBsZS5jb20ifV19';
+            const url = `${ZEUS_ECASH_GIFT_URL}${simpleToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.example.com',
+                        proofs: []
+                    }
+                ]
+            };
+
+            const result = await handleAnything(url);
+
+            expect(result).toEqual([
+                'CashuToken',
+                {
+                    token: simpleToken,
+                    decoded: expect.any(Object)
+                }
+            ]);
+        });
+
+        it('should throw error for zeusln.com/e/ URL with invalid token', async () => {
+            const invalidToken = 'notavalidcashutoken';
+            const url = `${ZEUS_ECASH_GIFT_URL}${invalidToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = false;
+
+            await expect(handleAnything(url)).rejects.toThrow();
+        });
+
+        it('should return false for zeusln.com/e/ URL with invalid token from clipboard', async () => {
+            const invalidToken = 'notavalidcashutoken';
+            const url = `${ZEUS_ECASH_GIFT_URL}${invalidToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = false;
+
+            const result = await handleAnything(url, undefined, true);
+
+            expect(result).toBe(false);
+        });
+
+        it('should handle zeusln.com/e/ URL with whitespace trimmed', async () => {
+            const url = `  ${ZEUS_ECASH_GIFT_URL}${validCashuToken}  `;
+            mockProcessBIP21Uri.mockReturnValue({
+                value: `${ZEUS_ECASH_GIFT_URL}${validCashuToken}`
+            });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.minibits.cash/Bitcoin',
+                        proofs: [{ amount: 16 }]
+                    }
+                ],
+                unit: 'sat'
+            };
+
+            const result = await handleAnything(url);
+
+            expect(result[0]).toBe('CashuToken');
+        });
+
+        it('should not match similar but different URLs', async () => {
+            // URL that starts with zeusln.com but not /e/ path
+            const url = 'https://zeusln.com/download';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = false;
+
+            // Should fall through to error since it's not a valid payment method
+            await expect(handleAnything(url)).rejects.toThrow();
+        });
+
+        it('should not match http:// URLs (only https://)', async () => {
+            const url = `http://zeusln.com/e/${validCashuToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = false;
+
+            // http:// should not match the https:// pattern
+            await expect(handleAnything(url)).rejects.toThrow();
         });
     });
 });

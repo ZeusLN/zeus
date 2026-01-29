@@ -128,6 +128,7 @@ interface CollapsedQRProps {
     labelBottom?: string;
     qrAnimationSpeed?: QRAnimationSpeed;
     onQRAnimationSpeedChange?: (speed: QRAnimationSpeed) => void;
+    onShareGiftLink?: () => void;
 }
 
 interface CollapsedQRState {
@@ -185,7 +186,8 @@ export default class CollapsedQR extends React.Component<
             labelBottom,
             qrAnimationSpeed,
             onQRAnimationSpeedChange,
-            showSpeed
+            showSpeed,
+            onShareGiftLink
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
@@ -446,6 +448,7 @@ export default class CollapsedQR extends React.Component<
                             onShareComplete={() =>
                                 this.setState({ tempQRRef: null })
                             }
+                            onShareGiftLink={onShareGiftLink}
                         />
                         {supportsNFC && (
                             <NFCButton
