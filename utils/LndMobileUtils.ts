@@ -33,7 +33,9 @@ import {
     SECONDARY_NEUTRINO_PEERS_MAINNET,
     DEFAULT_NEUTRINO_PEERS_TESTNET,
     DEFAULT_FEE_ESTIMATOR,
-    DEFAULT_SPEEDLOADER
+    DEFAULT_SPEEDLOADER,
+    DEFAULT_ESPLORA_MAINNET,
+    DEFAULT_ESPLORA_TESTNET
 } from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
@@ -103,6 +105,9 @@ const writeLndConfig = async ({
 }) => {
     const { writeConfig } = lndMobile.index;
 
+    const backend = settingsStore?.settings?.embeddedLndBackend || 'neutrino';
+    const isEsplora = backend === 'esplora';
+
     const peerMode = settingsStore?.settings?.dontAllowOtherPeers
         ? 'connect'
         : 'addpeer';
@@ -127,32 +132,28 @@ const writeLndConfig = async ({
             : ''
     }`;
 
-    const config = `[Application Options]
-    debuglevel=info
-    maxbackoff=2s
-    sync-freelist=1
-    accept-keysend=1
-    tlsdisableautofill=1
-    maxpendingchannels=1000
-    max-commit-fee-rate-anchors=21
-    accept-positive-inbound-fees=true
-    payments-expiration-grace-period=168h
-    ${rescan ? 'reset-wallet-transactions=true' : ''}
+    // Get esplora URL
+    const getEsploraUrl = () => {
+        if (!isTestnet) {
+            const mainnetUrl = settingsStore?.settings?.esploraMainnet;
+            if (mainnetUrl === 'Custom') {
+                return settingsStore?.settings?.customEsplora;
+            }
+            return mainnetUrl || DEFAULT_ESPLORA_MAINNET;
+        } else {
+            const testnetUrl = settingsStore?.settings?.esploraTestnet;
+            if (testnetUrl === 'Custom') {
+                return settingsStore?.settings?.customEsplora;
+            }
+            return testnetUrl || DEFAULT_ESPLORA_TESTNET;
+        }
+    };
 
-    ${dbConfig}
-    
-    [Routing]
-    routing.assumechanvalid=1
-    routing.strictgraphpruning=false
-
-    [Bitcoin]
-    bitcoin.active=1
-    bitcoin.mainnet=${isTestnet ? 0 : 1}
-    bitcoin.testnet=${isTestnet ? 1 : 0}
-    bitcoin.node=neutrino
-    bitcoin.defaultchanconfs=1
-
-    [Neutrino]
+    // Backend-specific configuration
+    const backendConfig = isEsplora
+        ? `[esplora]
+    esplora.url=${getEsploraUrl()}`
+        : `[Neutrino]
     ${
         !isTestnet
             ? settingsStore?.settings?.neutrinoPeersMainnet
@@ -173,7 +174,34 @@ const writeLndConfig = async ({
             : ''
     }
     neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=${persistFilters}
+    neutrino.persistfilters=${persistFilters}`;
+
+    const config = `[Application Options]
+    debuglevel=info
+    maxbackoff=2s
+    sync-freelist=1
+    accept-keysend=1
+    tlsdisableautofill=1
+    maxpendingchannels=1000
+    max-commit-fee-rate-anchors=21
+    accept-positive-inbound-fees=true
+    payments-expiration-grace-period=168h
+    ${rescan ? 'reset-wallet-transactions=true' : ''}
+
+    ${dbConfig}
+
+    [Routing]
+    routing.assumechanvalid=1
+    routing.strictgraphpruning=false
+
+    [Bitcoin]
+    bitcoin.active=1
+    bitcoin.mainnet=${isTestnet ? 0 : 1}
+    bitcoin.testnet=${isTestnet ? 1 : 0}
+    bitcoin.node=${backend}
+    bitcoin.defaultchanconfs=1
+
+    ${backendConfig}
 
     [fee]
     fee.url=${
