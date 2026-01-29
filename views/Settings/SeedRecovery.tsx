@@ -181,7 +181,8 @@ export default class SeedRecovery extends React.PureComponent<
             adminMacaroon,
             embeddedLndNetwork,
             implementation: 'embedded-lnd',
-            lndDir
+            lndDir,
+            isSqlite: true
         };
 
         let nodes: any;

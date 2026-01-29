@@ -240,7 +240,8 @@ const Intro: React.FC<IntroProps> = (props) => {
                                                 nickname: localeString(
                                                     'general.defaultNodeNickname'
                                                 ),
-                                                lndDir
+                                                lndDir,
+                                                isSqlite: true
                                             }
                                         ];
 
