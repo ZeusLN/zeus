@@ -1156,7 +1156,7 @@ const styles = StyleSheet.create({
     },
     npubInputContainer: {
         marginTop: 10,
-        paddingLeft: 34
+        paddingHorizontal: 15
     },
     npubLabel: {
         fontFamily: 'PPNeueMontreal-Book',
