@@ -1,7 +1,12 @@
 import AutoPayUtils from './AutoPayUtils';
 
 jest.mock('./BackendUtils', () => ({
-    decodePaymentRequest: jest.fn()
+    decodePaymentRequest: jest.fn(),
+    isLNDBased: jest.fn(() => true)
+}));
+
+jest.mock('./FeeUtils', () => ({
+    calculateDefaultRoutingFee: jest.fn(() => 100)
 }));
 
 jest.mock('./AddressUtils', () => ({
@@ -10,9 +15,14 @@ jest.mock('./AddressUtils', () => ({
 
 jest.mock('../models/Invoice', () => {
     return jest.fn().mockImplementation((data) => ({
-        getAmount: data?.mockAmount || 0
+        getRequestAmount: data?.mockAmount || 0
     }));
 });
+
+jest.mock('../stores/Stores', () => ({}));
+jest.mock('./LocaleUtils', () => ({
+    localeString: jest.fn((key) => key)
+}));
 
 import BackendUtils from './BackendUtils';
 import AddressUtils from './AddressUtils';
@@ -27,9 +37,18 @@ const mockSettingsStore = {
         payments: {
             autoPayEnabled: true,
             autoPayThreshold: 1000,
-            enableDonations: false
+            enableDonations: false,
+            timeoutSeconds: '60',
+            defaultFeePercentage: '5.0'
         }
-    }
+    },
+    implementation: 'lnd',
+    getSettings: jest.fn().mockResolvedValue({
+        payments: {
+            timeoutSeconds: '60',
+            defaultFeePercentage: '5.0'
+        }
+    })
 } as any;
 
 const mockTransactionsStore = {
@@ -90,7 +109,15 @@ describe('checkAutoPayAndProcess', () => {
         expect(result).toBe(true);
         expect(MockedInvoice).toHaveBeenCalledWith(mockDecodedInvoice);
         expect(mockTransactionsStore.sendPayment).toHaveBeenCalledWith({
-            payment_request: 'lnbc1234567890'
+            payment_request: 'lnbc1234567890',
+            max_parts: '16',
+            max_shard_amt: '',
+            fee_limit_sat: '100',
+            max_fee_percent: '5.0',
+            outgoing_chan_id: '',
+            last_hop_pubkey: '',
+            amp: false,
+            timeout_seconds: '60'
         });
         expect(mockNavigation.navigate).toHaveBeenCalledWith(
             'SendingLightning',
@@ -160,6 +187,7 @@ describe('checkAutoPayAndProcess', () => {
     });
 
     it('returns false when invoice decoding fails', async () => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
             null
         );
@@ -173,9 +201,15 @@ describe('checkAutoPayAndProcess', () => {
 
         expect(result).toBe(false);
         expect(mockTransactionsStore.sendPayment).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            'Auto-pay error:',
+            expect.any(Error)
+        );
+        consoleSpy.mockRestore();
     });
 
     it('handles errors gracefully and returns false', async () => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
         (BackendUtils.decodePaymentRequest as jest.Mock).mockRejectedValue(
             new Error('Decoding failed')
         );
@@ -189,6 +223,11 @@ describe('checkAutoPayAndProcess', () => {
 
         expect(result).toBe(false);
         expect(mockTransactionsStore.sendPayment).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            'Auto-pay error:',
+            expect.any(Error)
+        );
+        consoleSpy.mockRestore();
     });
 
     it('uses default threshold when not configured', async () => {
@@ -265,7 +304,15 @@ describe('checkAutoPayAndProcess', () => {
         );
 
         expect(mockTransactionsStore.sendPayment).toHaveBeenCalledWith({
-            payment_request: 'lnbc1234567890'
+            payment_request: 'lnbc1234567890',
+            max_parts: '16',
+            max_shard_amt: '',
+            fee_limit_sat: '100',
+            max_fee_percent: '5.0',
+            outgoing_chan_id: '',
+            last_hop_pubkey: '',
+            amp: false,
+            timeout_seconds: '60'
         });
     });
 });
