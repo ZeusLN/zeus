@@ -19,12 +19,14 @@ import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+import AutoPayUtils from '../../utils/AutoPayUtils';
 
 import {
     modalStore,
     invoicesStore,
     nodeInfoStore,
-    settingsStore
+    settingsStore,
+    transactionsStore
 } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
@@ -340,8 +342,28 @@ export default class LightningSwipeableRow extends Component<
                 navigation,
                 settings
             );
-        } else {
-            invoicesStore.getPayReq(lightning ?? '');
+        } else if (lightning) {
+            if (AutoPayUtils.shouldTryAutoPay(lightning)) {
+                try {
+                    const result = await AutoPayUtils.checkAutoPayAndProcess(
+                        lightning,
+                        navigation,
+                        settingsStore,
+                        transactionsStore
+                    );
+
+                    if (result) {
+                        return;
+                    }
+                } catch (error) {
+                    console.error(
+                        'Auto-pay failed, falling back to manual flow:',
+                        error
+                    );
+                }
+            }
+
+            invoicesStore.getPayReq(lightning);
             navigation.navigate('PaymentRequest', {});
         }
     };
