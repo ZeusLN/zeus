@@ -17,14 +17,21 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import ModalBox from '../../components/ModalBox';
 import Pill from '../../components/Pill';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    SuccessMessage
+} from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
+import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import NostrUtils from '../../utils/NostrUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -37,8 +44,19 @@ interface MintProps {
     CashuStore: CashuStore;
 }
 
+type ReviewStep = 'rating' | 'signing' | 'success';
+
 interface MintState {
     checkForExistingBalances: boolean;
+    showReviewModal: boolean;
+    reviewStep: ReviewStep;
+    reviewRating: number;
+    reviewText: string;
+    signingMethod: 'anonymous' | 'nsec';
+    nsecInput: string;
+    nsecError: string;
+    submitError: string;
+    submittedNpub: string;
 }
 
 const supportedContacts = ['email', 'nostr', 'twitter', 'x'];
@@ -46,8 +64,510 @@ const supportedContacts = ['email', 'nostr', 'twitter', 'x'];
 @inject('CashuStore')
 @observer
 export default class Mint extends React.Component<MintProps, MintState> {
-    state = {
-        checkForExistingBalances: false
+    state: MintState = {
+        checkForExistingBalances: false,
+        showReviewModal: false,
+        reviewStep: 'rating',
+        reviewRating: 0,
+        reviewText: '',
+        signingMethod: 'anonymous',
+        nsecInput: '',
+        nsecError: '',
+        submitError: '',
+        submittedNpub: ''
+    };
+
+    openReviewModal = () => {
+        this.props.CashuStore.resetReviewSubmitState();
+        this.setState({
+            showReviewModal: true,
+            reviewStep: 'rating',
+            reviewRating: 0,
+            reviewText: '',
+            signingMethod: 'anonymous',
+            nsecInput: '',
+            nsecError: '',
+            submitError: '',
+            submittedNpub: ''
+        });
+    };
+
+    closeReviewModal = () => {
+        this.setState({ showReviewModal: false });
+        this.props.CashuStore.resetReviewSubmitState();
+    };
+
+    setRating = (rating: number) => {
+        this.setState({ reviewRating: rating });
+    };
+
+    proceedToSigning = () => {
+        this.setState({ reviewStep: 'signing' });
+    };
+
+    validateAndSetNsec = (text: string) => {
+        this.setState({ nsecInput: text });
+
+        if (text.trim() === '') {
+            this.setState({ nsecError: '' });
+            return;
+        }
+
+        const isValid = NostrUtils.isValidNsec(text);
+        if (!isValid) {
+            this.setState({
+                nsecError: localeString('views.Cashu.Mint.invalidNsec')
+            });
+        } else {
+            this.setState({ nsecError: '' });
+        }
+    };
+
+    submitReview = async () => {
+        const { CashuStore, route } = this.props;
+        const { reviewRating, reviewText, signingMethod, nsecInput } =
+            this.state;
+        const mint = route.params?.mint;
+
+        const nsec = signingMethod === 'nsec' ? nsecInput : undefined;
+
+        const result = await CashuStore.submitMintReview(
+            mint?.mintUrl,
+            reviewRating > 0 ? reviewRating : undefined,
+            reviewText || undefined,
+            nsec
+        );
+
+        if (result.success) {
+            this.setState({
+                reviewStep: 'success',
+                submittedNpub: result.npub || ''
+            });
+        } else {
+            this.setState({
+                submitError:
+                    result.error || localeString('views.Cashu.Mint.submitError')
+            });
+        }
+    };
+
+    renderStarSelector = () => {
+        const { reviewRating } = this.state;
+        const stars = [];
+
+        for (let i = 1; i <= 5; i++) {
+            const isFilled = i <= reviewRating;
+            stars.push(
+                <TouchableOpacity
+                    key={i}
+                    onPress={() => this.setRating(i)}
+                    style={styles.starButton}
+                >
+                    <Text
+                        style={{
+                            color: isFilled
+                                ? themeColor('text')
+                                : themeColor('secondaryText'),
+                            fontSize: 32
+                        }}
+                    >
+                        {isFilled ? '★' : '☆'}
+                    </Text>
+                </TouchableOpacity>
+            );
+        }
+
+        return <View style={styles.starContainer}>{stars}</View>;
+    };
+
+    renderReviewModal = () => {
+        const { CashuStore } = this.props;
+        const {
+            showReviewModal,
+            reviewStep,
+            reviewText,
+            signingMethod,
+            nsecInput,
+            nsecError,
+            submitError,
+            submittedNpub
+        } = this.state;
+        const { submittingReview } = CashuStore;
+
+        const isNsecValid =
+            signingMethod === 'anonymous' ||
+            (nsecInput.trim() !== '' && !nsecError);
+
+        return (
+            <ModalBox
+                isOpen={showReviewModal}
+                style={{
+                    backgroundColor: 'transparent',
+                    minHeight: 300
+                }}
+                onClosed={this.closeReviewModal}
+            >
+                <View style={styles.modalContainer}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            { backgroundColor: themeColor('secondary') }
+                        ]}
+                    >
+                        {reviewStep === 'rating' && (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.modalTitle,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.submitReview'
+                                    )}
+                                </Text>
+
+                                <Text
+                                    style={{
+                                        ...styles.modalSubtitle,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.ratingLabel'
+                                    )}
+                                </Text>
+
+                                {this.renderStarSelector()}
+
+                                <Text
+                                    style={{
+                                        ...styles.modalSubtitle,
+                                        color: themeColor('secondaryText'),
+                                        marginTop: 20
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.reviewTextLabel'
+                                    )}
+                                </Text>
+
+                                <TextInput
+                                    placeholder={localeString(
+                                        'views.Cashu.Mint.reviewTextPlaceholder'
+                                    )}
+                                    value={reviewText}
+                                    onChangeText={(text: string) =>
+                                        this.setState({ reviewText: text })
+                                    }
+                                    multiline
+                                    numberOfLines={3}
+                                />
+
+                                <View style={styles.modalButtons}>
+                                    <Button
+                                        title={localeString('general.next')}
+                                        onPress={this.proceedToSigning}
+                                    />
+                                    <View style={styles.cancelButton}>
+                                        <Button
+                                            title={localeString(
+                                                'general.cancel'
+                                            )}
+                                            onPress={this.closeReviewModal}
+                                            secondary
+                                        />
+                                    </View>
+                                </View>
+                            </>
+                        )}
+
+                        {reviewStep === 'signing' && (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.modalTitle,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.signingMethod'
+                                    )}
+                                </Text>
+
+                                <Text
+                                    style={{
+                                        ...styles.modalSubtitle,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.signingMethodSubtitle'
+                                    )}
+                                </Text>
+
+                                {submitError ? (
+                                    <View style={{ marginBottom: 15 }}>
+                                        <ErrorMessage message={submitError} />
+                                    </View>
+                                ) : null}
+
+                                {/* Anonymous option */}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.optionItem,
+                                        {
+                                            backgroundColor:
+                                                themeColor('background')
+                                        },
+                                        signingMethod === 'anonymous' && [
+                                            styles.optionItemSelected,
+                                            {
+                                                borderColor:
+                                                    themeColor('highlight')
+                                            }
+                                        ]
+                                    ]}
+                                    onPress={() =>
+                                        this.setState({
+                                            signingMethod: 'anonymous'
+                                        })
+                                    }
+                                >
+                                    <View
+                                        style={[
+                                            styles.radioOuter,
+                                            {
+                                                borderColor:
+                                                    themeColor('highlight')
+                                            }
+                                        ]}
+                                    >
+                                        {signingMethod === 'anonymous' && (
+                                            <View
+                                                style={[
+                                                    styles.radioInner,
+                                                    {
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'highlight'
+                                                            )
+                                                    }
+                                                ]}
+                                            />
+                                        )}
+                                    </View>
+                                    <View style={styles.optionTextContainer}>
+                                        <Text
+                                            style={{
+                                                ...styles.optionTitle,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.Mint.anonymousReview'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.optionDescription,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.Mint.anonymousReviewDesc'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+
+                                {/* Nsec option */}
+                                <TouchableOpacity
+                                    style={[
+                                        styles.optionItem,
+                                        {
+                                            backgroundColor:
+                                                themeColor('background')
+                                        },
+                                        signingMethod === 'nsec' && [
+                                            styles.optionItemSelected,
+                                            {
+                                                borderColor:
+                                                    themeColor('highlight')
+                                            }
+                                        ]
+                                    ]}
+                                    onPress={() =>
+                                        this.setState({ signingMethod: 'nsec' })
+                                    }
+                                >
+                                    <View
+                                        style={[
+                                            styles.radioOuter,
+                                            {
+                                                borderColor:
+                                                    themeColor('highlight')
+                                            }
+                                        ]}
+                                    >
+                                        {signingMethod === 'nsec' && (
+                                            <View
+                                                style={[
+                                                    styles.radioInner,
+                                                    {
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'highlight'
+                                                            )
+                                                    }
+                                                ]}
+                                            />
+                                        )}
+                                    </View>
+                                    <View style={styles.optionTextContainer}>
+                                        <Text
+                                            style={{
+                                                ...styles.optionTitle,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.Mint.useNsec'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.optionDescription,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.Mint.useNsecDesc'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </TouchableOpacity>
+
+                                {signingMethod === 'nsec' && (
+                                    <View style={styles.nsecInputContainer}>
+                                        <TextInput
+                                            placeholder="nsec1..."
+                                            value={nsecInput}
+                                            onChangeText={
+                                                this.validateAndSetNsec
+                                            }
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
+                                            secureTextEntry
+                                        />
+                                        {nsecError ? (
+                                            <Text
+                                                style={{
+                                                    ...styles.nsecError,
+                                                    color: themeColor('error')
+                                                }}
+                                            >
+                                                {nsecError}
+                                            </Text>
+                                        ) : null}
+                                    </View>
+                                )}
+
+                                <View style={styles.modalButtons}>
+                                    {submittingReview ? (
+                                        <LoadingIndicator />
+                                    ) : (
+                                        <>
+                                            <Button
+                                                title={localeString(
+                                                    'views.Cashu.Mint.submitReviewButton'
+                                                )}
+                                                onPress={this.submitReview}
+                                                disabled={!isNsecValid}
+                                            />
+                                            <View style={styles.cancelButton}>
+                                                <Button
+                                                    title={localeString(
+                                                        'general.back'
+                                                    )}
+                                                    onPress={() =>
+                                                        this.setState({
+                                                            reviewStep:
+                                                                'rating',
+                                                            submitError: ''
+                                                        })
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
+                            </>
+                        )}
+
+                        {reviewStep === 'success' && (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.modalTitle,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.reviewSubmitted'
+                                    )}
+                                </Text>
+
+                                <View style={{ marginVertical: 15 }}>
+                                    <SuccessMessage
+                                        message={localeString(
+                                            'views.Cashu.Mint.reviewSubmittedDesc'
+                                        )}
+                                    />
+                                </View>
+
+                                {submittedNpub && (
+                                    <View style={styles.npubContainer}>
+                                        <Text
+                                            style={{
+                                                ...styles.npubLabel,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.Mint.publishedAs'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.npubValue,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {submittedNpub}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                <View style={styles.modalButtons}>
+                                    <Button
+                                        title={localeString('general.close')}
+                                        onPress={this.closeReviewModal}
+                                    />
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </ModalBox>
+        );
     };
 
     render() {
@@ -478,13 +998,25 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                         />
                                     </View>
                                 </View>
+                                <View
+                                    style={{ width: '100%', marginBottom: 10 }}
+                                >
+                                    <Button
+                                        title={localeString(
+                                            'views.Cashu.Mint.submitReview'
+                                        )}
+                                        tertiary
+                                        onPress={this.openReviewModal}
+                                        buttonStyle={{ height: 40 }}
+                                        disabled={loading}
+                                    />
+                                </View>
                                 <View style={{ width: '100%' }}>
                                     <Button
                                         title={localeString(
                                             'views.Cashu.AddMint.title'
-                                        ).toUpperCase()}
+                                        )}
                                         tertiary
-                                        noUppercase
                                         onPress={async () => {
                                             await addMint(
                                                 mint?.mintUrl,
@@ -529,13 +1061,28 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                             />
                                         </View>
                                     )}
+                                    <View
+                                        style={{
+                                            width: '100%',
+                                            marginBottom: 20
+                                        }}
+                                    >
+                                        <Button
+                                            title={localeString(
+                                                'views.Cashu.Mint.submitReview'
+                                            )}
+                                            tertiary
+                                            onPress={this.openReviewModal}
+                                            buttonStyle={{ height: 40 }}
+                                            disabled={loading}
+                                        />
+                                    </View>
                                     <View style={{ width: '100%' }}>
                                         <Button
                                             title={localeString(
                                                 'views.Cashu.Mint.removeMint'
-                                            ).toUpperCase()}
+                                            )}
                                             warning
-                                            noUppercase
                                             onPress={async () => {
                                                 await removeMint(mint?.mintUrl);
                                                 navigation.goBack();
@@ -549,6 +1096,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         )}
                     </>
                 )}
+                {this.renderReviewModal()}
             </Screen>
         );
     }
@@ -568,5 +1116,106 @@ const styles = StyleSheet.create({
     valueWithLink: {
         paddingBottom: 5,
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    // Modal styles
+    modalContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    modalContent: {
+        borderRadius: 20,
+        padding: 20,
+        width: '95%',
+        maxWidth: 400
+    },
+    modalTitle: {
+        fontFamily: font('marlideBold'),
+        fontSize: 22,
+        textAlign: 'center',
+        marginBottom: 10
+    },
+    modalSubtitle: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14,
+        textAlign: 'center',
+        marginBottom: 15
+    },
+    starContainer: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginBottom: 10
+    },
+    starButton: {
+        padding: 5
+    },
+    ratingText: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        fontSize: 16,
+        textAlign: 'center',
+        marginBottom: 10
+    },
+    optionItem: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 10
+    },
+    optionItemSelected: {
+        borderWidth: 2
+    },
+    radioOuter: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        borderWidth: 2,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+        marginTop: 2
+    },
+    radioInner: {
+        width: 12,
+        height: 12,
+        borderRadius: 6
+    },
+    optionTextContainer: {
+        flex: 1
+    },
+    optionTitle: {
+        fontFamily: 'PPNeueMontreal-Medium',
+        fontSize: 16,
+        marginBottom: 4
+    },
+    optionDescription: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 13
+    },
+    nsecInputContainer: {
+        marginTop: 10
+    },
+    nsecError: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 12,
+        marginTop: 5
+    },
+    modalButtons: {
+        marginTop: 20
+    },
+    cancelButton: {
+        marginTop: 10
+    },
+    npubContainer: {
+        marginVertical: 10
+    },
+    npubLabel: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 12,
+        marginBottom: 5
+    },
+    npubValue: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 12
     }
 });
