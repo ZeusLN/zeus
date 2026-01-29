@@ -48,6 +48,7 @@ interface AmountDisplayProps {
     accessibilityLabel?: string;
     roundAmount?: boolean;
     separatorSwap?: boolean;
+    onPendingPress?: () => void;
 }
 
 interface SymbolProps {
@@ -71,7 +72,8 @@ function AmountDisplay({
     accessible,
     accessibilityLabel,
     roundAmount = false,
-    separatorSwap = false
+    separatorSwap = false,
+    onPendingPress
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -79,20 +81,35 @@ function AmountDisplay({
 
     const actualSymbol = unit === 'BTC' ? '₿' : symbol;
 
-    const Pending = () => (
-        <View
-            style={{
-                paddingHorizontal: 4,
-                paddingTop: jumboText ? 4 : 1
-            }}
-        >
-            <ClockIcon
-                color={themeColor('bitcoin')}
-                width={jumboText ? 24 : 12}
-                height={jumboText ? 24 : 12}
-            />
-        </View>
-    );
+    const Pending = () => {
+        const icon = (
+            <View
+                style={{
+                    paddingHorizontal: 4,
+                    paddingTop: jumboText ? 4 : 1
+                }}
+            >
+                <ClockIcon
+                    color={themeColor('bitcoin')}
+                    width={jumboText ? 24 : 12}
+                    height={jumboText ? 24 : 12}
+                />
+            </View>
+        );
+
+        if (!onPendingPress) {
+            return icon;
+        }
+
+        return (
+            <TouchableOpacity
+                onPress={onPendingPress}
+                accessibilityLabel={localeString('general.pending')}
+            >
+                {icon}
+            </TouchableOpacity>
+        );
+    };
 
     const FiatSymbol: React.FC<SymbolProps> = ({ accessible }) => (
         <Body
@@ -324,6 +341,7 @@ interface AmountProps {
     accessibilityLabel?: string;
     negative?: boolean;
     roundAmount?: boolean;
+    onPendingPress?: () => void;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -347,7 +365,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
             accessible,
             accessibilityLabel,
             negative = false,
-            roundAmount = false
+            roundAmount = false,
+            onPendingPress
         } = this.props;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
@@ -401,6 +420,9 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             accessible={accessible}
                             accessibilityLabel={accessibilityLabel}
                             roundAmount={roundAmount}
+                            onPendingPress={
+                                pending ? onPendingPress : undefined
+                            }
                         />
                     </TouchableOpacity>
                 );
@@ -420,6 +442,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     accessible={accessible}
                     accessibilityLabel={accessibilityLabel}
                     roundAmount={roundAmount}
+                    onPendingPress={pending ? onPendingPress : undefined}
                 />
             );
         }
@@ -474,6 +497,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
                         roundAmount={roundAmount}
+                        onPendingPress={pending ? onPendingPress : undefined}
                     />
                 </TouchableOpacity>
             );
@@ -493,6 +517,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 accessible={accessible}
                 accessibilityLabel={accessibilityLabel}
                 roundAmount={roundAmount}
+                onPendingPress={pending ? onPendingPress : undefined}
             />
         );
     }
