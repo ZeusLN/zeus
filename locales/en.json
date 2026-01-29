@@ -2359,6 +2359,8 @@
     "stores.CashuStore.errorDiscoveringMints": "Failed to discover mints from Nostr relays",
     "stores.CashuStore.errorAddingMint": "Failed to add mint",
     "stores.CashuStore.checkSpentError": "Error checking token status",
+    "stores.CashuStore.smallTokensAlert.title": "Consider Consolidating Small Tokens",
+    "stores.CashuStore.smallTokensAlert.message": "You have {{count}} small tokens (≤{{threshold}} sats each). Having many small tokens can make it difficult to send larger amounts. Consider consolidating them by sending tokens to yourself or using the swap feature to combine them into larger denominations.",
     "cashu.upgradePrompt.title": "Upgrade to Self-Custody?",
     "cashu.upgradePrompt.title10k": "Time to Level Up",
     "cashu.upgradePrompt.title25k": "Secure Your Stack",
