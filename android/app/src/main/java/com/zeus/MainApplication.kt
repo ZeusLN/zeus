@@ -31,6 +31,7 @@ class MainApplication : Application(), ReactApplication {
                 add(LndMobileScheduledSyncPackage())
                 add(LncPackage())
                 add(NostrConnectPackage())
+                add(StealthModePackage())
                 // add(new ZeusTorPackage());
             }
 
