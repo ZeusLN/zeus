@@ -108,7 +108,7 @@ function ZeusHeader(props: HeaderProps) {
             containerStyle={{
                 borderBottomWidth: 0,
                 marginTop: containerStyle?.marginTop ?? insets.top,
-                height: 38
+                height: 50
             }}
             placement={placement}
             // Disable @rneui safe area handling - we use marginTop for positioning
