@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "復原模式",
     "views.Wallet.BalancePane.recovery.text": "直到程序完成前都請保持 ZEUS 開啟。",
     "views.Wallet.BalancePane.recovery.textAlt": "完成前請開著 ZEUS 不動。",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "將你的資金備份",
     "views.Wallet.BalancePane.backup.text": "請作備份以避免失去你的比特幣。",
     "views.Wallet.BalancePane.backup.action": "開始備份 ->",
