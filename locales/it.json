@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "Modalità di recupero",
     "views.Wallet.BalancePane.recovery.text": "Si prega di lasciare ZEUS aperto fino al completamento del processo.",
     "views.Wallet.BalancePane.recovery.textAlt": "Lasciare ZEUS aperto fino al completamento.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "Eseguire il backup dei tuoi fondi",
     "views.Wallet.BalancePane.backup.text": "Crea un backup per non perdere mai l'accesso al tuo bitcoin.",
     "views.Wallet.BalancePane.backup.action": "Inizia Backup ->",

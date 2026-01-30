@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "Λειτουργία αποκατάστασης",
     "views.Wallet.BalancePane.recovery.text": "Παρακαλούμε αφήστε το ZEUS ανοιχτό μέχρι να ολοκληρωθεί η διαδικασία.",
     "views.Wallet.BalancePane.recovery.textAlt": "Αφήστε το ZEUS ανοιχτό μέχρι την ολοκλήρωση.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "Κρατήστε αντίγραφο ασφαλείας των κεφαλαίων σας",
     "views.Wallet.BalancePane.backup.text": "Δημιουργήστε ένα αντίγραφο ασφαλείας για να μην χάσετε ποτέ την πρόσβαση στα bitcoin σας.",
     "views.Wallet.BalancePane.backup.action": "Έναρξη αντιγράφου ασφαλείας ->",

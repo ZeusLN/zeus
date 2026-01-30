@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "Palautustila",
     "views.Wallet.BalancePane.recovery.text": "Jätä ZEUS auki, kunnes prosessi on valmis.",
     "views.Wallet.BalancePane.recovery.textAlt": "Jätä ZEUS auki, kunnes se on valmis.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "Varmuuskopioi varasi",
     "views.Wallet.BalancePane.backup.text": "Luo varmuuskopio, jotta et koskaan menetä pääsyä bitcoiniisi.",
     "views.Wallet.BalancePane.backup.action": "Aloita varmuuskopiointi ->",

@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "Chế độ khôi phục",
     "views.Wallet.BalancePane.recovery.text": "Vui lòng giữ ZEUS mở cho đến khi quá trình hoàn tất.",
     "views.Wallet.BalancePane.recovery.textAlt": "Để ZEUS mở cho đến khi hoàn thành.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "Sao lưu nguồn vốn của bạn.",
     "views.Wallet.BalancePane.backup.text": "Tạo bản backup để không mất quyền truy cập bitcoin của bạn.",
     "views.Wallet.BalancePane.backup.action": "Bắt đầu sao lưu ->",

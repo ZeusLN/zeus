@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "복구 모드",
     "views.Wallet.BalancePane.recovery.text": "프로세스가 완료될 때까지 제우스를 열어두세요.",
     "views.Wallet.BalancePane.recovery.textAlt": "완료될 때까지 제우스를 열어 두세요.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "자산 내역 백업",
     "views.Wallet.BalancePane.backup.text": "백업을 생성하여 내 비트코인에 대한 통제권을 보호하세요.",
     "views.Wallet.BalancePane.backup.action": "백업 시작하기 ->",

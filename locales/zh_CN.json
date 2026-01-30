@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "恢复模式",
     "views.Wallet.BalancePane.recovery.text": "请保持 ZEUS 处于打开状态，直到该过程完成。",
     "views.Wallet.BalancePane.recovery.textAlt": "让 ZEUS 保持打开状态，直到完成。",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "备份您的资金",
     "views.Wallet.BalancePane.backup.text": "创建备份以避免丢失您的比特币访问权限。",
     "views.Wallet.BalancePane.backup.action": "开始备份->",
