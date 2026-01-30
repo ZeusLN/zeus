@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
 import { inject, observer } from 'mobx-react';
-import { CheckBox } from '@rneui/themed';
+import { CheckBox, Icon } from '@rneui/themed';
 import { StackNavigationProp } from '@react-navigation/stack';
 import RNFS from 'react-native-fs';
 import {
@@ -38,9 +38,25 @@ import {
     saveNodeConfigExportFile,
     decryptExportData
 } from '../../utils/NodeConfigUtils';
+import KeychainRecoveryUtils, {
+    RecoveryResult,
+    RecoveryScanResult
+} from '../../utils/KeychainRecoveryUtils';
 
-import SettingsStore, { Node } from '../../stores/SettingsStore';
+import SettingsStore, {
+    Node,
+    INTERFACE_KEYS
+} from '../../stores/SettingsStore';
 import moment from 'moment';
+
+// Helper function to get human-readable implementation name
+const getImplementationDisplayName = (
+    implementation: string | undefined
+): string => {
+    if (!implementation) return 'Unknown';
+    const found = INTERFACE_KEYS.find((item) => item.value === implementation);
+    return found ? found.key : implementation;
+};
 
 interface NodeConfigExportImportProps {
     navigation: StackNavigationProp<any, any>;
@@ -49,7 +65,15 @@ interface NodeConfigExportImportProps {
 
 interface NodeConfigExportImportState {
     isLoading: boolean;
-    activeModal: 'none' | 'nodeSelection' | 'export' | 'info' | 'password';
+    activeModal:
+        | 'none'
+        | 'nodeSelection'
+        | 'export'
+        | 'info'
+        | 'password'
+        | 'importNodeSelection'
+        | 'recovery'
+        | 'recoveryNodeSelection';
     selectedNodes: Array<number>;
     exportPassword: string;
     confirmPassword: string;
@@ -58,6 +82,15 @@ interface NodeConfigExportImportState {
     importPassword: string;
     importPasswordHidden: boolean;
     importData?: NodeConfigExport;
+    // Import node selection
+    importNodes: Node[];
+    selectedImportNodes: Array<number>;
+    // Recovery state
+    isScanning: boolean;
+    scanResult: RecoveryScanResult | null;
+    selectedRecoveryResult: RecoveryResult | null;
+    recoveryNodes: Node[];
+    selectedRecoveryNodes: Array<number>;
 }
 
 interface NodeConfigExport {
@@ -85,7 +118,16 @@ export default class NodeConfigExportImport extends React.Component<
         useEncryption: true,
         importFilePath: null,
         importPassword: '',
-        importPasswordHidden: true
+        importPasswordHidden: true,
+        // Import node selection
+        importNodes: [],
+        selectedImportNodes: [],
+        // Recovery state
+        isScanning: false,
+        scanResult: null,
+        selectedRecoveryResult: null,
+        recoveryNodes: [],
+        selectedRecoveryNodes: []
     };
 
     private resetExportState = () => {
@@ -102,7 +144,9 @@ export default class NodeConfigExportImport extends React.Component<
             activeModal: 'none',
             importFilePath: null,
             importPassword: '',
-            importPasswordHidden: true
+            importPasswordHidden: true,
+            importNodes: [],
+            selectedImportNodes: []
         });
     };
 
@@ -189,7 +233,7 @@ export default class NodeConfigExportImport extends React.Component<
                             }
                         ]}
                     >
-                        <ScrollView>
+                        <ScrollView showsVerticalScrollIndicator={false}>
                             {nodes.length > 0 && (
                                 <CheckBox
                                     title={localeString(
@@ -277,20 +321,24 @@ export default class NodeConfigExportImport extends React.Component<
                                                                 32
                                                             )}
                                                         </Text>
-                                                        {isEmbedded && (
-                                                            <Text
-                                                                style={{
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    ),
-                                                                    fontSize: 12
-                                                                }}
-                                                            >
-                                                                {localeString(
-                                                                    'views.Tools.nodeConfigExportImport.notExportable'
-                                                                )}
-                                                            </Text>
-                                                        )}
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontSize: 12
+                                                            }}
+                                                        >
+                                                            {isEmbedded
+                                                                ? `${localeString(
+                                                                      'views.Tools.nodeConfigExportImport.notExportable'
+                                                                  ).toUpperCase()} - ${getImplementationDisplayName(
+                                                                      node.implementation
+                                                                  )}`
+                                                                : getImplementationDisplayName(
+                                                                      node.implementation
+                                                                  )}
+                                                        </Text>
                                                     </View>
                                                 </View>
                                             }
@@ -299,20 +347,21 @@ export default class NodeConfigExportImport extends React.Component<
                                             onPress={() => {
                                                 if (isEmbedded) return;
 
-                                                const newSelectedNodes =
-                                                    isSelected
-                                                        ? selectedNodes.filter(
-                                                              (n) => n !== index
-                                                          )
-                                                        : [
-                                                              ...selectedNodes,
-                                                              index
-                                                          ];
-
-                                                this.setState({
+                                                this.setState((prevState) => ({
                                                     selectedNodes:
-                                                        newSelectedNodes
-                                                });
+                                                        prevState.selectedNodes.includes(
+                                                            index
+                                                        )
+                                                            ? prevState.selectedNodes.filter(
+                                                                  (n) =>
+                                                                      n !==
+                                                                      index
+                                                              )
+                                                            : [
+                                                                  ...prevState.selectedNodes,
+                                                                  index
+                                                              ]
+                                                }));
                                             }}
                                             iconRight={true}
                                             containerStyle={{
@@ -562,7 +611,14 @@ export default class NodeConfigExportImport extends React.Component<
                     importData
                 });
             } else {
-                await this.executeImport(importData);
+                // Show node selection modal for unencrypted imports
+                const nodes = (importData.data as { nodes: Node[] }).nodes;
+                this.setState({
+                    isLoading: false,
+                    importNodes: nodes,
+                    selectedImportNodes: nodes.map((_, i) => i), // Select all by default
+                    activeModal: 'importNodeSelection'
+                });
             }
         } catch (error) {
             this.handleError(
@@ -642,41 +698,205 @@ export default class NodeConfigExportImport extends React.Component<
         );
     };
 
+    private renderImportNodeSelectionModal = () => {
+        const { activeModal, importNodes, selectedImportNodes } = this.state;
+
+        const allNodesSelected =
+            importNodes.length > 0 &&
+            selectedImportNodes.length === importNodes.length;
+
+        return (
+            <Modal
+                visible={activeModal === 'importNodeSelection'}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={this.resetImportState}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            {
+                                maxHeight: '80%',
+                                backgroundColor: isLightTheme()
+                                    ? '#ffffff'
+                                    : themeColor('background')
+                            }
+                        ]}
+                    >
+                        <Text style={styles.modalTitle}>
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.selectConfigsToImport'
+                            )}
+                        </Text>
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {importNodes.length > 1 && (
+                                <CheckBox
+                                    title={localeString(
+                                        'views.Tools.nodeConfigExportImport.selectAllConfigs'
+                                    )}
+                                    checked={allNodesSelected}
+                                    onPress={() => {
+                                        if (allNodesSelected) {
+                                            this.setState({
+                                                selectedImportNodes: []
+                                            });
+                                        } else {
+                                            this.setState({
+                                                selectedImportNodes:
+                                                    importNodes.map((_, i) => i)
+                                            });
+                                        }
+                                    }}
+                                    containerStyle={{
+                                        backgroundColor: 'transparent',
+                                        borderWidth: 0,
+                                        marginBottom: 15
+                                    }}
+                                    textStyle={{
+                                        color: themeColor('text'),
+                                        fontWeight: 'bold'
+                                    }}
+                                    checkedColor={themeColor('text')}
+                                />
+                            )}
+
+                            {importNodes.map((node: Node, index: number) => {
+                                const isSelected =
+                                    selectedImportNodes.includes(index);
+
+                                return (
+                                    <View key={index} style={styles.nodeItem}>
+                                        <CheckBox
+                                            title={
+                                                <View style={styles.nodeInfo}>
+                                                    <NodeIdenticon
+                                                        selectedNode={node}
+                                                        width={42}
+                                                        rounded
+                                                    />
+                                                    <View
+                                                        style={styles.nodeText}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                fontSize: 16
+                                                            }}
+                                                        >
+                                                            {NodeTitle(
+                                                                node,
+                                                                32
+                                                            )}
+                                                        </Text>
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontSize: 12
+                                                            }}
+                                                        >
+                                                            {getImplementationDisplayName(
+                                                                node.implementation
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            }
+                                            checked={isSelected}
+                                            onPress={() => {
+                                                this.setState((prevState) => ({
+                                                    selectedImportNodes:
+                                                        prevState.selectedImportNodes.includes(
+                                                            index
+                                                        )
+                                                            ? prevState.selectedImportNodes.filter(
+                                                                  (n) =>
+                                                                      n !==
+                                                                      index
+                                                              )
+                                                            : [
+                                                                  ...prevState.selectedImportNodes,
+                                                                  index
+                                                              ]
+                                                }));
+                                            }}
+                                            iconRight={true}
+                                            containerStyle={{
+                                                backgroundColor: 'transparent',
+                                                borderWidth: 0,
+                                                marginBottom: 10,
+                                                padding: 0
+                                            }}
+                                            uncheckedColor={themeColor('text')}
+                                            checkedColor={themeColor('text')}
+                                        />
+                                    </View>
+                                );
+                            })}
+                        </ScrollView>
+
+                        <View style={styles.buttonContainer}>
+                            <Button
+                                title={localeString(
+                                    'views.Tools.nodeConfigExportImport.importSelected'
+                                )}
+                                onPress={this.executeImport}
+                                disabled={selectedImportNodes.length === 0}
+                                buttonStyle={{ marginBottom: 10 }}
+                            />
+                            <Button
+                                title={localeString('general.close')}
+                                onPress={this.resetImportState}
+                                secondary
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+
     private handlePasswordSubmit = async (password: string) => {
         const { importData } = this.state;
 
         try {
-            this.setState({ activeModal: 'none', isLoading: true });
+            this.setState({ isLoading: true });
 
             const nodes = decryptExportData(
                 importData!.data as string,
                 password
             );
-            await this.executeImport({
-                ...importData!,
-                data: { nodes }
-            });
 
-            this.resetImportState();
-            this.setState({ isLoading: false });
+            // Show node selection modal for encrypted imports
+            this.setState({
+                isLoading: false,
+                importNodes: nodes,
+                selectedImportNodes: nodes.map((_, i) => i), // Select all by default
+                activeModal: 'importNodeSelection'
+            });
         } catch (error) {
-            this.setState({ activeModal: 'password' });
+            this.setState({ activeModal: 'password', isLoading: false });
             this.handleError(error, 'views.Lockscreen.incorrectPassword');
         }
     };
 
-    private executeImport = async (importData: NodeConfigExport) => {
+    private executeImport = async () => {
+        const { importNodes, selectedImportNodes } = this.state;
+
         try {
-            if (!importData.version || importData.version > 1) {
-                throw new Error('Unsupported export version');
-            }
+            this.setState({ isLoading: true, activeModal: 'none' });
 
-            if (typeof importData.data === 'string') {
-                throw new Error('Cannot import encrypted data directly');
-            }
-            const nodes = importData.data.nodes;
+            // Only import selected nodes
+            const nodesToImport = selectedImportNodes.map(
+                (index) => importNodes[index]
+            );
 
-            await saveNodeConfigs(nodes, this.props.SettingsStore);
+            await saveNodeConfigs(nodesToImport, this.props.SettingsStore);
             this.setState({ isLoading: false });
 
             Alert.alert(
@@ -687,7 +907,10 @@ export default class NodeConfigExportImport extends React.Component<
                 [
                     {
                         text: localeString('general.ok'),
-                        onPress: () => this.props.navigation.navigate('Wallets')
+                        onPress: () => {
+                            this.resetImportState();
+                            this.props.navigation.navigate('Wallets');
+                        }
                     }
                 ]
             );
@@ -708,11 +931,538 @@ export default class NodeConfigExportImport extends React.Component<
         );
     };
 
+    // Recovery methods
+    private handleRecoveryScan = async () => {
+        this.setState({
+            activeModal: 'recovery',
+            isScanning: true,
+            scanResult: null
+        });
+
+        try {
+            const result = await KeychainRecoveryUtils.scanForRecoverableData();
+            this.setState({ scanResult: result, isScanning: false });
+        } catch (error) {
+            console.error('Recovery scan failed:', error);
+            this.setState({ isScanning: false });
+            Alert.alert(
+                localeString('general.error'),
+                localeString(
+                    'views.Tools.nodeConfigExportImport.recovery.scanError'
+                )
+            );
+        }
+    };
+
+    private handleRecoveryPreview = (result: RecoveryResult) => {
+        // Parse the nodes from the recovery data
+        try {
+            const settings = JSON.parse(result.data);
+            const nodes = settings.nodes || [];
+            this.setState({
+                selectedRecoveryResult: result,
+                recoveryNodes: nodes,
+                selectedRecoveryNodes: nodes.map((_: any, i: number) => i), // Select all by default
+                activeModal: 'recoveryNodeSelection'
+            });
+        } catch (e) {
+            console.error('Failed to parse recovery data:', e);
+            Alert.alert(
+                localeString('general.error'),
+                localeString(
+                    'views.Tools.nodeConfigExportImport.recovery.parseError'
+                )
+            );
+        }
+    };
+
+    private handleRecoveryRestore = async () => {
+        const { recoveryNodes, selectedRecoveryNodes } = this.state;
+
+        this.setState({ isLoading: true, activeModal: 'none' });
+
+        try {
+            // Get only the selected nodes
+            const selectedNodes = selectedRecoveryNodes.map(
+                (index) => recoveryNodes[index]
+            );
+
+            // Use saveNodeConfigs to append to existing nodes (same as import flow)
+            await saveNodeConfigs(selectedNodes, this.props.SettingsStore);
+
+            this.setState({ isLoading: false });
+
+            Alert.alert(
+                localeString('general.success'),
+                localeString(
+                    'views.Tools.nodeConfigExportImport.recovery.restoreSuccess'
+                ).replace('{count}', String(selectedNodes.length)),
+                [
+                    {
+                        text: localeString('general.ok'),
+                        onPress: () => {
+                            this.resetRecoveryState();
+                            this.props.navigation.navigate('Wallets');
+                        }
+                    }
+                ]
+            );
+        } catch (error) {
+            console.error('Recovery restore failed:', error);
+            this.setState({ isLoading: false });
+            Alert.alert(
+                localeString('general.error'),
+                localeString(
+                    'views.Tools.nodeConfigExportImport.recovery.restoreError'
+                )
+            );
+        }
+    };
+
+    private resetRecoveryState = () => {
+        this.setState({
+            activeModal: 'none',
+            scanResult: null,
+            selectedRecoveryResult: null,
+            isScanning: false,
+            recoveryNodes: [],
+            selectedRecoveryNodes: []
+        });
+    };
+
+    // DEV-only methods for testing recovery
+    private handleDevCopyToLegacy = async () => {
+        this.setState({ isLoading: true });
+
+        try {
+            const result = await KeychainRecoveryUtils.copyToLegacyLocations();
+
+            this.setState({ isLoading: false });
+
+            if (result.success) {
+                Alert.alert(
+                    'DEV: Copy Complete',
+                    `Copied current settings to ${
+                        result.locations.length
+                    } legacy location(s):\n\n${result.locations.join('\n')}`
+                );
+            } else {
+                Alert.alert(
+                    'DEV: Copy Failed',
+                    result.error || 'Unknown error'
+                );
+            }
+        } catch (error) {
+            this.setState({ isLoading: false });
+            Alert.alert('DEV: Copy Failed', String(error));
+        }
+    };
+
+    private handleDevClearLegacy = async () => {
+        Alert.alert(
+            'DEV: Clear Legacy Locations',
+            'This will clear all legacy storage locations. Current settings will NOT be affected.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear',
+                    style: 'destructive',
+                    onPress: async () => {
+                        this.setState({ isLoading: true });
+
+                        try {
+                            const result =
+                                await KeychainRecoveryUtils.clearLegacyLocations();
+
+                            this.setState({ isLoading: false });
+
+                            if (result.success) {
+                                Alert.alert(
+                                    'DEV: Clear Complete',
+                                    `Cleared ${
+                                        result.cleared.length
+                                    } legacy location(s):\n\n${result.cleared.join(
+                                        '\n'
+                                    )}`
+                                );
+                            } else {
+                                Alert.alert(
+                                    'DEV: Clear Failed',
+                                    result.error || 'Unknown error'
+                                );
+                            }
+                        } catch (error) {
+                            this.setState({ isLoading: false });
+                            Alert.alert('DEV: Clear Failed', String(error));
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    private renderRecoveryModal = () => {
+        const { activeModal, isScanning, scanResult } = this.state;
+
+        const recoverableSettings =
+            scanResult?.settingsFound.filter((r) => r.source !== 'current') ||
+            [];
+        const hasRecoverableData = recoverableSettings.length > 0;
+
+        return (
+            <Modal
+                animationType="slide"
+                transparent
+                visible={activeModal === 'recovery'}
+                onRequestClose={this.resetRecoveryState}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            {
+                                backgroundColor: isLightTheme()
+                                    ? '#ffffff'
+                                    : themeColor('background'),
+                                maxHeight: '85%'
+                            }
+                        ]}
+                    >
+                        <Text style={styles.modalTitle}>
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.recovery.title'
+                            )}
+                        </Text>
+
+                        {isScanning ? (
+                            <View style={styles.scanningContainer}>
+                                <LoadingIndicator />
+                                <Text style={{ marginTop: 15 }}>
+                                    {localeString(
+                                        'views.Tools.nodeConfigExportImport.recovery.scanning'
+                                    )}
+                                </Text>
+                            </View>
+                        ) : (
+                            <ScrollView
+                                style={{ maxHeight: 400 }}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                {Platform.OS === 'ios' && (
+                                    <View style={styles.warningBanner}>
+                                        <Icon
+                                            name="alert-circle"
+                                            type="feather"
+                                            color={themeColor('warning')}
+                                            size={18}
+                                        />
+                                        <Text style={styles.warningBannerText}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.recovery.iOSWarning'
+                                            )}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {hasRecoverableData ? (
+                                    <>
+                                        <Text style={styles.recoverySubtitle}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.recovery.foundData'
+                                            )}
+                                        </Text>
+                                        {recoverableSettings.map(
+                                            (result, index) =>
+                                                this.renderRecoveryItem(
+                                                    result,
+                                                    index
+                                                )
+                                        )}
+                                    </>
+                                ) : scanResult ? (
+                                    <View style={styles.emptyState}>
+                                        <Text style={styles.emptyStateText}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.recovery.noDataFound'
+                                            )}
+                                        </Text>
+                                        <Text style={styles.emptyStateSubtext}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.recovery.noDataFoundDesc'
+                                            )}
+                                        </Text>
+                                    </View>
+                                ) : null}
+                            </ScrollView>
+                        )}
+
+                        <View style={styles.buttonContainer}>
+                            {!isScanning && scanResult && (
+                                <Button
+                                    title={localeString(
+                                        'views.Tools.nodeConfigExportImport.recovery.rescan'
+                                    )}
+                                    onPress={() => this.handleRecoveryScan()}
+                                    secondary
+                                    buttonStyle={{ marginBottom: 10 }}
+                                />
+                            )}
+                            <Button
+                                title={localeString('general.close')}
+                                onPress={this.resetRecoveryState}
+                                secondary
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+
+    private renderRecoveryItem = (result: RecoveryResult, index: number) => {
+        const sourceName = KeychainRecoveryUtils.getSourceDisplayName(
+            result.source
+        );
+        const preview = KeychainRecoveryUtils.parseSettingsPreview(result.data);
+
+        return (
+            <TouchableOpacity
+                key={`${result.key}-${result.source}-${index}`}
+                style={[
+                    styles.recoveryItem,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
+                onPress={() => this.handleRecoveryPreview(result)}
+            >
+                <View style={styles.recoveryItemHeader}>
+                    <Icon
+                        name="database"
+                        type="feather"
+                        color={themeColor('warning')}
+                        size={20}
+                    />
+                    <Text style={styles.recoveryItemTitle}>
+                        {result.description}
+                    </Text>
+                </View>
+                <Text style={styles.recoveryItemSource}>{sourceName}</Text>
+                {preview && (
+                    <Text style={styles.recoveryItemPreview}>
+                        {`${preview.nodeCount} ${
+                            preview.nodeCount === 1
+                                ? localeString('general.wallet')
+                                : localeString('general.wallets')
+                        }`}
+                    </Text>
+                )}
+                <Text style={styles.tapToRestore}>
+                    {localeString(
+                        'views.Tools.nodeConfigExportImport.recovery.tapToRestore'
+                    )}
+                </Text>
+            </TouchableOpacity>
+        );
+    };
+
+    private renderRecoveryNodeSelectionModal = () => {
+        const {
+            activeModal,
+            selectedRecoveryResult,
+            recoveryNodes,
+            selectedRecoveryNodes
+        } = this.state;
+
+        if (!selectedRecoveryResult) return null;
+
+        const sourceName = KeychainRecoveryUtils.getSourceDisplayName(
+            selectedRecoveryResult.source
+        );
+
+        const allNodesSelected =
+            recoveryNodes.length > 0 &&
+            selectedRecoveryNodes.length === recoveryNodes.length;
+
+        return (
+            <Modal
+                animationType="slide"
+                transparent
+                visible={activeModal === 'recoveryNodeSelection'}
+                onRequestClose={() =>
+                    this.setState({ activeModal: 'recovery' })
+                }
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            {
+                                maxHeight: '80%',
+                                backgroundColor: isLightTheme()
+                                    ? '#ffffff'
+                                    : themeColor('background')
+                            }
+                        ]}
+                    >
+                        <Text style={styles.modalTitle}>
+                            {localeString(
+                                'views.Tools.nodeConfigExportImport.recovery.selectConfigsToRestore'
+                            )}
+                        </Text>
+
+                        <View style={styles.previewSection}>
+                            <Text style={styles.previewLabel}>
+                                {localeString(
+                                    'views.Tools.nodeConfigExportImport.recovery.source'
+                                )}
+                            </Text>
+                            <Text style={styles.previewValue}>
+                                {sourceName}
+                            </Text>
+                        </View>
+
+                        <ScrollView
+                            style={{ maxHeight: 300 }}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {recoveryNodes.length > 1 && (
+                                <CheckBox
+                                    title={localeString(
+                                        'views.Tools.nodeConfigExportImport.selectAllConfigs'
+                                    )}
+                                    checked={allNodesSelected}
+                                    onPress={() => {
+                                        if (allNodesSelected) {
+                                            this.setState({
+                                                selectedRecoveryNodes: []
+                                            });
+                                        } else {
+                                            this.setState({
+                                                selectedRecoveryNodes:
+                                                    recoveryNodes.map(
+                                                        (_, i) => i
+                                                    )
+                                            });
+                                        }
+                                    }}
+                                    containerStyle={{
+                                        backgroundColor: 'transparent',
+                                        borderWidth: 0,
+                                        marginBottom: 15
+                                    }}
+                                    textStyle={{
+                                        color: themeColor('text'),
+                                        fontWeight: 'bold'
+                                    }}
+                                    checkedColor={themeColor('text')}
+                                />
+                            )}
+
+                            {recoveryNodes.map((node: Node, index: number) => {
+                                const isSelected =
+                                    selectedRecoveryNodes.includes(index);
+
+                                return (
+                                    <View key={index} style={styles.nodeItem}>
+                                        <CheckBox
+                                            title={
+                                                <View style={styles.nodeInfo}>
+                                                    <NodeIdenticon
+                                                        selectedNode={node}
+                                                        width={42}
+                                                        rounded
+                                                    />
+                                                    <View
+                                                        style={styles.nodeText}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                fontSize: 16
+                                                            }}
+                                                        >
+                                                            {NodeTitle(
+                                                                node,
+                                                                32
+                                                            )}
+                                                        </Text>
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontSize: 12
+                                                            }}
+                                                        >
+                                                            {getImplementationDisplayName(
+                                                                node.implementation
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                </View>
+                                            }
+                                            checked={isSelected}
+                                            onPress={() => {
+                                                this.setState((prevState) => ({
+                                                    selectedRecoveryNodes:
+                                                        prevState.selectedRecoveryNodes.includes(
+                                                            index
+                                                        )
+                                                            ? prevState.selectedRecoveryNodes.filter(
+                                                                  (n) =>
+                                                                      n !==
+                                                                      index
+                                                              )
+                                                            : [
+                                                                  ...prevState.selectedRecoveryNodes,
+                                                                  index
+                                                              ]
+                                                }));
+                                            }}
+                                            iconRight={true}
+                                            containerStyle={{
+                                                backgroundColor: 'transparent',
+                                                borderWidth: 0,
+                                                marginBottom: 10,
+                                                padding: 0
+                                            }}
+                                            uncheckedColor={themeColor('text')}
+                                            checkedColor={themeColor('text')}
+                                        />
+                                    </View>
+                                );
+                            })}
+                        </ScrollView>
+
+                        <View style={styles.buttonContainer}>
+                            <Button
+                                title={localeString(
+                                    'views.Tools.nodeConfigExportImport.recovery.restoreSelected'
+                                )}
+                                onPress={this.handleRecoveryRestore}
+                                disabled={selectedRecoveryNodes.length === 0}
+                                buttonStyle={{ marginBottom: 10 }}
+                            />
+                            <Button
+                                title={localeString('general.goBack')}
+                                onPress={() =>
+                                    this.setState({ activeModal: 'recovery' })
+                                }
+                                secondary
+                            />
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+
     render() {
         const { isLoading } = this.state;
 
         return (
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -740,6 +1490,9 @@ export default class NodeConfigExportImport extends React.Component<
                 {this.renderExportModal()}
                 {this.renderInfoModal()}
                 {this.renderPasswordModal()}
+                {this.renderImportNodeSelectionModal()}
+                {this.renderRecoveryModal()}
+                {this.renderRecoveryNodeSelectionModal()}
 
                 <View style={styles.container}>
                     {isLoading ? (
@@ -787,6 +1540,97 @@ export default class NodeConfigExportImport extends React.Component<
                                     )}
                                 </Text>
                             </TouchableOpacity>
+
+                            {Platform.OS === 'ios' && (
+                                <TouchableOpacity
+                                    style={[
+                                        styles.optionButton,
+                                        {
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderLeftWidth: 4,
+                                            borderLeftColor:
+                                                themeColor('warning')
+                                        }
+                                    ]}
+                                    onPress={this.handleRecoveryScan}
+                                >
+                                    <Feather
+                                        name="refresh-cw"
+                                        size={24}
+                                        color={themeColor('warning')}
+                                    />
+                                    <Text
+                                        style={{
+                                            ...styles.optionText,
+                                            color: themeColor('warning')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Tools.nodeConfigExportImport.recovery.restoreLegacy'
+                                        )}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+
+                            {__DEV__ && (
+                                <>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.optionButton,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderLeftWidth: 4,
+                                                borderLeftColor: '#9C27B0'
+                                            }
+                                        ]}
+                                        onPress={this.handleDevCopyToLegacy}
+                                    >
+                                        <Feather
+                                            name="copy"
+                                            size={24}
+                                            color="#9C27B0"
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.optionText,
+                                                color: '#9C27B0'
+                                            }}
+                                        >
+                                            DEV: Copy to legacy locations
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.optionButton,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderLeftWidth: 4,
+                                                borderLeftColor:
+                                                    themeColor('error')
+                                            }
+                                        ]}
+                                        onPress={this.handleDevClearLegacy}
+                                    >
+                                        <Feather
+                                            name="trash-2"
+                                            size={24}
+                                            color={themeColor('error')}
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.optionText,
+                                                color: themeColor('error')
+                                            }}
+                                        >
+                                            DEV: Clear legacy locations
+                                        </Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </>
                     )}
                 </View>
@@ -818,14 +1662,15 @@ const styles = StyleSheet.create({
         alignItems: 'center'
     },
     modalContent: {
-        width: '80%',
+        width: '85%',
         padding: 20,
         borderRadius: 10
     },
     modalTitle: {
         fontSize: 18,
         marginBottom: 20,
-        textAlign: 'center'
+        textAlign: 'center',
+        fontWeight: 'bold'
     },
     buttonContainer: {
         width: '100%',
@@ -860,5 +1705,90 @@ const styles = StyleSheet.create({
     showHideToggle: {
         alignSelf: 'center',
         marginLeft: 10
+    },
+    // Recovery styles
+    scanningContainer: {
+        alignItems: 'center',
+        paddingVertical: 40
+    },
+    warningBanner: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 15
+    },
+    warningBannerText: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 13,
+        lineHeight: 18
+    },
+    recoverySubtitle: {
+        fontSize: 14,
+        opacity: 0.7,
+        marginBottom: 15
+    },
+    recoveryItem: {
+        padding: 15,
+        borderRadius: 10,
+        marginBottom: 10,
+        borderLeftWidth: 4,
+        borderLeftColor: '#FFC107'
+    },
+    recoveryItemHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 8
+    },
+    recoveryItemTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginLeft: 10
+    },
+    recoveryItemSource: {
+        fontSize: 13,
+        opacity: 0.7,
+        marginLeft: 30
+    },
+    recoveryItemPreview: {
+        fontSize: 14,
+        marginTop: 5,
+        marginLeft: 30
+    },
+    tapToRestore: {
+        fontSize: 12,
+        fontStyle: 'italic',
+        marginTop: 8,
+        opacity: 0.6
+    },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 30
+    },
+    emptyStateText: {
+        fontSize: 16,
+        fontWeight: '600',
+        marginTop: 15,
+        textAlign: 'center'
+    },
+    emptyStateSubtext: {
+        fontSize: 13,
+        opacity: 0.7,
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 10
+    },
+    previewSection: {
+        marginBottom: 15
+    },
+    previewLabel: {
+        fontSize: 13,
+        opacity: 0.7,
+        marginBottom: 3
+    },
+    previewValue: {
+        fontSize: 16
     }
 });
