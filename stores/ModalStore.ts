@@ -26,6 +26,7 @@ export default class ModalStore {
     @observable public alertModalNav: string | undefined;
     @observable public onShareQR?: () => void;
     @observable public onShareText?: () => void;
+    @observable public onShareGiftLink?: () => void;
     @observable public onPress: () => void;
 
     /* External Link Modal */
@@ -61,14 +62,17 @@ export default class ModalStore {
     @action
     public toggleShareModal = ({
         onShareQR,
-        onShareText
+        onShareText,
+        onShareGiftLink
     }: {
         onShareQR?: () => void;
         onShareText?: () => void;
+        onShareGiftLink?: () => void;
     }) => {
         this.showShareModal = onShareQR && onShareText ? true : false;
         this.onShareQR = onShareQR;
         this.onShareText = onShareText;
+        this.onShareGiftLink = onShareGiftLink;
     };
 
     @action
@@ -98,6 +102,9 @@ export default class ModalStore {
     };
     public shareText = () => {
         if (this.onShareText) this.onShareText();
+    };
+    public shareGiftLink = () => {
+        if (this.onShareGiftLink) this.onShareGiftLink();
     };
 
     @action
@@ -143,6 +150,7 @@ export default class ModalStore {
             this.showShareModal = false;
             this.onShareQR = undefined;
             this.onShareText = undefined;
+            this.onShareGiftLink = undefined;
             return true;
         }
         if (this.showNewChannelModal) {

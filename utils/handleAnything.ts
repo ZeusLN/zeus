@@ -4,7 +4,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
-import AddressUtils from './AddressUtils';
+import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
@@ -734,6 +734,23 @@ const handleAnything = async (
                     { cancelable: false }
                 );
             });
+    } else if (value.startsWith(ZEUS_ECASH_GIFT_URL)) {
+        // Handle zeusln.com ecash gift URLs - check before lnurl to avoid false matches
+        const cashuToken = value.replace(ZEUS_ECASH_GIFT_URL, '');
+        if (CashuUtils.isValidCashuToken(cashuToken)) {
+            if (isClipboardValue) return true;
+            const tokenObj = CashuUtils.decodeCashuToken(cashuToken);
+            const decoded = new CashuToken(tokenObj);
+            return [
+                'CashuToken',
+                {
+                    token: cashuToken,
+                    decoded
+                }
+            ];
+        }
+        if (isClipboardValue) return false;
+        throw new Error(localeString('utils.handleAnything.notValid'));
     } else if (
         !!findlnurl(value) ||
         !!lnurl ||

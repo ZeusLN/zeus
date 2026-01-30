@@ -25,16 +25,18 @@ interface ShareButtonProps {
     iconOnly?: boolean;
     onPress: () => Promise<void>;
     onShareComplete?: () => void;
+    onShareGiftLink?: () => void;
     iconContainerStyle?: ViewStyle;
 }
 
 export default class ShareButton extends React.Component<ShareButtonProps> {
     handlePress = async () => {
-        const { onPress } = this.props;
+        const { onPress, onShareGiftLink } = this.props;
         await onPress();
         modalStore.toggleShareModal({
             onShareQR: this.shareQR,
-            onShareText: this.shareText
+            onShareText: this.shareText,
+            onShareGiftLink
         });
     };
 
