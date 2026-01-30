@@ -457,6 +457,46 @@ export default class ChannelsPane extends React.PureComponent<
             initialRoute = closedChannelsTabName;
         }
 
+        const getTabScreenOptions = ({ route }: { route: any }) => ({
+            headerShown: false,
+            tabBarActiveTintColor: themeColor('text'),
+            tabBarInactiveTintColor: 'gray',
+            tabBarShowLabel: true,
+            tabBarStyle: {
+                borderTopWidth: 0.2,
+                borderTopColor: themeColor('secondaryText'),
+                paddingTop: 10,
+                paddingBottom: 10,
+                height: 70
+            },
+            tabBarItemStyle: {
+                justifyContent: 'center' as const
+            },
+            tabBarIconStyle: {
+                display: 'none' as const
+            },
+            tabBarLabel: ({
+                focused,
+                color
+            }: {
+                focused: boolean;
+                color: string;
+            }) => (
+                <Text
+                    style={{
+                        fontSize: 16,
+                        fontFamily: focused
+                            ? 'PPNeueMontreal-Medium'
+                            : 'PPNeueMontreal-Book',
+                        color
+                    }}
+                >
+                    {route.name}
+                </Text>
+            ),
+            animation: 'shift' as const
+        });
+
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader navigation={navigation} peers={true} channels />
@@ -482,33 +522,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     <Tab.Navigator
                                         initialRouteName={initialRoute}
                                         backBehavior="none"
-                                        screenOptions={() => ({
-                                            headerShown: false,
-                                            tabBarActiveTintColor:
-                                                themeColor('text'),
-                                            tabBarInactiveTintColor: 'gray',
-                                            tabBarShowLabel: true,
-                                            tabBarStyle: {
-                                                borderTopWidth: 0.2,
-                                                borderTopColor:
-                                                    themeColor('secondaryText'),
-                                                paddingTop: 10,
-                                                paddingBottom: 10,
-                                                height: 70
-                                            },
-                                            tabBarItemStyle: {
-                                                justifyContent: 'center'
-                                            },
-                                            tabBarIconStyle: {
-                                                display: 'none'
-                                            },
-                                            tabBarLabelStyle: {
-                                                fontSize: 16,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium'
-                                            },
-                                            animation: 'shift'
-                                        })}
+                                        screenOptions={getTabScreenOptions}
                                     >
                                         <Tab.Screen
                                             name={openChannelsTabName}
@@ -552,33 +566,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     <Tab.Navigator
                                         initialRouteName={initialRoute}
                                         backBehavior="none"
-                                        screenOptions={() => ({
-                                            headerShown: false,
-                                            tabBarActiveTintColor:
-                                                themeColor('text'),
-                                            tabBarInactiveTintColor: 'gray',
-                                            tabBarShowLabel: true,
-                                            tabBarStyle: {
-                                                borderTopWidth: 0.2,
-                                                borderTopColor:
-                                                    themeColor('secondaryText'),
-                                                paddingTop: 10,
-                                                paddingBottom: 10,
-                                                height: 70
-                                            },
-                                            tabBarItemStyle: {
-                                                justifyContent: 'center'
-                                            },
-                                            tabBarIconStyle: {
-                                                display: 'none'
-                                            },
-                                            tabBarLabelStyle: {
-                                                fontSize: 16,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium'
-                                            },
-                                            animation: 'shift'
-                                        })}
+                                        screenOptions={getTabScreenOptions}
                                     >
                                         <Tab.Screen
                                             name={openChannelsTabName}
