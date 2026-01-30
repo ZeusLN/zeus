@@ -22,7 +22,6 @@ import ChannelsFilter from '../../components/Channels/ChannelsFilter';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 import { Spacer } from '../../components/layout/Spacer';
-import Screen from '../../components/Screen';
 // nav
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -409,60 +408,54 @@ export default class ChannelsPane extends React.PureComponent<
             ...DefaultTheme,
             colors: {
                 ...DefaultTheme.colors,
-                background: themeColor('background'),
-                card: themeColor('background'),
-                border: themeColor('background')
+                background: 'transparent',
+                card: 'transparent',
+                border: 'transparent'
             }
         };
 
         const OpenChannelsScreen = () => {
             return (
-                <Screen>
-                    <FlatList
-                        data={filteredChannels}
-                        renderItem={this.renderItem}
-                        ListFooterComponent={<Spacer height={100} />}
-                        onRefresh={() => getChannels()}
-                        refreshing={loading}
-                        keyExtractor={(item, index) =>
-                            `${item.remote_pubkey}-${index}`
-                        }
-                    />
-                </Screen>
+                <FlatList
+                    data={filteredChannels}
+                    renderItem={this.renderItem}
+                    ListFooterComponent={<Spacer height={100} />}
+                    onRefresh={() => getChannels()}
+                    refreshing={loading}
+                    keyExtractor={(item, index) =>
+                        `${item.remote_pubkey}-${index}`
+                    }
+                />
             );
         };
 
         const PendingChannelsScreen = () => {
             return (
-                <Screen>
-                    <FlatList
-                        data={filteredPendingChannels}
-                        renderItem={this.renderItem}
-                        ListFooterComponent={<Spacer height={100} />}
-                        onRefresh={() => getChannels()}
-                        refreshing={loading}
-                        keyExtractor={(item, index) =>
-                            `${item.remote_pubkey}-${index}`
-                        }
-                    />
-                </Screen>
+                <FlatList
+                    data={filteredPendingChannels}
+                    renderItem={this.renderItem}
+                    ListFooterComponent={<Spacer height={100} />}
+                    onRefresh={() => getChannels()}
+                    refreshing={loading}
+                    keyExtractor={(item, index) =>
+                        `${item.remote_pubkey}-${index}`
+                    }
+                />
             );
         };
 
         const ClosedChannelsScreen = () => {
             return (
-                <Screen>
-                    <FlatList
-                        data={filteredClosedChannels}
-                        renderItem={this.renderItem}
-                        ListFooterComponent={<Spacer height={100} />}
-                        onRefresh={() => getChannels()}
-                        refreshing={loading}
-                        keyExtractor={(item, index) =>
-                            `${item.remote_pubkey}-${index}`
-                        }
-                    />
-                </Screen>
+                <FlatList
+                    data={filteredClosedChannels}
+                    renderItem={this.renderItem}
+                    ListFooterComponent={<Spacer height={100} />}
+                    onRefresh={() => getChannels()}
+                    refreshing={loading}
+                    keyExtractor={(item, index) =>
+                        `${item.remote_pubkey}-${index}`
+                    }
+                />
             );
         };
 
