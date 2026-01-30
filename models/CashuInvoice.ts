@@ -25,15 +25,52 @@ export default class CashuInvoice extends BaseModel {
     public formattedOriginalTimeUntilExpiry: string;
     public formattedTimeUntilExpiry: string;
 
+    // CDK transaction fields (for completed transactions from history)
+    public fromCDK?: boolean;
+    public cdkTimestamp?: number;
+    public cdkAmount?: number;
+    public cdkMemo?: string;
+    public cdkFee?: number;
+
+    /**
+     * Create CashuInvoice from CDK transaction (incoming)
+     */
+    static fromCDKTransaction(tx: {
+        id: string;
+        amount: number;
+        fee?: number;
+        mint_url: string;
+        timestamp: number;
+        memo?: string;
+        state: string;
+    }): CashuInvoice {
+        const invoice = new CashuInvoice({
+            quote: tx.id,
+            request: '',
+            state: tx.state === 'Pending' ? 'UNPAID' : 'PAID',
+            paid: tx.state !== 'Pending' && tx.state !== 'Failed',
+            mintUrl: tx.mint_url,
+            expires_at: tx.timestamp,
+            fromCDK: true,
+            cdkTimestamp: tx.timestamp,
+            cdkAmount: tx.amount,
+            cdkMemo: tx.memo,
+            cdkFee: tx.fee || 0
+        });
+        return invoice;
+    }
+
     @computed public get model(): string {
         return localeString('views.Cashu.CashuInvoice.title');
     }
 
     @computed public get getTimestamp(): string | number {
+        if (this.fromCDK) return this.cdkTimestamp || 0;
         return this.decoded?.timestamp || this.expires_at || 0;
     }
 
     @computed public get getMemo(): string | undefined {
+        if (this.fromCDK) return this.cdkMemo;
         let memo;
         for (let i = 0; i < this.decoded?.tags.length; i++) {
             const tag = this.decoded?.tags[i];
@@ -49,6 +86,9 @@ export default class CashuInvoice extends BaseModel {
     }
 
     @computed public get isPaid(): boolean {
+        if (this.fromCDK) {
+            return this.state !== 'UNPAID' && this.state !== 'Failed';
+        }
         return this.paid || this.state === 'PAID' || false;
     }
 
@@ -62,6 +102,7 @@ export default class CashuInvoice extends BaseModel {
 
     // return amount in satoshis
     @computed public get getAmount(): number {
+        if (this.fromCDK) return this.cdkAmount || 0;
         return this.decoded?.satoshis ? this.decoded.satoshis : 0;
     }
 
@@ -125,6 +166,9 @@ export default class CashuInvoice extends BaseModel {
     }
 
     @computed public get isExpired(): boolean {
+        // CDK transactions from history are completed, not expired
+        if (this.fromCDK) return false;
+
         const getExpiryTimestamp = this.getExpiryUnixTimestamp();
 
         if (getExpiryTimestamp == null) {

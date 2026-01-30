@@ -15,6 +15,8 @@ import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
+import app.zeusln.zeus.cashudevkit.CashuDevKitPackage
+
 //import com.facebook.hermes.reactexecutor.HermesExecutorFactory;
 // import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 class MainApplication : Application(), ReactApplication {
@@ -31,6 +33,7 @@ class MainApplication : Application(), ReactApplication {
                 add(LndMobileScheduledSyncPackage())
                 add(LncPackage())
                 add(NostrConnectPackage())
+                add(CashuDevKitPackage())
                 // add(new ZeusTorPackage());
             }
 

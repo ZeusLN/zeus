@@ -447,7 +447,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         const { settings } = SettingsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
-        const { totalBalanceSats, mintUrls, cashuWallets } = CashuStore!;
+        const { totalBalanceSats, mintUrls, mintInfos } = CashuStore!;
 
         const otherAccounts = editMode
             ? this.props.UTXOsStore?.accounts
@@ -476,8 +476,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             // Build mints info for display
             const mints: MintInfo[] =
                 mintUrls?.map((mintUrl: string) => {
-                    const wallet = cashuWallets?.[mintUrl];
-                    const mintInfo = wallet?.mintInfo;
+                    const mintInfo = mintInfos?.[mintUrl];
                     return {
                         url: mintUrl,
                         iconUrl: mintInfo?.icon_url,

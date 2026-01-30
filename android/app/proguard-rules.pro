@@ -27,3 +27,16 @@
 # Fresco animation cache classes (not included in public API)
 -dontwarn com.facebook.imagepipeline.cache.AnimatedCache
 -dontwarn com.facebook.imagepipeline.cache.AnimationFrames
+
+# CashuDevKit - Keep all CDK FFI classes and native methods
+-keep class org.cashudevkit.** { *; }
+-keep interface org.cashudevkit.** { *; }
+-keep enum org.cashudevkit.** { *; }
+-keepclassmembers class org.cashudevkit.** {
+    native <methods>;
+}
+
+# JNA - Required for CDK FFI
+-keep class com.sun.jna.** { *; }
+-keep class * implements com.sun.jna.** { *; }
+-dontwarn com.sun.jna.**

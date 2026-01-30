@@ -29,16 +29,22 @@ export default class EcashMintPicker extends React.Component<
 > {
     render() {
         const { CashuStore, hideAmount, disabled, navigation } = this.props;
-        const { cashuWallets, mintUrls, selectedMintUrl } = CashuStore!!;
+        const {
+            cashuWallets,
+            mintUrls,
+            selectedMintUrl,
+            mintInfos,
+            mintBalances
+        } = CashuStore!!;
 
         let mints: any = {};
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
-            const mintInfo = wallet?.mintInfo;
+            const mintInfo = mintInfos[mintUrl];
             mints[mintUrl] = {
                 ...mintInfo,
                 mintUrl,
-                mintBalance: wallet?.balanceSats,
+                mintBalance: mintBalances[mintUrl] || 0,
                 errorConnecting: wallet?.errorConnecting
             };
         });
