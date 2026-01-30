@@ -112,6 +112,7 @@ export default function PinPad({
     const handleAppendWithFeedback = (value: string) => {
         const wasAccepted = appendValue(value);
         if (wasAccepted) {
+            incrementPinValueLength();
             triggerHapticFeedback();
         } else {
             triggerErrorFeedback();
@@ -130,10 +131,9 @@ export default function PinPad({
                     {row.map((num) => (
                         <Touchable
                             key={num}
-                            touch={() => {
-                                incrementPinValueLength();
-                                handleAppendWithFeedback(pinNumbers[num]);
-                            }}
+                            touch={() =>
+                                handleAppendWithFeedback(pinNumbers[num])
+                            }
                             highlight={numberHighlight}
                             style={styles.key}
                         >
@@ -205,10 +205,7 @@ export default function PinPad({
 
                 {/* Middle key: 0 */}
                 <Touchable
-                    touch={() => {
-                        incrementPinValueLength();
-                        handleAppendWithFeedback(pinNumbers[0]);
-                    }}
+                    touch={() => handleAppendWithFeedback(pinNumbers[0])}
                     highlight={numberHighlight}
                     style={styles.key}
                 >
