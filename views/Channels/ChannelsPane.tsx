@@ -414,10 +414,10 @@ export default class ChannelsPane extends React.PureComponent<
             }
         };
 
-        const OpenChannelsScreen = () => {
-            return (
+        const createChannelScreen = (data: Channel[]) => () =>
+            (
                 <FlatList
-                    data={filteredChannels}
+                    data={data}
                     renderItem={this.renderItem}
                     ListFooterComponent={<Spacer height={100} />}
                     onRefresh={() => getChannels()}
@@ -427,37 +427,14 @@ export default class ChannelsPane extends React.PureComponent<
                     }
                 />
             );
-        };
 
-        const PendingChannelsScreen = () => {
-            return (
-                <FlatList
-                    data={filteredPendingChannels}
-                    renderItem={this.renderItem}
-                    ListFooterComponent={<Spacer height={100} />}
-                    onRefresh={() => getChannels()}
-                    refreshing={loading}
-                    keyExtractor={(item, index) =>
-                        `${item.remote_pubkey}-${index}`
-                    }
-                />
-            );
-        };
-
-        const ClosedChannelsScreen = () => {
-            return (
-                <FlatList
-                    data={filteredClosedChannels}
-                    renderItem={this.renderItem}
-                    ListFooterComponent={<Spacer height={100} />}
-                    onRefresh={() => getChannels()}
-                    refreshing={loading}
-                    keyExtractor={(item, index) =>
-                        `${item.remote_pubkey}-${index}`
-                    }
-                />
-            );
-        };
+        const OpenChannelsScreen = createChannelScreen(filteredChannels);
+        const PendingChannelsScreen = createChannelScreen(
+            filteredPendingChannels
+        );
+        const ClosedChannelsScreen = createChannelScreen(
+            filteredClosedChannels
+        );
 
         const openChannelsTabName = `${localeString(
             'views.Wallet.Wallet.open'
