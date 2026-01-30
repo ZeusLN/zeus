@@ -1,4 +1,7 @@
+import { Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
+
+import { sleep } from './SleepUtils';
 import { settingsStore } from '../stores/Stores';
 import {
     Settings,
@@ -102,6 +105,11 @@ class MigrationsUtils {
 
             console.log(`[Migration] Moving ${key} to Local Storage...`);
 
+            // iOS: Add delay after read to allow iCloud sync
+            if (Platform.OS === 'ios') {
+                await sleep(500);
+            }
+
             // 3. Write to new Storage namespace (zeus:key)
             const writeSuccess = await Storage.setItem(
                 key,
@@ -120,6 +128,11 @@ class MigrationsUtils {
                 throw new Error(
                     `Verification failed for ${key}. Data not found after write.`
                 );
+            }
+
+            // iOS: Add delay before delete to allow iCloud sync
+            if (Platform.OS === 'ios') {
+                await sleep(500);
             }
 
             // 5. Only delete old keychain entries after successful write + verify
