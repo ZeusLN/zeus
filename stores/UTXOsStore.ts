@@ -2,6 +2,7 @@ import { action, observable, runInAction } from 'mobx';
 import Storage from '../storage';
 
 import SettingsStore from './SettingsStore';
+import SyncStore from './SyncStore';
 
 import BackendUtils from '../utils/BackendUtils';
 
@@ -37,9 +38,11 @@ export default class UTXOsStore {
     @observable public loadingAddressesError: string = '';
     //
     settingsStore: SettingsStore;
+    syncStore: SyncStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, syncStore: SyncStore) {
         this.settingsStore = settingsStore;
+        this.syncStore = syncStore;
     }
 
     @action
@@ -303,12 +306,16 @@ export default class UTXOsStore {
         this.rescanErrorMsg = '';
         this.attemptingRescan = true;
 
+        // Start tracking rescan progress via logs
+        this.syncStore.startRescanTracking(blockHeight);
+
         return BackendUtils.rescan({
             start_height: blockHeight
         })
             .then((response: any) => {
                 console.log('rescan resp', response);
                 this.attemptingRescan = false;
+                // Note: Don't stop tracking here - let log parsing detect completion
                 return;
             })
             .catch((err: Error) => {
@@ -317,6 +324,7 @@ export default class UTXOsStore {
                     this.attemptingRescan = false;
                     this.rescanErrorMsg = err.toString();
                 });
+                this.syncStore.stopRescanTracking();
                 return;
             });
     };
