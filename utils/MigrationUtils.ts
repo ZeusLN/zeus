@@ -1,4 +1,7 @@
+import { Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
+
+import { sleep } from './SleepUtils';
 import { settingsStore } from '../stores/Stores';
 import {
     Settings,
@@ -102,6 +105,11 @@ class MigrationsUtils {
 
             console.log(`[Migration] Moving ${key} to Local Storage...`);
 
+            // iOS: Add delay after read to allow iCloud sync
+            if (Platform.OS === 'ios') {
+                await sleep(500);
+            }
+
             // 3. Write to new Storage namespace (zeus:key)
             const writeSuccess = await Storage.setItem(
                 key,
@@ -120,6 +128,11 @@ class MigrationsUtils {
                 throw new Error(
                     `Verification failed for ${key}. Data not found after write.`
                 );
+            }
+
+            // iOS: Add delay before delete to allow iCloud sync
+            if (Platform.OS === 'ios') {
+                await sleep(500);
             }
 
             // 5. Only delete old keychain entries after successful write + verify
@@ -155,28 +168,36 @@ class MigrationsUtils {
 
     /**
      * Deletes from old keychain entries (without zeus: prefix).
-     * Deletes from both cloud and local keychain.
+     *
+     * DISABLED: To prevent potential data loss during migration.
+     * Old keychain entries will remain but are harmless (orphaned data).
+     * The new Storage uses a "zeus:" prefix, so old and new keys don't conflict.
      */
     private async deleteFromOldKeychain(key: string) {
-        try {
-            await Keychain.resetInternetCredentials({
-                server: key,
-                cloudSync: true
-            });
-        } catch (e) {
-            console.warn(
-                `[Migration] Error deleting from cloud keychain: ${key}`,
-                e
-            );
-        }
-        try {
-            await Keychain.resetInternetCredentials({ server: key });
-        } catch (e) {
-            console.warn(
-                `[Migration] Error deleting from local keychain: ${key}`,
-                e
-            );
-        }
+        // Safety measure: skip deletion to prevent any potential data loss
+        console.log(`[Migration] Skipping delete for ${key} (safety measure)`);
+        return;
+
+        // Original delete code - commented out for safety:
+        // try {
+        //     await Keychain.resetInternetCredentials({
+        //         server: key,
+        //         cloudSync: true
+        //     });
+        // } catch (e) {
+        //     console.warn(
+        //         `[Migration] Error deleting from cloud keychain: ${key}`,
+        //         e
+        //     );
+        // }
+        // try {
+        //     await Keychain.resetInternetCredentials({ server: key });
+        // } catch (e) {
+        //     console.warn(
+        //         `[Migration] Error deleting from local keychain: ${key}`,
+        //         e
+        //     );
+        // }
     }
 
     private async migrateCashuForNode(lndDir: string) {
