@@ -168,28 +168,36 @@ class MigrationsUtils {
 
     /**
      * Deletes from old keychain entries (without zeus: prefix).
-     * Deletes from both cloud and local keychain.
+     *
+     * DISABLED: To prevent potential data loss during migration.
+     * Old keychain entries will remain but are harmless (orphaned data).
+     * The new Storage uses a "zeus:" prefix, so old and new keys don't conflict.
      */
     private async deleteFromOldKeychain(key: string) {
-        try {
-            await Keychain.resetInternetCredentials({
-                server: key,
-                cloudSync: true
-            });
-        } catch (e) {
-            console.warn(
-                `[Migration] Error deleting from cloud keychain: ${key}`,
-                e
-            );
-        }
-        try {
-            await Keychain.resetInternetCredentials({ server: key });
-        } catch (e) {
-            console.warn(
-                `[Migration] Error deleting from local keychain: ${key}`,
-                e
-            );
-        }
+        // Safety measure: skip deletion to prevent any potential data loss
+        console.log(`[Migration] Skipping delete for ${key} (safety measure)`);
+        return;
+
+        // Original delete code - commented out for safety:
+        // try {
+        //     await Keychain.resetInternetCredentials({
+        //         server: key,
+        //         cloudSync: true
+        //     });
+        // } catch (e) {
+        //     console.warn(
+        //         `[Migration] Error deleting from cloud keychain: ${key}`,
+        //         e
+        //     );
+        // }
+        // try {
+        //     await Keychain.resetInternetCredentials({ server: key });
+        // } catch (e) {
+        //     console.warn(
+        //         `[Migration] Error deleting from local keychain: ${key}`,
+        //         e
+        //     );
+        // }
     }
 
     private async migrateCashuForNode(lndDir: string) {
