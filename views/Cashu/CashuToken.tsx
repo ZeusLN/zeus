@@ -487,9 +487,15 @@ export default class CashuTokenView extends React.Component<
                                     copyValue={`cashu:${token}`}
                                     iconOnly
                                     showShare={
-                                        isSingleFrameSelected || isBbqrSelected
+                                        isSingleFrameSelected ||
+                                        (isBbqrSelected &&
+                                            cashuBBQrParts.length === 1)
                                     }
-                                    showSpeed={isBcurSelected}
+                                    showSpeed={
+                                        isBcurSelected ||
+                                        (isBbqrSelected &&
+                                            cashuBBQrParts.length === 1)
+                                    }
                                     truncateLongValue
                                     expanded
                                     qrAnimationSpeed={
