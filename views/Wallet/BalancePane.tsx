@@ -674,7 +674,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row'
     },
     balanceContainer: {
-        marginTop: 40
+        marginTop: 60,
+        marginBottom: 30
     },
     errorPane: {
         paddingTop: 20,

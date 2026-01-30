@@ -254,7 +254,7 @@ export default class InvoiceView extends React.Component<
                         <Row>
                             {loading && (
                                 <View style={{ paddingRight: 15 }}>
-                                    <LoadingIndicator size={35} />
+                                    <LoadingIndicator size={31} />
                                 </View>
                             )}
                             {invoice.isZeusPay && (

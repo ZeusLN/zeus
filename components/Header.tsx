@@ -1,10 +1,18 @@
 import React from 'react';
 import { StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
 import { Header, TextProps } from '@rneui/themed';
+import { initialWindowMetrics } from 'react-native-safe-area-context';
 import type { IconObject } from '@rneui/base/dist/Icon/Icon';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+const insets = initialWindowMetrics?.insets ?? {
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0
+};
 
 import ArrowLeft from '../assets/images/SVG/Arrow_left.svg';
 import Close from '../assets/images/SVG/Close.svg';
@@ -63,12 +71,13 @@ function ZeusHeader(props: HeaderProps) {
                 props.navigation!.goBack();
             }}
             accessibilityLabel={localeString('general.close')}
+            style={{ marginLeft: 4 }}
         >
             <Close
                 fill={themeColor('text')}
                 width="30"
                 height="30"
-                style={{ alignSelf: 'center', marginLeft: 5 }}
+                style={{ alignSelf: 'center', marginTop: 4 }}
             />
         </TouchableOpacity>
     );
@@ -97,10 +106,14 @@ function ZeusHeader(props: HeaderProps) {
             rightComponent={rightComponent ? rightComponent : undefined}
             backgroundColor="transparent"
             containerStyle={{
-                ...containerStyle,
-                borderBottomWidth: 0
+                borderBottomWidth: 0,
+                marginTop: containerStyle?.marginTop ?? insets.top,
+                height: 50
             }}
             placement={placement}
+            // Disable @rneui safe area handling - we use marginTop for positioning
+            // https://github.com/react-native-elements/react-native-elements/issues/3433
+            edges={[]}
         />
     );
 }
