@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "Mode pemulihan",
     "views.Wallet.BalancePane.recovery.text": "Harap biarkan ZEUS tetap terbuka hingga proses selesai.",
     "views.Wallet.BalancePane.recovery.textAlt": "Biarkan ZEUS terbuka sampai selesai.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "Cadangkan dana Anda",
     "views.Wallet.BalancePane.backup.text": "Buat pencadangan agar Anda tidak akan kehilangan akses ke bitcoin Anda.",
     "views.Wallet.BalancePane.backup.action": "Mulai pencadangan ->",
