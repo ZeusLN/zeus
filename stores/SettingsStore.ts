@@ -55,6 +55,13 @@ interface PrivacySettings {
     clipboard?: boolean;
     lurkerMode?: boolean;
     enableMempoolRates?: boolean;
+    // Stealth Mode (Android only)
+    stealthMode?: boolean;
+    stealthApp?: 'zeus' | 'calculator' | 'vpn' | 'qrscanner' | 'notepad';
+    // Stealth unlock configuration
+    stealthPinLength?: number; // Number of taps required (default 5)
+    stealthVpnCountry?: string; // VPN unlock country
+    stealthVpnServer?: string; // VPN unlock server
 }
 
 interface DisplaySettings {
@@ -1356,7 +1363,12 @@ export default class SettingsStore {
             customBlockExplorer: '',
             clipboard: false,
             lurkerMode: false,
-            enableMempoolRates: true
+            enableMempoolRates: true,
+            stealthMode: false,
+            stealthApp: 'calculator',
+            stealthPinLength: 5,
+            stealthVpnCountry: 'Switzerland',
+            stealthVpnServer: 'Geneva'
         },
         display: {
             theme: DEFAULT_THEME,

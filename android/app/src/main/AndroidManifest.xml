@@ -149,6 +149,68 @@
             <data android:mimeType="image/*" />
         </intent-filter>
       </activity>
+
+      <!-- Stealth Mode Activity Aliases -->
+      <!-- Calculator disguise - disabled by default -->
+      <activity-alias
+        android:name=".StealthCalculatorActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_stealth_calculator"
+        android:roundIcon="@mipmap/ic_stealth_calculator_round"
+        android:label="@string/stealth_calculator"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- VPN disguise - disabled by default -->
+      <activity-alias
+        android:name=".StealthVPNActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_stealth_vpn"
+        android:roundIcon="@mipmap/ic_stealth_vpn_round"
+        android:label="@string/stealth_vpn"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- QR Scanner disguise - disabled by default -->
+      <activity-alias
+        android:name=".StealthQRScannerActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_stealth_qrscanner"
+        android:roundIcon="@mipmap/ic_stealth_qrscanner_round"
+        android:label="@string/stealth_qrscanner"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
+      <!-- Notepad disguise - disabled by default -->
+      <activity-alias
+        android:name=".StealthNotepadActivity"
+        android:enabled="false"
+        android:exported="true"
+        android:icon="@mipmap/ic_stealth_notepad"
+        android:roundIcon="@mipmap/ic_stealth_notepad_round"
+        android:label="@string/stealth_notepad"
+        android:targetActivity=".MainActivity">
+        <intent-filter>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent-filter>
+      </activity-alias>
+
       <service
           android:name="com.reactnativehce.services.CardService"
           android:exported="true"
