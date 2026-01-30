@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "रिकवरी मोड",
     "views.Wallet.BalancePane.recovery.text": "कृपया प्रक्रिया पूरी होने तक ZEUS को खुला रखें।",
     "views.Wallet.BalancePane.recovery.textAlt": "पूरा होने तक ZEUS को खुला रखें।",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "अपने फंड का बैकअप लें",
     "views.Wallet.BalancePane.backup.text": "अपने बिटकॉइन तक पहुंच कभी न खोने के लिए बैकअप बनाएं।",
     "views.Wallet.BalancePane.backup.action": "बैकअप शुरू करें ->",
