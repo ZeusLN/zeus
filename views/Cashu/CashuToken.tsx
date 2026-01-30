@@ -185,7 +185,8 @@ export default class CashuTokenView extends React.Component<
             selectedIndex,
             cashuBBQrParts,
             cashuFrameIndex,
-            cashuBcurPart
+            cashuBcurPart,
+            isTokenTooLarge
         } = this.state;
         const { mintUrls, addMint, claimToken, loading, errorAddingMint } =
             CashuStore!!;
@@ -207,6 +208,14 @@ export default class CashuTokenView extends React.Component<
 
         const haveMint = mintUrls.includes(mint);
         const hasOpenChannels = ChannelsStore?.channels?.length > 0;
+
+        const isSingleFrameSelected = !isTokenTooLarge && selectedIndex === 0;
+        const isBcurSelected =
+            (!isTokenTooLarge && selectedIndex === 1) ||
+            (isTokenTooLarge && selectedIndex === 0);
+        const isBbqrSelected =
+            (!isTokenTooLarge && selectedIndex === 2) ||
+            (isTokenTooLarge && selectedIndex === 1);
 
         const qrButton = () => (
             <Text
@@ -254,7 +263,7 @@ export default class CashuTokenView extends React.Component<
             </Text>
         );
         const bcurButton = () => {
-            const bcurIndex = this.state.isTokenTooLarge ? 0 : 1;
+            const bcurIndex = isTokenTooLarge ? 0 : 1;
             return (
                 <Text
                     style={{
@@ -271,7 +280,7 @@ export default class CashuTokenView extends React.Component<
         };
 
         const bbqrButton = () => {
-            const bbqrIndex = this.state.isTokenTooLarge ? 1 : 2;
+            const bbqrIndex = isTokenTooLarge ? 1 : 2;
             return (
                 <Text
                     style={{
@@ -288,7 +297,7 @@ export default class CashuTokenView extends React.Component<
         };
 
         const qrButtons: any = [
-            !this.state.isTokenTooLarge && { element: singleButton },
+            !isTokenTooLarge && { element: singleButton },
             { element: bcurButton },
             { element: bbqrButton }
         ].filter(Boolean);
@@ -481,28 +490,23 @@ export default class CashuTokenView extends React.Component<
                             >
                                 <CollapsedQR
                                     value={
-                                        !this.state.isTokenTooLarge
-                                            ? selectedIndex === 0
-                                                ? `cashu:${token}`
-                                                : selectedIndex === 1
-                                                ? cashuBcurPart
-                                                : cashuBBQrParts[
-                                                      cashuFrameIndex
-                                                  ]
-                                            : selectedIndex === 0
+                                        isSingleFrameSelected
+                                            ? `cashu:${token}`
+                                            : isBcurSelected
                                             ? cashuBcurPart
                                             : cashuBBQrParts[cashuFrameIndex]
                                     }
                                     copyValue={`cashu:${token}`}
                                     iconOnly
                                     showShare={
-                                        !this.state.isTokenTooLarge &&
-                                        selectedIndex === 0
+                                        isSingleFrameSelected ||
+                                        (isBbqrSelected &&
+                                            cashuBBQrParts.length === 1)
                                     }
                                     showSpeed={
-                                        this.state.isTokenTooLarge ||
-                                        (!this.state.isTokenTooLarge &&
-                                            selectedIndex > 0)
+                                        isBcurSelected ||
+                                        (isBbqrSelected &&
+                                            cashuBBQrParts.length === 1)
                                     }
                                     truncateLongValue
                                     expanded

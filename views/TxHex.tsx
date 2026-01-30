@@ -451,11 +451,20 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                     ? bbqrParts[frameIndex]
                                                     : bcurPart
                                             }
-                                            showSpeed={selectedIndex !== 0}
+                                            showSpeed={
+                                                selectedIndex === 1 ||
+                                                (selectedIndex === 2 &&
+                                                    bbqrParts.length > 1)
+                                            }
+                                            showShare={
+                                                selectedIndex === 0 ||
+                                                (selectedIndex === 2 &&
+                                                    bbqrParts.length === 1)
+                                            }
                                             copyValue={txHex}
                                             truncateLongValue
                                             expanded
-                                            iconOnly={selectedIndex !== 0}
+                                            iconOnly
                                             qrAnimationSpeed={qrAnimationSpeed}
                                             onQRAnimationSpeedChange={(
                                                 speed

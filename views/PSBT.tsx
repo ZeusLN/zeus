@@ -376,7 +376,16 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                     ? bbqrParts[frameIndex]
                                                     : bcurPart
                                             }
-                                            showSpeed={selectedIndex !== 0}
+                                            showSpeed={
+                                                selectedIndex === 1 ||
+                                                (selectedIndex === 2 &&
+                                                    bbqrParts.length > 1)
+                                            }
+                                            showShare={
+                                                selectedIndex === 0 ||
+                                                (selectedIndex === 2 &&
+                                                    bbqrParts.length === 1)
+                                            }
                                             copyValue={fundedPsbt}
                                             truncateLongValue
                                             expanded
