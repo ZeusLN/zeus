@@ -415,6 +415,8 @@
     "views.Wallet.BalancePane.recovery.title": "Režim obnovení",
     "views.Wallet.BalancePane.recovery.text": "Nechte prosím aplikaci ZEUS otevřenou až do dokončení procesu.",
     "views.Wallet.BalancePane.recovery.textAlt": "Nechte aplikaci ZEUS otevřenou až do dokončení.",
+    "views.Wallet.BalancePane.rescan.title": "Rescanning wallet",
+    "views.Wallet.BalancePane.rescan.text": "Please leave ZEUS open until the rescan completes.",
     "views.Wallet.BalancePane.backup.title": "Zálohujte své prostředky",
     "views.Wallet.BalancePane.backup.text": "Vytvořte si zálohu, abyste nikdy neztratili přístup ke svým bitcoinům.",
     "views.Wallet.BalancePane.backup.action": "Začít zálohování ->",
