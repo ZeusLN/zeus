@@ -1029,7 +1029,7 @@ export default class AddMint extends React.Component<
                     </View>
                     {!isLoading &&
                         showDiscoverMints &&
-                        mints?.length &&
+                        mints &&
                         mints.length > 0 && (
                             <View
                                 style={{
