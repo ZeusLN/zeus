@@ -64,7 +64,7 @@ export default class ZeroConfPeers extends React.Component<
                         navigation={navigation}
                     />
                     <ScrollView style={{ margin: 5 }}>
-                        <View style={{ margin: 5 }}>
+                        <View style={{ margin: 10 }}>
                             <Text>
                                 {localeString(
                                     'views.Settings.EmbeddedNode.Peers.addPeer'
@@ -80,9 +80,14 @@ export default class ZeroConfPeers extends React.Component<
                                     style={{ flex: 1 }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
-                                    numberOfLines={1}
                                 />
-                                <View style={{ width: 60, height: 60 }}>
+                                <View
+                                    style={{
+                                        alignSelf: 'flex-end',
+                                        width: 60,
+                                        height: 60
+                                    }}
+                                >
                                     <Button
                                         icon={{
                                             name: 'plus',
@@ -127,7 +132,7 @@ export default class ZeroConfPeers extends React.Component<
                                             <View
                                                 style={{
                                                     alignSelf: 'flex-end',
-                                                    width: 50,
+                                                    width: 60,
                                                     height: 60
                                                 }}
                                             >
