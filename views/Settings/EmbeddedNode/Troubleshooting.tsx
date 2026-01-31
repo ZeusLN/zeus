@@ -64,8 +64,14 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
             deleteNeutrinoSuccess,
             deleteNeutrinoError
         } = this.state;
-        const { updateSettings, embeddedLndNetwork, lndDir, isSqlite }: any =
-            SettingsStore;
+        const {
+            updateSettings,
+            embeddedLndNetwork,
+            lndDir,
+            isSqlite,
+            settings
+        }: any = SettingsStore;
+        const { embeddedLndBackend } = settings;
 
         return (
             <Screen>
@@ -253,116 +259,124 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                 </Text>
                             </View>
                         </>
-                        <>
-                            <View style={{ marginTop: 25 }}>
-                                <Button
-                                    title={
-                                        deleteNeutrinoLoading
-                                            ? localeString('general.loading')
-                                            : deleteNeutrinoSuccess
-                                            ? localeString('general.success')
-                                            : localeString(
-                                                  'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
-                                              )
-                                    }
-                                    disabled={deleteNeutrinoLoading}
-                                    onPress={async () => {
-                                        this.setState({
-                                            deleteNeutrinoLoading: true,
-                                            deleteNeutrinoError: null,
-                                            deleteNeutrinoSuccess: false
-                                        });
+                        {embeddedLndBackend !== 'esplora' && (
+                            <>
+                                <View style={{ marginTop: 25 }}>
+                                    <Button
+                                        title={
+                                            deleteNeutrinoLoading
+                                                ? localeString(
+                                                      'general.loading'
+                                                  )
+                                                : deleteNeutrinoSuccess
+                                                ? localeString(
+                                                      'general.success'
+                                                  )
+                                                : localeString(
+                                                      'views.Settings.EmbeddedNode.stopLndDeleteNeutrino'
+                                                  )
+                                        }
+                                        disabled={deleteNeutrinoLoading}
+                                        onPress={async () => {
+                                            this.setState({
+                                                deleteNeutrinoLoading: true,
+                                                deleteNeutrinoError: null,
+                                                deleteNeutrinoSuccess: false
+                                            });
 
-                                        try {
-                                            await NativeModules.LndMobile.stopLnd();
-                                            await sleep(5000); // Let lnd close down
-                                        } catch (e: any) {
-                                            // If lnd was closed down already
-                                            if (
-                                                e?.message?.includes?.('closed')
-                                            ) {
+                                            try {
+                                                await NativeModules.LndMobile.stopLnd();
+                                                await sleep(5000); // Let lnd close down
+                                            } catch (e: any) {
+                                                // If lnd was closed down already
+                                                if (
+                                                    !e?.message?.includes?.(
+                                                        'closed'
+                                                    )
+                                                ) {
+                                                    console.error(e.message);
+                                                    this.setState({
+                                                        deleteNeutrinoLoading:
+                                                            false,
+                                                        deleteNeutrinoError:
+                                                            e.message ||
+                                                            localeString(
+                                                                'general.error'
+                                                            )
+                                                    });
+                                                    return;
+                                                }
                                                 console.log('yes closed');
-                                            } else {
-                                                console.error(e.message);
+                                            }
+
+                                            try {
+                                                await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                                                    lndDir || 'lnd',
+                                                    embeddedLndNetwork ===
+                                                        'Mainnet'
+                                                        ? 'mainnet'
+                                                        : 'testnet'
+                                                );
+                                                this.setState({
+                                                    deleteNeutrinoLoading:
+                                                        false,
+                                                    deleteNeutrinoSuccess: true
+                                                });
+
+                                                setTimeout(() => {
+                                                    this.setState({
+                                                        deleteNeutrinoSuccess:
+                                                            false
+                                                    });
+                                                }, 5000);
+
+                                                restartNeeded();
+                                            } catch (innerError: any) {
+                                                console.error(
+                                                    innerError.message
+                                                );
                                                 this.setState({
                                                     deleteNeutrinoLoading:
                                                         false,
                                                     deleteNeutrinoError:
-                                                        e.message ||
+                                                        innerError.message ||
                                                         localeString(
                                                             'general.error'
                                                         )
                                                 });
-                                                return;
                                             }
-                                        }
-
-                                        try {
-                                            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
-                                                lndDir || 'lnd',
-                                                embeddedLndNetwork === 'Mainnet'
-                                                    ? 'mainnet'
-                                                    : 'testnet'
-                                            );
-                                            this.setState({
-                                                deleteNeutrinoLoading: false,
-                                                deleteNeutrinoSuccess: true
-                                            });
-
-                                            setTimeout(() => {
-                                                this.setState({
-                                                    deleteNeutrinoSuccess: false
-                                                });
-                                            }, 5000);
-
-                                            restartNeeded();
-                                        } catch (e: any) {
-                                            console.error(e.message);
-                                            this.setState({
-                                                deleteNeutrinoLoading: false,
-                                                deleteNeutrinoError:
-                                                    e.message ||
-                                                    localeString(
-                                                        'general.error'
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                />
-                            </View>
-                            {deleteNeutrinoError && (
-                                <View
-                                    style={{
-                                        margin: 10,
-                                        marginTop: 10
-                                    }}
-                                >
+                                        }}
+                                    />
+                                </View>
+                                <View style={{ margin: 10 }}>
                                     <Text
                                         style={{
-                                            color: themeColor('error')
+                                            color: themeColor('secondaryText')
                                         }}
                                     >
-                                        {deleteNeutrinoError}
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
+                                        )}
                                     </Text>
                                 </View>
-                            )}
-                            <View
-                                style={{
-                                    margin: 10,
-                                    marginTop: deleteNeutrinoError ? 5 : 15
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
+                                {deleteNeutrinoError && (
+                                    <View
+                                        style={{
+                                            margin: 10,
+                                            marginTop: 10
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor('error')
+                                            }}
+                                        >
+                                            {deleteNeutrinoError}
+                                        </Text>
+                                    </View>
+                                )}
+                            </>
+                        )}
                     </ScrollView>
                 </View>
             </Screen>
