@@ -1930,6 +1930,7 @@
     "views.Cashu.Mint.useNsec": "Use your nsec",
     "views.Cashu.Mint.useNsecDesc": "Sign with your existing Nostr identity",
     "views.Cashu.Mint.invalidNsec": "Invalid nsec",
+    "views.Cashu.Mint.mintUrlRequired": "Mint URL is required",
     "views.Cashu.Mint.submitReviewButton": "Submit review",
     "views.Cashu.Mint.submitError": "Failed to submit review",
     "views.Cashu.Mint.reviewSubmitted": "Review submitted",

@@ -637,7 +637,10 @@ export default class CashuStore {
         nsec?: string
     ): Promise<{ success: boolean; npub?: string; error?: string }> => {
         if (!mintUrl) {
-            return { success: false, error: 'Mint URL is required' };
+            return {
+                success: false,
+                error: localeString('views.Cashu.Mint.mintUrlRequired')
+            };
         }
 
         runInAction(() => {
@@ -656,7 +659,10 @@ export default class CashuStore {
                         this.submittingReview = false;
                         this.reviewSubmitError = true;
                     });
-                    return { success: false, error: 'Invalid nsec' };
+                    return {
+                        success: false,
+                        error: localeString('views.Cashu.Mint.invalidNsec')
+                    };
                 }
                 privateKey = hexKey;
             } else {
