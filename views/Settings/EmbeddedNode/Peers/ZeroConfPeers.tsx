@@ -14,6 +14,7 @@ import SettingsStore from '../../../../stores/SettingsStore';
 
 import { localeString } from '../../../../utils/LocaleUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
+import ValidationUtils from '../../../../utils/ValidationUtils';
 
 interface ZeroConfPeersProps {
     navigation: StackNavigationProp<any, any>;
@@ -23,6 +24,7 @@ interface ZeroConfPeersProps {
 interface ZeroConfPeersState {
     zeroConfPeers: Array<string>;
     addPeer: string;
+    isPubkeyValid: boolean;
 }
 
 @inject('SettingsStore')
@@ -33,7 +35,8 @@ export default class ZeroConfPeers extends React.Component<
 > {
     state = {
         zeroConfPeers: this.props.SettingsStore.settings.zeroConfPeers || [],
-        addPeer: ''
+        addPeer: '',
+        isPubkeyValid: true
     };
 
     remove = (arrOriginal: Array<string>, elementToRemove: any) => {
@@ -44,7 +47,7 @@ export default class ZeroConfPeers extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { zeroConfPeers, addPeer } = this.state;
+        const { zeroConfPeers, addPeer, isPubkeyValid } = this.state;
         const { updateSettings }: any = SettingsStore;
 
         return (
@@ -74,12 +77,25 @@ export default class ZeroConfPeers extends React.Component<
                                 <TextInput
                                     placeholder="031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581"
                                     onChangeText={(text: string) =>
-                                        this.setState({ addPeer: text })
+                                        this.setState({
+                                            addPeer: text,
+                                            isPubkeyValid:
+                                                text === '' ||
+                                                ValidationUtils.validateNodePubkey(
+                                                    text
+                                                )
+                                        })
                                     }
                                     value={addPeer}
                                     style={{ flex: 1 }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    textColor={
+                                        isPubkeyValid
+                                            ? themeColor('text')
+                                            : themeColor('warning')
+                                    }
+                                    error={!isPubkeyValid}
                                 />
                                 <View
                                     style={{
@@ -93,18 +109,25 @@ export default class ZeroConfPeers extends React.Component<
                                             name: 'plus',
                                             type: 'font-awesome',
                                             size: 25,
-                                            color: themeColor('text')
+                                            color:
+                                                !addPeer || !isPubkeyValid
+                                                    ? themeColor(
+                                                          'secondaryText'
+                                                      )
+                                                    : themeColor('text')
                                         }}
                                         iconOnly
                                         onPress={() => {
-                                            if (!addPeer) return;
+                                            if (!addPeer || !isPubkeyValid)
+                                                return;
                                             const newZeroConfPeers = [
                                                 ...zeroConfPeers,
                                                 addPeer
                                             ];
                                             this.setState({
                                                 zeroConfPeers: newZeroConfPeers,
-                                                addPeer: ''
+                                                addPeer: '',
+                                                isPubkeyValid: true
                                             });
                                             updateSettings({
                                                 zeroConfPeers: newZeroConfPeers
