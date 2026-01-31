@@ -182,7 +182,7 @@ export default class LightningAddress extends React.Component<
         const cashuEnabled = SettingsStore.settings?.ecash?.enableCashu;
 
         const InfoButton = () => (
-            <View style={{ right: 15 }}>
+            <View style={{ marginRight: 15 }}>
                 <Icon
                     name="info"
                     onPress={() => {
@@ -196,7 +196,7 @@ export default class LightningAddress extends React.Component<
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"
-                    size={35}
+                    size={30}
                 />
             </View>
         );
