@@ -1011,7 +1011,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                         title={localeString(
                                             'views.Cashu.Mint.submitReview'
                                         )}
-                                        tertiary
+                                        secondary
                                         onPress={this.openReviewModal}
                                         buttonStyle={{ height: 40 }}
                                         disabled={loading}
