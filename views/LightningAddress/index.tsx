@@ -294,11 +294,25 @@ export default class LightningAddress extends React.Component<
                         }
                         navigation={navigation}
                     />
-                    {redeeming && <LightningLoadingPattern />}
-                    {redeemingAll && !redeeming && (
-                        <LightningLoadingPattern color={themeColor('text')} />
-                    )}
                     <View style={{ flex: 1, margin: 5 }}>
+                        {redeeming && (
+                            <View
+                                pointerEvents="none"
+                                style={styles.loadingPatternWrapper}
+                            >
+                                <LightningLoadingPattern />
+                            </View>
+                        )}
+                        {redeemingAll && !redeeming && (
+                            <View
+                                pointerEvents="none"
+                                style={styles.loadingPatternWrapper}
+                            >
+                                <LightningLoadingPattern
+                                    color={themeColor('text')}
+                                />
+                            </View>
+                        )}
                         {loading && <LoadingIndicator />}
                         {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
@@ -1372,6 +1386,13 @@ export default class LightningAddress extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    loadingPatternWrapper: {
+        position: 'absolute',
+        top: -50,
+        left: -5,
+        right: -5,
+        bottom: 0
+    },
     text: {
         fontFamily: 'PPNeueMontreal-Book'
     },
