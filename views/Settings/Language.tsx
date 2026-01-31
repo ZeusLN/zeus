@@ -75,8 +75,13 @@ export default class Language extends React.Component<
                     <Header
                         leftComponent="Back"
                         centerComponent={{
-                            text: localeString('views.Settings.Language.title'),
-                            style: { color: themeColor('text') }
+                            text: `${localeString(
+                                'views.Settings.Language.title'
+                            )} (${locales?.length || 0})`,
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
                         }}
                         navigation={navigation}
                     />
