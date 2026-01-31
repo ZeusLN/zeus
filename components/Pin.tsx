@@ -26,10 +26,12 @@ export default function Pin({
     const maxLength = 8;
     const minLength = 4;
 
-    const appendValue = (newValue: string) => {
+    const appendValue = (newValue: string): boolean => {
         if (pinValue.length + 1 <= maxLength) {
             setPinValue(`${pinValue}${newValue}`);
+            return true;
         }
+        return false;
     };
 
     const clearValue = () => {
