@@ -33,7 +33,9 @@ import {
     SECONDARY_NEUTRINO_PEERS_MAINNET,
     DEFAULT_NEUTRINO_PEERS_TESTNET,
     DEFAULT_FEE_ESTIMATOR,
-    DEFAULT_SPEEDLOADER
+    DEFAULT_SPEEDLOADER,
+    DEFAULT_ESPLORA_MAINNET,
+    DEFAULT_ESPLORA_TESTNET
 } from '../stores/SettingsStore';
 
 import { lnrpc } from '../proto/lightning';
@@ -103,6 +105,9 @@ const writeLndConfig = async ({
 }) => {
     const { writeConfig } = lndMobile.index;
 
+    const backend = settingsStore?.settings?.embeddedLndBackend || 'neutrino';
+    const isEsplora = backend === 'esplora';
+
     const peerMode = settingsStore?.settings?.dontAllowOtherPeers
         ? 'connect'
         : 'addpeer';
@@ -127,6 +132,46 @@ const writeLndConfig = async ({
             : ''
     }`;
 
+    // Get esplora URL
+    const getEsploraUrl = () => {
+        const url = isTestnet
+            ? settingsStore?.settings?.esploraTestnet
+            : settingsStore?.settings?.esploraMainnet;
+        const defaultUrl = isTestnet
+            ? DEFAULT_ESPLORA_TESTNET
+            : DEFAULT_ESPLORA_MAINNET;
+
+        if (url === 'Custom') {
+            return settingsStore?.settings?.customEsplora;
+        }
+        return url || defaultUrl;
+    };
+
+    // Backend-specific configuration
+    const neutrinoPeers = isTestnet
+        ? settingsStore?.settings?.neutrinoPeersTestnet
+        : settingsStore?.settings?.neutrinoPeersMainnet;
+
+    const backendConfig = isEsplora
+        ? `[esplora]
+    esplora.url=${getEsploraUrl()}`
+        : `[Neutrino]
+    ${neutrinoPeers
+        .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
+        .join('')}
+    ${
+        !isTestnet
+            ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
+            : ''
+    }
+    ${
+        !isTestnet
+            ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
+            : ''
+    }
+    neutrino.broadcasttimeout=11s
+    neutrino.persistfilters=${persistFilters}`;
+
     const config = `[Application Options]
     debuglevel=info
     maxbackoff=2s
@@ -140,7 +185,7 @@ const writeLndConfig = async ({
     ${rescan ? 'reset-wallet-transactions=true' : ''}
 
     ${dbConfig}
-    
+
     [Routing]
     routing.assumechanvalid=1
     routing.strictgraphpruning=false
@@ -149,31 +194,10 @@ const writeLndConfig = async ({
     bitcoin.active=1
     bitcoin.mainnet=${isTestnet ? 0 : 1}
     bitcoin.testnet=${isTestnet ? 1 : 0}
-    bitcoin.node=neutrino
+    bitcoin.node=${backend}
     bitcoin.defaultchanconfs=1
 
-    [Neutrino]
-    ${
-        !isTestnet
-            ? settingsStore?.settings?.neutrinoPeersMainnet
-                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
-                  .join('')
-            : settingsStore?.settings?.neutrinoPeersTestnet
-                  .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
-                  .join('')
-    }
-    ${
-        !isTestnet
-            ? 'neutrino.assertfilterheader=230000:1308d5cfc6462f877a5587fd77d7c1ab029d45e58d5175aaf8c264cee9bde760'
-            : ''
-    }
-    ${
-        !isTestnet
-            ? 'neutrino.assertfilterheader=660000:08312375fabc082b17fa8ee88443feb350c19a34bb7483f94f7478fa4ad33032'
-            : ''
-    }
-    neutrino.broadcasttimeout=11s
-    neutrino.persistfilters=${persistFilters}
+    ${backendConfig}
 
     [fee]
     fee.url=${

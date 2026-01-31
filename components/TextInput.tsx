@@ -39,6 +39,7 @@ interface TextInputProps {
     onFocus?: any;
     onBlur?: any;
     onSubmitEditing?: () => void;
+    onEndEditing?: (e: { nativeEvent: { text: string } }) => void;
 }
 
 const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
@@ -67,7 +68,8 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             right,
             error,
             onFocus,
-            onBlur
+            onBlur,
+            onEndEditing
         } = props;
         const defaultStyle = numberOfLines
             ? {
@@ -179,6 +181,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     ref={ref}
                     onFocus={onFocus}
                     onBlur={onBlur}
+                    onEndEditing={onEndEditing}
                 />
                 {suffix ? (
                     toggleUnits ? (

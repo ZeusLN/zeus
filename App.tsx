@@ -157,7 +157,7 @@ import DisasterRecoveryAdvanced from './views/Settings/EmbeddedNode/DisasterReco
 import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
-import Peers from './views/Settings/EmbeddedNode/Peers';
+import BlockchainBackend from './views/Settings/EmbeddedNode/BlockchainBackend';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
 import Advanced from './views/Settings/EmbeddedNode/Advanced';
@@ -914,8 +914,10 @@ export default class App extends React.PureComponent {
                                                         component={LNDLogs}
                                                     />
                                                     <Stack.Screen
-                                                        name="Peers" // @ts-ignore:next-line
-                                                        component={Peers}
+                                                        name="BlockchainBackend" // @ts-ignore:next-line
+                                                        component={
+                                                            BlockchainBackend
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="NeutrinoPeers" // @ts-ignore:next-line
