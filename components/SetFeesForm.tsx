@@ -65,7 +65,10 @@ export default class SetFeesForm extends React.Component<
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
             newMaxHtlc: props.maxHtlc || '',
-            feeRateMode: 'percent'
+            feeRateMode:
+                props.SettingsStore?.implementation === 'cln-rest'
+                    ? 'ppm'
+                    : 'percent'
         };
     }
 
@@ -143,7 +146,8 @@ export default class SetFeesForm extends React.Component<
                     autoCorrect={false}
                 />
 
-                {BackendUtils.isLNDBased() && (
+                {(BackendUtils.isLNDBased() ||
+                    implementation === 'cln-rest') && (
                     <View style={{ marginVertical: 10 }}>
                         <ToggleButton
                             options={[
@@ -188,13 +192,7 @@ export default class SetFeesForm extends React.Component<
                 </Text>
                 <TextInput
                     keyboardType="numeric"
-                    placeholder={
-                        implementation === 'cln-rest'
-                            ? '1'
-                            : feeRateMode === 'ppm'
-                            ? '1000'
-                            : '0.001'
-                    }
+                    placeholder={feeRateMode === 'ppm' ? '1000' : '0.001'}
                     value={newFeeRate}
                     onChangeText={(text: string) =>
                         this.setState({
