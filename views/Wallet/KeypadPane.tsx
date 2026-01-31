@@ -11,11 +11,11 @@ import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
-import Conversion from '../../components/Conversion';
-import PinPad from '../../components/PinPad';
 import EcashMintPicker from '../../components/EcashMintPicker';
 import EcashToggle from '../../components/EcashToggle';
+import KeypadAmountDisplay from '../../components/KeypadAmountDisplay';
 import ModalBox from '../../components/ModalBox';
+import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 import { getSatAmount } from '../../components/AmountInput';
@@ -31,13 +31,15 @@ import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
+import {
+    validateKeypadInput,
+    startShakeAnimation,
+    getAmountFontSizeWithInbound,
+    deleteLastCharacter
+} from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    getDecimalPlaceholder,
-    formatBitcoinWithSpaces,
-    numberWithCommas
-} from '../../utils/UnitsUtils';
+import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import MintToken from './../../assets/images/SVG/MintToken.svg';
@@ -136,71 +138,17 @@ export default class KeypadPane extends React.PureComponent<
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        let newAmount;
+        const { valid, newAmount } = validateKeypadInput(
+            amount,
+            value,
+            units,
+            FiatStore!,
+            SettingsStore!
+        );
 
-        const getDecimalLimit = (): number | null => {
-            if (units === 'fiat') {
-                const fiat = SettingsStore!.settings?.fiat || '';
-                const fiatProperties = FiatStore!.symbolLookup(fiat);
-                return fiatProperties?.decimalPlaces !== undefined
-                    ? fiatProperties.decimalPlaces
-                    : 2;
-            }
-            if (units === 'sats') return 3;
-            if (units === 'BTC') return 8;
-            return null;
-        };
-
-        const decimalLimit = getDecimalLimit();
-        const [integerPart, decimalPart] = amount.split('.');
-
-        // limit decimal places depending on units
-        if (
-            decimalPart &&
-            decimalLimit !== null &&
-            decimalPart.length >= decimalLimit
-        ) {
+        if (!valid) {
             this.startShake();
             return false;
-        }
-
-        if (units === 'BTC') {
-            // deny if trying to add more than 8 figures of Bitcoin
-            if (
-                !decimalPart &&
-                integerPart &&
-                integerPart.length == 8 &&
-                !amount.includes('.') &&
-                value !== '.'
-            ) {
-                this.startShake();
-                return false;
-            }
-        }
-
-        // only allow one decimal, unless currency has zero decimal places
-        if (value === '.' && (amount.includes('.') || decimalLimit === 0)) {
-            this.startShake();
-            return false;
-        }
-
-        const proposedNewAmountStr = `${amount}${value}`;
-        const proposedNewAmount = new BigNumber(proposedNewAmountStr);
-
-        // deny if exceeding BTC 21 million capacity
-        if (units === 'BTC' && proposedNewAmount.gt(21000000)) {
-            this.startShake();
-            return false;
-        }
-        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0)) {
-            this.startShake();
-            return false;
-        }
-
-        if (amount === '0') {
-            newAmount = value;
-        } else {
-            newAmount = proposedNewAmountStr;
         }
 
         let needInbound = false;
@@ -240,14 +188,7 @@ export default class KeypadPane extends React.PureComponent<
 
     deleteValue = () => {
         const { amount } = this.state;
-
-        let newAmount;
-
-        if (amount.length === 1) {
-            newAmount = '0';
-        } else {
-            newAmount = amount.substr(0, amount.length - 1);
-        }
+        const newAmount = deleteLastCharacter(amount);
 
         let needInbound = false;
         let belowMinAmount = false;
@@ -276,64 +217,12 @@ export default class KeypadPane extends React.PureComponent<
     amountSize = () => {
         const { amount, needInbound } = this.state;
         const { units } = this.props.UnitsStore!;
-        switch (amount.length + getDecimalPlaceholder(amount, units).count) {
-            case 1:
-            case 2:
-            case 3:
-            case 4:
-                return needInbound ? 70 : 80;
-            case 5:
-                return needInbound ? 65 : 75;
-            case 6:
-                return needInbound ? 60 : 65;
-            case 7:
-                return needInbound ? 55 : 60;
-            case 8:
-                return needInbound ? 50 : 55;
-            case 9:
-                return needInbound ? 45 : 50;
-            default:
-                return needInbound ? 40 : 45;
-        }
+        const { count } = getDecimalPlaceholder(amount, units);
+        return getAmountFontSizeWithInbound(amount.length, count, needInbound);
     };
 
     startShake = () => {
-        Animated.parallel([
-            Animated.sequence([
-                Animated.timing(this.textAnimation, {
-                    toValue: 1,
-                    duration: 100,
-                    useNativeDriver: false
-                }),
-                Animated.timing(this.textAnimation, {
-                    toValue: 0,
-                    duration: 1000,
-                    useNativeDriver: false
-                })
-            ]),
-            Animated.sequence([
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: -10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 0,
-                    duration: 100,
-                    useNativeDriver: true
-                })
-            ])
-        ]).start();
+        startShakeAnimation(this.shakeAnimation, this.textAnimation);
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
@@ -354,14 +243,8 @@ export default class KeypadPane extends React.PureComponent<
             overrideBelowMinAmount,
             ecashMode
         } = this.state;
-        const { units } = UnitsStore!;
         const { settings } = SettingsStore!;
         const { isSyncing } = SyncStore!;
-
-        const color = this.textAnimation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [themeColor('text'), 'red']
-        });
 
         const noMints = CashuStore?.mintUrls.length === 0;
 
@@ -425,54 +308,12 @@ export default class KeypadPane extends React.PureComponent<
                             alignItems: 'center'
                         }}
                     >
-                        <Animated.View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                zIndex: 10,
-                                transform: [
-                                    { translateX: this.shakeAnimation }
-                                ],
-                                height: 50
-                            }}
+                        <KeypadAmountDisplay
+                            amount={amount}
+                            shakeAnimation={this.shakeAnimation}
+                            textAnimation={this.textAnimation}
+                            fontSize={this.amountSize()}
                         >
-                            <Animated.Text
-                                style={{
-                                    color:
-                                        amount === '0'
-                                            ? themeColor('secondaryText')
-                                            : color,
-                                    fontSize: this.amountSize(),
-                                    textAlign: 'center',
-                                    fontFamily: 'PPNeueMontreal-Medium',
-                                    lineHeight: 80
-                                }}
-                            >
-                                {units === 'BTC'
-                                    ? formatBitcoinWithSpaces(amount)
-                                    : numberWithCommas(amount)}
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {
-                                        getDecimalPlaceholder(amount, units)
-                                            .string
-                                    }
-                                </Text>
-                            </Animated.Text>
-
-                            <View
-                                style={{
-                                    marginBottom: 10,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Conversion amount={amount} />
-                            </View>
-
                             <Row
                                 style={{
                                     alignSelf: 'center',
@@ -505,7 +346,7 @@ export default class KeypadPane extends React.PureComponent<
                                     )}
                                 <UnitToggle onToggle={this.clearValue} />
                             </Row>
-                        </Animated.View>
+                        </KeypadAmountDisplay>
                     </View>
 
                     <View>
