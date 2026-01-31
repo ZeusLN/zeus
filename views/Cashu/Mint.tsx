@@ -463,12 +463,18 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                             autoCapitalize="none"
                                             autoCorrect={false}
                                             secureTextEntry
+                                            error={!!nsecError}
+                                            textColor={
+                                                nsecError
+                                                    ? themeColor('warning')
+                                                    : undefined
+                                            }
                                         />
                                         {nsecError ? (
                                             <Text
                                                 style={{
                                                     ...styles.nsecError,
-                                                    color: themeColor('error')
+                                                    color: themeColor('warning')
                                                 }}
                                             >
                                                 {nsecError}
