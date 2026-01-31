@@ -44,13 +44,12 @@ const AnimatedQRDisplay: React.FC<AnimatedQRDisplayProps> = ({
         fileType
     });
 
+    const bcurIndex = hideSingleFrame ? 0 : 1;
+    const bbqrIndex = hideSingleFrame ? 1 : 2;
+
     const isSingleFrameSelected = !hideSingleFrame && selectedIndex === 0;
-    const isBcurSelected =
-        (!hideSingleFrame && selectedIndex === 1) ||
-        (hideSingleFrame && selectedIndex === 0);
-    const isBbqrSelected =
-        (!hideSingleFrame && selectedIndex === 2) ||
-        (hideSingleFrame && selectedIndex === 1);
+    const isBcurSelected = selectedIndex === bcurIndex;
+    const isBbqrSelected = selectedIndex === bbqrIndex;
 
     const getDisplayValue = (): string => {
         if (isSingleFrameSelected) {
