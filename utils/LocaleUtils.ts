@@ -36,6 +36,8 @@ import * as IT from '../locales/it.json';
 import * as VI from '../locales/vi.json';
 import * as JA from '../locales/ja.json';
 import * as KO from '../locales/ko.json';
+import * as BG from '../locales/bg.json';
+import * as ID from '../locales/id.json';
 
 const English: any = EN;
 const Czech: any = CS;
@@ -69,6 +71,8 @@ const Croatian: any = HR;
 const Korean: any = KO;
 const Hindi: any = hi_EN;
 const TaiwaneseMandarin: any = zh_TW;
+const Bulgarian: any = BG;
+const Indonesian: any = ID;
 
 // strings that are needed on the java layer
 const JAVA_LAYER_STRINGS = [
@@ -150,6 +154,10 @@ export function localeString(
                 return Hindi[localeString] || English[localeString];
             case 'zh_TW':
                 return TaiwaneseMandarin[localeString] || English[localeString];
+            case 'bg':
+                return Bulgarian[localeString] || English[localeString];
+            case 'id':
+                return Indonesian[localeString] || English[localeString];
 
             default:
                 return English[localeString];
