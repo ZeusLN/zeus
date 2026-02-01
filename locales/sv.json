@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Säkerhetskopiera dina tillgångar",
     "views.Wallet.BalancePane.backup.text": "Skapa en säkerhetskopia för att aldrig förlora åtkomst till din bitcoin.",
     "views.Wallet.BalancePane.backup.action": "Starta säkerhetskopiering ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Lokal",
     "views.Wallet.Channels.remote": "Fjärr",
     "views.Wallet.Channels.noChannels": "Inga kanaler",
