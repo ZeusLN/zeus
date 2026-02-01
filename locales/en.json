@@ -90,6 +90,7 @@
     "general.notAvailable": "N/A",
     "general.iUnderstand": "I understand",
     "general.network": "Network",
+    "general.noInternetConnection": "No internet connection",
     "general.tapToLearnMore": "Tap to learn more.",
     "general.lsp": "Lightning Service Provider (LSP)",
     "general.serviceProvider": "Service Provider",

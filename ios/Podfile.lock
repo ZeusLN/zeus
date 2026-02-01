@@ -2015,6 +2015,34 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-netinfo (11.5.0):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - react-native-nfc-manager (3.17.2):
     - React-Core
   - react-native-notifications (5.2.2):
@@ -3360,6 +3388,7 @@ DEPENDENCIES:
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-hce (from `../node_modules/react-native-hce`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
+  - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-notifications (from `../node_modules/react-native-notifications`)
   - react-native-ping (from `../node_modules/react-native-ping`)
@@ -3541,6 +3570,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-hce"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
+  react-native-netinfo:
+    :path: "../node_modules/@react-native-community/netinfo"
   react-native-nfc-manager:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-notifications:
@@ -3679,11 +3710,11 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   boost: 7e761d76ca2ce687f7cc98e698152abd03a18f90
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
-  DoubleConversion: cb417026b2400c8f53ae97020b2be961b59470cb
+  DoubleConversion: 76ab83afb40bddeeee456813d9c04f67f78771b5
   fast_float: b32c788ed9c6a8c584d114d0047beda9664e7cc6
   FBLazyVector: 309703e71d3f2f1ed7dc7889d58309c9d77a95a4
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
-  glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
+  glog: fdfdfe5479092de0c4bdbebedd9056951f092c4f
   hermes-engine: 14e40426f39aadfaeeec89d8ab620b226bcd8dfa
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 86fa7488b1476563f41071244aa73d5b738faf19
@@ -3730,6 +3761,7 @@ SPEC CHECKSUMS:
   react-native-get-random-values: 419569b6ed3d15bfb9b6781b2f2e058f8e8d2698
   react-native-hce: f42561549a16f53ae98edb7f1b68ad87b6e732e1
   react-native-image-picker: 0314366753615115fa55c3cc937ac44cb7e75702
+  react-native-netinfo: 34238ef2d5902cd505de92671b36eb7c28a55184
   react-native-nfc-manager: c8891e460b4943b695d63f7f4effc6345bbefc83
   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
   react-native-ping: 589027e929c300b0b68cc5c34105f33610177055

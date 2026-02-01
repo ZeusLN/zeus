@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Badge } from '@rneui/themed';
 import { initialWindowMetrics } from 'react-native-safe-area-context';
+import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 
 const insets = initialWindowMetrics?.insets ?? {
     top: 0,
@@ -272,6 +273,7 @@ interface WalletHeaderProps {
 
 interface WalletHeaderState {
     clipboard: string;
+    isConnected: boolean | null;
 }
 
 @inject(
@@ -292,10 +294,12 @@ export default class WalletHeader extends React.Component<
     WalletHeaderState
 > {
     state: WalletHeaderState = {
-        clipboard: ''
+        clipboard: '',
+        isConnected: true
     };
 
     focusListener: any = null;
+    netInfoUnsubscribe: (() => void) | null = null;
 
     componentDidMount() {
         this.readClipboard();
@@ -304,11 +308,20 @@ export default class WalletHeader extends React.Component<
             'focus',
             this.readClipboard
         );
+
+        this.netInfoUnsubscribe = NetInfo.addEventListener(
+            (state: NetInfoState) => {
+                this.setState({ isConnected: state.isConnected });
+            }
+        );
     }
 
     componentWillUnmount(): void {
         if (this.focusListener) {
             this.focusListener();
+        }
+        if (this.netInfoUnsubscribe) {
+            this.netInfoUnsubscribe();
         }
     }
 
@@ -328,7 +341,7 @@ export default class WalletHeader extends React.Component<
     };
 
     render() {
-        const { clipboard } = this.state;
+        const { clipboard, isConnected } = this.state;
         const {
             navigation,
             connecting,
@@ -481,8 +494,24 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
+        const OfflineBadge = () => {
+            return isConnected === false ? (
+                <Badge
+                    value={`⚠ ${localeString('general.noInternetConnection')}`}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('error'),
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
+                    }}
+                    textStyle={styles.badgeTextStyle}
+                />
+            ) : null;
+        };
+
         const StatusBadges = () => (
             <>
+                <OfflineBadge />
                 <CustodialBadge />
                 <NetworkBadge />
                 <ReadOnlyBadge />
