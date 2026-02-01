@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Zálohujte své prostředky",
     "views.Wallet.BalancePane.backup.text": "Vytvořte si zálohu, abyste nikdy neztratili přístup ke svým bitcoinům.",
     "views.Wallet.BalancePane.backup.action": "Začít zálohování ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Lokální",
     "views.Wallet.Channels.remote": "Vzdálené",
     "views.Wallet.Channels.noChannels": "Žádné kanály",
