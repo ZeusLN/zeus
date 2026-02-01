@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "גבו את הכספים שלכם",
     "views.Wallet.BalancePane.backup.text": "צרו גיבוי כדי לא לאבד גישה לביטקוין שלכם.",
     "views.Wallet.BalancePane.backup.action": "תחילת גיבוי ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "מקומי",
     "views.Wallet.Channels.remote": "מרוחק",
     "views.Wallet.Channels.noChannels": "אין ערוצים",
