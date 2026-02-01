@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Copia de rezervă a fondurilor",
     "views.Wallet.BalancePane.backup.text": "Creați o copie de rezervă pentru a nu pierde niciodată accesul la bitcoin.",
     "views.Wallet.BalancePane.backup.action": "Începeți backup ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Local",
     "views.Wallet.Channels.remote": "La distanță",
     "views.Wallet.Channels.noChannels": "Fără Canale",
