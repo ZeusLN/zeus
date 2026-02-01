@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "بکاپ انجام دهید",
     "views.Wallet.BalancePane.backup.text": "برای جلوگیری از عدم خسارت بیتکوین شما، بکاپ ایجاد کنید",
     "views.Wallet.BalancePane.backup.action": "آغاز به بکاپ",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "لوکال",
     "views.Wallet.Channels.remote": "ریموت",
     "views.Wallet.Channels.noChannels": "کانالی نیست",
