@@ -66,27 +66,38 @@ export default class LightningNodeConnect {
 
     connect = async () => await this.lnc.connect();
     checkPerms = async () => {
-        this.permOpenChannel = await this.lnc.hasPerms(
-            'lnrpc.Lightning.OpenChannel'
-        );
-        this.permSendCoins = await this.lnc.hasPerms(
-            'lnrpc.Lightning.SendCoins'
-        );
-        this.permSendLN = await this.lnc.hasPerms(
-            'routerrpc.Router.SendPaymentV2'
-        );
-        this.permNewAddress = await this.lnc.hasPerms(
-            'lnrpc.Lightning.NewAddress'
-        );
-        this.permImportAccount = await this.lnc.hasPerms(
-            'walletrpc.WalletKit.ImportAccount'
-        );
-        this.permForwardingHistory = await this.lnc.hasPerms(
-            'lnrpc.Lightning.ForwardingHistory'
-        );
-        this.permSignMessage = await this.lnc.hasPerms(
-            'signrpc.Signer.SignMessage'
-        );
+        // ZEUS-3642: we are temporarily returning all perms
+        // as true until resolved
+        // https://github.com/ZeusLN/zeus/issues/3642
+        //
+        // this.permOpenChannel = await this.lnc.hasPerms(
+        //     'lnrpc.Lightning.OpenChannel'
+        // );
+        // this.permSendCoins = await this.lnc.hasPerms(
+        //     'lnrpc.Lightning.SendCoins'
+        // );
+        // this.permSendLN = await this.lnc.hasPerms(
+        //     'routerrpc.Router.SendPaymentV2'
+        // );
+        // this.permNewAddress = await this.lnc.hasPerms(
+        //     'lnrpc.Lightning.NewAddress'
+        // );
+        // this.permImportAccount = await this.lnc.hasPerms(
+        //     'walletrpc.WalletKit.ImportAccount'
+        // );
+        // this.permForwardingHistory = await this.lnc.hasPerms(
+        //     'lnrpc.Lightning.ForwardingHistory'
+        // );
+        // this.permSignMessage = await this.lnc.hasPerms(
+        //     'signrpc.Signer.SignMessage'
+        // );
+        this.permOpenChannel = true;
+        this.permSendCoins = true;
+        this.permSendLN = true;
+        this.permNewAddress = true;
+        this.permImportAccount = true;
+        this.permForwardingHistory = true;
+        this.permSignMessage = true;
     };
     isConnected = async () => await this.lnc.isConnected();
     disconnect = () => this.lnc && this.lnc.disconnect();
