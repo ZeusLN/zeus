@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "將你的資金備份",
     "views.Wallet.BalancePane.backup.text": "請作備份以避免失去你的比特幣。",
     "views.Wallet.BalancePane.backup.action": "開始備份 ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "本地端",
     "views.Wallet.Channels.remote": "遠端",
     "views.Wallet.Channels.noChannels": "尚無管道",
