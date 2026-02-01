@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "अपने फंड का बैकअप लें",
     "views.Wallet.BalancePane.backup.text": "अपने बिटकॉइन तक पहुंच कभी न खोने के लिए बैकअप बनाएं।",
     "views.Wallet.BalancePane.backup.action": "बैकअप शुरू करें ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "लोकल",
     "views.Wallet.Channels.remote": "रिमोट",
     "views.Wallet.Channels.noChannels": "कोई चैनल नहीं",
