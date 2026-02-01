@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "สำรองข้อมูลเงินของคุณ",
     "views.Wallet.BalancePane.backup.text": "โปรดสำรองข้อมูลเก็บไว้เพื่อที่จะเข้าถึง Bitcoin ของคุณได้เสมอ",
     "views.Wallet.BalancePane.backup.action": "เริ่มการสำรองข้อมูล ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "ภายใน",
     "views.Wallet.Channels.remote": "ระยะไกล",
     "views.Wallet.Channels.noChannels": "ไม่มีแชนแนล",
