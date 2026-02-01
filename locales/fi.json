@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Varmuuskopioi varasi",
     "views.Wallet.BalancePane.backup.text": "Luo varmuuskopio, jotta et koskaan menetä pääsyä bitcoiniisi.",
     "views.Wallet.BalancePane.backup.action": "Aloita varmuuskopiointi ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Paikallinen",
     "views.Wallet.Channels.remote": "Etäyhteys",
     "views.Wallet.Channels.noChannels": "Ei kanavia",

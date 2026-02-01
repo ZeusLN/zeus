@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Fanya nakala rudufu ya pesa zako",
     "views.Wallet.BalancePane.backup.text": "Tengeneza nakala rudufu ili usipoteze ufikiaji wa bitcoin yako kamwe.",
     "views.Wallet.BalancePane.backup.action": "Anza nakala rudufu ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Njia ya ndani",
     "views.Wallet.Channels.remote": "Njia ya mbali",
     "views.Wallet.Channels.noChannels": "Hakuna Njia",

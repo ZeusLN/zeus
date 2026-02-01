@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Sermayenizi yedekleyin",
     "views.Wallet.BalancePane.backup.text": "Bitcoin'inize erişimi asla kaybetmemek için bir yedek oluşturun.",
     "views.Wallet.BalancePane.backup.action": "Yedeklemeyi başlat ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Lokaldeki",
     "views.Wallet.Channels.remote": "Dışarıdaki",
     "views.Wallet.Channels.noChannels": "Kanal yok",

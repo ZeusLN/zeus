@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Сделать резервную копию кошелька",
     "views.Wallet.BalancePane.backup.text": "Создайте резервную копию, чтобы не потерять доступ к своим биткоинам.",
     "views.Wallet.BalancePane.backup.action": "Начать ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Локальный",
     "views.Wallet.Channels.remote": "Удаленный",
     "views.Wallet.Channels.noChannels": "Нет Каналов",

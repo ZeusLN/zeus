@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Eseguire il backup dei tuoi fondi",
     "views.Wallet.BalancePane.backup.text": "Crea un backup per non perdere mai l'accesso al tuo bitcoin.",
     "views.Wallet.BalancePane.backup.action": "Inizia Backup ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Locale",
     "views.Wallet.Channels.remote": "Remoto",
     "views.Wallet.Channels.noChannels": "Nessun Canale",

@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Copia de seguridad de sus fondos",
     "views.Wallet.BalancePane.backup.text": "Cree una copia de seguridad para que nunca perder el acceso a su bitcoin.",
     "views.Wallet.BalancePane.backup.action": "Iniciar copia de seguridad ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Local",
     "views.Wallet.Channels.remote": "Remoto",
     "views.Wallet.Channels.noChannels": "Sin Canales",

@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "자산 내역 백업",
     "views.Wallet.BalancePane.backup.text": "백업을 생성하여 내 비트코인에 대한 통제권을 보호하세요.",
     "views.Wallet.BalancePane.backup.action": "백업 시작하기 ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "로컬",
     "views.Wallet.Channels.remote": "원격",
     "views.Wallet.Channels.noChannels": "채널 없음",

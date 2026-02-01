@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Cadangkan dana Anda",
     "views.Wallet.BalancePane.backup.text": "Buat pencadangan agar Anda tidak akan kehilangan akses ke bitcoin Anda.",
     "views.Wallet.BalancePane.backup.action": "Mulai pencadangan ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Lokal",
     "views.Wallet.Channels.remote": "Jarak jauh",
     "views.Wallet.Channels.noChannels": "Tidak ada Saluran",

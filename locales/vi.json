@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Sao lưu nguồn vốn của bạn.",
     "views.Wallet.BalancePane.backup.text": "Tạo bản backup để không mất quyền truy cập bitcoin của bạn.",
     "views.Wallet.BalancePane.backup.action": "Bắt đầu sao lưu ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Cơ sở",
     "views.Wallet.Channels.remote": "Từ xa",
     "views.Wallet.Channels.noChannels": "Không có Kênh",
