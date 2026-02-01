@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Резервно копие на средствата ви",
     "views.Wallet.BalancePane.backup.text": "Създайте резервно копие, за да не изгубите достъп до вашите Bitcoin-и.",
     "views.Wallet.BalancePane.backup.action": "Започни създаване на резервно копие ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Локален",
     "views.Wallet.Channels.remote": "Отдалечен",
     "views.Wallet.Channels.noChannels": "Няма канали",
