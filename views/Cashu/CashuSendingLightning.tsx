@@ -442,25 +442,26 @@ export default class CashuSendingLightning extends React.Component<
 
         return (
             <Screen>
-                <Header
-                    rightComponent={
-                        !loading &&
-                        LnurlPayStore.isZaplocker &&
-                        (!success || !!paymentError) ? (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.setState({
-                                        showZaplockerWarning: true
-                                    })
-                                }
-                            >
-                                <Clock color={themeColor('bitcoin')} />
-                            </TouchableOpacity>
-                        ) : (
-                            <></>
-                        )
-                    }
-                />
+                {!loading && (
+                    <Header
+                        rightComponent={
+                            LnurlPayStore.isZaplocker &&
+                            (!success || !!paymentError) ? (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.setState({
+                                            showZaplockerWarning: true
+                                        })
+                                    }
+                                >
+                                    <Clock color={themeColor('bitcoin')} />
+                                </TouchableOpacity>
+                            ) : (
+                                <></>
+                            )
+                        }
+                    />
+                )}
                 {this.renderZaplockerWarningModal()}
                 {this.renderInfoModal()}
                 {loading && (
@@ -468,7 +469,8 @@ export default class CashuSendingLightning extends React.Component<
                         style={{
                             alignItems: 'center',
                             justifyContent: 'center',
-                            height: '100%'
+                            height: '100%',
+                            marginTop: 25
                         }}
                     >
                         <LightningLoadingPattern />
