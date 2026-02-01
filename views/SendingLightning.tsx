@@ -602,7 +602,8 @@ export default class SendingLightning extends React.Component<
                         style={{
                             alignItems: 'center',
                             justifyContent: 'center',
-                            height: '100%'
+                            height: '100%',
+                            marginTop: 25
                         }}
                     >
                         <LightningLoadingPattern />
