@@ -568,6 +568,11 @@ export default class BalancePane extends React.PureComponent<
                         { backgroundColor: themeColor('error') }
                     ]}
                 >
+                    <WalletHeader
+                        navigation={navigation}
+                        SettingsStore={SettingsStore}
+                        loading={loading}
+                    />
                     <ImageBackground
                         source={ErrorZeus}
                         resizeMode="cover"
@@ -678,8 +683,6 @@ const styles = StyleSheet.create({
         marginBottom: 30
     },
     errorPane: {
-        paddingTop: 20,
-        paddingLeft: 10,
         flex: 1
     },
     errorBackground: {
@@ -689,7 +692,6 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         color: '#fff',
         fontSize: 20,
-        marginTop: 20,
-        marginBottom: 25
+        margin: 20
     }
 });

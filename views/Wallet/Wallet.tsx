@@ -1076,15 +1076,29 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     color: '#fff'
                                 }}
                                 title={localeString(
-                                    'views.Wallet.MainPane.goToSettings'
+                                    'views.Wallet.BalancePane.goToWalletConfig'
                                 )}
                                 buttonStyle={{
                                     backgroundColor: 'gray',
                                     marginBottom: 20
                                 }}
-                                onPress={() =>
-                                    protectedNavigation(navigation, 'Menu')
-                                }
+                                onPress={() => {
+                                    const { settings } = SettingsStore;
+                                    const selectedNode =
+                                        settings.selectedNode || 0;
+                                    const node = settings.nodes?.[selectedNode];
+                                    protectedNavigation(
+                                        navigation,
+                                        'WalletConfiguration',
+                                        false,
+                                        {
+                                            node,
+                                            index: selectedNode,
+                                            active: true,
+                                            newEntry: false
+                                        }
+                                    );
+                                }}
                             />
                             <Button
                                 title={localeString('views.Wallet.restart')}
