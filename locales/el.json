@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "Κρατήστε αντίγραφο ασφαλείας των κεφαλαίων σας",
     "views.Wallet.BalancePane.backup.text": "Δημιουργήστε ένα αντίγραφο ασφαλείας για να μην χάσετε ποτέ την πρόσβαση στα bitcoin σας.",
     "views.Wallet.BalancePane.backup.action": "Έναρξη αντιγράφου ασφαλείας ->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "Τοπικό",
     "views.Wallet.Channels.remote": "Απομακρυσμένο",
     "views.Wallet.Channels.noChannels": "Χωρίς κανάλια",
