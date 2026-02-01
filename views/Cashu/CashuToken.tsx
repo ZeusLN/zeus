@@ -322,7 +322,7 @@ export default class CashuTokenView extends React.Component<
                     }}
                     rightComponent={
                         loading ? (
-                            <View style={{ marginRight: 10 }}>
+                            <View>
                                 <LoadingIndicator size={30} />
                             </View>
                         ) : (
