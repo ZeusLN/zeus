@@ -422,6 +422,7 @@
     "views.Wallet.BalancePane.backup.title": "备份您的资金",
     "views.Wallet.BalancePane.backup.text": "创建备份以避免丢失您的比特币访问权限。",
     "views.Wallet.BalancePane.backup.action": "开始备份->",
+    "views.Wallet.BalancePane.goToWalletConfig": "Go to Wallet config",
     "views.Wallet.Channels.local": "本地",
     "views.Wallet.Channels.remote": "远程",
     "views.Wallet.Channels.noChannels": "暂无通道",
