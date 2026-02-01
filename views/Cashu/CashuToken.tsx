@@ -102,7 +102,7 @@ export default class CashuTokenView extends React.Component<
                 decoded
             });
 
-            if (!cashuWallets[mint].wallet) {
+            if (!cashuWallets[mint]?.wallet) {
                 await initializeWallet(mint, true);
             }
             // Set up a periodic check every 5 seconds
@@ -208,6 +208,7 @@ export default class CashuTokenView extends React.Component<
 
         const haveMint = mintUrls.includes(mint);
         const hasOpenChannels = ChannelsStore?.channels?.length > 0;
+        const enableCashu = settingsStore.settings.ecash?.enableCashu;
 
         const isSingleFrameSelected = !isTokenTooLarge && selectedIndex === 0;
         const isBcurSelected =
@@ -535,10 +536,36 @@ export default class CashuTokenView extends React.Component<
                     <View style={{ bottom: 15 }}>
                         {BackendUtils.supportsCashuWallet() && (
                             <>
+                                {!haveMint && (
+                                    <Button
+                                        title={localeString(
+                                            enableCashu
+                                                ? 'views.Cashu.AddMint.title'
+                                                : 'views.Cashu.AddMint.enableAndAdd'
+                                        )}
+                                        onPress={async () => {
+                                            if (!enableCashu) {
+                                                await settingsStore.updateSettings(
+                                                    {
+                                                        ecash: {
+                                                            ...(settingsStore
+                                                                .settings
+                                                                .ecash || {}),
+                                                            enableCashu: true
+                                                        }
+                                                    }
+                                                );
+                                                await CashuStore.initializeWallets();
+                                            }
+                                            await addMint(mint);
+                                        }}
+                                        containerStyle={{ marginTop: 15 }}
+                                        disabled={!isSupported || loading}
+                                        tertiary
+                                    />
+                                )}
                                 <Button
-                                    title={localeString(
-                                        'views.OpenChannel.import'
-                                    )}
+                                    title={localeString('general.receive')}
                                     onPress={async () => {
                                         this.setState({
                                             errorMessage: ''
@@ -565,17 +592,6 @@ export default class CashuTokenView extends React.Component<
                                         success
                                     }
                                 />
-                                {!haveMint && (
-                                    <Button
-                                        title={localeString(
-                                            'views.Cashu.AddMint.title'
-                                        )}
-                                        onPress={() => addMint(mint)}
-                                        containerStyle={{ marginTop: 15 }}
-                                        disabled={!isSupported || loading}
-                                        tertiary
-                                    />
-                                )}
                             </>
                         )}
                         <Button
