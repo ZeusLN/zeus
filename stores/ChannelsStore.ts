@@ -14,6 +14,7 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 import CloseChannelRequest from '../models/CloseChannelRequest';
 
 import SettingsStore from './SettingsStore';
+import NotesStore from './NotesStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -115,9 +116,11 @@ export default class ChannelsStore {
     @observable public haveAnnouncedChannels = false;
 
     settingsStore: SettingsStore;
+    notesStore: NotesStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, notesStore: NotesStore) {
         this.settingsStore = settingsStore;
+        this.notesStore = notesStore;
 
         reaction(
             () => this.channelRequest,
@@ -1184,6 +1187,20 @@ export default class ChannelsStore {
                         this.channelRequest = null;
                         this.channelSuccess = true;
                         this.connectingToPeer = false;
+
+                        // Auto-save note for opened channel
+                        if (this.funding_txid_str) {
+                            const noteKey = `note-${this.funding_txid_str}`;
+                            const noteValue = localeString(
+                                'views.OpenChannel.openedChannelNote'
+                            );
+                            console.log(
+                                'Auto-saving channel note:',
+                                noteKey,
+                                noteValue
+                            );
+                            this.notesStore.storeNoteKeys(noteKey, noteValue);
+                        }
                     })
                 )
                 .catch((error: Error) => {

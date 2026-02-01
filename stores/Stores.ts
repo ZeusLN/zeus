@@ -31,8 +31,9 @@ import NostrWalletConnectStore from './NostrWalletConnectStore';
 export const settingsStore = new SettingsStore();
 export const modalStore = new ModalStore();
 export const offersStore = new OffersStore();
+export const notesStore = new NotesStore();
 export const fiatStore = new FiatStore(settingsStore);
-export const channelsStore = new ChannelsStore(settingsStore);
+export const channelsStore = new ChannelsStore(settingsStore, notesStore);
 export const nodeInfoStore = new NodeInfoStore(channelsStore, settingsStore);
 export const alertStore = new AlertStore(settingsStore, nodeInfoStore);
 export const lspStore = new LSPStore(
@@ -64,7 +65,6 @@ export const feeStore = new FeeStore(settingsStore, nodeInfoStore);
 export const syncStore = new SyncStore(settingsStore);
 export const utxosStore = new UTXOsStore(settingsStore, syncStore);
 export const messageSignStore = new MessageSignStore();
-export const notesStore = new NotesStore();
 export const contactStore = new ContactStore();
 export const cashuStore = new CashuStore(
     settingsStore,
