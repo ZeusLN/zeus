@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Clipboard,
     FlatList,
     Image,
     StyleSheet,
@@ -8,6 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
