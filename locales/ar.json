@@ -1904,7 +1904,7 @@
     "views.Cashu.CashuPayment.failedPayment": "Failed Cashu Payment",
     "views.Cashu.CashuToken.proofCount": "Number of proofs",
     "views.Cashu.CashuToken.notSupported": "This token has a unit that is not supported",
-    "views.Cashu.CashuToken.success": "Successfully imported token",
+    "views.Cashu.CashuToken.success": "Successfully received token",
     "views.Cashu.CashuToken.meltTokenSelfCustody": "Melt token to self-custody",
     "views.Cashu.CashuToken.tokenSweep": "Cashu token sweep",
     "views.Cashu.CashuToken.feeAdjusted": "Fee adjusted",
