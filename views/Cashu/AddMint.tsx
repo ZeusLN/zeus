@@ -83,6 +83,12 @@ export default class AddMint extends React.Component<
         };
     }
 
+    componentWillUnmount() {
+        const { CashuStore } = this.props;
+        CashuStore.error_msg = undefined;
+        CashuStore.error = false;
+    }
+
     getMintInfo = async () => {
         const { mintUrl } = this.state;
         if (!mintUrl.trim()) {
