@@ -4,12 +4,11 @@ import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 const bitcoin = require('bitcoinjs-lib');
 
+import AnimatedQRDisplay from '../components/AnimatedQRDisplay';
 import Button from '../components/Button';
-import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -17,11 +16,7 @@ import Screen from '../components/Screen';
 import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
-import { splitQRs, DEFAULT_SPLIT_OPTIONS } from '../utils/BbqrUtils';
-import {
-    getQRAnimationInterval,
-    QRAnimationSpeed
-} from '../utils/QRAnimationUtils';
+import { getButtonGroupStyles } from '../utils/buttonGroupStyles';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -45,34 +40,21 @@ interface PSBTDecoded {
 }
 interface PSBTState {
     infoIndex: number;
-    selectedIndex: number;
     fundedPsbt: string;
-    frameIndex: number;
-    bbqrParts: Array<string>;
-    bcurEncoder: any;
-    bcurPart: string;
     psbtDecoded?: PSBTDecoded;
-    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('ChannelsStore', 'TransactionsStore')
 @observer
 export default class PSBT extends React.Component<PSBTProps, PSBTState> {
-    private qrAnimationInterval?: any;
     state: PSBTState = {
         infoIndex: 0,
-        selectedIndex: 0,
         fundedPsbt: this.props.route.params?.psbt || '',
-        frameIndex: 0,
-        bbqrParts: [],
-        bcurEncoder: undefined,
-        bcurPart: '',
-        psbtDecoded: undefined,
-        qrAnimationSpeed: 'medium'
+        psbtDecoded: undefined
     };
 
     componentDidMount(): void {
-        this.generateInfo();
+        this.decodePsbt();
     }
 
     componentDidUpdate(prevProps: any): void {
@@ -80,99 +62,27 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         const newPsbt = this.props.route.params?.psbt;
 
         if (newPsbt !== oldPsbt) {
-            this.setState(
-                {
-                    fundedPsbt: newPsbt
-                },
-                () => {
-                    this.generateInfo();
-                }
-            );
-        }
-    }
-
-    componentWillUnmount() {
-        // Clean up animation interval when component unmounts
-        if (this.qrAnimationInterval) {
-            clearInterval(this.qrAnimationInterval);
-        }
-    }
-
-    generateInfo = () => {
-        const { fundedPsbt } = this.state;
-
-        // PSBT data
-        const psbtDecoded = bitcoin.Psbt.fromBase64(fundedPsbt);
-
-        // BBQr
-
-        const input = Base64Utils.base64ToBytes(fundedPsbt);
-
-        const fileType = 'P'; // 'P' is for PSBT
-
-        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
-
-        // bc-ur
-
-        const messageBuffer = Buffer.from(fundedPsbt, 'base64');
-
-        // Then, create the UREncoder object
-
-        // The maximum amount of fragments to be generated in total
-        // For NGRAVE ZERO support please keep to a maximum fragment size of 200
-        const maxFragmentLength = 200;
-
-        // The index of the fragment that will be the first to be generated
-        // If it's more than the "maxFragmentLength", then all the subsequent fragments will only be
-        // fountain parts
-        const firstSeqNum = 0;
-
-        // Create the encoder object
-        const cryptoPSBT = new CryptoPSBT(messageBuffer);
-        const encoder = cryptoPSBT.toUREncoder(maxFragmentLength, firstSeqNum);
-        //
-
-        this.setState({
-            bcurEncoder: encoder,
-            bbqrParts: splitResult.parts,
-            psbtDecoded
-        });
-
-        // Clear any existing interval
-        if (this.qrAnimationInterval) {
-            clearInterval(this.qrAnimationInterval);
-        }
-
-        const length = splitResult.parts.length;
-        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
-
-        this.qrAnimationInterval = setInterval(() => {
-            this.setState({
-                frameIndex:
-                    this.state.frameIndex === length - 1
-                        ? 0
-                        : this.state.frameIndex + 1,
-                bcurPart:
-                    this.state.bcurEncoder?.nextPart().toUpperCase() ||
-                    undefined
+            this.setState({ fundedPsbt: newPsbt }, () => {
+                this.decodePsbt();
             });
-        }, interval);
+        }
+    }
+
+    decodePsbt = () => {
+        const { fundedPsbt } = this.state;
+        try {
+            const psbtDecoded = bitcoin.Psbt.fromBase64(fundedPsbt);
+            this.setState({ psbtDecoded });
+        } catch (e) {
+            this.setState({ psbtDecoded: undefined });
+        }
     };
 
     render() {
         const { ChannelsStore, TransactionsStore, navigation } = this.props;
         const { pending_chan_ids } = ChannelsStore;
         const { loading } = TransactionsStore;
-        const {
-            infoIndex,
-            selectedIndex,
-            frameIndex,
-            bbqrParts,
-            fundedPsbt,
-            bcurPart,
-            psbtDecoded,
-            qrAnimationSpeed
-        } = this.state;
+        const { infoIndex, fundedPsbt, psbtDecoded } = this.state;
 
         const qrButton = () => (
             <Text
@@ -206,51 +116,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             { element: infoButton }
         ];
 
-        const singleButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 0
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                {localeString('views.PSBT.singleFrame')}
-            </Text>
-        );
-        const bcurButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 1
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                BC-ur
-            </Text>
-        );
-        const bbqrButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 2
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                BBQr
-            </Text>
-        );
-
-        const qrButtons: any = [
-            { element: singleButton },
-            { element: bcurButton },
-            { element: bbqrButton }
-        ];
+        const groupStyles = getButtonGroupStyles();
 
         return (
             <Screen>
@@ -324,87 +190,20 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                 }}
                                 selectedIndex={infoIndex}
                                 buttons={infoButtons}
-                                selectedButtonStyle={{
-                                    backgroundColor: themeColor('highlight'),
-                                    borderRadius: 12
-                                }}
-                                containerStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 12,
-                                    borderColor: themeColor('secondary'),
-                                    marginBottom: 10
-                                }}
-                                innerBorderStyle={{
-                                    color: themeColor('secondary')
-                                }}
+                                selectedButtonStyle={
+                                    groupStyles.selectedButtonStyle
+                                }
+                                containerStyle={groupStyles.containerStyle}
+                                innerBorderStyle={groupStyles.innerBorderStyle}
                             />
                             {infoIndex === 0 && (
                                 <>
-                                    <ButtonGroup
-                                        onPress={(selectedIndex: number) => {
-                                            this.setState({ selectedIndex });
-                                        }}
-                                        selectedIndex={selectedIndex}
-                                        buttons={qrButtons}
-                                        selectedButtonStyle={{
-                                            backgroundColor:
-                                                themeColor('highlight'),
-                                            borderRadius: 12
-                                        }}
-                                        containerStyle={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 12,
-                                            borderColor:
-                                                themeColor('secondary'),
-                                            marginBottom: 10
-                                        }}
-                                        innerBorderStyle={{
-                                            color: themeColor('secondary')
-                                        }}
+                                    <AnimatedQRDisplay
+                                        data={fundedPsbt}
+                                        encoderType="psbt"
+                                        fileType="P"
+                                        copyValue={fundedPsbt}
                                     />
-                                    <View
-                                        style={{
-                                            margin: 10
-                                        }}
-                                    >
-                                        <CollapsedQR
-                                            value={
-                                                selectedIndex === 0
-                                                    ? fundedPsbt
-                                                    : selectedIndex === 2
-                                                    ? bbqrParts[frameIndex]
-                                                    : bcurPart
-                                            }
-                                            showSpeed={
-                                                selectedIndex === 1 ||
-                                                (selectedIndex === 2 &&
-                                                    bbqrParts.length > 1)
-                                            }
-                                            showShare={
-                                                selectedIndex === 0 ||
-                                                (selectedIndex === 2 &&
-                                                    bbqrParts.length === 1)
-                                            }
-                                            copyValue={fundedPsbt}
-                                            truncateLongValue
-                                            expanded
-                                            iconOnly={selectedIndex !== 0}
-                                            qrAnimationSpeed={qrAnimationSpeed}
-                                            onQRAnimationSpeedChange={(
-                                                speed
-                                            ) => {
-                                                this.setState(
-                                                    {
-                                                        qrAnimationSpeed: speed
-                                                    },
-                                                    () => {
-                                                        this.generateInfo();
-                                                    }
-                                                );
-                                            }}
-                                        />
-                                    </View>
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
