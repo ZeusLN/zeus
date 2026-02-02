@@ -5,16 +5,18 @@ import {
     StyleSheet,
     Text,
     TouchableOpacity,
+    Vibration,
     View
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { ListItem } from '@rneui/themed';
+import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { CashuMint } from '@cashu/cashu-ts';
 
 import Button from '../../components/Button';
+import CopiedToast from '../../components/CopiedToast';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import ModalBox from '../../components/ModalBox';
@@ -54,6 +56,7 @@ interface AddMintState {
     error: boolean;
     error_msg: string;
     expandedReviews: Set<number>;
+    showCopiedToast: boolean;
 }
 
 const REVIEW_CONTENT_MAX_LENGTH = 150;
@@ -65,6 +68,8 @@ export default class AddMint extends React.Component<
     AddMintState
 > {
     listener: any;
+    private toastTimeout: ReturnType<typeof setTimeout> | null = null;
+
     constructor(props: any) {
         super(props);
         this.state = {
@@ -79,7 +84,8 @@ export default class AddMint extends React.Component<
             loading: false,
             error: false,
             error_msg: '',
-            expandedReviews: new Set()
+            expandedReviews: new Set(),
+            showCopiedToast: false
         };
     }
 
@@ -87,6 +93,7 @@ export default class AddMint extends React.Component<
         const { CashuStore } = this.props;
         CashuStore.error_msg = undefined;
         CashuStore.error = false;
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
     }
 
     getMintInfo = async () => {
@@ -475,6 +482,13 @@ export default class AddMint extends React.Component<
 
     copyToClipboard = (text: string) => {
         Clipboard.setString(text);
+        Vibration.vibrate(50);
+        this.setState({ showCopiedToast: true });
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        this.toastTimeout = setTimeout(
+            () => this.setState({ showCopiedToast: false }),
+            2000
+        );
     };
 
     toggleReviewExpanded = (index: number) => {
@@ -575,26 +589,26 @@ export default class AddMint extends React.Component<
                             ) : null}
                         </View>
                         {item.rating && this.renderStarRating(item.rating)}
-                        <TouchableOpacity
-                            onPress={() => this.copyToClipboard(npub)}
-                        >
+                        <View style={styles.npubRow}>
                             <Text
                                 style={[
                                     styles.reviewerNpub,
                                     { color: themeColor('secondaryText') }
                                 ]}
                             >
-                                {truncatedNpub}{' '}
-                                <Text
-                                    style={[
-                                        styles.copyHint,
-                                        { color: themeColor('highlight') }
-                                    ]}
-                                >
-                                    {localeString('general.tapToCopy')}
-                                </Text>
+                                {truncatedNpub}
                             </Text>
-                        </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => this.copyToClipboard(npub)}
+                                style={styles.copyIconButton}
+                            >
+                                <Icon
+                                    name="content-copy"
+                                    size={14}
+                                    color={themeColor('secondaryText')}
+                                />
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
                 {this.renderReviewContent(item.content, index)}
@@ -1060,6 +1074,7 @@ export default class AddMint extends React.Component<
                 </View>
                 {this.renderDiscoverModal()}
                 {this.renderReviewsModal()}
+                <CopiedToast visible={this.state.showCopiedToast} />
             </Screen>
         );
     }
@@ -1274,9 +1289,13 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         fontSize: 11
     },
-    copyHint: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 10
+    npubRow: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    copyIconButton: {
+        padding: 4,
+        marginLeft: 4
     },
     reviewContent: {
         fontFamily: 'PPNeueMontreal-Book',

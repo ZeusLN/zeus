@@ -4,20 +4,17 @@ import {
     Text,
     TouchableOpacity,
     Vibration,
-    View,
-    Dimensions,
-    Modal
+    View
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import { Icon } from '@rneui/themed';
 
 import { Body } from './text/Body';
+import CopiedToast from './CopiedToast';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
-import { localeString } from '../utils/LocaleUtils';
 
 import ModalStore from '../stores/ModalStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -216,40 +213,7 @@ export default class KeyValue extends React.Component<
                 <View style={{ paddingTop: 10, paddingBottom: 10 }}>
                     <KeyValueRow />
                 </View>
-                <Modal
-                    transparent
-                    visible={this.state.showCopiedToast}
-                    animationType="fade"
-                    onRequestClose={() => {}}
-                >
-                    <View style={styles.modalContainer}>
-                        <View
-                            style={[
-                                styles.toast,
-                                {
-                                    backgroundColor: themeColor('text')
-                                }
-                            ]}
-                        >
-                            <Icon
-                                name="check"
-                                size={18}
-                                color={themeColor('background')}
-                                style={{ marginRight: 6 }}
-                            />
-                            <Text
-                                style={[
-                                    styles.toastText,
-                                    {
-                                        color: themeColor('background')
-                                    }
-                                ]}
-                            >
-                                {localeString('components.CopyButton.copied')}
-                            </Text>
-                        </View>
-                    </View>
-                </Modal>
+                <CopiedToast visible={this.state.showCopiedToast} />
             </>
         );
     }
@@ -275,23 +239,5 @@ const styles = StyleSheet.create({
     },
     rtlValue: {
         paddingRight: 10
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        paddingBottom: Math.max(Dimensions.get('window').height * 0.15, 160)
-    },
-    toast: {
-        borderRadius: 8,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        flexDirection: 'row',
-        alignItems: 'center',
-        elevation: 5
-    },
-    toastText: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 14
     }
 });
