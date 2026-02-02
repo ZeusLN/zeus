@@ -1919,6 +1919,7 @@
     "views.Cashu.Mint.restoration": "Recovering your Cashu proofs and balances",
     "views.Cashu.Mint.restorationKeyset": "Restoring keyset",
     "views.Cashu.Mint.checkForExistingBalances": "Check for existing balances",
+    "views.Cashu.Mint.reviewMint": "Review mint",
     "views.Cashu.Mint.submitReview": "Submit review",
     "views.Cashu.Mint.ratingLabel": "Rating",
     "views.Cashu.Mint.reviewTextLabel": "Review (optional)",

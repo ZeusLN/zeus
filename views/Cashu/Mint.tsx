@@ -498,14 +498,10 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                             <View style={styles.cancelButton}>
                                                 <Button
                                                     title={localeString(
-                                                        'general.back'
+                                                        'general.cancel'
                                                     )}
-                                                    onPress={() =>
-                                                        this.setState({
-                                                            reviewStep:
-                                                                'rating',
-                                                            submitError: ''
-                                                        })
+                                                    onPress={
+                                                        this.closeReviewModal
                                                     }
                                                     secondary
                                                 />
@@ -1009,17 +1005,6 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 >
                                     <Button
                                         title={localeString(
-                                            'views.Cashu.Mint.submitReview'
-                                        )}
-                                        secondary
-                                        onPress={this.openReviewModal}
-                                        buttonStyle={{ height: 40 }}
-                                        disabled={loading}
-                                    />
-                                </View>
-                                <View style={{ width: '100%' }}>
-                                    <Button
-                                        title={localeString(
                                             'views.Cashu.AddMint.title'
                                         )}
                                         tertiary
@@ -1030,6 +1015,17 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                             );
                                             navigation.popTo('Mints');
                                         }}
+                                        buttonStyle={{ height: 40 }}
+                                        disabled={loading}
+                                    />
+                                </View>
+                                <View style={{ width: '100%' }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Cashu.Mint.reviewMint'
+                                        )}
+                                        secondary
+                                        onPress={this.openReviewModal}
                                         buttonStyle={{ height: 40 }}
                                         disabled={loading}
                                     />
@@ -1075,7 +1071,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     >
                                         <Button
                                             title={localeString(
-                                                'views.Cashu.Mint.submitReview'
+                                                'views.Cashu.Mint.reviewMint'
                                             )}
                                             tertiary
                                             onPress={this.openReviewModal}
