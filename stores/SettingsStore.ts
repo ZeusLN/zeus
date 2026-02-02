@@ -423,7 +423,9 @@ export const LOCALE_KEYS = [
     { key: 'ko', value: '한국어' },
     { key: 'sw', value: 'Kiswahili' },
     { key: 'hi_IN', value: 'हिन्दी' },
-    { key: 'zh_TW', value: '台灣華語' }
+    { key: 'zh_TW', value: '台灣華語' },
+    { key: 'bg', value: 'Български' },
+    { key: 'id', value: 'Bahasa Indonesia' }
 ];
 
 // this mapping is only for migration and does not need to be updated when new languages are added
