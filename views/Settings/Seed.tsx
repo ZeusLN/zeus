@@ -23,6 +23,7 @@ import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -230,7 +231,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { understood, showModal } = this.state;
+        const { understood, showModal, isChannelExporting } = this.state;
         const seedPhrase = route.params?.seedPhrase ?? SettingsStore.seedPhrase;
         const isRefundRescueKey = !!route.params?.seedPhrase;
 
@@ -314,6 +315,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     rightComponent={
                         understood && seedPhrase ? (
                             <Row>
+                                {isChannelExporting ? (
+                                    <LoadingIndicator size={28} />
+                                ) : (
+                                    <></>
+                                )}
                                 {isRefundRescueKey ? (
                                     <DownloadRescueKey
                                         seedPhrase={seedPhrase}

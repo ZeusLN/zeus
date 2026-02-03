@@ -8,12 +8,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import {
-    pick,
-    types,
-    isErrorWithCode,
-    errorCodes
-} from '@react-native-documents/picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import RNRestart from 'react-native-restart';
@@ -38,10 +32,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    exportChannelDb,
-    restoreChannels
-} from '../../utils/ChannelMigrationUtils';
+import { exportChannelDb } from '../../utils/ChannelMigrationUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -151,40 +142,6 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                 }
             ]
         );
-    };
-
-    importWallet = async () => {
-        try {
-            const [result] = await pick({
-                type: [types.allFiles],
-                mode: 'import'
-            });
-
-            const sourceUri = result.uri;
-            if (!sourceUri) throw new Error('No file selected');
-
-            const { NodeInfoStore } = this.props;
-            const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
-            const lndDir = () => this.props.SettingsStore.lndDir || 'lnd';
-
-            await restoreChannels(
-                sourceUri,
-                result.name ?? 'channel.sqlite',
-                lndDir(),
-                isTestnet,
-                (loading) => this.setState({ isLoading: loading })
-            );
-        } catch (error) {
-            if (
-                isErrorWithCode(error) &&
-                error.code === errorCodes.OPERATION_CANCELED
-            ) {
-            } else {
-                console.error(error);
-                Alert.alert(localeString('general.error'));
-            }
-            this.setState({ isLoading: false });
-        }
     };
 
     render() {
@@ -734,44 +691,6 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         </TouchableOpacity>
                     </View>
-
-                    {true && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => this.importWallet()}
-                            >
-                                <View style={styles.icon}>
-                                    <Feather
-                                        name="upload"
-                                        size={24}
-                                        color={themeColor('text')}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Tools.migration.import'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
 
                     {BackendUtils.supportsWithdrawalRequests() && (
                         <View
