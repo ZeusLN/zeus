@@ -364,6 +364,37 @@ export default class LightningNodeConnect {
 
         return this.lnc.lnd.lightning.closeChannel(params);
     };
+    abandonChannel = async (
+        urlParams?: Array<string | boolean | undefined>
+    ) => {
+        const fundingTxidStr =
+            urlParams && typeof urlParams[0] === 'string'
+                ? urlParams[0]
+                : undefined;
+        const outputIndex =
+            urlParams && typeof urlParams[1] === 'string'
+                ? Number(urlParams[1])
+                : 0;
+
+        const params: any = {
+            channelPoint: {
+                fundingTxidStr,
+                fundingTxidBytes: undefined,
+                outputIndex
+            }
+        };
+
+        // Only include boolean parameters if they are explicitly set (not undefined)
+        if (urlParams && urlParams[2]) {
+            params.pendingFundingShimOnly = Boolean(urlParams[2]);
+        }
+
+        if (urlParams && urlParams[3]) {
+            params.iKnowWhatIAmDoing = Boolean(urlParams[3]);
+        }
+
+        return this.lnc.lnd.lightning.abandonChannel(params);
+    };
     getNodeInfo = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
             .getNodeInfo({ pub_key: urlParams && urlParams[0] })

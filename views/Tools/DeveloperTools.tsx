@@ -14,6 +14,7 @@ import MaterialIcons from '@react-native-vector-icons/material-icons';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import CopyButton from '../../components/CopyButton';
+import Switch from '../../components/Switch';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -33,13 +34,19 @@ interface DeveloperToolsState {
     response: string | null;
     error: string | null;
     showScrollTop: boolean;
+    showScrollBottom: boolean;
+    contentHeight: number;
+    scrollViewHeight: number;
 }
 
 interface CategoryProps {
     title: string;
     commands: DeveloperCommand[];
     selectedCommand: string | null;
-    onCommand: (command: string) => Promise<void>;
+    onCommand: (
+        command: string,
+        param?: string | Array<string | boolean | undefined>
+    ) => Promise<void>;
     expanded: boolean;
     onToggle: () => void;
     implementation: Implementations;
@@ -47,7 +54,10 @@ interface CategoryProps {
 
 interface CommandProps {
     command: string;
-    onTap: (command: string, param?: string) => Promise<void>;
+    onTap: (
+        command: string,
+        param?: string | Array<string | boolean | undefined>
+    ) => Promise<void>;
     selected: boolean;
     onToggle?: () => void;
     visible?: boolean;
@@ -58,6 +68,8 @@ interface CommandState {
     selectedSubItemIndex?: number;
     loading: boolean;
     expanded: boolean;
+    pendingFundingShimOnly?: boolean;
+    iKnowWhatIAmDoing?: boolean;
 }
 
 interface ResponseContainerProps {
@@ -229,6 +241,14 @@ const categories: Array<{
             {
                 name: 'getForwardingHistory',
                 compatibleImplementations: ['lnd', 'lightning-node-connect']
+            },
+            {
+                name: 'abandonChannel',
+                compatibleImplementations: [
+                    'lnd',
+                    'embedded-lnd',
+                    'lightning-node-connect'
+                ]
             }
         ]
     }
@@ -268,11 +288,13 @@ const ResponseContainer = ({
 );
 
 class Command extends React.Component<CommandProps, CommandState> {
-    private commandsWithSubItems = ['getChannelInfo'];
+    private commandsWithSubItems = ['getChannelInfo', 'abandonChannel'];
 
     state: CommandState = {
         loading: false,
-        expanded: false
+        expanded: false,
+        pendingFundingShimOnly: false,
+        iKnowWhatIAmDoing: false
     };
 
     private loadSubItems = async () => {
@@ -281,10 +303,24 @@ class Command extends React.Component<CommandProps, CommandState> {
             try {
                 const response = await BackendUtils.call('getChannels');
                 const channels = response.channels || [];
-                const subItems = channels.map((channel: any) => ({
-                    label: `Channel ${channel.chan_id} (${channel.remote_pubkey})`,
-                    commandParameters: [channel.chan_id]
-                }));
+                const subItems = channels.map((channel: any) => {
+                    if (this.props.command === 'abandonChannel') {
+                        // Parse channel_point (format: "txid:index") for abandonChannel
+                        const channelPoint = channel.channel_point || '';
+                        const [fundingTxId, outputIndex] =
+                            channelPoint.split(':');
+                        return {
+                            label: `Channel ${channel.chan_id} (${channel.remote_pubkey})`,
+                            commandParameters: [fundingTxId, outputIndex || '0']
+                        };
+                    } else {
+                        // Use chan_id for getChannelInfo
+                        return {
+                            label: `Channel ${channel.chan_id} (${channel.remote_pubkey})`,
+                            commandParameters: [channel.chan_id]
+                        };
+                    }
+                });
                 this.setState({ subItems, loading: false });
             } catch (error) {
                 console.error('Error loading channels:', error);
@@ -310,7 +346,23 @@ class Command extends React.Component<CommandProps, CommandState> {
         selectedSubItemIndex: number
     ): void {
         this.setState({ selectedSubItemIndex });
-        this.props.onTap(command, commandParameters);
+        // For abandonChannel, include boolean parameters only if explicitly set to true
+        if (command === 'abandonChannel') {
+            const params: Array<string | boolean | undefined> = [
+                ...commandParameters
+            ];
+            // Only include boolean params if they are explicitly true
+            // Pass undefined if false so backends can check for !== undefined
+            params.push(
+                this.state.pendingFundingShimOnly === true ? true : undefined
+            );
+            params.push(
+                this.state.iKnowWhatIAmDoing === true ? true : undefined
+            );
+            this.props.onTap(command, params);
+        } else {
+            this.props.onTap(command, commandParameters);
+        }
     }
 
     render() {
@@ -341,6 +393,64 @@ class Command extends React.Component<CommandProps, CommandState> {
                     <View
                         style={[{ backgroundColor: themeColor('secondary') }]}
                     >
+                        {command === 'abandonChannel' && (
+                            <View
+                                style={[
+                                    styles.booleanParamsContainer,
+                                    {
+                                        backgroundColor:
+                                            themeColor('background')
+                                    }
+                                ]}
+                            >
+                                <View style={styles.booleanParamRow}>
+                                    <Text
+                                        style={[
+                                            styles.booleanParamLabel,
+                                            {
+                                                color: themeColor('text')
+                                            }
+                                        ]}
+                                    >
+                                        pending_funding_shim_only
+                                    </Text>
+                                    <Switch
+                                        value={
+                                            this.state.pendingFundingShimOnly ||
+                                            false
+                                        }
+                                        onValueChange={(value: boolean) =>
+                                            this.setState({
+                                                pendingFundingShimOnly: value
+                                            })
+                                        }
+                                    />
+                                </View>
+                                <View style={styles.booleanParamRow}>
+                                    <Text
+                                        style={[
+                                            styles.booleanParamLabel,
+                                            {
+                                                color: themeColor('text')
+                                            }
+                                        ]}
+                                    >
+                                        i_know_what_i_am_doing
+                                    </Text>
+                                    <Switch
+                                        value={
+                                            this.state.iKnowWhatIAmDoing ||
+                                            false
+                                        }
+                                        onValueChange={(value: boolean) =>
+                                            this.setState({
+                                                iKnowWhatIAmDoing: value
+                                            })
+                                        }
+                                    />
+                                </View>
+                            </View>
+                        )}
                         {loading ? (
                             <ActivityIndicator color={themeColor('text')} />
                         ) : subItems!.length === 0 ? (
@@ -457,19 +567,42 @@ export default class DeveloperTools extends React.Component<
         loading: false,
         response: null,
         error: null,
-        showScrollTop: false
+        showScrollTop: false,
+        showScrollBottom: false,
+        contentHeight: 0,
+        scrollViewHeight: 0
     };
 
     handleScroll = (event: any) => {
         const currentScrollPosition = event.nativeEvent.contentOffset.y;
-        this.setState({ showScrollTop: currentScrollPosition > 100 });
+        const contentHeight = event.nativeEvent.contentSize.height;
+        const scrollViewHeight = event.nativeEvent.layoutMeasurement.height;
+        const scrollableDistance = contentHeight - scrollViewHeight;
+        const distanceFromBottom = scrollableDistance - currentScrollPosition;
+
+        this.setState({
+            showScrollTop: currentScrollPosition > 100,
+            showScrollBottom:
+                distanceFromBottom > 100 && contentHeight > scrollViewHeight,
+            contentHeight,
+            scrollViewHeight
+        });
     };
 
     scrollToTop = () => {
         this.scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     };
 
-    handleCommand = async (command: string, param?: string) => {
+    scrollToBottom = () => {
+        const { contentHeight, scrollViewHeight } = this.state;
+        const scrollToY = Math.max(0, contentHeight - scrollViewHeight);
+        this.scrollViewRef.current?.scrollTo({ y: scrollToY, animated: true });
+    };
+
+    handleCommand = async (
+        command: string,
+        param?: string | Array<string | boolean | undefined>
+    ) => {
         this.setState({
             selectedCommand: command,
             loading: true,
@@ -477,7 +610,21 @@ export default class DeveloperTools extends React.Component<
             error: null
         });
         try {
-            const response = await BackendUtils.call(command, param);
+            // BackendUtils.call uses .apply() which spreads arrays as arguments.
+            // For methods expecting urlParams?: Array<string>, we need to wrap the array
+            // in another array so it's passed as a single array argument.
+            // For methods expecting a single string (like getChannelInfo), pass the array as-is
+            // so the first element is extracted.
+            const commandsNeedingArrayParam = [
+                'abandonChannel',
+                'closeChannel'
+            ];
+            const args =
+                Array.isArray(param) &&
+                commandsNeedingArrayParam.includes(command)
+                    ? [param]
+                    : param;
+            const response = await BackendUtils.call(command, args);
             this.setState({
                 loading: false,
                 response: JSON.stringify(response, null, 2)
@@ -499,8 +646,14 @@ export default class DeveloperTools extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { expandedCategory, loading, response, error, showScrollTop } =
-            this.state;
+        const {
+            expandedCategory,
+            loading,
+            response,
+            error,
+            showScrollTop,
+            showScrollBottom
+        } = this.state;
 
         return (
             <Screen>
@@ -519,6 +672,14 @@ export default class DeveloperTools extends React.Component<
                     ref={this.scrollViewRef}
                     contentContainerStyle={styles.container}
                     onScroll={this.handleScroll}
+                    onContentSizeChange={(_contentWidth, contentHeight) => {
+                        this.setState({ contentHeight });
+                    }}
+                    onLayout={(event) => {
+                        this.setState({
+                            scrollViewHeight: event.nativeEvent.layout.height
+                        });
+                    }}
                     scrollEventThrottle={16}
                 >
                     {categories
@@ -589,6 +750,24 @@ export default class DeveloperTools extends React.Component<
                         />
                     </TouchableOpacity>
                 )}
+                {showScrollBottom && (
+                    <TouchableOpacity
+                        style={[
+                            styles.scrollBottomButton,
+                            {
+                                backgroundColor: themeColor('secondary'),
+                                borderColor: themeColor('background')
+                            }
+                        ]}
+                        onPress={this.scrollToBottom}
+                    >
+                        <MaterialIcons
+                            name="arrow-downward"
+                            size={24}
+                            color={themeColor('text')}
+                        />
+                    </TouchableOpacity>
+                )}
             </Screen>
         );
     }
@@ -599,6 +778,22 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 10,
         right: 10,
+        width: 45,
+        height: 45,
+        borderRadius: 22.5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3.84,
+        borderWidth: 1
+    },
+    scrollBottomButton: {
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
         width: 45,
         height: 45,
         borderRadius: 22.5,
@@ -641,6 +836,24 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book',
         paddingTop: 8,
         paddingLeft: 32
+    },
+    booleanParamsContainer: {
+        marginTop: 8,
+        marginHorizontal: 16,
+        marginBottom: 8,
+        padding: 12,
+        borderRadius: 8
+    },
+    booleanParamRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 8
+    },
+    booleanParamLabel: {
+        fontSize: 12,
+        fontFamily: 'PPNeueMontreal-Book',
+        flex: 1
     },
     responseContainer: {
         marginTop: 16,
