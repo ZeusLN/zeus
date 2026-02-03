@@ -14,6 +14,7 @@ const log = Log('utils/LndMobileUtils.ts');
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
 import { retry, sleep } from './SleepUtils';
+import { importChannelDb } from './ChannelMigrationUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
@@ -1112,13 +1113,17 @@ export async function createLndWallet({
     seedMnemonic,
     walletPassphrase,
     isTestnet,
-    channelBackupsBase64
+    channelBackupsBase64,
+    channelDbUri,
+    channelDbFileName
 }: {
     lndDir: string;
     seedMnemonic?: string;
     walletPassphrase?: string;
     isTestnet?: boolean;
     channelBackupsBase64?: string;
+    channelDbUri?: string;
+    channelDbFileName?: string;
 }) {
     const {
         initialize,
@@ -1138,6 +1143,16 @@ export async function createLndWallet({
         isSqlite: Platform.OS === 'ios'
     });
     await initialize();
+
+    if (channelDbUri && channelDbFileName) {
+        console.log('Importing channel DB before LND starting...');
+        await importChannelDb(
+            channelDbUri,
+            channelDbFileName,
+            lndDir,
+            isTestnet || false
+        );
+    }
 
     await startLnd({
         lndDir,
