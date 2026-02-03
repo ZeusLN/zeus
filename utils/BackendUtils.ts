@@ -220,6 +220,8 @@ class BackendUtils {
             VersionUtils.isSupportedVersion(nodeInfoVersion, 'v0.20.0')
         );
     };
+    supportsSplicing = () => this.call('supportsSplicing');
+    devSplice = (...args: any[]) => this.call('devSplice', args);
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
