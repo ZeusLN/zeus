@@ -1077,7 +1077,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.d(TAG, "receive: p2pkSigningKeys count = ${innerReceiveOptions.p2pkSigningKeys.size}")
 
                 val receiveOptions = MultiMintReceiveOptions(
-                    allowUntrusted = true, // Match iOS behavior - allows receiving tokens from untrusted mints
+                    allowUntrusted = false,
                     transferToMint = null,
                     receiveOptions = innerReceiveOptions
                 )
