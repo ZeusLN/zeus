@@ -89,6 +89,8 @@ interface SeedRecoveryState {
     restoreRescueKey?: boolean;
     rescueHost: string;
     customRescueHost: string;
+    channelDbUri?: string;
+    channelDbFileName?: string;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -159,8 +161,73 @@ export default class SeedRecovery extends React.PureComponent<
         this.setState({ network, restoreSwaps, restoreRescueKey });
     }
 
-    saveWalletConfiguration = (recoveryCipherSeed?: string) => {
+    finishRestoreWallet = (nodes: any) => {
         const { SettingsStore, navigation } = this.props;
+        const { embeddedLndStarted, setConnectingStatus } = SettingsStore;
+
+        if (nodes.length === 1) {
+            setConnectingStatus(true);
+            navigation.popTo('Wallet');
+        } else {
+            if (Platform.OS === 'android' && embeddedLndStarted) {
+                restartNeeded(true);
+            } else {
+                navigation.popTo('Wallets');
+            }
+        }
+    };
+
+    askForChannelBackupFirst = (onProceed: () => void) => {
+        Alert.alert(
+            localeString('views.Tools.migration.import'),
+            `${localeString('views.Tools.migration.import.message1')}\n\n` +
+                `${localeString('views.Tools.migration.import.message2')}`,
+            [
+                {
+                    text: localeString('views.Tools.migration.import.skip'),
+                    style: 'cancel',
+                    onPress: () => onProceed()
+                },
+                {
+                    text: localeString('views.Tools.migration.import.confirm'),
+                    onPress: async () => {
+                        try {
+                            const [result] = await pick({
+                                type: [types.allFiles],
+                                mode: 'import'
+                            });
+                            if (result.uri) {
+                                this.setState(
+                                    {
+                                        channelDbUri: result.uri,
+                                        channelDbFileName:
+                                            result.name ?? 'channel.sqlite'
+                                    },
+                                    () => onProceed()
+                                );
+                            } else {
+                                onProceed();
+                            }
+                        } catch (e) {
+                            if (
+                                isErrorWithCode(e) &&
+                                e.code === errorCodes.OPERATION_CANCELED
+                            ) {
+                                onProceed();
+                            } else {
+                                console.error(e);
+                                Alert.alert(localeString('general.error'));
+                                onProceed();
+                            }
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    saveWalletConfiguration = (recoveryCipherSeed?: string) => {
+        const { SettingsStore } = this.props;
         const {
             walletPassword,
             adminMacaroon,
@@ -168,12 +235,7 @@ export default class SeedRecovery extends React.PureComponent<
             seedPhrase,
             lndDir
         } = this.state;
-        const {
-            setConnectingStatus,
-            updateSettings,
-            settings,
-            embeddedLndStarted
-        } = SettingsStore;
+        const { updateSettings, settings } = SettingsStore;
 
         const node = {
             seedPhrase,
@@ -198,16 +260,7 @@ export default class SeedRecovery extends React.PureComponent<
             selectedNode: nodes.length - 1,
             recovery: recoveryCipherSeed ? true : false
         }).then(async () => {
-            if (nodes.length === 1) {
-                setConnectingStatus(true);
-                navigation.popTo('Wallet');
-            } else {
-                if (Platform.OS === 'android' && embeddedLndStarted) {
-                    restartNeeded(true);
-                } else {
-                    navigation.popTo('Wallets');
-                }
-            }
+            this.finishRestoreWallet(nodes);
         });
     };
 
@@ -390,12 +443,16 @@ export default class SeedRecovery extends React.PureComponent<
 
             const lndDir = uuidv4();
 
+            const { channelDbUri, channelDbFileName } = this.state;
+
             try {
                 const response = await createLndWallet({
                     lndDir,
                     seedMnemonic: recoveryCipherSeed,
                     isTestnet: network === 'testnet',
-                    channelBackupsBase64
+                    channelBackupsBase64,
+                    channelDbUri,
+                    channelDbFileName
                 });
 
                 const { wallet, seed, randomBase64 }: any = response;
@@ -896,7 +953,9 @@ export default class SeedRecovery extends React.PureComponent<
 
                                             navigation.goBack();
                                         } else {
-                                            restore();
+                                            this.askForChannelBackupFirst(
+                                                restore
+                                            );
                                         }
                                     }}
                                     title={

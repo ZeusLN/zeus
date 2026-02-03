@@ -1,8 +1,9 @@
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, NativeModules } from 'react-native';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import RNRestart from 'react-native-restart';
 import { localeString } from './LocaleUtils';
+import { sleep } from '../utils/SleepUtils';
 
 import Storage from '../storage';
 
@@ -48,6 +49,20 @@ export const exportChannelDb = async (
             return;
         }
 
+        try {
+            await NativeModules.LndMobile.stopLnd();
+            await sleep(5000);
+        } catch (e: any) {
+            if (e?.message?.includes?.('closed')) {
+                console.log('LND stopped successfully.');
+            } else {
+                console.error('Failed to stop LND:', e.message);
+                if (setLoading) setLoading(false);
+                Alert.alert(localeString('general.error'));
+                return;
+            }
+        }
+
         const { path, type } = dbPath;
         const extension = type === 'sqlite' ? 'sqlite' : 'db';
         const backupFileName = `zeus-channels-${
@@ -62,8 +77,6 @@ export const exportChannelDb = async (
         await RNFS.copyFile(path, stagingPath);
 
         if (setLoading) setLoading(false);
-
-        console.log('Opening Share Sheet...');
 
         const shareResult = await Share.open({
             title: localeString('views.Tools.migration.export.title'),
@@ -80,8 +93,6 @@ export const exportChannelDb = async (
             await RNFS.unlink(stagingPath);
             return;
         }
-
-        console.log(' Export successful. Locking wallet...');
 
         await Storage.setItem(
             CHANNEL_MIGRATION_ACTIVE,
@@ -104,63 +115,34 @@ export const exportChannelDb = async (
         console.error('Export Failed:', error);
         if (setLoading) setLoading(false);
         Alert.alert(localeString('general.error'));
-        RNRestart.Restart();
     }
 };
 
-export const restoreChannels = async (
+export const importChannelDb = async (
     sourceUri: string,
     fileName: string,
     lndDir: string,
-    isTestnet: boolean,
-    setLoading?: (loading: boolean) => void
+    isTestnet: boolean
 ) => {
-    try {
-        if (setLoading) setLoading(true);
+    const isSqliteBackup = fileName.toLowerCase().endsWith('.sqlite');
+    const dbName = isSqliteBackup ? 'channel.sqlite' : 'channel.db';
 
-        console.log(`Restoring from: ${sourceUri}`);
+    const rootPath = Platform.select({
+        android: RNFS.DocumentDirectoryPath,
+        ios: `${RNFS.LibraryDirectoryPath}/Application Support`
+    });
 
-        const isSqliteBackup = fileName.toLowerCase().endsWith('.sqlite');
-        const dbName = isSqliteBackup ? 'channel.sqlite' : 'channel.db';
+    const destFolder = `${rootPath}/${lndDir}/data/graph/${
+        isTestnet ? 'testnet' : 'mainnet'
+    }`;
+    const destPath = `${destFolder}/${dbName}`;
 
-        const rootPath = Platform.select({
-            android: RNFS.DocumentDirectoryPath,
-            ios: `${RNFS.LibraryDirectoryPath}/Application Support`
-        });
-
-        const destFolder = `${rootPath}/${lndDir}/data/graph/${
-            isTestnet ? 'testnet' : 'mainnet'
-        }`;
-        const destPath = `${destFolder}/${dbName}`;
-
-        console.log(`Target Destination: ${destPath}`);
-
-        if (await RNFS.exists(destPath)) {
-            await RNFS.unlink(destPath);
-        }
-        await RNFS.copyFile(sourceUri, destPath);
-
-        if (setLoading) setLoading(false);
-
-        Alert.alert(
-            localeString('views.Tools.nodeConfigExportImport.importSuccess'),
-            `${localeString(
-                'views.Tools.migration.import.success.text1'
-            )}\n\n` +
-                `ⓘ ${localeString(
-                    'views.Tools.migration.import.success.text2'
-                )}`,
-            [
-                {
-                    text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
-                }
-            ],
-            { cancelable: false }
-        );
-    } catch (error) {
-        console.error('Import Failed:', error);
-        if (setLoading) setLoading(false);
-        Alert.alert(localeString('general.error'));
+    if (!(await RNFS.exists(destFolder))) {
+        await RNFS.mkdir(destFolder);
     }
+
+    if (await RNFS.exists(destPath)) {
+        await RNFS.unlink(destPath);
+    }
+    await RNFS.copyFile(sourceUri, destPath);
 };
