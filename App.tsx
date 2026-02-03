@@ -42,7 +42,8 @@ import {
     unitsStore,
     utxosStore,
     sweepStore,
-    nostrWalletConnectStore
+    nostrWalletConnectStore,
+    spliceStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -298,6 +299,7 @@ import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
 import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
 import ShareIntentProcessing from './views/ShareIntentProcessing';
 import WIFSweeper from './views/Tools/WIFSweeper';
+import SpliceOut from './views/Tools/SpliceOut';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
@@ -424,6 +426,7 @@ export default class App extends React.PureComponent {
                 UTXOsStore={utxosStore}
                 SweepStore={sweepStore}
                 NostrWalletConnectStore={nostrWalletConnectStore}
+                SpliceStore={spliceStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -1628,6 +1631,12 @@ export default class App extends React.PureComponent {
                                                             name="WIFSweeper" // @ts-ignore:next-line
                                                             component={
                                                                 WIFSweeper
+                                                            }
+                                                        />
+                                                        <Stack.Screen
+                                                            name="SpliceOut" // @ts-ignore:next-line
+                                                            component={
+                                                                SpliceOut
                                                             }
                                                         />
                                                     </Stack.Navigator>

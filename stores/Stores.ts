@@ -28,6 +28,7 @@ import UnitsStore from './UnitsStore';
 import UTXOsStore from './UTXOsStore';
 import SweepStore from './SweepStore';
 import NostrWalletConnectStore from './NostrWalletConnectStore';
+import SpliceStore from './SpliceStore';
 
 export const settingsStore = new SettingsStore();
 export const connectivityStore = new ConnectivityStore(settingsStore);
@@ -105,3 +106,4 @@ export const nostrWalletConnectStore = new NostrWalletConnectStore(
     modalStore,
     paymentsStore
 );
+export const spliceStore = new SpliceStore();
