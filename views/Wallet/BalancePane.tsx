@@ -85,9 +85,24 @@ export default class BalancePane extends React.PureComponent<
             cashu: 'views.Wallet.pendingBalanceIcon.explainerCashu'
         };
 
+        let modalText: string | Array<string>;
+        if (context === 'onchain') {
+            modalText = [
+                localeString(
+                    'views.Wallet.pendingBalanceIcon.explainerOnchain'
+                ),
+                localeString(
+                    'views.Wallet.pendingBalanceIcon.explainerOnchainLine2'
+                )
+            ];
+        } else {
+            modalText = localeString(explainerKeyMap[context]);
+        }
+
         ModalStore.toggleInfoModal({
             title: localeString('views.Wallet.pendingBalanceIcon.title'),
-            text: localeString(explainerKeyMap[context])
+            text: modalText,
+            link: 'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
         });
     };
 
