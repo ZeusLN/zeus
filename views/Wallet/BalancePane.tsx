@@ -84,6 +84,15 @@ export default class BalancePane extends React.PureComponent<
         }
     }
 
+    handlePendingPress = () => {
+        const { ModalStore } = this.props;
+
+        ModalStore.toggleInfoModal({
+            title: localeString('views.Wallet.pendingBalanceIcon.title'),
+            text: localeString('views.Wallet.pendingBalanceIcon.explainer')
+        });
+    };
+
     render() {
         const {
             NodeInfoStore,
@@ -91,7 +100,6 @@ export default class BalancePane extends React.PureComponent<
             CashuStore,
             SettingsStore,
             SyncStore,
-            ModalStore,
             navigation,
             loading
         } = this.props;
@@ -141,16 +149,7 @@ export default class BalancePane extends React.PureComponent<
                             jumboText
                             toggleable
                             pending
-                            onPendingPress={() =>
-                                ModalStore.toggleInfoModal({
-                                    title: localeString(
-                                        'views.Wallet.pendingBalanceIcon.title'
-                                    ),
-                                    text: localeString(
-                                        'views.Wallet.pendingBalanceIcon.explainer'
-                                    )
-                                })
-                            }
+                            onPendingPress={this.handlePendingPress}
                         />
                         <View style={styles.conversion}>
                             <Conversion
@@ -184,16 +183,7 @@ export default class BalancePane extends React.PureComponent<
                             jumboText
                             toggleable
                             pending
-                            onPendingPress={() =>
-                                ModalStore.toggleInfoModal({
-                                    title: localeString(
-                                        'views.Wallet.pendingBalanceIcon.title'
-                                    ),
-                                    text: localeString(
-                                        'views.Wallet.pendingBalanceIcon.explainer'
-                                    )
-                                })
-                            }
+                            onPendingPress={this.handlePendingPress}
                         />
                         <View style={styles.conversionSecondary}>
                             <Conversion
