@@ -35,6 +35,7 @@ import DropdownSetting from '../../components/DropdownSetting';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { validateChannelBackupFile } from '../../utils/ChannelMigrationUtils';
 
 import {
     createLndWallet,
@@ -197,11 +198,27 @@ export default class SeedRecovery extends React.PureComponent<
                                 mode: 'import'
                             });
                             if (result.uri) {
+                                const fileName =
+                                    result.name ?? 'channel.sqlite';
+
+                                const validation =
+                                    await validateChannelBackupFile(
+                                        result.uri,
+                                        fileName
+                                    );
+
+                                if (!validation.valid) {
+                                    Alert.alert(
+                                        localeString('general.error'),
+                                        validation.error
+                                    );
+                                    return;
+                                }
+
                                 this.setState(
                                     {
                                         channelDbUri: result.uri,
-                                        channelDbFileName:
-                                            result.name ?? 'channel.sqlite'
+                                        channelDbFileName: fileName
                                     },
                                     () => onProceed()
                                 );

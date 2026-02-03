@@ -214,7 +214,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
                         const lndDir = () =>
                             this.props.SettingsStore.lndDir || 'lnd';
-                        console.log(lndDir(), isTestnet, isSqlite);
 
                         await exportChannelDb(
                             lndDir(),

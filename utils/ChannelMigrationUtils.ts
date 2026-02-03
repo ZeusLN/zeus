@@ -9,6 +9,42 @@ import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
+const VALID_CHANNEL_DB_EXTENSIONS = ['.sqlite', '.db'];
+
+export const validateChannelBackupFile = async (
+    fileUri: string,
+    fileName: string
+): Promise<{ valid: boolean; error?: string }> => {
+    const lowerFileName = fileName.toLowerCase();
+    const hasValidExtension = VALID_CHANNEL_DB_EXTENSIONS.some((ext) =>
+        lowerFileName.endsWith(ext)
+    );
+
+    if (!hasValidExtension) {
+        return {
+            valid: false,
+            error: localeString('views.Tools.migration.import.invalidExtension')
+        };
+    }
+
+    try {
+        const stat = await RNFS.stat(fileUri);
+        if (!stat.size || stat.size === 0) {
+            return {
+                valid: false,
+                error: localeString('views.Tools.migration.import.emptyFile')
+            };
+        }
+    } catch (e) {
+        return {
+            valid: false,
+            error: localeString('views.Tools.migration.import.fileNotFound')
+        };
+    }
+
+    return { valid: true };
+};
+
 export const getChannelDbPath = async (
     lndDir: string,
     isTestnet: boolean,
@@ -30,7 +66,7 @@ export const getChannelDbPath = async (
 };
 
 export const exportChannelDb = async (
-    lndDir: string | any,
+    lndDir: string,
     isTestnet: boolean,
     isSqlite: boolean,
     setLoading?: (loading: boolean) => void
@@ -124,6 +160,11 @@ export const importChannelDb = async (
     lndDir: string,
     isTestnet: boolean
 ) => {
+    const validation = await validateChannelBackupFile(sourceUri, fileName);
+    if (!validation.valid) {
+        throw new Error(validation.error);
+    }
+
     const isSqliteBackup = fileName.toLowerCase().endsWith('.sqlite');
     const dbName = isSqliteBackup ? 'channel.sqlite' : 'channel.db';
 
