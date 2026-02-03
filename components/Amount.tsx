@@ -106,7 +106,7 @@ function AmountDisplay({
         return (
             <TouchableOpacity
                 onPress={onPendingPress}
-                accessibilityLabel={localeString('general.pending')}
+                accessibilityLabel={localeString('views.Wallet.Wallet.pending')}
             >
                 {icon}
             </TouchableOpacity>
