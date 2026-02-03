@@ -167,7 +167,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         return JSONObject().apply {
             put("encoded", token.encode())
             put("value", token.value().value)
-            put("mint_url", token.mintUrl().toString())
+            put("mint_url", token.mintUrl().url)
             put("memo", token.memo() ?: "")
             put("unit", token.unit()?.let { currencyUnitToString(it) } ?: "sat")
         }
@@ -865,14 +865,61 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val url = MintUrl(mintUrl)
                 val amt = Amount(amount.toLong().toULong())
 
-                // Parse options if provided
-                val includeFee = optionsJson?.let {
-                    JSONObject(it).optBoolean("include_fee", false)
-                } ?: false
+                // Parse options if provided; be defensive so malformed JSON doesn't crash
+                var includeFee = false
+                var conditions: SpendingConditions? = null
+                optionsJson?.let { raw ->
+                    val parsed = runCatching { JSONObject(raw) }.getOrNull() ?: return@let
+
+                    includeFee = parsed.optBoolean("include_fee", false)
+
+                    // Parse spending conditions (P2PK) if provided
+                    parsed.optJSONObject("conditions")?.let { cond ->
+                        if (cond.optString("kind") != "P2PK") return@let
+
+                        cond.optJSONObject("data")?.let { data ->
+                            val pubkeyHex =
+                                data.optString("pubkey").takeIf { it.isNotEmpty() }
+                                    ?: return@let
+
+                            val locktime =
+                                if (data.has("locktime") && !data.isNull("locktime")) {
+                                    data.optLong("locktime").toULong()
+                                } else {
+                                    null
+                                }
+
+                            val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
+                                (0 until arr.length()).mapNotNull { i ->
+                                    arr.optString(i).takeIf { it.isNotEmpty() }
+                                }
+                            }
+
+                            conditions = SpendingConditions.P2pk(
+                                pubkey = pubkeyHex,
+                                conditions = Conditions(
+                                    locktime = locktime ?: 0UL,
+                                    pubkeys = emptyList(),
+                                    refundKeys = refundKeys ?: emptyList(),
+                                    numSigs = 0UL,
+                                    sigFlag = 0.toUByte(),
+                                    numSigsRefund = 0UL
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Log for debugging: check if we're creating P2PK conditions
+                if (conditions != null) {
+                    Log.d(TAG, "prepareSend: Creating P2PK conditions with pubkey")
+                } else {
+                    Log.d(TAG, "prepareSend: No P2PK conditions (conditions is null)")
+                }
 
                 val innerSendOptions = SendOptions(
                     memo = null,
-                    conditions = null,
+                    conditions = conditions,
                     amountSplitTarget = SplitTarget.None,
                     sendKind = SendKind.OnlineExact,
                     includeFee = includeFee,
@@ -982,39 +1029,55 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val token = Token.fromString(encodedToken)
+                
+                // Debug: Log token info to help diagnose P2PK issues
+                try {
+                    val tokenMintUrl = token.mintUrl().url
+                    Log.d(TAG, "receive: token mintUrl = $tokenMintUrl")
+                    Log.d(TAG, "receive: token value = ${token.value().value}")
+                } catch (e: Exception) {
+                    Log.w(TAG, "receive: Could not log token info", e)
+                }
 
-                // Parse options if provided
-                var innerReceiveOptions: ReceiveOptions
-                if (optionsJson != null) {
-                    val json = JSONObject(optionsJson)
+                // Parse options if provided; be defensive so malformed JSON doesn't crash
+                var innerReceiveOptions = ReceiveOptions(
+                    amountSplitTarget = SplitTarget.None,
+                    p2pkSigningKeys = emptyList(),
+                    preimages = emptyList(),
+                    metadata = emptyMap()
+                )
+                optionsJson?.let { raw ->
+                    val json = runCatching { JSONObject(raw) }.getOrNull() ?: return@let
                     val p2pkKeysJson = json.optJSONArray("p2pk_signing_keys")
                     val p2pkKeys = p2pkKeysJson?.let { arr ->
                         (0 until arr.length()).mapNotNull { i ->
-                            try { SecretKey(arr.getString(i)) } catch (e: Exception) { null }
+                            val hex =
+                                arr.optString(i).takeIf { it.isNotEmpty() }
+                                    ?: return@mapNotNull null
+                            runCatching { SecretKey(hex) }.getOrNull()
                         }
                     }
                     val preimagesJson = json.optJSONArray("preimages")
-                    val preimages = preimagesJson?.let { arr ->
-                        (0 until arr.length()).map { i -> arr.getString(i) }
-                    }
+                    val preimages =
+                        preimagesJson?.let { arr ->
+                            (0 until arr.length()).mapNotNull { i ->
+                                arr.optString(i).takeIf { it.isNotEmpty() }
+                            }
+                        } ?: emptyList()
 
                     innerReceiveOptions = ReceiveOptions(
                         amountSplitTarget = SplitTarget.None,
                         p2pkSigningKeys = p2pkKeys ?: emptyList(),
-                        preimages = preimages ?: emptyList(),
-                        metadata = emptyMap()
-                    )
-                } else {
-                    innerReceiveOptions = ReceiveOptions(
-                        amountSplitTarget = SplitTarget.None,
-                        p2pkSigningKeys = emptyList(),
-                        preimages = emptyList(),
+                        preimages = preimages,
                         metadata = emptyMap()
                     )
                 }
+                
+                // Log for debugging: check if we're providing signing keys
+                Log.d(TAG, "receive: p2pkSigningKeys count = ${innerReceiveOptions.p2pkSigningKeys.size}")
 
                 val receiveOptions = MultiMintReceiveOptions(
-                    allowUntrusted = false,
+                    allowUntrusted = true, // Match iOS behavior - allows receiving tokens from untrusted mints
                     transferToMint = null,
                     receiveOptions = innerReceiveOptions
                 )

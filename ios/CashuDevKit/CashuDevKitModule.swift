@@ -662,19 +662,32 @@ class CashuDevKitModule: RCTEventEmitter {
                 if let json = conditionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    // Parse P2PK conditions
                     if let kind = parsed["kind"] as? String, kind == "P2PK",
                        let condData = parsed["data"] as? [String: Any],
-                       let pubkey = condData["pubkey"] as? String {
-                        let locktime = condData["locktime"] as? UInt64
-                        let refundKeys = condData["refund_keys"] as? [String] ?? []
+                       let pubkey = condData["pubkey"] as? String,
+                       !pubkey.isEmpty {
+                        
+                        let locktime: UInt64 = {
+                            if let lt = condData["locktime"] as? NSNumber {
+                                return lt.uint64Value
+                            }
+                            return 0
+                        }()
+                        
+                        let refundKeys: [String] = {
+                            if let keys = condData["refund_keys"] as? [String] {
+                                return keys.filter { !$0.isEmpty }
+                            }
+                            return []
+                        }()
+                        
                         let innerConditions = Conditions(
                             locktime: locktime,
                             pubkeys: [],
                             refundKeys: refundKeys,
-                            numSigs: nil,
+                            numSigs: 0,
                             sigFlag: 0,
-                            numSigsRefund: nil
+                            numSigsRefund: 0
                         )
                         conditions = .p2pk(pubkey: pubkey, conditions: innerConditions)
                     }
@@ -769,17 +782,50 @@ class CashuDevKitModule: RCTEventEmitter {
 
                 // Parse options if provided
                 var includeFee = false
+                var spendingConditions: SpendingConditions? = nil
                 if let json = optionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     if let fee = parsed["include_fee"] as? Bool {
                         includeFee = fee
                     }
+
+                    if let cond = parsed["conditions"] as? [String: Any],
+                       let kind = cond["kind"] as? String,
+                       kind == "P2PK",
+                       let condData = cond["data"] as? [String: Any],
+                       let pubkey = condData["pubkey"] as? String,
+                       !pubkey.isEmpty {
+                        
+                        let locktime: UInt64 = {
+                            if let lt = condData["locktime"] as? NSNumber {
+                                return lt.uint64Value
+                            }
+                            return 0
+                        }()
+                        
+                        let refundKeys: [String] = {
+                            if let keys = condData["refund_keys"] as? [String] {
+                                return keys.filter { !$0.isEmpty }
+                            }
+                            return []
+                        }()
+                        
+                        let inner = Conditions(
+                            locktime: locktime,
+                            pubkeys: [],
+                            refundKeys: refundKeys,
+                            numSigs: 0,
+                            sigFlag: 0,
+                            numSigsRefund: 0
+                        )
+                        spendingConditions = .p2pk(pubkey: pubkey, conditions: inner)
+                    }
                 }
 
                 let innerSendOptions = SendOptions(
                     memo: nil,
-                    conditions: nil,
+                    conditions: spendingConditions,
                     amountSplitTarget: .none,
                     sendKind: .onlineExact,
                     includeFee: includeFee,

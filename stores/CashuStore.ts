@@ -11,7 +11,8 @@ import CashuDevKit, {
     CDKMeltQuote,
     CDKMelted,
     CDKToken,
-    CDKSpendingConditions
+    CDKSpendingConditions,
+    CDKP2PKCondition
 } from '../cashu-cdk';
 
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -722,16 +723,18 @@ export default class CashuStore {
         }
 
         let conditions: CDKSpendingConditions | undefined;
-        if (p2pkPubkey) {
+        if (p2pkPubkey && p2pkPubkey.trim().length > 0) {
+            const conditionData: CDKP2PKCondition = {
+                pubkey: p2pkPubkey.trim()
+            };
+            if (locktime !== undefined && locktime !== null) {
+                conditionData.locktime = locktime;
+            }
             conditions = {
                 kind: 'P2PK',
-                data: {
-                    pubkey: p2pkPubkey,
-                    locktime
-                }
+                data: conditionData
             };
         }
-
         const token = await CashuDevKit.send(mintUrl, amount, memo, conditions);
         await this.syncCDKBalances();
 
@@ -749,9 +752,10 @@ export default class CashuStore {
             throw new Error('CDK not initialized');
         }
 
-        const options = signingKey
-            ? { p2pk_signing_keys: [signingKey] }
-            : undefined;
+        // p2pk_signing_keys when the token is P2PK-locked.
+        const options: { p2pk_signing_keys: string[] } = {
+            p2pk_signing_keys: signingKey ? [signingKey] : []
+        };
 
         const amount = await CashuDevKit.receive(encodedToken, options);
         await this.syncCDKBalances();
@@ -1115,47 +1119,6 @@ export default class CashuStore {
             this.loading = false;
         });
         return this.cashuWallets;
-    };
-
-    private getSeed = () => {
-        if (this.seed) return this.seed;
-
-        if (true || this.seedVersion === 'v2-bip39') {
-            const lndSeedPhrase = this.settingsStore.seedPhrase;
-            const mnemonic = lndSeedPhrase.join(' ');
-
-            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(mnemonic);
-            // only need 16 bytes for a 12 word phrase
-            const entropy = seedFromMnemonic.slice(48, 64);
-
-            const cashuSeedPhrase = bip39scure.entropyToMnemonic(
-                entropy,
-                BIP39_WORD_LIST
-            );
-            const seedPhrase = cashuSeedPhrase.split(' ');
-
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-seed-phrase`,
-                seedPhrase
-            );
-            this.seedPhrase = seedPhrase;
-
-            const seed = bip39scure.mnemonicToSeedSync(cashuSeedPhrase);
-
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-seed`,
-                Base64Utils.bytesToBase64(seed)
-            );
-            this.seed = seed;
-            return this.seed;
-        }
-
-        // v1
-        const seedPhrase = this.settingsStore.seedPhrase;
-        const mnemonic = seedPhrase.join(' ');
-        const seed = bip39.mnemonicToSeedSync(mnemonic);
-        this.seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
-        return this.seed;
     };
 
     setTotalBalance = async (newTotalBalanceSats: number) => {
@@ -2119,8 +2082,17 @@ export default class CashuStore {
             console.error('Error checking token spent status:', error);
             runInAction(() => {
                 this.error = true;
+                let errorMessage: string;
+                if (error && typeof error === 'object') {
+                    // CDKError has { type, message } structure
+                    errorMessage = error.message || String(error);
+                } else if (typeof error === 'string') {
+                    errorMessage = error;
+                } else {
+                    errorMessage = String(error);
+                }
                 this.error_msg =
-                    error.message ||
+                    errorMessage ||
                     localeString('stores.CashuStore.checkSpentError');
             });
             return false;
@@ -2189,18 +2161,12 @@ export default class CashuStore {
                     noLsp: true
                 };
 
-                // First receive the token via CDK
-                const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
-                let signingKey: string | undefined;
-                if (isLocked) {
-                    const bip39seed = this.getSeed();
-                    if (bip39seed) {
-                        signingKey = Base64Utils.base64ToHex(
-                            Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
-                        );
-                    }
-                }
-                await this.receiveTokenCDK(encodedToken, signingKey);
+                // Providing our Cashu secret key; CDK will only use it if the token is P2PK-locked.
+                const signingKey = this.deriveCashuSecretKey();
+                await this.receiveTokenCDK(
+                    encodedToken,
+                    signingKey || undefined
+                );
                 await this.syncCDKBalances();
 
                 // Create invoice for sweeping
@@ -2244,19 +2210,12 @@ export default class CashuStore {
                 await this.syncCDKBalances(true); // Include transactions for activity
             } else {
                 // Regular receive via CDK
-                const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
-                let signingKey: string | undefined;
-
-                if (isLocked) {
-                    const bip39seed = this.getSeed();
-                    if (bip39seed) {
-                        signingKey = Base64Utils.base64ToHex(
-                            Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
-                        );
-                    }
-                }
-
-                await this.receiveTokenCDK(encodedToken, signingKey);
+                // Providing our Cashu secret key; CDK will only use it if the token is P2PK-locked.
+                const signingKey = this.deriveCashuSecretKey();
+                await this.receiveTokenCDK(
+                    encodedToken,
+                    signingKey || undefined
+                );
 
                 // Record received token activity
                 this.receivedTokens?.push(
@@ -2287,6 +2246,19 @@ export default class CashuStore {
                 return {
                     success: false,
                     errorMessage: localeString('stores.CashuStore.alreadySpent')
+                };
+            }
+            if (
+                typeof e?.message === 'string' &&
+                e.message.toLowerCase().includes('witness is missing') &&
+                e.message.toLowerCase().includes('p2pk')
+            ) {
+                this.loading = false;
+                return {
+                    success: false,
+                    errorMessage: localeString(
+                        'stores.CashuStore.claimError.lockedToWallet'
+                    )
                 };
             }
             this.loading = false;
@@ -2480,7 +2452,7 @@ export default class CashuStore {
                 return;
             }
 
-            // Send token via CDK
+            // Send token via CDK (normalize pubkey so we never create P2PK by mistake)
             const cdkToken = await this.sendTokenCDK(
                 mintUrl,
                 Number(value),
