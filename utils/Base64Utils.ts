@@ -23,14 +23,15 @@ class Base64Utils {
         new Uint8Array(
             input.match(/.{1,2}/g)!.map((byte) => parseInt(byte, 16))
         );
-    bytesToHex = (input: number[]) =>
-        input && Array.isArray(input)
-            ? input.reduce(
-                  (memo: string, i: number) =>
-                      memo + ('0' + i.toString(16)).slice(-2),
-                  ''
-              )
-            : '';
+    bytesToHex = (input: number[] | { [key: string]: number }) => {
+        if (!input || typeof input !== 'object') return '';
+        const bytes = Array.isArray(input) ? input : Object.values(input);
+        return bytes.reduce(
+            (memo: string, i: number) =>
+                memo + ('0' + i.toString(16)).slice(-2),
+            ''
+        );
+    };
 
     bytesToUtf8 = (input: Uint8Array) => Buffer.from(input).toString('utf-8');
 
