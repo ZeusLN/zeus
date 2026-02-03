@@ -39,6 +39,15 @@ import LockIcon from '../../assets/images/SVG/Lock.svg';
 
 const ErrorZeus = require('../../assets/images/errorZeus.png');
 
+type PendingBalanceContext = 'onchain' | 'lightning' | 'cashu';
+
+const PENDING_BALANCE_EXPLAINER_KEY_MAP: Record<PendingBalanceContext, string> =
+    {
+        onchain: 'views.Wallet.pendingBalanceIcon.explainerOnchain',
+        lightning: 'views.Wallet.pendingBalanceIcon.explainerLightning',
+        cashu: 'views.Wallet.pendingBalanceIcon.explainerCashu'
+    };
+
 interface BalancePaneProps {
     navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
@@ -84,20 +93,26 @@ export default class BalancePane extends React.PureComponent<
         }
     }
 
-    handlePendingPress = (
-        context: 'onchain' | 'lightning' | 'cashu' = 'onchain'
-    ) => {
+    handlePendingPress = (context: PendingBalanceContext = 'onchain') => {
         const { ModalStore } = this.props;
 
-        const explainerKeyMap = {
-            onchain: 'views.Wallet.pendingBalanceIcon.explainerOnchain',
-            lightning: 'views.Wallet.pendingBalanceIcon.explainerLightning',
-            cashu: 'views.Wallet.pendingBalanceIcon.explainerCashu'
-        };
+        let modalText: string | Array<string> = localeString(
+            PENDING_BALANCE_EXPLAINER_KEY_MAP[context]
+        );
+
+        if (context === 'onchain') {
+            modalText = [
+                modalText,
+                localeString(
+                    'views.Wallet.pendingBalanceIcon.explainerOnchainLine2'
+                )
+            ];
+        }
 
         ModalStore.toggleInfoModal({
             title: localeString('views.Wallet.pendingBalanceIcon.title'),
-            text: localeString(explainerKeyMap[context])
+            text: modalText,
+            link: 'https://docs.zeusln.app/for-users/using-zeus/pending-balances'
         });
     };
 
@@ -189,6 +204,28 @@ export default class BalancePane extends React.PureComponent<
             const hasCashuPending =
                 settings?.ecash?.enableCashu && Number(pendingCashuBalance) > 0;
             const hasAnyPending = hasOnchainPending || hasCashuPending;
+            const renderPendingBalance = (
+                sats: string | number,
+                context: 'onchain' | 'cashu'
+            ) => (
+                <>
+                    <Amount
+                        sats={sats}
+                        sensitive
+                        jumboText
+                        toggleable
+                        pending
+                        onPendingPress={() => this.handlePendingPress(context)}
+                    />
+                    <View style={styles.conversionSecondary}>
+                        <Conversion
+                            sats={combinedBalanceValue}
+                            satsPending={sats}
+                            sensitive
+                        />
+                    </View>
+                </>
+            );
 
             return (
                 <View style={styles.balance}>
@@ -203,48 +240,13 @@ export default class BalancePane extends React.PureComponent<
                             <Conversion sats={combinedBalanceValue} sensitive />
                         </View>
                     )}
-                    {hasOnchainPending && (
-                        <>
-                            <Amount
-                                sats={pendingUnconfirmedBalance}
-                                sensitive
-                                jumboText
-                                toggleable
-                                pending
-                                onPendingPress={() =>
-                                    this.handlePendingPress('onchain')
-                                }
-                            />
-                            <View style={styles.conversionSecondary}>
-                                <Conversion
-                                    sats={combinedBalanceValue}
-                                    satsPending={pendingUnconfirmedBalance}
-                                    sensitive
-                                />
-                            </View>
-                        </>
-                    )}
-                    {hasCashuPending && (
-                        <>
-                            <Amount
-                                sats={pendingCashuBalance}
-                                sensitive
-                                jumboText
-                                toggleable
-                                pending
-                                onPendingPress={() =>
-                                    this.handlePendingPress('cashu')
-                                }
-                            />
-                            <View style={styles.conversionSecondary}>
-                                <Conversion
-                                    sats={combinedBalanceValue}
-                                    satsPending={pendingCashuBalance}
-                                    sensitive
-                                />
-                            </View>
-                        </>
-                    )}
+                    {hasOnchainPending &&
+                        renderPendingBalance(
+                            pendingUnconfirmedBalance,
+                            'onchain'
+                        )}
+                    {hasCashuPending &&
+                        renderPendingBalance(pendingCashuBalance, 'cashu')}
                     {cashuOfflinePendingBalance > 0 && (
                         <Amount
                             sats={cashuOfflinePendingBalance}
@@ -252,6 +254,11 @@ export default class BalancePane extends React.PureComponent<
                             jumboText
                             toggleable
                             pending
+                            onPendingPress={() =>
+                                this.setState({
+                                    showOfflinePendingModal: true
+                                })
+                            }
                         />
                     )}
                 </View>
