@@ -827,7 +827,13 @@ export default class LightningAddressStore {
                             'Receiving token from server:',
                             redeemData.token
                         );
-                        await this.cashuStore.receiveTokenCDK(redeemData.token);
+                        // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
+                        const signingKey =
+                            this.cashuStore.deriveCashuSecretKey();
+                        await this.cashuStore.receiveTokenCDK(
+                            redeemData.token,
+                            signingKey || undefined
+                        );
                     }
 
                     this.redeeming = false;
