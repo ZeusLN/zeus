@@ -58,7 +58,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { implementation, settings } = SettingsStore;
+        const { implementation, settings, isChannelMigrating } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -88,7 +88,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.isLocalWallet() && selectedNode && (
+                    {BackendUtils.isLocalWallet() &&
+                        selectedNode &&
+                        !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -128,7 +130,9 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsFlowLSP() && selectedNode && (
+                    {BackendUtils.supportsFlowLSP() &&
+                        selectedNode &&
+                        !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -145,77 +149,85 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                         BackendUtils.supportsLSPS1native() ||
                                         BackendUtils.supportsLSPScustomMessage() ||
                                         BackendUtils.supportsLSPS1rest();
-                                    if (
-                                        BackendUtils.supportsFlowLSP() &&
-                                        supportsLSPS1
-                                    ) {
-                                        navigation.navigate('LSPServicesList');
-                                    } else {
-                                        navigation.navigate('LSPSettings');
-                                    }
-                                }}
-                            >
-                                <View style={styles.icon}>
-                                    <CloudIcon
-                                        fill={themeColor('text')}
-                                        width={25}
-                                        height={25}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
+                                        if (
+                                            BackendUtils.supportsFlowLSP() &&
+                                            supportsLSPS1
+                                        ) {
+                                            navigation.navigate(
+                                                'LSPServicesList'
+                                            );
+                                        } else {
+                                            navigation.navigate('LSPSettings');
+                                        }
                                     }}
                                 >
-                                    {localeString('general.lsp')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View style={styles.icon}>
+                                        <CloudIcon
+                                            fill={themeColor('text')}
+                                            width={25}
+                                            height={25}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('general.lsp')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
-                    {BackendUtils.supportsCashuWallet() && selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => {
-                                    navigation.navigate('EcashSettings');
+                    {BackendUtils.supportsCashuWallet() &&
+                        selectedNode &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
                                 }}
                             >
-                                <View style={styles.icon}>
-                                    <EcashIcon
-                                        fill={themeColor('text')}
-                                        width={20}
-                                        height={20}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() => {
+                                        navigation.navigate('EcashSettings');
                                     }}
                                 >
-                                    {localeString('general.ecash')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    <View style={styles.icon}>
+                                        <EcashIcon
+                                            fill={themeColor('text')}
+                                            width={20}
+                                            height={20}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('general.ecash')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
-                    {selectedNode && (
+                    {selectedNode && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -288,7 +300,54 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 
                     {selectedNode &&
                         BackendUtils.supportsChannelManagement() &&
-                        implementation !== 'ldk-node' && (
+                        implementation !== 'ldk-node' &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('ChannelsSettings')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <ChannelsIcon
+                                                fill={themeColor('text')}
+                                                width={27}
+                                                height={27}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.Wallet.channels'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {selectedNode &&
+                        !BackendUtils.isLNDBased() &&
+                        implementation !== 'lndhub' &&
+                        !isChannelMigrating && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),
@@ -472,7 +531,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </TouchableOpacity>
                     </View>
 
-                    {selectedNode && (
+                    {selectedNode && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
