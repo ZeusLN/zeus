@@ -33,7 +33,39 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     // ========================================================================
     // Helper Methods
     // ========================================================================
+    /**
+ * Parse P2PK spending conditions from JSON
+ */
+ private fun parseP2PKConditions(json: JSONObject): SpendingConditions? {
+    val kind = json.optString("kind")
+    if (kind != "P2PK") return null
 
+    val data = json.optJSONObject("data") ?: return null
+    val pubkeyHex = data.optString("pubkey").takeIf { it.isNotEmpty() } ?: return null
+
+    val locktime = if (data.has("locktime") && !data.isNull("locktime")) {
+        data.optLong("locktime").toULong()
+    } else {
+        0UL
+    }
+    val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
+        (0 until arr.length()).mapNotNull { i ->
+            arr.optString(i).takeIf { it.isNotEmpty() }
+        }
+    } ?: emptyList()
+
+    return SpendingConditions.P2pk(
+        pubkey = pubkeyHex,
+        conditions = Conditions(
+            locktime = locktime,
+            pubkeys = emptyList(),
+            refundKeys = refundKeys,
+            numSigs = 0UL,
+            sigFlag = 0.toUByte(),
+            numSigsRefund = 0UL
+        )
+    )
+}
     /**
      * Returns the initialized wallet or rejects with NO_WALLET error and returns null
      */
@@ -722,38 +754,15 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 val url = MintUrl(mintUrl)
 
                 // Parse spending conditions if provided
-                var conditions: SpendingConditions? = null
-                if (conditionsJson != null) {
-                    val json = JSONObject(conditionsJson)
-                    val kind = json.optString("kind")
-                    if (kind == "P2PK") {
-                        val data = json.getJSONObject("data")
-                        val pubkeyHex = data.getString("pubkey")
-                        val locktime = if (data.has("locktime")) data.getLong("locktime").toULong() else null
-                        val refundKeysJson = data.optJSONArray("refund_keys")
-                        val refundKeys = refundKeysJson?.let { arr ->
-                            (0 until arr.length()).mapNotNull { i ->
-                                try { arr.getString(i) } catch (e: Exception) { null }
-                            }
-                        }
-
-                        conditions = SpendingConditions.P2pk(
-                            pubkey = pubkeyHex,
-                            conditions = Conditions(
-                                locktime = locktime ?: 0UL,
-                                pubkeys = emptyList(),
-                                refundKeys = refundKeys ?: emptyList(),
-                                numSigs = 0UL,
-                                sigFlag = 0.toUByte(),
-                                numSigsRefund = 0UL
-                            )
-                        )
-                    }
+                val conditions = conditionsJson?.let { json ->
+                    runCatching {
+                        parseP2PKConditions(JSONObject(json))
+                    }.getOrNull()
                 }
-
                 val proofs = wallet!!.mint(url, quoteId, conditions)
 
                 val array = JSONArray()
+
                 proofs.forEach { proof ->
                     array.put(encodeProof(proof))
                 }
@@ -882,43 +891,12 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
                     includeFee = parsed.optBoolean("include_fee", false)
 
-                    // Parse spending conditions (P2PK) if provided
+                  // Parse spending conditions (P2PK) if provided
                     parsed.optJSONObject("conditions")?.let { cond ->
-                        if (cond.optString("kind") != "P2PK") return@let
-
-                        cond.optJSONObject("data")?.let { data ->
-                            val pubkeyHex =
-                                data.optString("pubkey").takeIf { it.isNotEmpty() }
-                                    ?: return@let
-
-                            val locktime =
-                                if (data.has("locktime") && !data.isNull("locktime")) {
-                                    data.optLong("locktime").toULong()
-                                } else {
-                                    null
-                                }
-
-                            val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
-                                (0 until arr.length()).mapNotNull { i ->
-                                    arr.optString(i).takeIf { it.isNotEmpty() }
-                                }
-                            }
-
-                            conditions = SpendingConditions.P2pk(
-                                pubkey = pubkeyHex,
-                                conditions = Conditions(
-                                    locktime = locktime ?: 0UL,
-                                    pubkeys = emptyList(),
-                                    refundKeys = refundKeys ?: emptyList(),
-                                    numSigs = 0UL,
-                                    sigFlag = 0.toUByte(),
-                                    numSigsRefund = 0UL
-                                )
-                            )
-                        }
+                        conditions = parseP2PKConditions(cond)
                     }
                 }
-
+    
                 val innerSendOptions = SendOptions(
                     memo = null,
                     conditions = conditions,
@@ -938,6 +916,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 )
 
                 val prepared = wallet!!.prepareSend(url, amt, sendOptions)
+                
                 val preparedId = prepared.id()
 
                 preparedSends[preparedId] = prepared

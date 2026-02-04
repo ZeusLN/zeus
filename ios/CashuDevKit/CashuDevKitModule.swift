@@ -30,6 +30,42 @@ class CashuDevKitModule: RCTEventEmitter {
 
     // MARK: - Helper Methods
 
+    /// Parse P2PK spending conditions from JSON dictionary
+    private func parseP2PKConditions(from json: [String: Any]) -> SpendingConditions? {
+       guard let kind = json["kind"] as? String,
+          kind == "P2PK",
+          let condData = json["data"] as? [String: Any],
+          let pubkey = condData["pubkey"] as? String,
+          !pubkey.isEmpty else {
+        return nil
+    }
+    
+      let locktime: UInt64 = {
+        if let lt = condData["locktime"] as? NSNumber {
+            return lt.uint64Value
+        }
+        return 0
+    }()
+    
+    let refundKeys: [String] = {
+        if let keys = condData["refund_keys"] as? [String] {
+            return keys.filter { !$0.isEmpty }
+        }
+        return []
+    }()
+    
+    let conditions = Conditions(
+        locktime: locktime,
+        pubkeys: [],
+        refundKeys: refundKeys,
+        numSigs: 0,
+        sigFlag: 0,
+        numSigsRefund: 0
+    )
+    
+    return .p2pk(pubkey: pubkey, conditions: conditions)
+  }
+
     /// Returns the initialized wallet or rejects with NO_WALLET error
     private func getInitializedWallet(reject: @escaping RCTPromiseRejectBlock) -> MultiMintWallet? {
         guard isInitialized, let wallet = wallet else {
@@ -671,35 +707,7 @@ class CashuDevKitModule: RCTEventEmitter {
                 if let json = conditionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    if let kind = parsed["kind"] as? String, kind == "P2PK",
-                       let condData = parsed["data"] as? [String: Any],
-                       let pubkey = condData["pubkey"] as? String,
-                       !pubkey.isEmpty {
-                        
-                        let locktime: UInt64 = {
-                            if let lt = condData["locktime"] as? NSNumber {
-                                return lt.uint64Value
-                            }
-                            return 0
-                        }()
-                        
-                        let refundKeys: [String] = {
-                            if let keys = condData["refund_keys"] as? [String] {
-                                return keys.filter { !$0.isEmpty }
-                            }
-                            return []
-                        }()
-                        
-                        let innerConditions = Conditions(
-                            locktime: locktime,
-                            pubkeys: [],
-                            refundKeys: refundKeys,
-                            numSigs: 0,
-                            sigFlag: 0,
-                            numSigsRefund: 0
-                        )
-                        conditions = .p2pk(pubkey: pubkey, conditions: innerConditions)
-                    }
+                   conditions = parseP2PKConditions(from: parsed)
                 }
 
                 let proofs = try await wallet.mint(mintUrl: url, quoteId: quoteId, spendingConditions: conditions)
@@ -798,37 +806,8 @@ class CashuDevKitModule: RCTEventEmitter {
                     if let fee = parsed["include_fee"] as? Bool {
                         includeFee = fee
                     }
-
-                    if let cond = parsed["conditions"] as? [String: Any],
-                       let kind = cond["kind"] as? String,
-                       kind == "P2PK",
-                       let condData = cond["data"] as? [String: Any],
-                       let pubkey = condData["pubkey"] as? String,
-                       !pubkey.isEmpty {
-                        
-                        let locktime: UInt64 = {
-                            if let lt = condData["locktime"] as? NSNumber {
-                                return lt.uint64Value
-                            }
-                            return 0
-                        }()
-                        
-                        let refundKeys: [String] = {
-                            if let keys = condData["refund_keys"] as? [String] {
-                                return keys.filter { !$0.isEmpty }
-                            }
-                            return []
-                        }()
-                        
-                        let inner = Conditions(
-                            locktime: locktime,
-                            pubkeys: [],
-                            refundKeys: refundKeys,
-                            numSigs: 0,
-                            sigFlag: 0,
-                            numSigsRefund: 0
-                        )
-                        spendingConditions = .p2pk(pubkey: pubkey, conditions: inner)
+                    if let cond = parsed["conditions"] as? [String: Any] {
+                    spendingConditions = parseP2PKConditions(from: cond)
                     }
                 }
 
