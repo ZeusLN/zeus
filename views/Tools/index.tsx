@@ -146,7 +146,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings, isChannelMigrating } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -181,7 +181,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.supportsAccounts() && (
+                    {BackendUtils.supportsAccounts() && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -218,7 +218,8 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         </View>
                     )}
                     {selectedNode &&
-                        BackendUtils.supportsNostrWalletConnectService() && (
+                        BackendUtils.supportsNostrWalletConnectService() &&
+                        !isChannelMigrating && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),
@@ -262,24 +263,71 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         )}
 
-                    {selectedNode && BackendUtils.supportsWatchtowerClient() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('Watchtowers')
-                                }
+                    {selectedNode &&
+                        BackendUtils.supportsWatchtowerClient() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.columnField}>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('Watchtowers')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <WatchtowerIcon
+                                                fill={themeColor('text')}
+                                                width={23}
+                                                height={23}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Tools.watchtowers'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {selectedNode &&
+                        BackendUtils.isLNDBased() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('BumpFee')
+                                    }
+                                >
                                     <View style={styles.icon}>
-                                        <WatchtowerIcon
+                                        <SpeedometerIcon
                                             fill={themeColor('text')}
                                             width={23}
                                             height={23}
@@ -291,8 +339,50 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                             color: themeColor('text')
                                         }}
                                     >
+                                        {localeString('views.BumpFee.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {selectedNode &&
+                        BackendUtils.supportsMessageSigning() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('SignVerifyMessage')
+                                    }
+                                >
+                                    <View style={styles.icon}>
+                                        <SignIcon
+                                            fill={themeColor('text')}
+                                            width={18}
+                                            height={18}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
                                         {localeString(
-                                            'views.Tools.watchtowers'
+                                            'views.Settings.SignMessage.title'
                                         )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
@@ -300,86 +390,9 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                             stroke={forwardArrowColor}
                                         />
                                     </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.isLNDBased() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('BumpFee')}
-                            >
-                                <View style={styles.icon}>
-                                    <SpeedometerIcon
-                                        fill={themeColor('text')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.BumpFee.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.supportsMessageSigning() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('SignVerifyMessage')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <SignIcon
-                                        fill={themeColor('text')}
-                                        width={18}
-                                        height={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.SignMessage.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     <View
                         style={{
@@ -419,46 +432,52 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         </TouchableOpacity>
                     </View>
 
-                    {selectedNode && BackendUtils.supportsChannelManagement() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Rebalance')}
+                    {selectedNode &&
+                        BackendUtils.supportsChannelManagement() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <RebalanceIcon
-                                            fill={themeColor('text')}
-                                            width={18}
-                                            height={18}
-                                        />
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('Rebalance')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <RebalanceIcon
+                                                fill={themeColor('text')}
+                                                width={18}
+                                                height={18}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Rebalance.title'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
                                     </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Rebalance.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
-                    {BackendUtils.supportsSweep() && (
+                    {BackendUtils.supportsSweep() && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -497,49 +516,51 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsOnchainSends() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('WIFSweeper')
-                                }
+                    {selectedNode &&
+                        BackendUtils.supportsOnchainSends() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <Icon
-                                            name="key-plus"
-                                            type="material-design"
-                                            color={themeColor('text')}
-                                            size={25}
-                                        />
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('WIFSweeper')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <Icon
+                                                name="key-plus"
+                                                type="material-design"
+                                                color={themeColor('text')}
+                                                size={25}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString('views.Wif.title')}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
                                     </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Wif.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
-                    {selectedNode && (
+                    {selectedNode && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -580,7 +601,8 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     )}
 
                     {BackendUtils.supportsCashuWallet() &&
-                        settings?.ecash?.enableCashu && (
+                        settings?.ecash?.enableCashu &&
+                        !isChannelMigrating && (
                             <View
                                 style={{
                                     backgroundColor: themeColor('secondary'),
@@ -658,41 +680,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         </TouchableOpacity>
                     </View>
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => this.handleExportChannels()}
-                        >
-                            <View style={styles.icon}>
-                                <Feather
-                                    name="upload"
-                                    size={24}
-                                    color={themeColor('text')}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Tools.migration.export')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    {BackendUtils.supportsWithdrawalRequests() && (
+                    {!isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -704,19 +692,13 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'CreateWithdrawalRequest'
-                                    )
-                                }
+                                onPress={() => this.handleExportChannels()}
                             >
                                 <View style={styles.icon}>
-                                    <Icon
-                                        name="edit"
-                                        type="feather"
+                                    <Feather
+                                        name="upload"
+                                        size={24}
                                         color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={18}
                                     />
                                 </View>
                                 <Text
@@ -725,7 +707,9 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('general.withdrawalRequest')}
+                                    {localeString(
+                                        'views.Tools.migration.export'
+                                    )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
@@ -734,7 +718,54 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsDevTools() && (
+                    {BackendUtils.supportsWithdrawalRequests() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'CreateWithdrawalRequest'
+                                        )
+                                    }
+                                >
+                                    <View style={styles.icon}>
+                                        <Icon
+                                            name="edit"
+                                            type="feather"
+                                            color={themeColor('text')}
+                                            underlayColor="transparent"
+                                            size={18}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'general.withdrawalRequest'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {BackendUtils.supportsDevTools() && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

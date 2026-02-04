@@ -13,7 +13,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { openStoreForReview } from '../../utils/RatingUtils';
 
-import { nodeInfoStore } from '../../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 
 interface SupportProps {
     navigation: StackNavigationProp<any, any>;
@@ -35,12 +35,18 @@ function Support(props: SupportProps) {
         {
             label: localeString('views.PaymentRequest.donateToZEUS'),
             path: 'DonateToZEUS',
-            condition: nodeInfoStore.nodeInfo.isMainNet && Platform.OS !== 'ios'
+            condition:
+                nodeInfoStore.nodeInfo.isMainNet &&
+                Platform.OS !== 'ios' &&
+                !settingsStore.isChannelMigrating
         },
         {
             label: localeString('views.PaymentRequest.addATip'),
             path: 'ChangeDonationSettings',
-            condition: nodeInfoStore.nodeInfo.isMainNet && Platform.OS !== 'ios'
+            condition:
+                nodeInfoStore.nodeInfo.isMainNet &&
+                Platform.OS !== 'ios' &&
+                !settingsStore.isChannelMigrating
         },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {
