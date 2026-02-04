@@ -47,7 +47,11 @@ export default class HandleAnythingQRScanner extends React.Component<
     HandleAnythingQRState
 > {
     decoder: any;
-    constructor(props: any) {
+    // Flag to prevent duplicate processing when QR is scanned multiple times
+    // while handleAnything is resolving. Using a class property instead of
+    // state because setState is async and can't prevent race conditions.
+    isProcessing: boolean = false;
+    constructor(props: HandleAnythingQRProps) {
         super(props);
 
         this.state = {
@@ -68,6 +72,8 @@ export default class HandleAnythingQRScanner extends React.Component<
         const view = route.params?.view;
 
         if (view === 'Swaps') {
+            if (this.isProcessing) return;
+            this.isProcessing = true;
             this.setState({ loading: true });
             try {
                 const { value, satAmount } = AddressUtils.processBIP21Uri(data);
@@ -118,6 +124,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                     localeString('components.QRCodeScanner.notRecognized')
                 );
             } catch (err: any) {
+                this.isProcessing = false;
                 console.error(err.message);
                 Alert.alert(
                     localeString('general.error'),
@@ -136,6 +143,8 @@ export default class HandleAnythingQRScanner extends React.Component<
             }
             return;
         } else if (view === 'RefundSwap') {
+            if (this.isProcessing) return;
+            this.isProcessing = true;
             this.setState({ loading: true });
             try {
                 const { value } = AddressUtils.processBIP21Uri(data);
@@ -160,6 +169,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                     localeString('components.QRCodeScanner.notRecognized')
                 );
             } catch (err: any) {
+                this.isProcessing = false;
                 console.error(err.message);
                 Alert.alert(
                     localeString('general.error'),
@@ -349,6 +359,10 @@ export default class HandleAnythingQRScanner extends React.Component<
 
         if (!handleData) handleData = data;
 
+        // Prevent duplicate processing if already handling a scan
+        if (this.isProcessing) return;
+        this.isProcessing = true;
+
         this.setState({
             loading: true
         });
@@ -367,6 +381,9 @@ export default class HandleAnythingQRScanner extends React.Component<
                 }
             })
             .catch((err) => {
+                // Reset flag on error so user can try scanning again
+                this.isProcessing = false;
+
                 Alert.alert(
                     localeString('general.error'),
                     err.message,
