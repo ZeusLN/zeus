@@ -884,7 +884,8 @@ export default class AddMint extends React.Component<
                                 onChangeText={(text: string) =>
                                     this.setState({
                                         mintUrl: text,
-                                        error: false
+                                        error: false,
+                                        error_msg: ''
                                     })
                                 }
                                 locked={false}
@@ -1000,7 +1001,9 @@ export default class AddMint extends React.Component<
                                                     }}
                                                     onPress={() => {
                                                         this.setState({
-                                                            mintUrl: item.url
+                                                            mintUrl: item.url,
+                                                            error: false,
+                                                            error_msg: ''
                                                         });
                                                     }}
                                                 >
