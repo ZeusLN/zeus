@@ -29,6 +29,7 @@ import DateTimeUtils from '../../utils/DateTimeUtils';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import CashuStore, {
     MintReview,
@@ -101,6 +102,16 @@ export default class AddMint extends React.Component<
         if (!mintUrl.trim()) {
             return;
         }
+
+        // Validate URL format
+        if (!UrlUtils.isValidUrl(mintUrl)) {
+            this.setState({
+                error: true,
+                error_msg: localeString('views.Cashu.AddMint.errorInvalidUrl')
+            });
+            return;
+        }
+
         const { CashuStore } = this.props;
         const existingMints = CashuStore.mintUrls || [];
 
@@ -132,7 +143,8 @@ export default class AddMint extends React.Component<
             });
         } catch (e) {
             this.setState({
-                error: true
+                error: true,
+                error_msg: localeString('views.Cashu.AddMint.errorInvalidUrl')
             });
         } finally {
             this.setState({

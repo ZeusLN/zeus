@@ -1890,6 +1890,7 @@
     "cashu.selectCashuPubkey": "Select Cashu pubkey",
     "views.Cashu.AddMint.title": "Add mint",
     "views.Cashu.AddMint.errorMintAlreadyAdded": "Mint already added",
+    "views.Cashu.AddMint.errorInvalidUrl": "Mint URL is invalid",
     "views.Cashu.AddMint.discover": "Discover mints",
     "views.Cashu.AddMint.discover.explainer": "These mints were recommended by other Nostr users. Read reviews at bitcoinmints.com. Be careful and do your own research before using a mint.",
     "views.Cashu.AddMint.discover.explainerZeus": "These mints were recommended by Nostr users that ZEUS follows. Be careful and do your own research before using a mint.",
