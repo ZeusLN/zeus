@@ -10,7 +10,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
-import { nodeInfoStore } from '../../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 
 interface SupportProps {
     navigation: StackNavigationProp<any, any>;
@@ -32,12 +32,16 @@ function Support(props: SupportProps) {
         {
             label: localeString('views.PaymentRequest.donateToZEUS'),
             path: 'DonateToZEUS',
-            condition: nodeInfoStore.nodeInfo.isMainNet
+            condition:
+                nodeInfoStore.nodeInfo.isMainNet ||
+                !settingsStore.isChannelMigrating
         },
         {
             label: localeString('views.PaymentRequest.addATip'),
             path: 'ChangeDonationSettings',
-            condition: nodeInfoStore.nodeInfo.isMainNet
+            condition:
+                nodeInfoStore.nodeInfo.isMainNet ||
+                !settingsStore.isChannelMigrating
         },
         { label: localeString('views.Sponsors.title'), path: 'Sponsors' },
         {

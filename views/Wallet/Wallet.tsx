@@ -341,20 +341,20 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         migrationData.migrationStatus &&
                         migrationData.lndDir === lndDir
                     ) {
-                        this.setState({
-                            isChannelMigrating: true
-                        });
+                        this.setState({ isChannelMigrating: true });
+                        SettingsStore.setChannelMigrating(true);
                     } else {
-                        this.setState({
-                            isChannelMigrating: false
-                        });
+                        this.setState({ isChannelMigrating: false });
+                        SettingsStore.setChannelMigrating(false);
                     }
                 } catch (e) {
                     console.error('Failed to parse migration data:', e);
                     this.setState({ isChannelMigrating: false });
+                    SettingsStore.setChannelMigrating(false);
                 }
             } else {
                 this.setState({ isChannelMigrating: false });
+                SettingsStore.setChannelMigrating(false);
             }
 
             // This awaits on settings, so should await on Tor being bootstrapped before making requests
@@ -583,6 +583,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     AlertStore.checkNeutrinoPeers();
 
                     if (!recovery) await stopLnd();
+
+                    const { isChannelMigrating } = this.state;
+                    if (isChannelMigrating) {
+                        console.log(
+                            'Wallet is in migration lock mode - skipping LND startup'
+                        );
+                        this.setState({ loading: false });
+                        setConnectingStatus(false);
+                        return;
+                    }
 
                     if (settings?.ecash?.enableCashu)
                         await CashuStore.initializeWallets();
@@ -1093,9 +1103,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         SyncStore={SyncStore}
                         loading={loading}
                         isChannelMigrating={isChannelMigrating}
-                        onUnlock={() =>
-                            this.setState({ isChannelMigrating: false })
-                        }
+                        onUnlock={() => {
+                            this.setState({ isChannelMigrating: false });
+                            SettingsStore.setChannelMigrating(false);
+                        }}
                     />
 
                     {error && (
