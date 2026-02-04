@@ -64,6 +64,8 @@ import LnurlAuth from './views/LnurlAuth';
 import Receive from './views/Receive';
 import PaymentRequest from './views/PaymentRequest';
 import HandleAnythingQRScanner from './views/HandleAnythingQRScanner';
+import SwapsQRScanner from './views/SwapsQRScanner';
+import RefundSwapQRScanner from './views/RefundSwapQRScanner';
 import NodeQRScanner from './views/NodeQRScanner';
 import OpenChannel from './views/OpenChannel';
 import SendingOnChain from './views/SendingOnChain';
@@ -738,6 +740,18 @@ export default class App extends React.PureComponent {
                                                         name="HandleAnythingQRScanner" // @ts-ignore:next-line
                                                         component={
                                                             HandleAnythingQRScanner
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapsQRScanner" // @ts-ignore:next-line
+                                                        component={
+                                                            SwapsQRScanner
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RefundSwapQRScanner" // @ts-ignore:next-line
+                                                        component={
+                                                            RefundSwapQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
