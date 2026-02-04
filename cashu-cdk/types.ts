@@ -33,6 +33,7 @@ export interface CDKToken {
     unit?: string;
     mint_url: string;
     encoded: string;
+    proofs: CDKProof[];
 }
 
 // ============================================================================

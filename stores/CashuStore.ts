@@ -2468,6 +2468,7 @@ export default class CashuStore {
                 memo,
                 unit: 'sat',
                 sent: true,
+                proofs: cdkToken.proofs,
                 encodedToken: token,
                 created_at: Date.now() / 1000,
                 spent: false,

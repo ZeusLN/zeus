@@ -205,17 +205,26 @@ class CashuDevKitModule: RCTEventEmitter {
         return result
     }
 
-    private func encodeToken(_ token: Token) throws -> [String: Any] {
+    private func encodeToken(_ token: Token) async throws -> [String: Any] {
         let value = try token.value()
         let mintUrl = try token.mintUrl()
-
-        return [
-            "encoded": token.encode(),
-            "value": value.value,
-            "mint_url": mintUrl.url,
-            "memo": token.memo() ?? "",
-            "unit": token.unit().map { currencyUnitToString($0) } ?? "sat"
-        ]
+        var result: [String: Any] = [
+        "encoded": token.encode(),
+        "value": value.value,
+        "mint_url": mintUrl.url,
+        "memo": token.memo() ?? "",
+        "unit": token.unit().map { currencyUnitToString($0) } ?? "sat"
+    ]
+    do {
+        if let wallet = self.wallet {
+            let keysets = try await wallet.getMintKeysets(mintUrl: mintUrl)
+            let proofs = try token.proofs(mintKeysets: keysets)
+            result["proofs"] = proofs.map { encodeProof($0) }
+        }
+    } catch {
+        result["proofs"] = []
+    }
+    return result
     }
 
     private func encodeMintInfo(_ info: MintInfo) -> [String: Any] {
@@ -876,7 +885,7 @@ class CashuDevKitModule: RCTEventEmitter {
 
             do {
                 let token = try await prepared.confirm(memo: memo)
-                let encoded = try encodeToken(token)
+                let encoded = try await encodeToken(token)
                 resolve(encodeToJson(encoded))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
@@ -972,9 +981,10 @@ class CashuDevKitModule: RCTEventEmitter {
     func decodeToken(_ encodedToken: String,
                      resolve: @escaping RCTPromiseResolveBlock,
                      reject: @escaping RCTPromiseRejectBlock) {
+    Task {
         do {
             let token = try Token.fromString(encodedToken: encodedToken)
-            let encoded = try encodeToken(token)
+            let encoded = try await encodeToken(token)
             resolve(encodeToJson(encoded))
         } catch let error as FfiError {
             let (code, message) = mapFfiError(error)
@@ -982,6 +992,7 @@ class CashuDevKitModule: RCTEventEmitter {
         } catch {
             reject("DECODE_ERROR", error.localizedDescription, error)
         }
+     }
     }
 
     @objc(isValidToken:resolver:rejecter:)

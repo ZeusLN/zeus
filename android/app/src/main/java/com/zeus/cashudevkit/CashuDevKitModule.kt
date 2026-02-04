@@ -163,13 +163,22 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    private fun encodeToken(token: Token): JSONObject {
+    private suspend fun encodeToken(token: Token): JSONObject {
+        val mintUrl = token.mintUrl();
+        val keysets = wallet!!.getMintKeysets(mintUrl) ?: emptyList()
+        val proofs = token.proofs(keysets)
+        val proofsArray = JSONArray()
+        proofs.forEach { proof ->
+            proofsArray.put(encodeProof(proof))
+        }
         return JSONObject().apply {
             put("encoded", token.encode())
             put("value", token.value().value)
             put("mint_url", token.mintUrl().url)
             put("memo", token.memo() ?: "")
             put("unit", token.unit()?.let { currencyUnitToString(it) } ?: "sat")
+            put("proofs", proofsArray)
+    
         }
     }
 
@@ -910,13 +919,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     }
                 }
 
-                // Log for debugging: check if we're creating P2PK conditions
-                if (conditions != null) {
-                    Log.d(TAG, "prepareSend: Creating P2PK conditions with pubkey")
-                } else {
-                    Log.d(TAG, "prepareSend: No P2PK conditions (conditions is null)")
-                }
-
                 val innerSendOptions = SendOptions(
                     memo = null,
                     conditions = conditions,
@@ -969,8 +971,9 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val token = prepared.confirm(memo)
+                val encodedTokenJson = encodeToken(token)  
                 withContext(Dispatchers.Main) {
-                    promise.resolve(encodeToken(token).toString())
+                    promise.resolve(encodedTokenJson.toString())
                 }
             } catch (e: FfiException) {
                 val (code, message) = mapFfiException(e)
@@ -1108,16 +1111,22 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun decodeToken(encodedToken: String, promise: Promise) {
-        try {
-            val token = Token.fromString(encodedToken)
-            promise.resolve(encodeToken(token).toString())
-        } catch (e: FfiException) {
-            val (code, message) = mapFfiException(e)
-            Log.e(TAG, "decodeToken error: $message", e)
-            promise.reject(code, message, e)
-        } catch (e: Exception) {
-            Log.e(TAG, "decodeToken error", e)
-            promise.reject("DECODE_ERROR", e.message, e)
+        scope.launch{
+            try {
+                val token = Token.fromString(encodedToken)
+                val encodedTokenJson = encodeToken(token) 
+                withContext(Dispatchers.Main) {
+                    promise.resolve(encodedTokenJson.toString())
+                }
+                promise.resolve(encodeToken(token).toString())
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "decodeToken error: $message", e)
+                promise.reject(code, message, e)
+            } catch (e: Exception) {
+                Log.e(TAG, "decodeToken error", e)
+                promise.reject("DECODE_ERROR", e.message, e)
+            }
         }
     }
 
