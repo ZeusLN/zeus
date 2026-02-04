@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     ScrollView,
     StyleSheet,
     Text,
@@ -64,7 +65,15 @@ interface CommandProps {
 }
 
 interface CommandState {
-    subItems?: Array<{ commandParameters: any; label: string }>;
+    subItems?: Array<{
+        commandParameters: any;
+        label: string;
+        channelInfo?: {
+            chanId: string;
+            remotePubkey: string;
+            outpoint: string;
+        };
+    }>;
     selectedSubItemIndex?: number;
     loading: boolean;
     expanded: boolean;
@@ -313,7 +322,15 @@ class Command extends React.Component<CommandProps, CommandState> {
                             channelPoint.split(':');
                         return {
                             label,
-                            commandParameters: [fundingTxId, outputIndex || '0']
+                            commandParameters: [
+                                fundingTxId,
+                                outputIndex || '0'
+                            ],
+                            channelInfo: {
+                                chanId: channel.chan_id,
+                                remotePubkey: channel.remote_pubkey,
+                                outpoint: channelPoint
+                            }
                         };
                     } else {
                         // Use chan_id for getChannelInfo
@@ -345,11 +362,12 @@ class Command extends React.Component<CommandProps, CommandState> {
     private onSubItemTap(
         command: string,
         commandParameters: any,
-        selectedSubItemIndex: number
+        selectedSubItemIndex: number,
+        channelInfo?: { chanId: string; remotePubkey: string; outpoint: string }
     ): void {
         this.setState({ selectedSubItemIndex });
         // For abandonChannel, include boolean parameters only if explicitly set to true
-        if (command === 'abandonChannel') {
+        if (command === 'abandonChannel' && channelInfo) {
             const params: Array<string | boolean | undefined> = [
                 ...commandParameters
             ];
@@ -361,7 +379,39 @@ class Command extends React.Component<CommandProps, CommandState> {
             params.push(
                 this.state.iKnowWhatIAmDoing === true ? true : undefined
             );
-            this.props.onTap(command, params);
+
+            // Show confirmation dialog before abandoning channel
+            const details = [
+                `${localeString('views.Channel.channelId')}: ${
+                    channelInfo.chanId
+                }`,
+                `${localeString('views.NodeInfo.pubkey')}: ${
+                    channelInfo.remotePubkey
+                }`,
+                `${localeString('views.Channel.channelPoint')}: ${
+                    channelInfo.outpoint
+                }`
+            ].join('\n\n');
+
+            Alert.alert(
+                localeString('views.Tools.developerTools.abandonChannel.title'),
+                `${localeString(
+                    'views.Tools.developerTools.abandonChannel.message'
+                )}\n\n${details}`,
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel'
+                    },
+                    {
+                        text: localeString(
+                            'views.Tools.developerTools.abandonChannel.confirm'
+                        ),
+                        style: 'destructive',
+                        onPress: () => this.props.onTap(command, params)
+                    }
+                ]
+            );
         } else {
             this.props.onTap(command, commandParameters);
         }
@@ -474,7 +524,8 @@ class Command extends React.Component<CommandProps, CommandState> {
                                         this.onSubItemTap(
                                             command,
                                             item.commandParameters,
-                                            index
+                                            index,
+                                            item.channelInfo
                                         )
                                     }
                                 >
