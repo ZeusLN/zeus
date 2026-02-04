@@ -42,6 +42,7 @@ interface LnurlPayMetadataEntry {
 export default class LnurlPayStore {
     paymentHash: string | undefined;
     domain: string | undefined;
+    lightningAddress: string | undefined;
     successAction: LNURLPaySuccessAction | undefined;
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -62,6 +63,7 @@ export default class LnurlPayStore {
     public reset = () => {
         this.paymentHash = undefined;
         this.domain = undefined;
+        this.lightningAddress = undefined;
         this.successAction = undefined;
         this.isZaplocker = undefined;
         this.isPmtHashSigValid = undefined;
@@ -97,7 +99,8 @@ export default class LnurlPayStore {
         user_pubkey?: string,
         relays?: Array<string>,
         relays_sig?: string,
-        pr?: string
+        pr?: string,
+        lightningAddress?: string
     ) => {
         this.reset();
         const now = new Date().getTime();
@@ -123,6 +126,7 @@ export default class LnurlPayStore {
             this.paymentHash = paymentHash;
             this.successAction = successAction;
             this.domain = domain;
+            this.lightningAddress = lightningAddress;
 
             if (pr) this.paymentRequest = pr;
 

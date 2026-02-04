@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { nip19 } from 'nostr-tools';
 import RNFS from 'react-native-fs';
 
+import Contact from '../models/Contact';
+
 const transformContactData = async (contact: any) => {
     try {
         const name = contact?.display_name || contact?.name || '';
@@ -78,4 +80,20 @@ const transformContactData = async (contact: any) => {
     }
 };
 
-export default { transformContactData };
+const findContactByLightningAddress = (
+    lightningAddress: string | undefined,
+    contacts: Contact[] | undefined
+): Contact | null => {
+    if (!lightningAddress || !contacts) return null;
+
+    const normalizedAddress = lightningAddress.toLowerCase();
+    const found = contacts.find((contact: Contact) =>
+        contact.lnAddress?.some(
+            (addr: string) => addr && addr.toLowerCase() === normalizedAddress
+        )
+    );
+
+    return found ? new Contact(found) : null;
+};
+
+export default { transformContactData, findContactByLightningAddress };

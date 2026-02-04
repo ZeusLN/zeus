@@ -19,6 +19,7 @@ import LnurlPaySuccess from './LnurlPay/Success';
 import Button from '../components/Button';
 import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
+import RecipientDisplay from '../components/RecipientDisplay';
 import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
@@ -27,6 +28,7 @@ import Amount from '../components/Amount';
 import ModalBox from '../components/ModalBox';
 
 import BalanceStore from '../stores/BalanceStore';
+import ContactStore from '../stores/ContactStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -35,6 +37,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import BackendUtils from '../utils/BackendUtils';
+import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -51,6 +54,7 @@ import BigNumber from 'bignumber.js';
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
+    ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
@@ -83,6 +87,7 @@ interface SendingLightningState {
 
 @inject(
     'BalanceStore',
+    'ContactStore',
     'LnurlPayStore',
     'PaymentsStore',
     'SettingsStore',
@@ -560,8 +565,13 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, SettingsStore, LnurlPayStore, navigation } =
-            this.props;
+        const {
+            TransactionsStore,
+            SettingsStore,
+            ContactStore,
+            LnurlPayStore,
+            navigation
+        } = this.props;
         const {
             loading,
             error,
@@ -590,6 +600,13 @@ export default class SendingLightning extends React.Component<
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
+
+        // Find matching contact by Lightning Address
+        const lightningAddress = LnurlPayStore.lightningAddress;
+        const matchedContact = ContactUtils.findContactByLightningAddress(
+            lightningAddress,
+            ContactStore?.contacts
+        );
 
         const stack = getRouteStack();
         const isSwap = stack.filter((route) => route.name === 'SwapDetails')[0];
@@ -711,6 +728,10 @@ export default class SendingLightning extends React.Component<
                                                 )}
                                             </Text>
                                         )}
+                                        <RecipientDisplay
+                                            contact={matchedContact}
+                                            lightningAddress={lightningAddress}
+                                        />
                                     </View>
                                 </>
                             )}
@@ -844,7 +865,12 @@ export default class SendingLightning extends React.Component<
                                 !isIncomplete &&
                                 !error &&
                                 !payment_error && (
-                                    <View style={{ width: '90%' }}>
+                                    <View
+                                        style={{
+                                            width: '90%',
+                                            marginBottom: 15
+                                        }}
+                                    >
                                         <CopyBox
                                             heading={localeString(
                                                 'views.Payment.paymentPreimage'

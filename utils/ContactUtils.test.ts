@@ -98,4 +98,83 @@ describe('ContactUtils', () => {
             expect(transformedContact).toBeInstanceOf(Object);
         });
     });
+
+    describe('findContactByLightningAddress', () => {
+        const mockContacts = [
+            {
+                name: 'Alice',
+                lnAddress: ['alice@example.com'],
+                contactId: 'alice-123'
+            },
+            {
+                name: 'Bob',
+                lnAddress: ['bob@example.com', 'bob@other.com'],
+                contactId: 'bob-456'
+            },
+            {
+                name: 'Charlie',
+                lnAddress: [],
+                contactId: 'charlie-789'
+            }
+        ] as any;
+
+        it('finds contact by exact Lightning Address match', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                'alice@example.com',
+                mockContacts
+            );
+            expect(result).not.toBeNull();
+            expect(result?.name).toBe('Alice');
+        });
+
+        it('finds contact with case-insensitive matching', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                'ALICE@EXAMPLE.COM',
+                mockContacts
+            );
+            expect(result).not.toBeNull();
+            expect(result?.name).toBe('Alice');
+        });
+
+        it('finds contact with multiple Lightning Addresses', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                'bob@other.com',
+                mockContacts
+            );
+            expect(result).not.toBeNull();
+            expect(result?.name).toBe('Bob');
+        });
+
+        it('returns null when no match found', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                'unknown@example.com',
+                mockContacts
+            );
+            expect(result).toBeNull();
+        });
+
+        it('returns null when lightningAddress is undefined', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                undefined,
+                mockContacts
+            );
+            expect(result).toBeNull();
+        });
+
+        it('returns null when contacts is undefined', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                'alice@example.com',
+                undefined
+            );
+            expect(result).toBeNull();
+        });
+
+        it('returns null when contacts array is empty', () => {
+            const result = ContactUtils.findContactByLightningAddress(
+                'alice@example.com',
+                []
+            );
+            expect(result).toBeNull();
+        });
+    });
 });

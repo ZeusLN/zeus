@@ -26,6 +26,7 @@ import Contact from '../../models/Contact';
 
 import LnurlPayMetadata from './Metadata';
 
+import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getUnformattedAmount, getSatAmount } from '../../utils/AmountUtils';
@@ -164,19 +165,10 @@ export default class LnurlPay extends React.Component<
         }
 
         // Find matching contact by Lightning Address
-        let matchedContact: Contact | null = null;
-        if (lightningAddress && ContactStore?.contacts) {
-            const normalizedAddress = lightningAddress.toLowerCase();
-            const found = ContactStore.contacts.find((contact: Contact) =>
-                contact.lnAddress?.some(
-                    (addr: string) =>
-                        addr && addr.toLowerCase() === normalizedAddress
-                )
-            );
-            if (found) {
-                matchedContact = new Contact(found);
-            }
-        }
+        const matchedContact = ContactUtils.findContactByLightningAddress(
+            lightningAddress,
+            ContactStore?.contacts
+        );
 
         return {
             amount: finalAmount,
@@ -193,7 +185,7 @@ export default class LnurlPay extends React.Component<
 
         const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
             this.props;
-        const { domain, comment } = this.state;
+        const { domain, comment, lightningAddress } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
@@ -291,7 +283,8 @@ export default class LnurlPay extends React.Component<
                             user_pubkey,
                             relays,
                             relays_sig,
-                            pr
+                            pr,
+                            lightningAddress
                         );
 
                         navigation.navigate('ChoosePaymentMethod', {
@@ -341,7 +334,8 @@ export default class LnurlPay extends React.Component<
                             user_pubkey,
                             relays,
                             relays_sig,
-                            pr
+                            pr,
+                            lightningAddress
                         );
                         navigation.navigate('PaymentRequest');
                     });
