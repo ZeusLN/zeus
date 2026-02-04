@@ -130,13 +130,9 @@ ZEUS is proud to be integrated on the following platforms:
 
 ## Contributing
 
-Please be sure to run `yarn run tsc` to check for type errors, `yarn run test` to run all tests, and `yarn run prettier` to run the prettier
+We welcome contributions from the community. Please read our [Contribution Guidelines](CONTRIBUTING.md).
 
-If you are making cosmetic changes please test on both Android and iOS as things don't render exactly the same on both platforms.
-
-If you're looking for a quick way to get a lightning development environment running, check out [Polar](https://github.com/jamaljsr/polar).
-
-NOTE: When configuring a new node on Android in dev, the `Host` field must be `10.0.2.2` - `127.0.0.1` or `localhost` won't work.
+First-time contributors are [highly encouraged to start with code review first](CODE_REVIEW.md), before creating their own Pull Requests.
 
 ## Reproducible builds
 
