@@ -81,4 +81,25 @@ describe('Payment.getAmount with partial HTLC success', () => {
         // Should return 50 sats (50500 - 500) / 1000
         expect(payment.getAmount).toBe(50);
     });
+
+    it('uses amountFromFields for in-transit payments', () => {
+        const payment = new Payment({
+            value_sat: 50000,
+            payment_preimage:
+                '0000000000000000000000000000000000000000000000000000000000000000',
+            htlcs: [
+                {
+                    status: 'IN_FLIGHT',
+                    route: {
+                        total_amt_msat: 50000000,
+                        hops: [{ amt_to_forward_msat: 50000000 }]
+                    }
+                }
+            ]
+        });
+
+        // Should return 50000 sats from value_sat, not 0 from failed HTLC sum
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.getAmount).toBe(50000);
+    });
 });

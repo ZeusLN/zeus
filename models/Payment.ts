@@ -247,7 +247,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getAmount(): number | string {
-        if (!this.htlcs || this.htlcs.length === 0) {
+        if (!this.htlcs || this.htlcs.length === 0 || this.isInTransit) {
             return this.amountFromFields;
         }
 
