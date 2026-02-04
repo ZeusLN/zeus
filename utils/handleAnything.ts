@@ -56,7 +56,7 @@ const nostrProfileLookup = async (data: string) => {
                         kinds: [0]
                     }
                 ]);
-            } catch (e) { }
+            } catch (e) {}
         }
     );
 
@@ -244,7 +244,7 @@ const handleAnything = async (
     if (!isClipboardValue || !data.match(/^https?:\/\//i)) {
         try {
             lnurl = decodelnurl(data);
-        } catch (e) { }
+        } catch (e) {}
     }
 
     if (!hasAt && hasMultiple) {
@@ -457,10 +457,7 @@ const handleAnything = async (
         return [
             'WalletConfiguration',
             {
-                node: {
-                    ...node,
-                    certVerification: true
-                },
+                node,
                 enableTor: node.host && node.host.includes('.onion'),
                 newEntry: true,
                 isValid: true
@@ -549,7 +546,7 @@ const handleAnything = async (
                 b12Lightning = _l;
                 b12Offer = _o;
             }
-        } catch (e: any) { }
+        } catch (e: any) {}
 
         // try BOLT 11 address
         const [username, bolt11Domain] = value.split('@');
@@ -823,8 +820,8 @@ const handleAnything = async (
                             params.status === 'ERROR'
                                 ? `${params.domain} says: ${params.reason}`
                                 : `${localeString(
-                                    'utils.handleAnything.unsupportedLnurlType'
-                                )}: ${params.tag}`,
+                                      'utils.handleAnything.unsupportedLnurlType'
+                                  )}: ${params.tag}`,
                             [
                                 {
                                     text: localeString('general.ok'),
