@@ -8,15 +8,18 @@ import OrderItem from './OrderItem';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import Order from '../../models/Order';
+import { StackNavigationProp } from '@react-navigation/stack';
+import FiatStore from '../../stores/FiatStore';
+
 interface SwipeableOrderItemProps {
-    item: any;
-    navigation: any;
-    fiatStore: any;
+    item: Order;
+    navigation: StackNavigationProp<any, any>;
+    fiatStore?: FiatStore;
     onClickPaid: () => void;
     onClickHide: () => void;
     onSwipeableOpen: () => void;
 }
-
 const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
     (
         {
@@ -29,7 +32,7 @@ const SwipeableOrderItem = React.forwardRef<Swipeable, SwipeableOrderItemProps>(
         },
         ref
     ) => {
-        const { getRate, getSymbol } = fiatStore;
+        const { getRate, getSymbol } = fiatStore!;
         const isPaid = !!item.payment;
 
         let tip = '';

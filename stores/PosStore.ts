@@ -121,7 +121,7 @@ export default class PosStore {
         }
 
         const { settings } = this.settingsStore;
-        const { fiatRates, getRate } = this.fiatStore as any;
+        const { fiatRates, getRate } = this.fiatStore;
         const { units } = this.unitsStore;
 
         const { pos, fiat } = settings;

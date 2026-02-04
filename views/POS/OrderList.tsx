@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, Text, TouchableOpacity } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { Spacer } from '../../components/layout/Spacer';
 import SwipeableOrderItem from '../Wallet/SwipeableOrderItem';
@@ -62,9 +62,9 @@ export default class OrderList extends React.PureComponent<OrderListProps> {
                 data={orders}
                 renderItem={({ item, index }) => (
                     <SwipeableOrderItem
-                        ref={(ref: Swipeable | null) =>
-                            (this.rows[index] = ref)
-                        }
+                        ref={(ref: Swipeable | null) => {
+                            this.rows[index] = ref;
+                        }}
                         onSwipeableOpen={() => this.closeRow(index)}
                         item={item}
                         navigation={navigation}
@@ -76,7 +76,7 @@ export default class OrderList extends React.PureComponent<OrderListProps> {
                 ListFooterComponent={<Spacer height={100} />}
                 onRefresh={onRefresh}
                 refreshing={loading}
-                keyExtractor={(_, index) => `${index}`}
+                keyExtractor={(item) => item.id}
             />
         );
     }

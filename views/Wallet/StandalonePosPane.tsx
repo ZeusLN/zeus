@@ -7,15 +7,16 @@ import {
     TouchableOpacity,
     SectionList
 } from 'react-native';
-import { ButtonGroup, SearchBar } from '@rneui/themed';
+
+import { SearchBar } from '@rneui/themed';
+
 import { inject, observer } from 'mobx-react';
 import moment from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import WalletHeader from '../../components/WalletHeader';
 import OrderList from '../POS/OrderList';
+import Layout from '../../views/POS/Layout';
 
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 
@@ -28,12 +29,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
-
-import { version } from './../../package.json';
 
 interface StandalonePosPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -345,11 +343,11 @@ export default class StandalonePosPane extends React.PureComponent<
             SettingsStore,
             PosStore,
             FiatStore,
-            NodeInfoStore,
             InventoryStore,
             navigation
         } = this.props;
-        const { search, selectedIndex, productsList, itemQty } = this.state;
+        const { search, selectedIndex, productsList, itemQty, fadeAnimation } =
+            this.state;
         const { setFiltersPos } = ActivityStore!;
         const {
             getOrders,
@@ -358,13 +356,12 @@ export default class StandalonePosPane extends React.PureComponent<
             updateSearch,
             hideOrder
         } = PosStore!;
-        const { getRate, getFiatRates }: any = FiatStore;
         const orders =
-            selectedIndex === 0
-                ? []
-                : selectedIndex === 1
+            selectedIndex === 1
                 ? filteredOpenOrders
-                : filteredPaidOrders;
+                : selectedIndex === 2
+                ? filteredPaidOrders
+                : [];
 
         const currentOrder = PosStore?.currentOrder;
         const disableButtons =
@@ -376,9 +373,6 @@ export default class StandalonePosPane extends React.PureComponent<
             selectedIndex === 0
                 ? localeString('general.pos')
                 : `${localeString('general.pos')} (${orders.length || 0})`;
-
-        const error = NodeInfoStore?.error || SettingsStore?.error;
-
         const loading = PosStore?.loading || InventoryStore?.loading || false;
 
         const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
@@ -431,140 +425,19 @@ export default class StandalonePosPane extends React.PureComponent<
             { element: paidOrdersButton }
         ];
         const buttonElements = buttons.map((btn) => btn.element());
-        if (error) {
-            return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('error'),
-                        paddingTop: 20,
-                        paddingLeft: 10,
-                        flex: 1
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 20,
-                            marginTop: 20,
-                            marginBottom: 25
-                        }}
-                    >
-                        {SettingsStore?.errorMsg
-                            ? SettingsStore.errorMsg
-                            : NodeInfoStore?.errorMsg
-                            ? NodeInfoStore.errorMsg
-                            : localeString('views.Wallet.MainPane.error')}
-                    </Text>
-                    <Button
-                        icon={{
-                            name: 'settings',
-                            size: 25,
-                            color: '#fff'
-                        }}
-                        title={localeString(
-                            'views.Wallet.MainPane.goToSettings'
-                        )}
-                        buttonStyle={{
-                            backgroundColor: 'gray'
-                        }}
-                        containerStyle={{
-                            alignItems: 'center'
-                        }}
-                        onPress={() => {
-                            protectedNavigation(navigation, 'Menu');
-                        }}
-                        adaptiveWidth
-                    />
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 12,
-                            marginTop: 20,
-                            marginBottom: -40
-                        }}
-                    >
-                        {`v${version}`}
-                    </Text>
-                </View>
-            );
-        }
 
         return (
-            <View style={{ flex: 1 }}>
-                <WalletHeader
-                    title={headerString}
-                    navigation={navigation}
-                    SettingsStore={SettingsStore}
-                />
-
-                {fiatEnabled && getRate() === '$N/A' && (
-                    <Animated.View
-                        style={{
-                            alignSelf: 'center',
-                            opacity: this.state.fadeAnimation
-                        }}
-                    >
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                marginBottom: 10
-                            }}
-                        >
-                            {localeString(
-                                'pos.views.Wallet.PosPane.fetchingRates'
-                            )}
-                        </Text>
-                    </Animated.View>
-                )}
-                {fiatEnabled && getRate() !== '$N/A' && (
-                    <TouchableOpacity onPress={() => getFiatRates()}>
-                        <Text
-                            style={{
-                                color:
-                                    getRate() === '$N/A'
-                                        ? themeColor('error')
-                                        : themeColor('text'),
-                                alignSelf: 'center',
-                                marginBottom: 10
-                            }}
-                        >
-                            {getRate() === '$N/A'
-                                ? localeString('general.fiatFetchError')
-                                : getRate()}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
-                {!loading && (
-                    <ButtonGroup
-                        onPress={(selectedIndex: number) => {
-                            this.setState({ selectedIndex });
-                        }}
-                        selectedIndex={selectedIndex}
-                        buttons={buttonElements}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
-                )}
-
-                {loading && (
-                    <View style={{ marginTop: 40 }}>
-                        <LoadingIndicator />
-                    </View>
-                )}
-
+            <Layout
+                title={headerString}
+                navigation={navigation}
+                loading={loading}
+                selectedIndex={selectedIndex}
+                buttons={buttonElements}
+                onIndexChange={(selectedIndex: number) =>
+                    this.setState({ selectedIndex })
+                }
+                fadeAnimation={fadeAnimation}
+            >
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
@@ -597,25 +470,22 @@ export default class StandalonePosPane extends React.PureComponent<
                     />
                 )}
 
-                {!loading &&
-                    selectedIndex === 0 &&
-                    productsList &&
-                    productsList.length === 0 && (
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                marginTop: 20,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.POS.Product.noProductsDefined'
-                            )}
-                        </Text>
-                    )}
-
                 {!loading && selectedIndex === 0 && (
                     <>
+                        {productsList && productsList.length === 0 && (
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    marginTop: 20,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.POS.Product.noProductsDefined'
+                                )}
+                            </Text>
+                        )}
+
                         <SectionList
                             sections={productsList}
                             renderSectionHeader={this.renderSectionHeader}
@@ -627,12 +497,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                 marginRight: 10
                             }}
                         />
-                        <View
-                            style={{
-                                paddingTop: 5,
-                                marginBottom: 10
-                            }}
-                        >
+                        <View style={{ paddingTop: 5, marginBottom: 10 }}>
                             <View
                                 style={{
                                     flexDirection: 'row',
@@ -753,7 +618,7 @@ export default class StandalonePosPane extends React.PureComponent<
                         }}
                     />
                 )}
-            </View>
+            </Layout>
         );
     }
 }

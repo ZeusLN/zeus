@@ -9,7 +9,6 @@ import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 
-import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -28,9 +27,10 @@ import { SATS_PER_BTC, getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 import { PricedIn } from '../../models/Product';
 
+import BigNumber from 'bignumber.js';
+
 interface PosKeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
-    ChannelsStore?: ChannelsStore;
     FiatStore?: FiatStore;
     PosStore?: PosStore;
     SettingsStore?: SettingsStore;
@@ -41,7 +41,7 @@ interface PosKeypadPaneState {
     amount: string;
 }
 
-@inject('ChannelsStore', 'FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
+@inject('FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class PosKeypadPane extends React.PureComponent<
     PosKeypadPaneProps,
