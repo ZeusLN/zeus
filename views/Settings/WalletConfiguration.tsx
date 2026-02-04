@@ -2351,6 +2351,7 @@ export default class WalletConfiguration extends React.Component<
                                         'views.Settings.WalletConfiguration.walletActive'
                                     )}
                                     backgroundColor="transparent"
+                                    width={'100%'}
                                 />
                             </View>
                         )}
