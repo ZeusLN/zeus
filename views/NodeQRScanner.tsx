@@ -13,8 +13,12 @@ interface NodeQRProps {
 
 function NodeQRScanner(props: NodeQRProps) {
     const { navigation } = props;
+    const isProcessing = React.useRef(false);
 
     const handleNodeScanned = (data: string) => {
+        if (isProcessing.current) return;
+        isProcessing.current = true;
+
         if (NodeUriUtils.isValidNodeUri(data)) {
             const { pubkey, host } = NodeUriUtils.processNodeUri(data);
             navigation.popTo('OpenChannel', {
@@ -22,6 +26,7 @@ function NodeQRScanner(props: NodeQRProps) {
                 host
             });
         } else {
+            isProcessing.current = false;
             Alert.alert(
                 localeString('general.error'),
                 localeString('views.NodeQRScanner.error'),

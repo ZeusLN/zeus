@@ -6,32 +6,19 @@ import { Header } from '@rneui/themed';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Route } from '@react-navigation/native';
 import { Bytes, CryptoAccount, CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
-
-import { nodeInfoStore } from '../stores/Stores';
-
-import Invoice from '../models/Invoice';
 
 import handleAnything from '../utils/handleAnything';
 import Base64Utils from '../utils/Base64Utils';
 import { joinQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import AddressUtils from '../utils/AddressUtils';
-import BackendUtils from '../utils/BackendUtils';
 
 interface HandleAnythingQRProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<
-        'HandleAnythingQRScanner',
-        {
-            view?: string;
-        }
-    >;
 }
 
 interface HandleAnythingQRState {
@@ -68,126 +55,7 @@ export default class HandleAnythingQRScanner extends React.Component<
     };
 
     handleAnythingScanned = async (data: string) => {
-        const { navigation, route } = this.props;
-        const view = route.params?.view;
-
-        if (view === 'Swaps') {
-            if (this.isProcessing) return;
-            this.isProcessing = true;
-            this.setState({ loading: true });
-            try {
-                const { value, satAmount } = AddressUtils.processBIP21Uri(data);
-
-                const { nodeInfo } = nodeInfoStore;
-                const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-
-                // Reverse Swap
-                if (
-                    AddressUtils.isValidBitcoinAddress(
-                        value,
-                        isTestNet || isRegTest || isSigNet
-                    )
-                ) {
-                    navigation.goBack();
-                    navigation.navigate('Swaps', {
-                        initialInvoice: value,
-                        initialAmountSats: satAmount,
-                        initialReverse: true
-                    });
-                    return;
-                }
-
-                // Submarine Swap
-                if (AddressUtils.isValidLightningPaymentRequest(value)) {
-                    const decodedInvoice =
-                        await BackendUtils.decodePaymentRequest([value]);
-
-                    if (!decodedInvoice) {
-                        throw new Error(
-                            localeString('views.Invoice.couldNotDecode')
-                        );
-                    }
-
-                    const invoiceModel = new Invoice(decodedInvoice);
-                    const amount = invoiceModel.getRequestAmount;
-
-                    navigation.goBack();
-                    navigation.navigate('Swaps', {
-                        initialInvoice: value,
-                        initialAmountSats: amount,
-                        initialReverse: false
-                    });
-                    return;
-                }
-
-                throw new Error(
-                    localeString('components.QRCodeScanner.notRecognized')
-                );
-            } catch (err: any) {
-                this.isProcessing = false;
-                console.error(err.message);
-                Alert.alert(
-                    localeString('general.error'),
-                    (err as Error).message ||
-                        localeString('utils.handleAnything.notValid'),
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
-                );
-                this.setState({ loading: false });
-                navigation.goBack();
-            }
-            return;
-        } else if (view === 'RefundSwap') {
-            if (this.isProcessing) return;
-            this.isProcessing = true;
-            this.setState({ loading: true });
-            try {
-                const { value } = AddressUtils.processBIP21Uri(data);
-
-                const { nodeInfo } = nodeInfoStore;
-                const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-
-                if (
-                    AddressUtils.isValidBitcoinAddress(
-                        value,
-                        isTestNet || isRegTest || isSigNet
-                    )
-                ) {
-                    navigation.goBack();
-                    navigation.navigate('RefundSwap', {
-                        scannedAddress: value
-                    });
-                    return;
-                }
-
-                throw new Error(
-                    localeString('components.QRCodeScanner.notRecognized')
-                );
-            } catch (err: any) {
-                this.isProcessing = false;
-                console.error(err.message);
-                Alert.alert(
-                    localeString('general.error'),
-                    (err as Error).message ||
-                        localeString('utils.handleAnything.notValid'),
-                    [
-                        {
-                            text: localeString('general.ok'),
-                            onPress: () => void 0
-                        }
-                    ],
-                    { cancelable: false }
-                );
-                this.setState({ loading: false });
-                navigation.goBack();
-            }
-            return;
-        }
+        const { navigation } = this.props;
 
         let handleData;
 
