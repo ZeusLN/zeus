@@ -183,7 +183,7 @@
     "@typescript-eslint/eslint-plugin": "6.13.1",
     "@typescript-eslint/parser": "8.20.0",
     "babel-jest": "29.7.0",
-    "compressing": "1.10.0",
+    "compressing": "1.10.4",
     "concurrently": "9.1.2",
     "eslint": "8.45.0",
     "eslint-config-prettier": "8.5.0",
