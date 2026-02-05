@@ -1935,6 +1935,7 @@
     "views.Cashu.Mint.mintUrlRequired": "Mint URL is required",
     "views.Cashu.Mint.submitReviewButton": "Submit review",
     "views.Cashu.Mint.submitError": "Failed to submit review",
+    "views.Cashu.Mint.failedToPublishRelay": "Failed to publish to any relay",
     "views.Cashu.Mint.reviewSubmitted": "Review submitted",
     "views.Cashu.Mint.reviewSubmittedDesc": "Your review has been published to Nostr relays",
     "views.Cashu.Mint.publishedAs": "Published as:",

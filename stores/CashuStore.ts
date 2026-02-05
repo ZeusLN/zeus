@@ -724,7 +724,9 @@ export default class CashuStore {
             const successCount = results.filter(Boolean).length;
 
             if (successCount === 0) {
-                throw new Error('Failed to publish to any relay');
+                throw new Error(
+                    localeString('views.Cashu.Mint.failedToPublishRelay')
+                );
             }
 
             runInAction(() => {
@@ -741,7 +743,8 @@ export default class CashuStore {
             });
             return {
                 success: false,
-                error: e?.message || 'Failed to submit review'
+                error:
+                    e?.message || localeString('views.Cashu.Mint.submitError')
             };
         }
     };
