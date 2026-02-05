@@ -21,6 +21,15 @@ import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
+import {
+    generatePrivateKey,
+    getPublicKey,
+    getEventHash,
+    getSignature,
+    relayInit
+} from 'nostr-tools';
+
+import NostrUtils from '../utils/NostrUtils';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -59,6 +68,10 @@ const UPGRADE_MESSAGES: { [key: number]: string } = {
     100000: 'cashu.upgradePrompt.message100k'
 };
 
+// ZEUS official npub for trusted mint recommendations
+const ZEUS_NPUB =
+    'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
+
 interface Wallet {
     wallet?: CashuWallet;
     walletId: string;
@@ -73,6 +86,55 @@ interface Wallet {
 interface MintRecommendation {
     count: number;
     url: string;
+}
+
+export interface MintReviewRating {
+    score: number;
+    max: number;
+}
+
+export interface MintReview {
+    pubkey: string;
+    content: string;
+    createdAt: number;
+    mintUrl: string;
+    rating?: MintReviewRating;
+}
+
+/**
+ * Parses a rating from review content in format [n/m] at the beginning.
+ * Returns the rating object and the remaining content with the rating stripped.
+ */
+const parseReviewRating = (
+    content: string
+): { rating?: MintReviewRating; cleanContent: string } => {
+    if (!content) {
+        return { cleanContent: '' };
+    }
+
+    const ratingRegex = /^\s*\[(\d+)\/(\d+)\]\s*/;
+    const match = content.match(ratingRegex);
+
+    if (match) {
+        const score = parseInt(match[1], 10);
+        const max = parseInt(match[2], 10);
+
+        if (score >= 0 && max > 0 && score <= max) {
+            return {
+                rating: { score, max },
+                cleanContent: content.replace(ratingRegex, '').trim()
+            };
+        }
+    }
+
+    return { cleanContent: content.trim() };
+};
+
+export interface ReviewerProfile {
+    pubkey: string;
+    npub: string;
+    name?: string;
+    picture?: string;
 }
 
 interface ClaimTokenResponse {
@@ -124,6 +186,15 @@ export default class CashuStore {
     @observable public paymentDuration?: number;
 
     @observable public mintRecommendations?: MintRecommendation[];
+    @observable public trustedMintRecommendations?: MintRecommendation[];
+    @observable public mintReviews: Map<string, MintReview[]> = new Map();
+    @observable public reviewerProfiles: Map<string, ReviewerProfile> =
+        new Map();
+    @observable public loadingTrustedMints = false;
+    @observable public loadingReviews = false;
+    @observable public submittingReview = false;
+    @observable public reviewSubmitSuccess = false;
+    @observable public reviewSubmitError = false;
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
 
@@ -227,6 +298,90 @@ export default class CashuStore {
         );
         return this.totalBalanceSats;
     };
+
+    /**
+     * Helper: Subscribe to NDK and collect events with EOSE handling and timeout.
+     */
+    private subscribeAndCollectEvents = async (
+        filter: NDKFilter,
+        logPrefix: string
+    ): Promise<Set<NDKEvent>> => {
+        const events = new Set<NDKEvent>();
+        let eoseCount = 0;
+        const totalRelays = DEFAULT_NOSTR_RELAYS.length;
+        const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+
+        await new Promise<void>((resolve) => {
+            sub.on('event', (event: NDKEvent) => {
+                events.add(event);
+            });
+            sub.on('eose', () => {
+                eoseCount++;
+                if (eoseCount >= Math.ceil(totalRelays / 2)) {
+                    console.log(
+                        `${logPrefix}: EOSE received from majority of relays`
+                    );
+                    resolve();
+                }
+            });
+            setTimeout(() => {
+                console.log(`${logPrefix}: Timeout reached`);
+                resolve();
+            }, 10000);
+        });
+
+        sub.stop();
+        return events;
+    };
+
+    /**
+     * Helper: Process NIP-87 events into mint recommendations and reviews.
+     */
+    private processMintRecommendationEvents = (
+        events: Set<NDKEvent>
+    ): {
+        recommendations: MintRecommendation[];
+        reviews: Map<string, MintReview[]>;
+    } => {
+        const mintCounts = new Map<string, number>();
+        const mintReviewsMap = new Map<string, MintReview[]>();
+
+        for (const event of events) {
+            if (event.tagValue('k') === '38172' && event.tagValue('u')) {
+                const mintUrl = event.tagValue('u');
+                if (
+                    typeof mintUrl === 'string' &&
+                    mintUrl.startsWith('https://')
+                ) {
+                    const count = (mintCounts.get(mintUrl) || 0) + 1;
+                    mintCounts.set(mintUrl, count);
+
+                    // Store review data with parsed rating
+                    const { rating, cleanContent } = parseReviewRating(
+                        event.content || ''
+                    );
+                    const review: MintReview = {
+                        pubkey: event.pubkey,
+                        content: cleanContent,
+                        createdAt: event.created_at || 0,
+                        mintUrl,
+                        rating
+                    };
+
+                    const existingReviews = mintReviewsMap.get(mintUrl) || [];
+                    existingReviews.push(review);
+                    mintReviewsMap.set(mintUrl, existingReviews);
+                }
+            }
+        }
+
+        const recommendations = Array.from(mintCounts.entries())
+            .map(([url, count]) => ({ url, count }))
+            .sort((a, b) => b.count - a.count);
+
+        return { recommendations, reviews: mintReviewsMap };
+    };
+
     @action
     public fetchMints = async () => {
         try {
@@ -246,59 +401,21 @@ export default class CashuStore {
                 limit: 2000
             };
 
-            const events = new Set<NDKEvent>();
-            let eoseCount = 0;
-            const totalRelays = DEFAULT_NOSTR_RELAYS.length;
-            const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+            const events = await this.subscribeAndCollectEvents(
+                filter,
+                'Mint discovery'
+            );
 
-            await new Promise<void>((resolve) => {
-                sub.on('event', (event: NDKEvent) => {
-                    events.add(event);
-                });
-                sub.on('eose', () => {
-                    eoseCount++;
-                    if (eoseCount >= Math.ceil(totalRelays / 2)) {
-                        console.log(
-                            'Mint discovery: EOSE received from majority of relays'
-                        );
-                        resolve();
-                    }
-                });
-                setTimeout(() => {
-                    console.log('Mint discovery: Timeout reached');
-                    resolve();
-                }, 10000);
-            });
-
-            sub.stop();
-
-            const mintCounts = new Map<string, number>();
-
-            for (const event of events) {
-                if (event.tagValue('k') === '38172' && event.tagValue('u')) {
-                    const mintUrl = event.tagValue('u');
-                    if (
-                        typeof mintUrl === 'string' &&
-                        mintUrl.startsWith('https://')
-                    ) {
-                        mintCounts.set(
-                            mintUrl,
-                            (mintCounts.get(mintUrl) || 0) + 1
-                        );
-                    }
-                }
-            }
-
-            const mintUrlsCounted = Array.from(mintCounts.entries())
-                .map(([url, count]) => ({ url, count }))
-                .sort((a, b) => b.count - a.count);
+            const { recommendations, reviews } =
+                this.processMintRecommendationEvents(events);
 
             runInAction(() => {
-                this.mintRecommendations = mintUrlsCounted;
+                this.mintRecommendations = recommendations;
+                this.mintReviews = reviews;
                 this.loading = false;
             });
 
-            return mintUrlsCounted;
+            return recommendations;
         } catch (e: any) {
             console.error('Error fetching mints:', e);
             runInAction(() => {
@@ -309,6 +426,334 @@ export default class CashuStore {
                 );
             });
         }
+    };
+
+    // Validate npub format and return hex pubkey if valid
+    public validateNpub = (npubInput: string): string | null => {
+        return NostrUtils.npubToHex(npubInput);
+    };
+
+    @action
+    public fetchMintsFromFollows = async (npubInput?: string) => {
+        try {
+            runInAction(() => {
+                this.loadingTrustedMints = true;
+                this.error = false;
+                this.error_msg = undefined;
+            });
+
+            // Use provided npub or default to ZEUS npub
+            const npubToUse = npubInput?.trim() || ZEUS_NPUB;
+            const hexPubkey = this.validateNpub(npubToUse);
+
+            if (!hexPubkey) {
+                runInAction(() => {
+                    this.loadingTrustedMints = false;
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'views.Cashu.AddMint.invalidNpub'
+                    );
+                });
+                return [];
+            }
+
+            // Initialize NDK if not already done
+            if (!this.ndk) {
+                this.ndk = new NDK({
+                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                });
+                await this.ndk.connect();
+            }
+
+            // Fetch follow list (kind 3)
+            const followFilter: NDKFilter = {
+                kinds: [3 as NDKKind],
+                authors: [hexPubkey],
+                limit: 1
+            };
+
+            const followEvents = await this.ndk.fetchEvents(followFilter);
+            const followEvent = Array.from(followEvents)[0];
+
+            if (!followEvent) {
+                console.log('No follow list found for npub');
+                runInAction(() => {
+                    this.trustedMintRecommendations = [];
+                    this.loadingTrustedMints = false;
+                    this.error = true;
+                    this.error_msg = localeString(
+                        'views.Cashu.AddMint.noFollowList'
+                    );
+                });
+                return [];
+            }
+
+            // Extract followed pubkeys from 'p' tags
+            const followedPubkeys = new Set<string>();
+            for (const tag of followEvent.tags) {
+                if (tag[0] === 'p' && tag[1]) {
+                    followedPubkeys.add(tag[1]);
+                }
+            }
+
+            if (followedPubkeys.size === 0) {
+                runInAction(() => {
+                    this.trustedMintRecommendations = [];
+                    this.loadingTrustedMints = false;
+                });
+                return [];
+            }
+
+            // Fetch mint recommendations (kind 38000) from followed accounts
+            const mintFilter: NDKFilter = {
+                kinds: [38000 as NDKKind],
+                authors: Array.from(followedPubkeys),
+                limit: 2000
+            };
+
+            const events = await this.subscribeAndCollectEvents(
+                mintFilter,
+                'Trusted mint discovery'
+            );
+
+            const { recommendations, reviews } =
+                this.processMintRecommendationEvents(events);
+
+            runInAction(() => {
+                this.trustedMintRecommendations = recommendations;
+                this.mintReviews = reviews;
+                this.loadingTrustedMints = false;
+            });
+
+            return recommendations;
+        } catch (e: any) {
+            console.error('Error fetching mints from follows:', e);
+            runInAction(() => {
+                this.loadingTrustedMints = false;
+                this.error = true;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorDiscoveringMints'
+                );
+            });
+        }
+    };
+
+    @action
+    public fetchReviewerProfiles = async (pubkeys: string[]) => {
+        if (!pubkeys.length) return;
+
+        try {
+            runInAction(() => {
+                this.loadingReviews = true;
+            });
+
+            // Filter out pubkeys we already have profiles for
+            const newPubkeys = pubkeys.filter(
+                (pk) => !this.reviewerProfiles.has(pk)
+            );
+
+            if (!newPubkeys.length) {
+                runInAction(() => {
+                    this.loadingReviews = false;
+                });
+                return;
+            }
+
+            // Initialize NDK if not already done
+            if (!this.ndk) {
+                this.ndk = new NDK({
+                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                });
+                await this.ndk.connect();
+            }
+
+            // Fetch profiles (kind 0)
+            const profileFilter: NDKFilter = {
+                kinds: [0 as NDKKind],
+                authors: newPubkeys,
+                limit: newPubkeys.length
+            };
+
+            const events = await this.ndk.fetchEvents(profileFilter);
+
+            const profilesMap = new Map<string, ReviewerProfile>();
+
+            // Initialize all pubkeys with basic info
+            for (const pubkey of newPubkeys) {
+                const npub = NostrUtils.hexToNpub(pubkey);
+                profilesMap.set(pubkey, {
+                    pubkey,
+                    npub: npub || pubkey
+                });
+            }
+
+            // Update with profile data where available
+            for (const event of events) {
+                try {
+                    const content = JSON.parse(event.content);
+                    const npub = NostrUtils.hexToNpub(event.pubkey);
+                    profilesMap.set(event.pubkey, {
+                        pubkey: event.pubkey,
+                        npub: npub || event.pubkey,
+                        name:
+                            content.display_name ||
+                            content.name ||
+                            content.username,
+                        picture: content.picture
+                    });
+                } catch (e) {
+                    console.error('Error parsing profile:', e);
+                }
+            }
+
+            runInAction(() => {
+                // Merge new profiles with existing ones
+                for (const [pubkey, profile] of profilesMap) {
+                    this.reviewerProfiles.set(pubkey, profile);
+                }
+                this.loadingReviews = false;
+            });
+        } catch (e: any) {
+            console.error('Error fetching reviewer profiles:', e);
+            runInAction(() => {
+                this.loadingReviews = false;
+            });
+        }
+    };
+
+    /**
+     * Submits a mint review to Nostr relays (NIP-87).
+     * @param mintUrl - The mint URL to review
+     * @param rating - Rating from 1-5 (optional)
+     * @param reviewText - Review text content (optional)
+     * @param nsec - User's nsec for signing (if not provided, generates anonymous keypair)
+     * @returns Object with success status and optional npub of the signer
+     */
+    @action
+    public submitMintReview = async (
+        mintUrl: string,
+        rating?: number,
+        reviewText?: string,
+        nsec?: string
+    ): Promise<{ success: boolean; npub?: string; error?: string }> => {
+        if (!mintUrl) {
+            return {
+                success: false,
+                error: localeString('views.Cashu.Mint.mintUrlRequired')
+            };
+        }
+
+        runInAction(() => {
+            this.submittingReview = true;
+            this.reviewSubmitSuccess = false;
+            this.reviewSubmitError = false;
+        });
+
+        try {
+            // Get or generate private key
+            let privateKey: string;
+            if (nsec) {
+                const hexKey = NostrUtils.nsecToHex(nsec);
+                if (!hexKey) {
+                    runInAction(() => {
+                        this.submittingReview = false;
+                        this.reviewSubmitError = true;
+                    });
+                    return {
+                        success: false,
+                        error: localeString('views.Cashu.Mint.invalidNsec')
+                    };
+                }
+                privateKey = hexKey;
+            } else {
+                // Generate anonymous keypair
+                privateKey = generatePrivateKey();
+            }
+
+            const publicKey = getPublicKey(privateKey);
+            const npub = NostrUtils.hexToNpub(publicKey);
+
+            // Build content with optional rating prefix
+            let content = '';
+            if (rating && rating >= 1 && rating <= 5) {
+                content = `[${rating}/5]`;
+                if (reviewText?.trim()) {
+                    content += ` ${reviewText.trim()}`;
+                }
+            } else if (reviewText?.trim()) {
+                content = reviewText.trim();
+            }
+
+            // Create NIP-87 event (kind 38000, parameterized replaceable)
+            const unsignedEvent = {
+                kind: 38000,
+                content,
+                tags: [
+                    ['k', '38172'], // Cashu mint recommendation
+                    ['u', mintUrl],
+                    ['d', mintUrl] // Identifier for parameterized replaceable
+                ],
+                created_at: Math.floor(Date.now() / 1000),
+                pubkey: publicKey
+            };
+
+            // Sign the event
+            const signedEvent = {
+                ...unsignedEvent,
+                id: getEventHash(unsignedEvent),
+                sig: getSignature(unsignedEvent, privateKey)
+            };
+
+            // Publish to relays
+            const publishPromises = DEFAULT_NOSTR_RELAYS.map(
+                async (relayUrl) => {
+                    try {
+                        const relay = relayInit(relayUrl);
+                        await relay.connect();
+                        await relay.publish(signedEvent);
+                        relay.close();
+                        return true;
+                    } catch (e) {
+                        console.warn(`Failed to publish to ${relayUrl}:`, e);
+                        return false;
+                    }
+                }
+            );
+
+            const results = await Promise.all(publishPromises);
+            const successCount = results.filter(Boolean).length;
+
+            if (successCount === 0) {
+                throw new Error(
+                    localeString('views.Cashu.Mint.failedToPublishRelay')
+                );
+            }
+
+            runInAction(() => {
+                this.submittingReview = false;
+                this.reviewSubmitSuccess = true;
+            });
+
+            return { success: true, npub: npub || publicKey };
+        } catch (e: any) {
+            console.error('Error submitting mint review:', e);
+            runInAction(() => {
+                this.submittingReview = false;
+                this.reviewSubmitError = true;
+            });
+            return {
+                success: false,
+                error:
+                    e?.message || localeString('views.Cashu.Mint.submitError')
+            };
+        }
+    };
+
+    @action
+    public resetReviewSubmitState = () => {
+        this.submittingReview = false;
+        this.reviewSubmitSuccess = false;
+        this.reviewSubmitError = false;
     };
 
     @action

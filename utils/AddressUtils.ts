@@ -7,6 +7,7 @@ bitcoin.initEccLib(ecc);
 import { nodeInfoStore } from '../stores/Stores';
 
 import Base64Utils from '../utils/Base64Utils';
+import NostrUtils from '../utils/NostrUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { walletrpc } from '../proto/lightning';
@@ -51,9 +52,6 @@ const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
 /* ZEUS ecash gift URL */
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
-
-/* npub */
-const npubFormat = /^npub1[0-9a-z]{58}$/;
 
 /* xpub,ypub,zpub,vpub */
 const xpubFormat = /^(xpub|ypub|zpub|vpub|tpub)(.*)/;
@@ -209,7 +207,7 @@ class AddressUtils {
 
     isValidWithdrawalRequest = (input: string) => withdrawalRequest.test(input);
 
-    isValidNpub = (input: string) => npubFormat.test(input);
+    isValidNpub = (input: string) => NostrUtils.isValidNpub(input);
 
     isValidXpub = (input: string) => xpubFormat.test(input);
 

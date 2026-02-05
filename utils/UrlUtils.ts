@@ -32,6 +32,33 @@ const goToBlockExplorer = (
     goToUrl(url);
 };
 
+const isValidUrl = (url: string): boolean => {
+    if (!url || typeof url !== 'string') {
+        return false;
+    }
+
+    const trimmedUrl = url.trim();
+
+    // Must start with http:// or https://
+    if (
+        !trimmedUrl.startsWith('http://') &&
+        !trimmedUrl.startsWith('https://')
+    ) {
+        return false;
+    }
+
+    try {
+        const parsed = new URL(trimmedUrl);
+        // Must have a valid hostname
+        if (!parsed.hostname || parsed.hostname.length === 0) {
+            return false;
+        }
+        return true;
+    } catch {
+        return false;
+    }
+};
+
 const goToBlockExplorerTXID = (txid: string, testnet?: boolean) =>
     goToBlockExplorer('tx', txid, testnet);
 const goToBlockExplorerAddress = (address: string, testnet?: boolean) =>
@@ -65,6 +92,7 @@ const leaveZeus = (url: string) => {
 };
 
 export default {
+    isValidUrl,
     goToBlockExplorerTXID,
     goToBlockExplorerAddress,
     goToBlockExplorerBlockHeight,
