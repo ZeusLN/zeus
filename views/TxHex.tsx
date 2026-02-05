@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from '@rneui/themed';
-import { UR, UREncoder } from '@ngraveio/bc-ur';
 import clone from 'lodash/clone';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,8 +17,8 @@ import { runInAction } from 'mobx';
 const bitcoin = require('bitcoinjs-lib');
 
 import Amount from '../components/Amount';
+import AnimatedQRDisplay from '../components/AnimatedQRDisplay';
 import Button from '../components/Button';
-import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -27,7 +26,7 @@ import Screen from '../components/Screen';
 import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
-import { DEFAULT_SPLIT_OPTIONS, splitQRs } from '../utils/BbqrUtils';
+import { getButtonGroupStyles } from '../utils/buttonGroupStyles';
 import { localeString } from '../utils/LocaleUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -37,10 +36,6 @@ import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import SettingsStore from '../stores/SettingsStore';
-import {
-    getQRAnimationInterval,
-    QRAnimationSpeed
-} from '../utils/QRAnimationUtils';
 
 interface TxHexProps {
     navigation: StackNavigationProp<any, any>;
@@ -53,101 +48,32 @@ interface TxHexProps {
 
 interface TxHexState {
     infoIndex: number;
-    selectedIndex: number;
     txHex: string;
-    frameIndex: number;
-    bbqrParts: Array<string>;
-    bcurEncoder: any;
-    bcurPart: string;
     txDecoded?: any;
-    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore', 'SettingsStore')
 @observer
 export default class TxHex extends React.Component<TxHexProps, TxHexState> {
-    private qrAnimationInterval?: any;
     state: TxHexState = {
         infoIndex: 0,
-        selectedIndex: 0,
         txHex: this.props.route.params?.txHex || '',
-        frameIndex: 0,
-        bbqrParts: [],
-        bcurEncoder: undefined,
-        bcurPart: '',
-        txDecoded: undefined,
-        qrAnimationSpeed: 'medium'
+        txDecoded: undefined
     };
 
     componentDidMount(): void {
-        this.generateInfo();
+        this.decodeTx();
     }
 
-    generateInfo = () => {
+    decodeTx = () => {
         const { txHex } = this.state;
-
-        // TX data
-        const txDecoded = bitcoin.Transaction.fromHex(txHex);
-
-        // BBQr
-
-        const input = Base64Utils.base64ToBytes(txHex);
-
-        const fileType = 'T'; // 'T' is for Transaction
-
-        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
-
-        // bc-ur
-
-        const messageBuffer = Buffer.from(txHex);
-
-        // First step is to create a UR object from a Buffer
-        const ur = UR.fromBuffer(messageBuffer);
-
-        // Then, create the UREncoder object
-
-        // The maximum amount of fragments to be generated in total
-        // For NGRAVE ZERO support please keep to a maximum fragment size of 200
-        const maxFragmentLength = 200;
-
-        // The index of the fragment that will be the first to be generated
-        // If it's more than the "maxFragmentLength", then all the subsequent fragments will only be
-        // fountain parts
-        const firstSeqNum = 0;
-
-        // Create the encoder object
-        const encoder = new UREncoder(ur, maxFragmentLength, firstSeqNum);
-        //
-
-        this.setState({
-            bcurEncoder: encoder,
-            bbqrParts: splitResult.parts,
-            txDecoded
-        });
-
-        // Clear any existing interval
-        if (this.qrAnimationInterval) {
-            clearInterval(this.qrAnimationInterval);
+        try {
+            const txDecoded = bitcoin.Transaction.fromHex(txHex);
+            this.setState({ txDecoded });
+        } catch (e) {
+            this.setState({ txDecoded: undefined });
         }
-
-        const length = splitResult.parts.length;
-        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
-        this.qrAnimationInterval = setInterval(() => {
-            this.setState({
-                frameIndex:
-                    this.state.frameIndex === length - 1
-                        ? 0
-                        : this.state.frameIndex + 1,
-                bcurPart: this.state.bcurEncoder?.nextPart() || undefined
-            });
-        }, interval);
     };
-
-    componentWillUnmount() {
-        if (this.qrAnimationInterval) {
-            clearInterval(this.qrAnimationInterval);
-        }
-    }
 
     handleBroadcast = async () => {
         const { txHex } = this.state;
@@ -216,16 +142,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         const { pending_chan_ids } = ChannelsStore;
         const { testnet } = NodeInfoStore;
         const { loading } = TransactionsStore;
-        const {
-            infoIndex,
-            selectedIndex,
-            frameIndex,
-            bbqrParts,
-            txHex,
-            bcurPart,
-            txDecoded,
-            qrAnimationSpeed
-        } = this.state;
+        const { infoIndex, txHex, txDecoded } = this.state;
 
         const qrButton = () => (
             <Text
@@ -259,51 +176,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             { element: infoButton }
         ];
 
-        const singleButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 0
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                {localeString('views.PSBT.singleFrame')}
-            </Text>
-        );
-        const bcurButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 1
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                BC-ur
-            </Text>
-        );
-        const bbqrButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 2
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                BBQr
-            </Text>
-        );
-
-        const qrButtons: any = [
-            { element: singleButton },
-            { element: bcurButton },
-            { element: bbqrButton }
-        ];
+        const groupStyles = getButtonGroupStyles();
 
         return (
             <Screen>
@@ -399,87 +272,20 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                 }}
                                 selectedIndex={infoIndex}
                                 buttons={infoButtons}
-                                selectedButtonStyle={{
-                                    backgroundColor: themeColor('highlight'),
-                                    borderRadius: 12
-                                }}
-                                containerStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 12,
-                                    borderColor: themeColor('secondary'),
-                                    marginBottom: 10
-                                }}
-                                innerBorderStyle={{
-                                    color: themeColor('secondary')
-                                }}
+                                selectedButtonStyle={
+                                    groupStyles.selectedButtonStyle
+                                }
+                                containerStyle={groupStyles.containerStyle}
+                                innerBorderStyle={groupStyles.innerBorderStyle}
                             />
                             {infoIndex === 0 && (
                                 <>
-                                    <ButtonGroup
-                                        onPress={(selectedIndex: number) => {
-                                            this.setState({ selectedIndex });
-                                        }}
-                                        selectedIndex={selectedIndex}
-                                        buttons={qrButtons}
-                                        selectedButtonStyle={{
-                                            backgroundColor:
-                                                themeColor('highlight'),
-                                            borderRadius: 12
-                                        }}
-                                        containerStyle={{
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderRadius: 12,
-                                            borderColor:
-                                                themeColor('secondary'),
-                                            marginBottom: 10
-                                        }}
-                                        innerBorderStyle={{
-                                            color: themeColor('secondary')
-                                        }}
+                                    <AnimatedQRDisplay
+                                        data={txHex}
+                                        encoderType="transaction"
+                                        fileType="T"
+                                        copyValue={txHex}
                                     />
-                                    <View
-                                        style={{
-                                            margin: 10
-                                        }}
-                                    >
-                                        <CollapsedQR
-                                            value={
-                                                selectedIndex === 0
-                                                    ? txHex
-                                                    : selectedIndex === 2
-                                                    ? bbqrParts[frameIndex]
-                                                    : bcurPart
-                                            }
-                                            showSpeed={
-                                                selectedIndex === 1 ||
-                                                (selectedIndex === 2 &&
-                                                    bbqrParts.length > 1)
-                                            }
-                                            showShare={
-                                                selectedIndex === 0 ||
-                                                (selectedIndex === 2 &&
-                                                    bbqrParts.length === 1)
-                                            }
-                                            copyValue={txHex}
-                                            truncateLongValue
-                                            expanded
-                                            iconOnly
-                                            qrAnimationSpeed={qrAnimationSpeed}
-                                            onQRAnimationSpeedChange={(
-                                                speed
-                                            ) => {
-                                                this.setState(
-                                                    {
-                                                        qrAnimationSpeed: speed
-                                                    },
-                                                    () => {
-                                                        this.generateInfo();
-                                                    }
-                                                );
-                                            }}
-                                        />
-                                    </View>
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(

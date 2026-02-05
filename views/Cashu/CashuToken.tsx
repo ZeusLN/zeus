@@ -4,13 +4,13 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ButtonGroup } from '@rneui/themed';
-import { UR, UREncoder } from '@ngraveio/bc-ur';
 
 import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import { activityStore, settingsStore } from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
+import AnimatedQRDisplay from '../../components/AnimatedQRDisplay';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
@@ -21,21 +21,15 @@ import {
     ErrorMessage
 } from '../../components/SuccessErrorMessage';
 import Text from '../../components/Text';
-import CollapsedQR from '../../components/CollapsedQR';
 
 import CashuToken from '../../models/CashuToken';
 
 import { ZEUS_ECASH_GIFT_URL } from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { getButtonGroupStyles } from '../../utils/buttonGroupStyles';
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import Base64Utils from '../../utils/Base64Utils';
-import { DEFAULT_SPLIT_OPTIONS, splitQRs } from '../../utils/BbqrUtils';
-import {
-    getQRAnimationInterval,
-    QRAnimationSpeed
-} from '../../utils/QRAnimationUtils';
 
 interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
@@ -49,14 +43,10 @@ interface CashuTokenState {
     success: boolean;
     errorMessage: string;
     infoIndex: number;
-    selectedIndex: number;
-    cashuBBQrParts: Array<string>;
-    cashuBcurEncoder: any;
-    cashuFrameIndex: number;
-    cashuBcurPart: string;
     isTokenTooLarge: boolean;
-    qrAnimationSpeed: QRAnimationSpeed;
 }
+
+const MAX_TOKEN_LENGTH = 1000;
 
 @inject('CashuStore', 'ChannelsStore')
 @observer
@@ -64,19 +54,12 @@ export default class CashuTokenView extends React.Component<
     CashuTokenProps,
     CashuTokenState
 > {
-    private qrAnimationInterval?: any;
     state = {
         updatedToken: undefined,
         success: false,
         errorMessage: '',
         infoIndex: 0,
-        selectedIndex: 0,
-        cashuBBQrParts: [],
-        cashuBcurEncoder: undefined,
-        cashuFrameIndex: 0,
-        cashuBcurPart: '',
-        isTokenTooLarge: false,
-        qrAnimationSpeed: 'medium' as QRAnimationSpeed
+        isTokenTooLarge: false
     };
 
     async componentDidMount() {
@@ -94,14 +77,11 @@ export default class CashuTokenView extends React.Component<
         const token = route.params?.token || decoded?.encodedToken;
         const { spent, mint } = decoded;
 
-        console.log('Decoded token:', decoded);
-        if (token) this.generateCashuInfo(token);
+        if (token) {
+            this.setState({ isTokenTooLarge: token.length > MAX_TOKEN_LENGTH });
+        }
 
         if (!spent) {
-            console.log('token not spent last time checked, checking...', {
-                decoded
-            });
-
             if (!cashuWallets[mint]?.wallet) {
                 await initializeWallet(mint, true);
             }
@@ -110,24 +90,16 @@ export default class CashuTokenView extends React.Component<
                 const isSpent = await checkTokenSpent(decoded);
 
                 if (isSpent) {
-                    console.log('Token spent, stopping check...');
                     const updatedToken = await markTokenSpent(decoded);
                     this.setState({
                         updatedToken
                     });
-                    clearInterval(checkInterval); // Stop checking once spent
+                    clearInterval(checkInterval);
                     activityStore.getActivityAndFilter(
                         settingsStore.settings.locale
                     );
-                } else {
-                    console.log('Token not spent, checking again...');
                 }
             }, 5000);
-        }
-    }
-    componentWillUnmount() {
-        if (this.qrAnimationInterval) {
-            clearInterval(this.qrAnimationInterval);
         }
     }
 
@@ -142,39 +114,6 @@ export default class CashuTokenView extends React.Component<
         }
     };
 
-    generateCashuInfo = (token: string) => {
-        const MAX_TOKEN_LENGTH = 1000;
-        const input = Base64Utils.base64ToBytes(token);
-        const fileType = 'U';
-
-        const splitResult = splitQRs(input, fileType, DEFAULT_SPLIT_OPTIONS);
-        const messageBuffer = Buffer.from(token, 'utf-8');
-        const ur = UR.fromBuffer(messageBuffer);
-        const encoder = new UREncoder(ur, 200, 0);
-        const length = splitResult.parts.length;
-        this.setState({
-            cashuBcurEncoder: encoder,
-            cashuBBQrParts: splitResult.parts,
-            cashuFrameIndex: 0,
-            cashuBcurPart: encoder.nextPart(),
-            isTokenTooLarge: token.length > MAX_TOKEN_LENGTH
-        });
-        // Clear any existing interval
-        if (this.qrAnimationInterval) {
-            clearInterval(this.qrAnimationInterval);
-        }
-        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
-        this.qrAnimationInterval = setInterval(() => {
-            this.setState((prevState: any) => ({
-                cashuFrameIndex:
-                    prevState.cashuFrameIndex === length - 1
-                        ? 0
-                        : prevState.cashuFrameIndex + 1,
-                cashuBcurPart: encoder.nextPart()
-            }));
-        }, interval);
-    };
-
     render() {
         const { navigation, route, CashuStore, ChannelsStore } = this.props;
         const {
@@ -182,10 +121,6 @@ export default class CashuTokenView extends React.Component<
             errorMessage,
             updatedToken,
             infoIndex,
-            selectedIndex,
-            cashuBBQrParts,
-            cashuFrameIndex,
-            cashuBcurPart,
             isTokenTooLarge
         } = this.state;
         const { mintUrls, addMint, claimToken, loading, errorAddingMint } =
@@ -210,13 +145,7 @@ export default class CashuTokenView extends React.Component<
         const hasOpenChannels = ChannelsStore?.channels?.length > 0;
         const enableCashu = settingsStore.settings.ecash?.enableCashu;
 
-        const isSingleFrameSelected = !isTokenTooLarge && selectedIndex === 0;
-        const isBcurSelected =
-            (!isTokenTooLarge && selectedIndex === 1) ||
-            (isTokenTooLarge && selectedIndex === 0);
-        const isBbqrSelected =
-            (!isTokenTooLarge && selectedIndex === 2) ||
-            (isTokenTooLarge && selectedIndex === 1);
+        const groupStyles = getButtonGroupStyles();
 
         const qrButton = () => (
             <Text
@@ -249,59 +178,6 @@ export default class CashuTokenView extends React.Component<
             { element: infoButton },
             { element: qrButton }
         ];
-
-        const singleButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 0
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                {localeString('views.PSBT.singleFrame')}
-            </Text>
-        );
-        const bcurButton = () => {
-            const bcurIndex = isTokenTooLarge ? 0 : 1;
-            return (
-                <Text
-                    style={{
-                        ...styles.text,
-                        color:
-                            selectedIndex === bcurIndex
-                                ? themeColor('background')
-                                : themeColor('text')
-                    }}
-                >
-                    BC-ur
-                </Text>
-            );
-        };
-
-        const bbqrButton = () => {
-            const bbqrIndex = isTokenTooLarge ? 1 : 2;
-            return (
-                <Text
-                    style={{
-                        ...styles.text,
-                        color:
-                            selectedIndex === bbqrIndex
-                                ? themeColor('background')
-                                : themeColor('text')
-                    }}
-                >
-                    BBQr
-                </Text>
-            );
-        };
-
-        const qrButtons: any = [
-            !isTokenTooLarge && { element: singleButton },
-            { element: bcurButton },
-            { element: bbqrButton }
-        ].filter(Boolean);
 
         return (
             <Screen>
@@ -376,19 +252,9 @@ export default class CashuTokenView extends React.Component<
                         }}
                         selectedIndex={infoIndex}
                         buttons={infoButtons}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary'),
-                            marginBottom: 10
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
+                        selectedButtonStyle={groupStyles.selectedButtonStyle}
+                        containerStyle={groupStyles.containerStyle}
+                        innerBorderStyle={groupStyles.innerBorderStyle}
                     />
 
                     {infoIndex === 0 && (
@@ -463,73 +329,15 @@ export default class CashuTokenView extends React.Component<
                     )}
 
                     {infoIndex === 1 && (
-                        <>
-                            <ButtonGroup
-                                onPress={(selectedIndex: number) => {
-                                    this.setState({ selectedIndex });
-                                }}
-                                selectedIndex={selectedIndex}
-                                buttons={qrButtons}
-                                selectedButtonStyle={{
-                                    backgroundColor: themeColor('highlight'),
-                                    borderRadius: 12
-                                }}
-                                containerStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 12,
-                                    borderColor: themeColor('secondary'),
-                                    marginBottom: 10
-                                }}
-                                innerBorderStyle={{
-                                    color: themeColor('secondary')
-                                }}
-                            />
-                            <View
-                                style={{
-                                    margin: 10
-                                }}
-                            >
-                                <CollapsedQR
-                                    value={
-                                        isSingleFrameSelected
-                                            ? `cashu:${token}`
-                                            : isBcurSelected
-                                            ? cashuBcurPart
-                                            : cashuBBQrParts[cashuFrameIndex]
-                                    }
-                                    copyValue={`cashu:${token}`}
-                                    iconOnly
-                                    showShare={
-                                        isSingleFrameSelected ||
-                                        (isBbqrSelected &&
-                                            cashuBBQrParts.length === 1)
-                                    }
-                                    showSpeed={
-                                        isBcurSelected ||
-                                        (isBbqrSelected &&
-                                            cashuBBQrParts.length === 1)
-                                    }
-                                    truncateLongValue
-                                    expanded
-                                    qrAnimationSpeed={
-                                        this.state.qrAnimationSpeed
-                                    }
-                                    onQRAnimationSpeedChange={(speed) => {
-                                        this.setState(
-                                            {
-                                                qrAnimationSpeed: speed
-                                            },
-                                            () => {
-                                                this.generateCashuInfo(token);
-                                            }
-                                        );
-                                    }}
-                                    onShareGiftLink={() =>
-                                        this.shareGiftLink(token)
-                                    }
-                                />
-                            </View>
-                        </>
+                        <AnimatedQRDisplay
+                            data={token}
+                            encoderType="generic"
+                            fileType="U"
+                            valuePrefix="cashu:"
+                            copyValue={`cashu:${token}`}
+                            hideSingleFrame={isTokenTooLarge}
+                            onShareGiftLink={() => this.shareGiftLink(token)}
+                        />
                     )}
                 </ScrollView>
                 {infoIndex === 0 && !received && (!sent || (sent && !spent)) && (
