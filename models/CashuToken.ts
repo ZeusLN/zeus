@@ -69,12 +69,12 @@ export default class CashuToken extends BaseModel {
         return CashuUtils.getP2PKLocktime(this.proofs[0].secret);
     }
 
-    @computed public get getContactName(): string | undefined {
+    @computed public get getContactDetails(): any {
         const lockPubkey = this.getLockPubkey;
         if (!lockPubkey) return undefined;
         const contact = contactStore.contacts.find((contact: any) =>
             contact.cashuPubkey?.some((pubkey: string) => pubkey === lockPubkey)
         );
-        return contact?.name;
+        return contact;
     }
 }

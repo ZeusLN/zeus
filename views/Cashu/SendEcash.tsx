@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -13,6 +13,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import CashuToken from '../../models/CashuToken';
+import Contact from '../../models/Contact';
 
 import CashuStore from '../../stores/CashuStore';
 import ContactStore from '../../stores/ContactStore';
@@ -51,6 +52,7 @@ interface SendEcashState {
     satAmount: string | number;
     pubkey: string;
     contactName: string;
+    contactImage?: string;
     locktime?: number;
     duration: string;
     showCustomDuration: boolean;
@@ -92,6 +94,7 @@ export default class SendEcash extends React.Component<
             satAmount: satAmount || '',
             pubkey: '',
             contactName: '',
+            contactImage: undefined,
             duration: '',
             showCustomDuration: false,
             customDurationValue: '',
@@ -115,6 +118,21 @@ export default class SendEcash extends React.Component<
         }
     }
 
+    loadLockedContactDetails = (cashuPubkey: string) => {
+        const { ContactStore } = this.props;
+        if (!cashuPubkey) return;
+        const lockedContact = ContactStore?.contacts?.find((contact: any) =>
+            contact.cashuPubkey?.some(
+                (pubkey: string) => pubkey === cashuPubkey
+            )
+        );
+        const contact = new Contact(lockedContact);
+        this.setState({
+            contactName: contact.name,
+            contactImage: contact.getPhoto
+        });
+    };
+
     handleScreenFocus = () => {
         const { route } = this.props;
         const params: SendEcashParams = route.params || {};
@@ -127,7 +145,6 @@ export default class SendEcash extends React.Component<
                 memo: params.memo ?? this.state.memo,
                 value: params.value ?? this.state.value,
                 satAmount: params.satAmount ?? this.state.satAmount,
-                contactName: params.contactName ?? this.state.contactName,
                 showCustomDuration:
                     params.showCustomDuration ?? this.state.showCustomDuration,
                 customDurationValue:
@@ -136,6 +153,7 @@ export default class SendEcash extends React.Component<
                 customDurationUnit:
                     params.customDurationUnit ?? this.state.customDurationUnit
             };
+            this.loadLockedContactDetails(params.pubkey ?? this.state.pubkey);
             this.setState(stateUpdate as SendEcashState, () => {
                 const updatedParams = { ...params };
                 delete updatedParams.fromLockSettings;
@@ -259,7 +277,15 @@ export default class SendEcash extends React.Component<
 
     render() {
         const { CashuStore, navigation } = this.props;
-        const { memo, value, satAmount, pubkey, duration } = this.state;
+        const {
+            memo,
+            value,
+            satAmount,
+            pubkey,
+            duration,
+            contactImage,
+            contactName
+        } = this.state;
 
         const { mintToken, mintingToken, loadingMsg } = CashuStore;
         const loading = CashuStore.loading || this.state.loading;
@@ -412,15 +438,42 @@ export default class SendEcash extends React.Component<
                                                 color: themeColor('text')
                                             }}
                                             title={
-                                                pubkey && pubkey.length > 0
-                                                    ? `${this.formatPubkey(
-                                                          pubkey
-                                                      )} (${this.formatDuration(
-                                                          duration
-                                                      )})`
-                                                    : localeString(
-                                                          'cashu.lockToPubkey'
-                                                      )
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center',
+                                                        gap: 5
+                                                    }}
+                                                >
+                                                    {contactImage && (
+                                                        <Image
+                                                            source={{
+                                                                uri: contactImage
+                                                            }}
+                                                            style={{
+                                                                width: 22,
+                                                                height: 22,
+                                                                borderRadius: 20
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <Text>
+                                                        {contactName
+                                                            ? `${contactName} (${this.formatDuration(
+                                                                  duration
+                                                              )})`
+                                                            : pubkey &&
+                                                              pubkey.length > 0
+                                                            ? `${this.formatPubkey(
+                                                                  pubkey
+                                                              )} (${this.formatDuration(
+                                                                  duration
+                                                              )})`
+                                                            : localeString(
+                                                                  'cashu.lockToPubkey'
+                                                              )}
+                                                    </Text>
+                                                </View>
                                             }
                                             onPress={
                                                 this.handleLockSettingsPress
