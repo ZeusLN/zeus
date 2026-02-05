@@ -37,6 +37,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { validateChannelBackupFile } from '../../utils/ChannelMigrationUtils';
 
+import ModalStore from '../../stores/ModalStore';
+
 import {
     createLndWallet,
     optimizeNeutrinoPeers,
@@ -62,6 +64,7 @@ interface SeedRecoveryProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     SwapStore: SwapStore;
+    ModalStore: ModalStore;
     route: Route<
         'SeedRecovery',
         { network: string; restoreSwaps?: boolean; restoreRescueKey?: boolean }
@@ -94,7 +97,7 @@ interface SeedRecoveryState {
     channelDbFileName?: string;
 }
 
-@inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
+@inject('NodeInfoStore', 'SettingsStore', 'SwapStore', 'ModalStore')
 @observer
 export default class SeedRecovery extends React.PureComponent<
     SeedRecoveryProps,
@@ -179,68 +182,57 @@ export default class SeedRecovery extends React.PureComponent<
     };
 
     askForChannelBackupFirst = (onProceed: () => void) => {
-        Alert.alert(
-            localeString('views.Tools.migration.import'),
-            `${localeString('views.Tools.migration.import.message1')}\n\n` +
-                `${localeString('views.Tools.migration.import.message2')}`,
-            [
-                {
-                    text: localeString('views.Tools.migration.import.skip'),
-                    style: 'cancel',
-                    onPress: () => onProceed()
-                },
-                {
-                    text: localeString('views.Tools.migration.import.confirm'),
-                    onPress: async () => {
-                        try {
-                            const [result] = await pick({
-                                type: [types.allFiles],
-                                mode: 'import'
-                            });
-                            if (result.uri) {
-                                const fileName =
-                                    result.name ?? 'channel.sqlite';
+        this.props.ModalStore.toggleRestoreChannelModal({
+            show: true,
+            onCheckOlympus: async () => {
+                //TODO
+            },
+            onImportFile: async () => {
+                this.handleImportFile(onProceed);
+            },
+            onContinueWithoutBackup: () => {
+                onProceed();
+            },
+            onCancel: () => {}
+        });
+    };
 
-                                const validation =
-                                    await validateChannelBackupFile(
-                                        result.uri,
-                                        fileName
-                                    );
+    handleImportFile = async (onProceed: () => void) => {
+        try {
+            const [result] = await pick({
+                type: [types.allFiles],
+                mode: 'import'
+            });
+            if (result.uri) {
+                const fileName = result.name ?? 'channel.sqlite';
+                const validation = await validateChannelBackupFile(
+                    result.uri,
+                    fileName
+                );
 
-                                if (!validation.valid) {
-                                    Alert.alert(
-                                        localeString('general.error'),
-                                        validation.error
-                                    );
-                                    return;
-                                }
-
-                                this.setState(
-                                    {
-                                        channelDbUri: result.uri,
-                                        channelDbFileName: fileName
-                                    },
-                                    () => onProceed()
-                                );
-                            } else {
-                                onProceed();
-                            }
-                        } catch (e) {
-                            if (
-                                isErrorWithCode(e) &&
-                                e.code === errorCodes.OPERATION_CANCELED
-                            ) {
-                                onProceed();
-                            } else {
-                                console.error(e);
-                                Alert.alert(localeString('general.error'));
-                                onProceed();
-                            }
-                        }
-                    }
+                if (!validation.valid) {
+                    Alert.alert(
+                        localeString('general.error'),
+                        validation.error
+                    );
+                    return;
                 }
-            ]
-        );
+
+                this.setState(
+                    { channelDbUri: result.uri, channelDbFileName: fileName },
+                    () => onProceed()
+                );
+            } else {
+                this.askForChannelBackupFirst(onProceed);
+            }
+        } catch (e) {
+            if (
+                !isErrorWithCode(e) ||
+                e.code !== errorCodes.OPERATION_CANCELED
+            ) {
+                Alert.alert(localeString('general.error'));
+            }
+        }
     };
 
     saveWalletConfiguration = (recoveryCipherSeed?: string) => {
