@@ -1,5 +1,67 @@
 import ValidationUtils from './ValidationUtils';
 
+describe('hasProtocolPrefix', () => {
+    it('detects http protocol prefix', () => {
+        expect(ValidationUtils.hasProtocolPrefix('http://example.com')).toBe(
+            true
+        );
+        expect(ValidationUtils.hasProtocolPrefix('HTTP://example.com')).toBe(
+            true
+        );
+    });
+
+    it('detects https protocol prefix', () => {
+        expect(ValidationUtils.hasProtocolPrefix('https://example.com')).toBe(
+            true
+        );
+        expect(ValidationUtils.hasProtocolPrefix('HTTPS://example.com')).toBe(
+            true
+        );
+    });
+
+    it('returns false for addresses without protocol prefix', () => {
+        expect(ValidationUtils.hasProtocolPrefix('example.com')).toBe(false);
+        expect(ValidationUtils.hasProtocolPrefix('127.0.0.1')).toBe(false);
+        expect(
+            ValidationUtils.hasProtocolPrefix('v2onionaddress.onion')
+        ).toBe(false);
+    });
+});
+
+describe('isValidOnionAddress', () => {
+    it('accepts valid V2 onion addresses', () => {
+        expect(
+            ValidationUtils.isValidOnionAddress('v2onionaddress12.onion')
+        ).toBe(true);
+        expect(
+            ValidationUtils.isValidOnionAddress('V2ONIONADDRESS12.ONION')
+        ).toBe(true);
+    });
+
+    it('accepts valid V3 onion addresses', () => {
+        expect(
+            ValidationUtils.isValidOnionAddress(
+                'v3onionaddressv3onionaddressv3onionaddressv3onionadd.onion'
+            )
+        ).toBe(true);
+    });
+
+    it('rejects invalid onion addresses', () => {
+        expect(ValidationUtils.isValidOnionAddress('too-short.onion')).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidOnionAddress('not-an-onion.com')).toBe(
+            false
+        );
+        expect(
+            ValidationUtils.isValidOnionAddress('v@lidcharacters.onion')
+        ).toBe(false);
+        expect(
+            ValidationUtils.isValidOnionAddress('v2onionaddress123.onion')
+        ).toBe(false);
+    });
+});
+
 describe('isValidServerAddress', () => {
     it('accepts valid server addresses without port', () => {
         expect(ValidationUtils.isValidServerAddress('example.com')).toBe(true);
