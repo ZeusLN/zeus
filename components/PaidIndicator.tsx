@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, Vibration } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
@@ -10,29 +10,30 @@ const lightning3 = require('../assets/images/Lottie/lightning3.json');
 const lightning = [lightning1, lightning2, lightning3];
 
 function PaidIndicator() {
-    // vibrate upon payment completion
-    Vibration.vibrate([250, 250, 1000]);
-
-    const randomNumber = Math.ceil(Math.random() * 3) - 1;
+    // Use useState to ensure the random selection persists across re-renders
+    const [randomIndex] = useState(() =>
+        Math.floor(Math.random() * lightning.length)
+    );
     const indicatorSize = Dimensions.get('window').height * 0.4;
 
     const animationRef = useRef<Lottie>(null);
 
     useEffect(() => {
-        // Start the animation only when desired
-
-        const timer = setTimeout(() => {
-            animationRef.current?.play();
-        }, 1);
-        return () => clearTimeout(timer);
+        // vibrate upon payment completion
+        Vibration.vibrate([250, 250, 1000]);
     }, []); // Empty dependency means it runs only on first mount
+
+    const handleAnimationLoaded = () => {
+        animationRef.current?.play();
+    };
 
     return (
         <Lottie
             ref={animationRef}
-            source={lightning[randomNumber]}
+            source={lightning[randomIndex]}
             autoPlay={false}
             loop={false}
+            onAnimationLoaded={handleAnimationLoaded}
             resizeMode="cover"
             colorFilters={[
                 {
