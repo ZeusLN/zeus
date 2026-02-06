@@ -286,7 +286,8 @@ export default class LightningSwipeableRow extends Component<
                         lnurlParams: response,
                         ecash:
                             BackendUtils.supportsCashuWallet() &&
-                            settings?.ecash?.enableCashu
+                            settings?.ecash?.enableCashu,
+                        lightningAddress
                     });
                 })
                 .catch((error: any) => {
@@ -305,7 +306,8 @@ export default class LightningSwipeableRow extends Component<
                             lnurlParams: data,
                             ecash:
                                 BackendUtils.supportsCashuWallet() &&
-                                settings?.ecash?.enableCashu
+                                settings?.ecash?.enableCashu,
+                            lightningAddress
                         });
                     } else {
                         throw new Error(error);

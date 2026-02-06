@@ -1,7 +1,7 @@
 import url from 'url';
 import * as React from 'react';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
 import { Route } from '@react-navigation/native';
@@ -17,12 +17,16 @@ import { Row } from '../..//components/layout/Row';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
 import CashuStore from '../../stores/CashuStore';
+import ContactStore from '../../stores/ContactStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import UnitsStore from '../../stores/UnitsStore';
 
+import Contact from '../../models/Contact';
+
 import LnurlPayMetadata from './Metadata';
 
+import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getUnformattedAmount, getSatAmount } from '../../utils/AmountUtils';
@@ -31,12 +35,19 @@ import { ScrollView } from 'react-native-gesture-handler';
 interface LnurlPayProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    ContactStore: ContactStore;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
     UnitsStore: UnitsStore;
     route: Route<
         'LnurlPay',
-        { lnurlParams: any; amount: any; satAmount: any; ecash: boolean }
+        {
+            lnurlParams: any;
+            amount: any;
+            satAmount: any;
+            ecash: boolean;
+            lightningAddress?: string;
+        }
     >;
 }
 
@@ -44,11 +55,19 @@ interface LnurlPayState {
     amount: string;
     satAmount: string | number;
     domain: string;
+    lightningAddress: string;
+    matchedContact: Contact | null;
     comment: string;
     loading: boolean;
 }
 
-@inject('CashuStore', 'InvoicesStore', 'LnurlPayStore', 'UnitsStore')
+@inject(
+    'CashuStore',
+    'ContactStore',
+    'InvoicesStore',
+    'LnurlPayStore',
+    'UnitsStore'
+)
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -67,6 +86,8 @@ export default class LnurlPay extends React.Component<
                 amount: '',
                 satAmount: '',
                 domain: '',
+                lightningAddress: '',
+                matchedContact: null,
                 comment: '',
                 loading: false
             };
@@ -98,9 +119,14 @@ export default class LnurlPay extends React.Component<
     }
 
     stateFromProps(props: LnurlPayProps) {
-        const { route, UnitsStore } = props;
+        const { route, UnitsStore, ContactStore } = props;
         const { resetUnits, units } = UnitsStore;
-        const { lnurlParams: lnurl, amount, satAmount } = route.params ?? {};
+        const {
+            lnurlParams: lnurl,
+            amount,
+            satAmount,
+            lightningAddress
+        } = route.params ?? {};
 
         // if requested amount is fixed,
         // convert units to sats so conversion rate doesn't make things unpayable
@@ -138,10 +164,18 @@ export default class LnurlPay extends React.Component<
             finalSatAmount = minSendableSats;
         }
 
+        // Find matching contact by Lightning Address
+        const matchedContact = ContactUtils.findContactByLightningAddress(
+            lightningAddress,
+            ContactStore?.contacts
+        );
+
         return {
             amount: finalAmount,
             satAmount: finalSatAmount,
             domain: lnurl.domain,
+            lightningAddress: lightningAddress || '',
+            matchedContact,
             comment: ''
         };
     }
@@ -151,7 +185,7 @@ export default class LnurlPay extends React.Component<
 
         const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
             this.props;
-        const { domain, comment } = this.state;
+        const { domain, comment, lightningAddress } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
@@ -249,7 +283,8 @@ export default class LnurlPay extends React.Component<
                             user_pubkey,
                             relays,
                             relays_sig,
-                            pr
+                            pr,
+                            lightningAddress
                         );
 
                         navigation.navigate('ChoosePaymentMethod', {
@@ -299,7 +334,8 @@ export default class LnurlPay extends React.Component<
                             user_pubkey,
                             relays,
                             relays_sig,
-                            pr
+                            pr,
+                            lightningAddress
                         );
                         navigation.navigate('PaymentRequest');
                     });
@@ -309,9 +345,39 @@ export default class LnurlPay extends React.Component<
 
     render() {
         const { navigation, route } = this.props;
-        const { amount, satAmount, domain, comment, loading } = this.state;
+        const {
+            amount,
+            satAmount,
+            domain,
+            lightningAddress,
+            matchedContact,
+            comment,
+            loading
+        } = this.state;
 
         const lnurl = route.params?.lnurlParams;
+
+        // Extract image from LNURL metadata
+        let metadataImage: string | null = null;
+        try {
+            const keypairs: Array<[string, string]> = JSON.parse(
+                lnurl.metadata
+            );
+            metadataImage =
+                keypairs
+                    .filter(([typ]) => typ.startsWith('image/'))
+                    .map(([typ, content]) => `data:${typ},${content}`)[0] ||
+                null;
+        } catch (err) {
+            console.log('Error parsing LNURL metadata:', err);
+        }
+
+        // Priority: Contact photo > LNURL metadata image
+        const displayImage = matchedContact?.photo
+            ? matchedContact.getPhoto
+            : metadataImage;
+        const displayName = matchedContact?.name;
+        const displayAddress = lightningAddress || domain;
 
         return (
             <Screen>
@@ -337,19 +403,40 @@ export default class LnurlPay extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
-                    {domain && (
-                        <View style={styles.content}>
+                    {/* Lightning Address Header */}
+                    {displayAddress && (
+                        <View style={styles.headerSection}>
+                            {displayImage && (
+                                <Image
+                                    source={{ uri: displayImage }}
+                                    style={styles.profileImage}
+                                />
+                            )}
+                            {displayName && (
+                                <Text
+                                    style={[
+                                        styles.nameText,
+                                        { color: themeColor('text') }
+                                    ]}
+                                >
+                                    {displayName}
+                                </Text>
+                            )}
                             <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('secondaryText'),
-                                    padding: 20,
-                                    fontWeight: 'bold',
-                                    fontSize: 22
-                                }}
+                                style={[
+                                    styles.addressText,
+                                    { color: themeColor('text') }
+                                ]}
                             >
-                                {domain}
+                                {displayAddress}
                             </Text>
+                            <View style={{ marginTop: 8 }}>
+                                <LnurlPayMetadata
+                                    metadata={lnurl.metadata}
+                                    showArrow={false}
+                                    hideImage={true}
+                                />
+                            </View>
                         </View>
                     )}
 
@@ -484,12 +571,6 @@ export default class LnurlPay extends React.Component<
                             />
                         </View>
                     </View>
-                    <View style={styles.metadata}>
-                        <LnurlPayMetadata
-                            metadata={lnurl.metadata}
-                            showArrow={false}
-                        />
-                    </View>
                 </ScrollView>
             </Screen>
         );
@@ -502,5 +583,25 @@ const styles = StyleSheet.create({
     },
     content: { paddingHorizontal: 20 },
     button: { paddingVertical: 15 },
-    metadata: { padding: 20 }
+    headerSection: {
+        alignItems: 'center',
+        paddingVertical: 20,
+        paddingHorizontal: 20
+    },
+    profileImage: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        marginBottom: 15
+    },
+    nameText: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        marginBottom: 5,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    addressText: {
+        fontSize: 18,
+        fontFamily: 'PPNeueMontreal-Book'
+    }
 });

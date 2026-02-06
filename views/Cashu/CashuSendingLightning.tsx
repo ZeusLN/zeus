@@ -18,15 +18,18 @@ import LnurlPaySuccess from '../LnurlPay/Success';
 import Button from '../../components/Button';
 import LightningLoadingPattern from '../../components/LightningLoadingPattern';
 import PaidIndicator from '../../components/PaidIndicator';
+import RecipientDisplay from '../../components/RecipientDisplay';
 import Screen from '../../components/Screen';
 import SuccessAnimation from '../../components/SuccessAnimation';
 import { Row } from '../../components/layout/Row';
 
 import CashuStore from '../../stores/CashuStore';
+import ContactStore from '../../stores/ContactStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
+import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -48,6 +51,7 @@ import Header from '../../components/Header';
 interface CashuSendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
@@ -73,7 +77,7 @@ interface CashuSendingLightningState {
     showZaplockerWarning: boolean;
 }
 
-@inject('CashuStore', 'LnurlPayStore', 'NodeInfoStore')
+@inject('CashuStore', 'ContactStore', 'LnurlPayStore', 'NodeInfoStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -422,7 +426,8 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     render() {
-        const { CashuStore, LnurlPayStore, navigation } = this.props;
+        const { CashuStore, ContactStore, LnurlPayStore, navigation } =
+            this.props;
         const {
             loading,
             paymentError,
@@ -439,6 +444,13 @@ export default class CashuSendingLightning extends React.Component<
 
         const success = this.successfullySent(CashuStore);
         const windowSize = Dimensions.get('window');
+
+        // Find matching contact by Lightning Address
+        const lightningAddress = LnurlPayStore.lightningAddress;
+        const matchedContact = ContactUtils.findContactByLightningAddress(
+            lightningAddress,
+            ContactStore?.contacts
+        );
 
         return (
             <Screen>
@@ -577,6 +589,10 @@ export default class CashuSendingLightning extends React.Component<
                                                 )}
                                             </Text>
                                         )}
+                                        <RecipientDisplay
+                                            contact={matchedContact}
+                                            lightningAddress={lightningAddress}
+                                        />
                                     </View>
                                 </>
                             )}
@@ -641,7 +657,12 @@ export default class CashuSendingLightning extends React.Component<
                             {!!paymentPreimage &&
                                 !paymentError &&
                                 !paymentErrorMsg && (
-                                    <View style={{ width: '90%' }}>
+                                    <View
+                                        style={{
+                                            width: '90%',
+                                            marginBottom: 15
+                                        }}
+                                    >
                                         <CopyBox
                                             heading={localeString(
                                                 'views.Payment.paymentPreimage'
