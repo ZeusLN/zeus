@@ -50,7 +50,8 @@ import {
     startLnd,
     stopLnd,
     expressGraphSync,
-    LND_FOLDER_MISSING_ERROR
+    LND_FOLDER_MISSING_ERROR,
+    waitForRpcReady
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
@@ -724,7 +725,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }, 60000); // 60 seconds
                 }
             }
-
+            await waitForRpcReady();
             SyncStore.checkRecoveryStatus();
             await NodeInfoStore.getNodeInfo();
             NodeInfoStore.getNetworkInfo();
