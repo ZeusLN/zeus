@@ -40,8 +40,17 @@ export default class CashuInvoiceView extends React.Component<
     CashuInvoiceProps,
     CashuInvoiceState
 > {
+    checkInterval: ReturnType<typeof setInterval> | null = null;
+
     state = {
         updatedInvoice: undefined
+    };
+
+    private stopCheckingInterval = () => {
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
+        }
     };
 
     async componentDidMount() {
@@ -62,7 +71,7 @@ export default class CashuInvoiceView extends React.Component<
             }
 
             // Set up a periodic check every 5 seconds
-            const checkInterval = setInterval(async () => {
+            this.checkInterval = setInterval(async () => {
                 const result = await checkInvoicePaid(quote, mintUrl);
 
                 if (result?.isPaid) {
@@ -70,7 +79,7 @@ export default class CashuInvoiceView extends React.Component<
                     this.setState({
                         updatedInvoice: result?.updatedInvoice
                     });
-                    clearInterval(checkInterval); // Stop checking once paid
+                    this.stopCheckingInterval();
                     activityStore.getActivityAndFilter(
                         settingsStore.settings.locale
                     );
@@ -79,6 +88,10 @@ export default class CashuInvoiceView extends React.Component<
                 }
             }, 5000);
         }
+    }
+
+    componentWillUnmount() {
+        this.stopCheckingInterval();
     }
 
     render() {
