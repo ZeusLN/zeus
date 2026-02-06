@@ -61,6 +61,7 @@ interface KeypadPaneState {
     overrideBelowMinAmount: boolean;
     flowLspNotConfigured: boolean;
     ecashMode: boolean;
+    isInputInvalid: boolean;
 }
 
 @inject(
@@ -80,6 +81,7 @@ export default class KeypadPane extends React.PureComponent<
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
     focusListener: any = null;
+    textAnimationRef: Animated.CompositeAnimation | null = null;
 
     constructor(props: KeypadPaneProps) {
         super(props);
@@ -101,7 +103,8 @@ export default class KeypadPane extends React.PureComponent<
             belowMinAmount: false,
             overrideBelowMinAmount: false,
             flowLspNotConfigured: true,
-            ecashMode: initialEcashMode
+            ecashMode: initialEcashMode,
+            isInputInvalid: false
         };
     }
 
@@ -131,10 +134,20 @@ export default class KeypadPane extends React.PureComponent<
         });
     }
 
+    resetTextAnimation = () => {
+        if (this.textAnimationRef) {
+            this.textAnimationRef.stop();
+            this.textAnimationRef = null;
+        }
+        this.textAnimation.setValue(0);
+    };
+
     appendValue = (value: string): boolean => {
         const { amount } = this.state;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
+
+        this.resetTextAnimation();
 
         let newAmount;
 
@@ -223,23 +236,28 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: newAmount,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            isInputInvalid: false
         });
 
         return true;
     };
 
     clearValue = () => {
+        this.resetTextAnimation();
         this.setState({
             amount: '0',
             needInbound: false,
             belowMinAmount: false,
-            overrideBelowMinAmount: false
+            overrideBelowMinAmount: false,
+            isInputInvalid: false
         });
     };
 
     deleteValue = () => {
         const { amount } = this.state;
+
+        this.resetTextAnimation();
 
         let newAmount;
 
@@ -269,7 +287,8 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: newAmount,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            isInputInvalid: false
         });
     };
 
@@ -298,7 +317,10 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        Animated.parallel([
+        this.resetTextAnimation();
+        this.setState({ isInputInvalid: true });
+
+        this.textAnimationRef = Animated.parallel([
             Animated.sequence([
                 Animated.timing(this.textAnimation, {
                     toValue: 1,
@@ -333,7 +355,12 @@ export default class KeypadPane extends React.PureComponent<
                     useNativeDriver: true
                 })
             ])
-        ]).start();
+        ]);
+
+        this.textAnimationRef.start(() => {
+            this.textAnimationRef = null;
+            this.setState({ isInputInvalid: false });
+        });
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
@@ -352,17 +379,19 @@ export default class KeypadPane extends React.PureComponent<
             needInbound,
             belowMinAmount,
             overrideBelowMinAmount,
-            ecashMode
+            ecashMode,
+            isInputInvalid
         } = this.state;
         const { units } = UnitsStore!;
         const { settings } = SettingsStore!;
         const { isSyncing } = SyncStore!;
 
-        const color = this.textAnimation.interpolate({
+        const animatedColor = this.textAnimation.interpolate({
             inputRange: [0, 1],
             outputRange: [themeColor('text'), 'red']
         });
 
+        const color = isInputInvalid ? animatedColor : themeColor('text');
         const noMints = CashuStore?.mintUrls.length === 0;
 
         return (
