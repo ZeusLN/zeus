@@ -89,6 +89,7 @@ interface SeedRecoveryState {
     restoreRescueKey?: boolean;
     rescueHost: string;
     customRescueHost: string;
+    invalidInput: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -126,7 +127,8 @@ export default class SeedRecovery extends React.PureComponent<
             rescueHost: isTestnet
                 ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
                 : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customRescueHost: settings.swaps?.customHost || ''
+            customRescueHost: settings.swaps?.customHost || '',
+            invalidInput: false
         };
     }
 
@@ -474,6 +476,11 @@ export default class SeedRecovery extends React.PureComponent<
                                     prefixStyle={{
                                         color: themeColor('highlight')
                                     }}
+                                    textColor={
+                                        this.state.invalidInput
+                                            ? themeColor('error')
+                                            : undefined
+                                    }
                                     style={{
                                         margin: 20,
                                         marginLeft: 10,
@@ -498,13 +505,19 @@ export default class SeedRecovery extends React.PureComponent<
                                             });
                                         }
 
-                                        if (text && text.length > 0) {
+                                        if (text.length > 0) {
+                                            const filtered = filterData(text);
                                             this.setState({
-                                                filteredData: filterData(text)
+                                                filteredData: filtered,
+                                                invalidInput:
+                                                    selectedInputType ===
+                                                        'word' &&
+                                                    filtered.length === 0
                                             });
-                                        } else if (text && text.length === 0) {
+                                        } else {
                                             this.setState({
-                                                filteredData: BIP39_WORD_LIST
+                                                filteredData: BIP39_WORD_LIST,
+                                                invalidInput: false
                                             });
                                         }
 
@@ -527,6 +540,22 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                 />
                             )}
+                            {selectedInputType === 'word' &&
+                                this.state.invalidInput && (
+                                    <Text
+                                        style={{
+                                            color: themeColor('error'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 14,
+                                            marginTop: 5,
+                                            marginLeft: 30
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.NodeConfiguration.invalidSeedWord'
+                                        )}
+                                    </Text>
+                                )}
                         </View>
                         {!showSuggestions && (
                             <>
