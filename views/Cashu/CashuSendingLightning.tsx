@@ -42,6 +42,7 @@ import CopyBox from '../../components/CopyBox';
 import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import ModalBox from '../../components/ModalBox';
+import RatingModal from '../../components/Modals/RatingModal';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
 
@@ -464,6 +465,7 @@ export default class CashuSendingLightning extends React.Component<
                 )}
                 {this.renderZaplockerWarningModal()}
                 {this.renderInfoModal()}
+                {<RatingModal />}
                 {loading && (
                     <View
                         style={{
