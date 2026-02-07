@@ -304,6 +304,78 @@ export default class SendingLightning extends React.Component<
         }
     };
 
+    renderPaymentSummary = () => {
+        const { currentPayment } = this.state;
+        const { TransactionsStore } = this.props;
+        const { paymentDuration } = TransactionsStore;
+
+        if (!currentPayment) return null;
+
+        const amount =
+            currentPayment.value_sat ||
+            currentPayment.num_satoshis ||
+            currentPayment.amount_msat / 1000;
+
+        if (!amount) return null;
+
+        const fee = currentPayment.fee_msat
+            ? Number(currentPayment.fee_msat) / 1000
+            : 0;
+
+        let feePercentageDisplay = '';
+        if (fee > 0) {
+            const rawPercentage = new BigNumber(fee).div(amount).times(100);
+            const roundedPercentage = Number(rawPercentage.toFixed(3));
+            const shouldShowTilde = !rawPercentage.eq(roundedPercentage);
+            feePercentageDisplay = ` (${
+                shouldShowTilde ? '~' : ''
+            }${roundedPercentage.toString().replace(/-/g, '')}%)`;
+        }
+
+        return (
+            <>
+                <Text
+                    style={{
+                        color: themeColor('secondaryText'),
+                        marginTop: 10,
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {localeString('views.Send.amount')}:{' '}
+                    <Text style={{ color: themeColor('text') }}>
+                        {amount} {localeString('general.sats')}
+                    </Text>
+                </Text>
+                <Text
+                    style={{
+                        color: themeColor('secondaryText'),
+                        marginTop: 5,
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {localeString('views.Payment.fee')}:{' '}
+                    <Text style={{ color: themeColor('text') }}>
+                        {fee} {localeString('general.sats')}
+                        {feePercentageDisplay}
+                    </Text>
+                </Text>
+                {paymentDuration !== null && (
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            marginTop: 10,
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {localeString('views.SendingLightning.paymentSettled', {
+                            seconds: paymentDuration.toFixed(2)
+                        })}
+                    </Text>
+                )}
+            </>
+        );
+    };
+
     renderInfoModal = () => {
         const {
             showDonationInfo,
@@ -570,8 +642,7 @@ export default class SendingLightning extends React.Component<
             payment_preimage,
             payment_error,
             isIncomplete,
-            noteKey,
-            paymentDuration
+            noteKey
         } = TransactionsStore;
         const { implementation } = SettingsStore;
         const {
@@ -689,28 +760,7 @@ export default class SendingLightning extends React.Component<
                                                 'views.SendingLightning.success'
                                             )}
                                         </Text>
-                                        {paymentDuration !== null && (
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    marginTop: 10,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.SendingLightning.paymentSettled',
-                                                    {
-                                                        seconds:
-                                                            paymentDuration.toFixed(
-                                                                2
-                                                            )
-                                                    }
-                                                )}
-                                            </Text>
-                                        )}
+                                        {this.renderPaymentSummary()}
                                     </View>
                                 </>
                             )}
