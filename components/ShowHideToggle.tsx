@@ -32,7 +32,7 @@ class ShowHideToggle extends Component<
 
     render() {
         return (
-            <TouchableOpacity onPress={this.handleIconPress}>
+            <TouchableOpacity onPress={this.handleIconPress} hitSlop={10}>
                 {this.state.showHideToggle ? (
                     <EyeClosed
                         height="18"
