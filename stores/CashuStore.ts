@@ -3814,6 +3814,13 @@ export default class CashuStore {
             }
         }
 
+        // Check for small tokens consolidation suggestion on startup
+        setTimeout(() => {
+            this.mintUrls.forEach((mintUrl) => {
+                this.checkSmallTokensConsolidation(mintUrl);
+            });
+        }, 2000);
+
         const completionTime =
             (new Date().getTime() - start.getTime()) / 1000 + 's';
         console.log('Cashu start-up time:', completionTime);
