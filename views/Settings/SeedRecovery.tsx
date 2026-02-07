@@ -671,6 +671,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     {suggestionsOne.map((key) => {
                                         return (
                                             <RecoveryLabel
+                                                key={key}
                                                 type="mnemonicWord"
                                                 text={key}
                                             />
@@ -681,6 +682,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     {suggestionsTwo.map((key) => {
                                         return (
                                             <RecoveryLabel
+                                                key={key}
                                                 type="mnemonicWord"
                                                 text={key}
                                             />
