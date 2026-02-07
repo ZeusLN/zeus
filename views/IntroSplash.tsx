@@ -4,6 +4,7 @@ import {
     Dimensions,
     ImageBackground,
     NativeEventSubscription,
+    Platform,
     View,
     Text
 } from 'react-native';
@@ -309,7 +310,8 @@ export default class IntroSplash extends React.Component<
                                                         'general.defaultNodeNickname'
                                                     ),
                                                     lndDir,
-                                                    isSqlite: true
+                                                    isSqlite:
+                                                        Platform.OS === 'ios'
                                                 }
                                             ];
 
