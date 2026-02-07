@@ -107,6 +107,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             });
         });
     }
+    componentWillUnmount() {
+        if (this.listener) {
+            this.listener.remove();
+            this.listener = null;
+        }
+        this.props.LSPStore.resetLSPS1Data();
+    }
 
     componentDidUpdate(_prevProps: LSPS1Props) {
         const {
@@ -400,7 +407,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                             )}
                         </Row>
                     }
-                    onBack={() => LSPStore.resetLSPS1Data()}
                 />
                 <View style={{ paddingHorizontal: 18 }}>
                     {BackendUtils.supportsLSPScustomMessage() &&
@@ -774,7 +780,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             )}
                                         </Text>
                                     </Row>
-                                    {info.min_initial_lsp_balance_sat && (
+                                    {info?.min_initial_lsp_balance_sat && (
                                         <Slider
                                             style={{
                                                 width: '100%',
