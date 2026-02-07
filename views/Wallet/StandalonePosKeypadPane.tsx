@@ -39,6 +39,7 @@ interface PosKeypadPaneProps {
 
 interface PosKeypadPaneState {
     amount: string;
+    isInputInvalid: boolean;
 }
 
 @inject('ChannelsStore', 'FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
@@ -49,14 +50,26 @@ export default class PosKeypadPane extends React.PureComponent<
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
+    textAnimationRef: Animated.CompositeAnimation | null = null;
     state = {
-        amount: '0'
+        amount: '0',
+        isInputInvalid: false
+    };
+
+    resetTextAnimation = () => {
+        if (this.textAnimationRef) {
+            this.textAnimationRef.stop();
+            this.textAnimationRef = null;
+        }
+        this.textAnimation.setValue(0);
     };
 
     appendValue = (value: string): boolean => {
         const { amount } = this.state;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
+
+        this.resetTextAnimation();
 
         let newAmount;
 
@@ -126,20 +139,25 @@ export default class PosKeypadPane extends React.PureComponent<
         }
 
         this.setState({
-            amount: newAmount
+            amount: newAmount,
+            isInputInvalid: false
         });
 
         return true;
     };
 
     clearValue = () => {
+        this.resetTextAnimation();
         this.setState({
-            amount: '0'
+            amount: '0',
+            isInputInvalid: false
         });
     };
 
     deleteValue = () => {
         const { amount } = this.state;
+
+        this.resetTextAnimation();
 
         let newAmount;
 
@@ -150,7 +168,8 @@ export default class PosKeypadPane extends React.PureComponent<
         }
 
         this.setState({
-            amount: newAmount
+            amount: newAmount,
+            isInputInvalid: false
         });
     };
 
@@ -177,7 +196,10 @@ export default class PosKeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        Animated.parallel([
+        this.resetTextAnimation();
+        this.setState({ isInputInvalid: true });
+
+        this.textAnimationRef = Animated.parallel([
             Animated.sequence([
                 Animated.timing(this.textAnimation, {
                     toValue: 1,
@@ -212,7 +234,12 @@ export default class PosKeypadPane extends React.PureComponent<
                     useNativeDriver: true
                 })
             ])
-        ]).start();
+        ]);
+
+        this.textAnimationRef.start(() => {
+            this.textAnimationRef = null;
+            this.setState({ isInputInvalid: false });
+        });
     };
 
     addItemAndCheckout = async () => {
@@ -356,13 +383,15 @@ export default class PosKeypadPane extends React.PureComponent<
 
     render() {
         const { UnitsStore, navigation } = this.props;
-        const { amount } = this.state;
+        const { amount, isInputInvalid } = this.state;
         const { units } = UnitsStore!;
 
-        const color = this.textAnimation.interpolate({
+        const animatedColor = this.textAnimation.interpolate({
             inputRange: [0, 1],
             outputRange: [themeColor('text'), 'red']
         });
+
+        const color = isInputInvalid ? animatedColor : themeColor('text');
 
         return (
             <View style={{ flex: 1 }}>
