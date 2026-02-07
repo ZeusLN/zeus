@@ -8,6 +8,7 @@ export default class ModalStore {
     @observable public showShareModal: boolean = false;
     @observable public showNewChannelModal: boolean = false;
     @observable public showNWCPendingPaymentsModal: boolean = false;
+    @observable public showRestoreChannelModal: boolean = false;
     @observable public nwcPendingPaymentsData?: {
         pendingEvents: any[];
         totalAmount: number;
@@ -28,6 +29,11 @@ export default class ModalStore {
     @observable public onShareText?: () => void;
     @observable public onShareGiftLink?: () => void;
     @observable public onPress: () => void;
+
+    @observable public onCheckOlympus?: () => void;
+    @observable public onImportFile?: () => void;
+    @observable public onContinueWithoutBackup?: () => void;
+    @observable public onCancelBackupModal?: () => void;
 
     /* External Link Modal */
     @action
@@ -126,6 +132,30 @@ export default class ModalStore {
     @action
     public toggleAndroidNfcModal = (status: boolean) => {
         this.showAndroidNfcModal = status;
+    };
+
+    /* Channel Backup Modal */
+    @action
+    public toggleRestoreChannelModal = (params?: {
+        show: boolean;
+        onCheckOlympus?: () => void;
+        onImportFile?: () => void;
+        onContinueWithoutBackup?: () => void;
+        onCancel?: () => void;
+    }) => {
+        if (!params || !params.show) {
+            this.showRestoreChannelModal = false;
+            this.onCheckOlympus = undefined;
+            this.onImportFile = undefined;
+            this.onContinueWithoutBackup = undefined;
+            this.onCancelBackupModal = undefined;
+        } else {
+            this.showRestoreChannelModal = true;
+            this.onCheckOlympus = params.onCheckOlympus;
+            this.onImportFile = params.onImportFile;
+            this.onContinueWithoutBackup = params.onContinueWithoutBackup;
+            this.onCancelBackupModal = params.onCancel;
+        }
     };
 
     @action
