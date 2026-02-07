@@ -16,8 +16,9 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import QuickPayUtils from '../../utils/QuickPayUtils';
 
-import { cashuStore } from '../../stores/Stores';
+import { cashuStore, settingsStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import MintToken from '../../assets/images/SVG/MintToken.svg';
@@ -227,14 +228,36 @@ export default class EcashSwipeableRow extends Component<
         }
     };
 
-    private fetchLnInvoice = () => {
+    private fetchLnInvoice = async () => {
         const { lightning, lnurlParams, navigation } = this.props;
         if (lightning?.toLowerCase().startsWith('lnurl') || lnurlParams) {
             this.handleLnurlRequest(lightning, lnurlParams, navigation);
             return;
-        } else {
-            cashuStore.getPayReq(lightning ?? '');
-            this.props.navigation.navigate('CashuPaymentRequest', {});
+        } else if (lightning) {
+            cashuStore.getPayReq(lightning);
+
+            if (QuickPayUtils.shouldTryQuickPay(lightning)) {
+                try {
+                    const quickPayProcessed =
+                        await QuickPayUtils.checkCashuQuickPayAndProcess(
+                            lightning,
+                            navigation,
+                            settingsStore,
+                            cashuStore
+                        );
+
+                    if (quickPayProcessed) {
+                        return;
+                    }
+                } catch (error) {
+                    console.error(
+                        'Cashu quick-pay failed, falling back to manual ecash flow:',
+                        error
+                    );
+                }
+            }
+
+            navigation.navigate('CashuPaymentRequest', {});
         }
     };
 
