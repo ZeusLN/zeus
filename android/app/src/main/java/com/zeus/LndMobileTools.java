@@ -453,7 +453,7 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void DEBUG_deleteNeutrinoFiles(String lndDir, String network, Promise promise) {
+  public void DEBUG_deleteNeutrinoFiles(String lndDir, String network, boolean isSqlite, Promise promise) {
     String basePath;
     if (lndDir == null || lndDir.isEmpty() || lndDir.equals("lnd")) {
       basePath = getReactApplicationContext().getFilesDir().toString();
@@ -468,7 +468,18 @@ class LndMobileTools extends ReactContextBaseJavaModule {
     File neutrinoDbFile = new File(neutrinoDb);
     File blockHeadersBinFile = new File(blockHeadersBin);
     File regHeadersBinFiles = new File(regHeadersBin);
-    promise.resolve(neutrinoDbFile.delete() && blockHeadersBinFile.delete() && regHeadersBinFiles.delete());
+    boolean result1 = neutrinoDbFile.delete();
+    boolean result2 = blockHeadersBinFile.delete();
+    boolean result3 = regHeadersBinFiles.delete();
+    boolean result = result1 || result2 || result3;
+
+    if (isSqlite) {
+      new File(chainFolder + "/neutrino.sqlite").delete();
+      new File(chainFolder + "/neutrino.sqlite-shm").delete();
+      new File(chainFolder + "/neutrino.sqlite-wal").delete();
+    }
+
+    promise.resolve(result);
   }
 
   @ReactMethod
