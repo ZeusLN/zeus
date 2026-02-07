@@ -358,7 +358,9 @@ export interface ILndMobileInjections {
         ) => Promise<lnrpc.RestoreBackupResponse>;
         abandonChannel: (
             fundingTxId: string,
-            outputIndex: number
+            outputIndex: number,
+            pendingFundingShimOnly?: boolean,
+            iKnowWhatIAmDoing?: boolean
         ) => Promise<lnrpc.AbandonChannelResponse>;
     };
     onchain: {
