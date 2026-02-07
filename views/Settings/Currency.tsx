@@ -171,7 +171,11 @@ export default class Currency extends React.Component<
                                     >
                                         {localeString(
                                             'views.Settings.Currency.selectCurrency'
-                                        ) + ` (${selectedCurrency})`}
+                                        ) +
+                                            ` (${(
+                                                SettingsStore.settings.fiats ||
+                                                []
+                                            ).join(', ')})`}
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 <Icon
