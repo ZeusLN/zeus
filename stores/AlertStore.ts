@@ -87,13 +87,13 @@ export default class AlertStore {
             });
         }
 
-        const filteredResults = results.filter((result: any) => {
+        const filteredResults = results.filter((result: Peer) => {
             return (
                 result.ms ===
                     localeString(
                         'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut'
                     ) ||
-                (Number.isInteger(result.ms) &&
+                (typeof result.ms === 'number' &&
                     result.ms > NEUTRINO_PING_THRESHOLD_MS)
             );
         });
