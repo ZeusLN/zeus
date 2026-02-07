@@ -5,6 +5,8 @@ import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
 // Core Lightning
 import CLNRest from '../backends/CLNRest';
+// LNSocket Commando Node
+import LNSocket from '../backends/LNSocket';
 // Custodial
 import LndHub from '../backends/LndHub';
 import NostrWalletConnect from '../backends/NostrWalletConnect';
@@ -14,6 +16,7 @@ class BackendUtils {
     lightningNodeConnect: LightningNodeConnect;
     embeddedLND: EmbeddedLND;
     clnRest: CLNRest;
+    lnSocket: LNSocket;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
     constructor() {
@@ -21,6 +24,7 @@ class BackendUtils {
         this.lightningNodeConnect = new LightningNodeConnect();
         this.embeddedLND = new EmbeddedLND();
         this.clnRest = new CLNRest();
+        this.lnSocket = new LNSocket();
         this.lndHub = new LndHub();
         this.nostrWalletConnect = new NostrWalletConnect();
     }
@@ -36,6 +40,8 @@ class BackendUtils {
                 return this.embeddedLND;
             case 'cln-rest':
                 return this.clnRest;
+            case 'lnsocket':
+                return this.lnSocket;
             case 'lndhub':
                 return this.lndHub;
             case 'nostr-wallet-connect':
@@ -242,6 +248,9 @@ class BackendUtils {
     waitSendPay = (...args: any[]) => this.call('waitSendPay', args);
 
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
+
+    // Commando
+    init = (...args: any[]) => this.call('init', args);
 }
 
 const backendUtils = new BackendUtils();

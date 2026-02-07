@@ -798,6 +798,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
+        } else if (implementation === 'lnsocket') {
+            if (connecting) {
+                await BackendUtils.init();
+                const connected = await BackendUtils.connect();
+                // TODO pull connect call into store to display error on connection failure
+                if (connected) {
+                    NodeInfoStore.getNodeInfo();
+                }
+            }
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
