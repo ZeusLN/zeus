@@ -10,7 +10,7 @@ import {
 } from '../stores/Stores';
 
 import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
-import AutoPayUtils from './AutoPayUtils';
+import QuickPayUtils from './QuickPayUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
@@ -30,21 +30,21 @@ import wifUtils from './WIFUtils';
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
 
-const checkAutoPayAndRedirect = async (paymentRequest: string) => {
-    const shouldTryAutoPay = AutoPayUtils.shouldTryAutoPay(paymentRequest);
+const checkQuickPayAndRedirect = async (paymentRequest: string) => {
+    const shouldTryQuickPay = QuickPayUtils.shouldTryQuickPay(paymentRequest);
 
-    if (shouldTryAutoPay) {
+    if (shouldTryQuickPay) {
         try {
-            const { shouldAutoPay, enableDonations, amount } =
-                await AutoPayUtils.checkShouldAutoPay(
+            const { shouldQuickPay, enableDonations, amount } =
+                await QuickPayUtils.checkShouldQuickPay(
                     paymentRequest,
                     settingsStore
                 );
 
-            if (shouldAutoPay) {
+            if (shouldQuickPay) {
                 const pay_req = invoicesStore.pay_req;
                 const finalPaymentParams =
-                    await AutoPayUtils.buildPaymentParams(
+                    await QuickPayUtils.buildPaymentParams(
                         paymentRequest,
                         amount,
                         settingsStore,
@@ -61,7 +61,7 @@ const checkAutoPayAndRedirect = async (paymentRequest: string) => {
                 ];
             }
         } catch (error) {
-            console.error('Auto-pay check failed:', error);
+            console.error('Quick-pay check failed:', error);
         }
     }
 
@@ -354,7 +354,7 @@ const handleAnything = async (
                     ];
                 } else {
                     await invoicesStore.getPayReq(lightning);
-                    return await checkAutoPayAndRedirect(lightning);
+                    return await checkQuickPayAndRedirect(lightning);
                 }
             }
         }
@@ -409,7 +409,7 @@ const handleAnything = async (
             ];
         } else {
             await invoicesStore.getPayReq(value || lightning);
-            return await checkAutoPayAndRedirect(value || lightning);
+            return await checkQuickPayAndRedirect(value || lightning);
         }
     } else if (
         !hasAt &&

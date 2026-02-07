@@ -17,7 +17,7 @@ import handleAnything, {
     convertMerchantQRToLightningAddress,
     isMerchantQR
 } from './handleAnything';
-import AutoPayUtils from './AutoPayUtils';
+import QuickPayUtils from './QuickPayUtils';
 import BackendUtils from './BackendUtils';
 
 let mockProcessBIP21Uri = jest.fn();
@@ -57,10 +57,10 @@ jest.mock('./BackendUtils', () => ({
     supportsLnurlAuth: () => false,
     decodePaymentRequest: jest.fn()
 }));
-jest.mock('./AutoPayUtils', () => ({
-    shouldTryAutoPay: jest.fn(),
-    checkAutoPayAndProcess: jest.fn(),
-    checkShouldAutoPay: jest.fn(),
+jest.mock('./QuickPayUtils', () => ({
+    shouldTryQuickPay: jest.fn(),
+    checkQuickPayAndProcess: jest.fn(),
+    checkShouldQuickPay: jest.fn(),
     buildPaymentParams: jest.fn().mockResolvedValue({
         payment_request: 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee',
         max_parts: '16',
@@ -104,8 +104,8 @@ jest.mock('../stores/Stores', () => ({
             locale: 'en',
             ecash: { enableCashu: false },
             payments: {
-                autoPayEnabled: false,
-                autoPayThreshold: 0,
+                quickPayEnabled: false,
+                quickPayThreshold: 0,
                 enableDonations: false
             }
         }
@@ -1763,9 +1763,11 @@ describe('handleAnything', () => {
         it('should process auto-pay for valid Lightning invoice when enabled', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockResolvedValue({
-                shouldAutoPay: true,
+            (QuickPayUtils.shouldTryQuickPay as jest.Mock).mockReturnValue(
+                true
+            );
+            (QuickPayUtils.checkShouldQuickPay as jest.Mock).mockResolvedValue({
+                shouldQuickPay: true,
                 amount: 1500,
                 enableDonations: false
             });
@@ -1778,8 +1780,10 @@ describe('handleAnything', () => {
                     enableDonations: false
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(QuickPayUtils.shouldTryQuickPay).toHaveBeenCalledWith(
+                invoice
+            );
+            expect(QuickPayUtils.checkShouldQuickPay).toHaveBeenCalledWith(
                 invoice,
                 settingsStore
             );
@@ -1799,9 +1803,11 @@ describe('handleAnything', () => {
         it('should fallback to PaymentRequest when auto-pay threshold is exceeded', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockResolvedValue({
-                shouldAutoPay: false,
+            (QuickPayUtils.shouldTryQuickPay as jest.Mock).mockReturnValue(
+                true
+            );
+            (QuickPayUtils.checkShouldQuickPay as jest.Mock).mockResolvedValue({
+                shouldQuickPay: false,
                 amount: 1500,
                 enableDonations: false
             });
@@ -1809,24 +1815,30 @@ describe('handleAnything', () => {
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(QuickPayUtils.shouldTryQuickPay).toHaveBeenCalledWith(
+                invoice
+            );
+            expect(QuickPayUtils.checkShouldQuickPay).toHaveBeenCalledWith(
                 invoice,
                 settingsStore
             );
             expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
-        it('should skip auto-pay when AutoPayUtils.shouldTryAutoPay returns false', async () => {
+        it('should skip quick-pay when QuickPayUtils.shouldTryQuickPay returns false', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(false);
+            (QuickPayUtils.shouldTryQuickPay as jest.Mock).mockReturnValue(
+                false
+            );
 
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).not.toHaveBeenCalled();
+            expect(QuickPayUtils.shouldTryQuickPay).toHaveBeenCalledWith(
+                invoice
+            );
+            expect(QuickPayUtils.checkShouldQuickPay).not.toHaveBeenCalled();
             expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
@@ -1837,22 +1849,26 @@ describe('handleAnything', () => {
                 .spyOn(console, 'error')
                 .mockImplementation();
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockRejectedValue(
+            (QuickPayUtils.shouldTryQuickPay as jest.Mock).mockReturnValue(
+                true
+            );
+            (QuickPayUtils.checkShouldQuickPay as jest.Mock).mockRejectedValue(
                 error
             );
 
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(QuickPayUtils.shouldTryQuickPay).toHaveBeenCalledWith(
+                invoice
+            );
+            expect(QuickPayUtils.checkShouldQuickPay).toHaveBeenCalledWith(
                 invoice,
                 settingsStore
             );
             expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
             expect(consoleSpy).toHaveBeenCalledWith(
-                'Auto-pay check failed:',
+                'Quick-pay check failed:',
                 error
             );
             consoleSpy.mockRestore();
@@ -1873,7 +1889,7 @@ describe('handleAnything', () => {
                     locked: true
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
+            expect(QuickPayUtils.shouldTryQuickPay).not.toHaveBeenCalled();
             expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
@@ -1892,7 +1908,7 @@ describe('handleAnything', () => {
                     locked: true
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
+            expect(QuickPayUtils.shouldTryQuickPay).not.toHaveBeenCalled();
             expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
@@ -1912,8 +1928,10 @@ describe('handleAnything', () => {
                     isValid: true
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
-            expect(AutoPayUtils.checkAutoPayAndProcess).not.toHaveBeenCalled();
+            expect(QuickPayUtils.shouldTryQuickPay).not.toHaveBeenCalled();
+            expect(
+                QuickPayUtils.checkQuickPayAndProcess
+            ).not.toHaveBeenCalled();
         });
 
         it('should return true from clipboard for Lightning invoices', async () => {
@@ -1922,7 +1940,7 @@ describe('handleAnything', () => {
             const result = await handleAnything(invoice, undefined, true);
 
             expect(result).toEqual(true);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
+            expect(QuickPayUtils.shouldTryQuickPay).not.toHaveBeenCalled();
             expect(BackendUtils.decodePaymentRequest).not.toHaveBeenCalled();
             expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
@@ -1930,9 +1948,11 @@ describe('handleAnything', () => {
         it('should handle auto-pay when not disabled by settings', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockResolvedValue({
-                shouldAutoPay: false,
+            (QuickPayUtils.shouldTryQuickPay as jest.Mock).mockReturnValue(
+                true
+            );
+            (QuickPayUtils.checkShouldQuickPay as jest.Mock).mockResolvedValue({
+                shouldQuickPay: false,
                 amount: 1500,
                 enableDonations: false
             });
@@ -1940,8 +1960,10 @@ describe('handleAnything', () => {
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(QuickPayUtils.shouldTryQuickPay).toHaveBeenCalledWith(
+                invoice
+            );
+            expect(QuickPayUtils.checkShouldQuickPay).toHaveBeenCalledWith(
                 invoice,
                 settingsStore
             );

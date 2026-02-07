@@ -1,4 +1,6 @@
-import AutoPayUtils from './AutoPayUtils';
+import QuickPayUtils from './QuickPayUtils';
+import BackendUtils from './BackendUtils';
+import AddressUtils from './AddressUtils';
 
 jest.mock('./BackendUtils', () => ({
     decodePaymentRequest: jest.fn(),
@@ -24,8 +26,6 @@ jest.mock('./LocaleUtils', () => ({
     localeString: jest.fn((key) => key)
 }));
 
-import BackendUtils from './BackendUtils';
-import AddressUtils from './AddressUtils';
 const MockedInvoice = require('../models/Invoice');
 
 const mockNavigation = {
@@ -35,8 +35,8 @@ const mockNavigation = {
 const mockSettingsStore = {
     settings: {
         payments: {
-            autoPayEnabled: true,
-            autoPayThreshold: 1000,
+            quickPayEnabled: true,
+            quickPayThreshold: 1000,
             enableDonations: false,
             timeoutSeconds: '60',
             defaultFeePercentage: '5.0'
@@ -55,7 +55,7 @@ const mockTransactionsStore = {
     sendPayment: jest.fn()
 } as any;
 
-describe('shouldTryAutoPay', () => {
+describe('shouldTryQuickPay', () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
@@ -65,7 +65,7 @@ describe('shouldTryAutoPay', () => {
             AddressUtils.isValidLightningPaymentRequest as jest.Mock
         ).mockReturnValue(true);
 
-        const result = AutoPayUtils.shouldTryAutoPay('lnbc1234567890');
+        const result = QuickPayUtils.shouldTryQuickPay('lnbc1234567890');
 
         expect(
             AddressUtils.isValidLightningPaymentRequest
@@ -78,7 +78,7 @@ describe('shouldTryAutoPay', () => {
             AddressUtils.isValidLightningPaymentRequest as jest.Mock
         ).mockReturnValue(false);
 
-        const result = AutoPayUtils.shouldTryAutoPay('invalid');
+        const result = QuickPayUtils.shouldTryQuickPay('invalid');
 
         expect(
             AddressUtils.isValidLightningPaymentRequest
@@ -87,19 +87,19 @@ describe('shouldTryAutoPay', () => {
     });
 });
 
-describe('checkAutoPayAndProcess', () => {
+describe('checkQuickPayAndProcess', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         MockedInvoice.mockClear();
     });
 
-    it('processes auto-pay when amount is within threshold and auto-pay is enabled', async () => {
+    it('processes quick-pay when amount is within threshold and quick-pay is enabled', async () => {
         const mockDecodedInvoice = { mockAmount: 500 };
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
             mockDecodedInvoice
         );
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -125,13 +125,13 @@ describe('checkAutoPayAndProcess', () => {
         );
     });
 
-    it('does not process auto-pay when amount exceeds threshold', async () => {
+    it('does not process quick-pay when amount exceeds threshold', async () => {
         const mockDecodedInvoice = { mockAmount: 1500 };
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
             mockDecodedInvoice
         );
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -143,7 +143,7 @@ describe('checkAutoPayAndProcess', () => {
         expect(mockNavigation.navigate).not.toHaveBeenCalled();
     });
 
-    it('does not process auto-pay when auto-pay is disabled', async () => {
+    it('does not process quick-pay when quick-pay is disabled', async () => {
         const mockDecodedInvoice = { mockAmount: 500 };
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
             mockDecodedInvoice
@@ -152,13 +152,13 @@ describe('checkAutoPayAndProcess', () => {
         const disabledSettingsStore = {
             settings: {
                 payments: {
-                    autoPayEnabled: false,
-                    autoPayThreshold: 1000
+                    quickPayEnabled: false,
+                    quickPayThreshold: 1000
                 }
             }
         } as any;
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             disabledSettingsStore,
@@ -169,13 +169,13 @@ describe('checkAutoPayAndProcess', () => {
         expect(mockTransactionsStore.sendPayment).not.toHaveBeenCalled();
     });
 
-    it('does not process auto-pay when amount is zero', async () => {
+    it('does not process quick-pay when amount is zero', async () => {
         const mockDecodedInvoice = { mockAmount: 0 };
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
             mockDecodedInvoice
         );
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -192,7 +192,7 @@ describe('checkAutoPayAndProcess', () => {
             null
         );
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'invalid_invoice',
             mockNavigation,
             mockSettingsStore,
@@ -202,7 +202,7 @@ describe('checkAutoPayAndProcess', () => {
         expect(result).toBe(false);
         expect(mockTransactionsStore.sendPayment).not.toHaveBeenCalled();
         expect(consoleSpy).toHaveBeenCalledWith(
-            'Auto-pay error:',
+            'Quick-pay error:',
             expect.any(Error)
         );
         consoleSpy.mockRestore();
@@ -214,7 +214,7 @@ describe('checkAutoPayAndProcess', () => {
             new Error('Decoding failed')
         );
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -224,7 +224,7 @@ describe('checkAutoPayAndProcess', () => {
         expect(result).toBe(false);
         expect(mockTransactionsStore.sendPayment).not.toHaveBeenCalled();
         expect(consoleSpy).toHaveBeenCalledWith(
-            'Auto-pay error:',
+            'Quick-pay error:',
             expect.any(Error)
         );
         consoleSpy.mockRestore();
@@ -239,12 +239,12 @@ describe('checkAutoPayAndProcess', () => {
         const settingsWithoutThreshold = {
             settings: {
                 payments: {
-                    autoPayEnabled: true
+                    quickPayEnabled: true
                 }
             }
         } as any;
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             settingsWithoutThreshold,
@@ -260,7 +260,7 @@ describe('checkAutoPayAndProcess', () => {
             mockDecodedInvoice
         );
 
-        const result = await AutoPayUtils.checkAutoPayAndProcess(
+        const result = await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -277,7 +277,7 @@ describe('checkAutoPayAndProcess', () => {
             mockDecodedInvoice
         );
 
-        await AutoPayUtils.checkAutoPayAndProcess(
+        await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -296,7 +296,7 @@ describe('checkAutoPayAndProcess', () => {
             mockDecodedInvoice
         );
 
-        await AutoPayUtils.checkAutoPayAndProcess(
+        await QuickPayUtils.checkQuickPayAndProcess(
             'lnbc1234567890',
             mockNavigation,
             mockSettingsStore,
@@ -314,5 +314,190 @@ describe('checkAutoPayAndProcess', () => {
             amp: false,
             timeout_seconds: '60'
         });
+    });
+});
+
+describe('checkCashuQuickPayAndProcess', () => {
+    const mockCashuStore = {
+        payReq: null,
+        payLnInvoiceFromEcash: jest.fn()
+    } as any;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        MockedInvoice.mockClear();
+        mockCashuStore.payReq = { amount: 500 }; // Default to having a pay request
+        mockCashuStore.payLnInvoiceFromEcash.mockResolvedValue(undefined);
+    });
+
+    it('processes Cashu quick-pay when amount is within threshold and quick-pay is enabled', async () => {
+        const mockDecodedInvoice = { mockAmount: 500 };
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            mockDecodedInvoice
+        );
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            mockSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(true);
+        expect(MockedInvoice).toHaveBeenCalledWith(mockDecodedInvoice);
+        expect(mockCashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({});
+        expect(mockNavigation.navigate).toHaveBeenCalledWith(
+            'CashuSendingLightning',
+            { enableDonations: false }
+        );
+    });
+
+    it('does not process Cashu quick-pay when amount exceeds threshold', async () => {
+        const mockDecodedInvoice = { mockAmount: 1500 };
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            mockDecodedInvoice
+        );
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            mockSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(false);
+        expect(mockCashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(mockNavigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('does not process Cashu quick-pay when quick-pay is disabled', async () => {
+        const mockDecodedInvoice = { mockAmount: 500 };
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            mockDecodedInvoice
+        );
+
+        const disabledSettingsStore = {
+            ...mockSettingsStore,
+            settings: {
+                ...mockSettingsStore.settings,
+                payments: {
+                    ...mockSettingsStore.settings.payments,
+                    quickPayEnabled: false
+                }
+            }
+        };
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            disabledSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(false);
+        expect(mockCashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(mockNavigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('does not process Cashu quick-pay when no payReq is available', async () => {
+        const mockDecodedInvoice = { mockAmount: 500 };
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            mockDecodedInvoice
+        );
+
+        // Remove payReq to simulate no payment request available
+        mockCashuStore.payReq = null;
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            mockSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(false);
+        expect(mockCashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(mockNavigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('handles errors gracefully and returns false', async () => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockRejectedValue(
+            new Error('Decode failed')
+        );
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            mockSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(false);
+        expect(mockCashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(mockNavigation.navigate).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            'Cashu quick-pay error:',
+            expect.any(Error)
+        );
+        consoleSpy.mockRestore();
+    });
+
+    it('handles payment errors gracefully and returns false', async () => {
+        const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+        const mockDecodedInvoice = { mockAmount: 500 };
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            mockDecodedInvoice
+        );
+        mockCashuStore.payLnInvoiceFromEcash.mockRejectedValue(
+            new Error('Payment failed')
+        );
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            mockSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(false);
+        expect(mockCashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith({});
+        expect(mockNavigation.navigate).not.toHaveBeenCalled();
+        expect(consoleSpy).toHaveBeenCalledWith(
+            'Cashu quick-pay error:',
+            expect.any(Error)
+        );
+        consoleSpy.mockRestore();
+    });
+
+    it('enables donations when configured in settings', async () => {
+        const mockDecodedInvoice = { mockAmount: 500 };
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue(
+            mockDecodedInvoice
+        );
+
+        const donationsEnabledSettingsStore = {
+            ...mockSettingsStore,
+            settings: {
+                ...mockSettingsStore.settings,
+                payments: {
+                    ...mockSettingsStore.settings.payments,
+                    enableDonations: true
+                }
+            }
+        };
+
+        const result = await QuickPayUtils.checkCashuQuickPayAndProcess(
+            'lnbc1234567890',
+            mockNavigation,
+            donationsEnabledSettingsStore,
+            mockCashuStore
+        );
+
+        expect(result).toBe(true);
+        expect(mockNavigation.navigate).toHaveBeenCalledWith(
+            'CashuSendingLightning',
+            { enableDonations: true }
+        );
     });
 });

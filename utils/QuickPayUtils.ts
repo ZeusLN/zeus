@@ -8,24 +8,24 @@ import CashuStore from '../stores/CashuStore';
 import Invoice from '../models/Invoice';
 import { localeString } from './LocaleUtils';
 
-class AutoPayUtils {
+class QuickPayUtils {
     private static readonly DEFAULT_MAX_PARTS = '16';
     private static readonly DEFAULT_MAX_SHARD_AMT = '';
     private static readonly DEFAULT_TIMEOUT_SECONDS = '60';
     private static readonly DEFAULT_FEE_PERCENTAGE = '5.0';
     private static readonly DEFAULT_FALLBACK_FEE_LIMIT = '1000';
     private static readonly DEFAULT_FAILED_RESULT = {
-        shouldAutoPay: false,
+        shouldQuickPay: false,
         amount: 0,
         enableDonations: false
     };
 
-    private checkAutoPayConditions = async (
+    private checkQuickPayConditions = async (
         invoice: string,
         settingsStore: SettingsStore,
         additionalCondition?: boolean
     ): Promise<{
-        shouldAutoPay: boolean;
+        shouldQuickPay: boolean;
         amount: number;
         enableDonations: boolean;
     }> => {
@@ -43,18 +43,18 @@ class AutoPayUtils {
         const amount = invoiceModel.getRequestAmount;
 
         const { payments } = settingsStore.settings;
-        const autoPayThreshold = payments?.autoPayThreshold || 0;
+        const quickPayThreshold = payments?.quickPayThreshold || 0;
         const enableDonations = payments?.enableDonations || false;
 
-        const shouldAutoPay = !!(
-            payments?.autoPayEnabled &&
+        const shouldQuickPay = !!(
+            payments?.quickPayEnabled &&
             amount > 0 &&
-            amount <= autoPayThreshold &&
+            amount <= quickPayThreshold &&
             additionalCondition !== false
         );
 
         return {
-            shouldAutoPay,
+            shouldQuickPay,
             amount,
             enableDonations: enableDonations || false
         };
@@ -70,8 +70,8 @@ class AutoPayUtils {
         const isLnd = BackendUtils.isLNDBased();
         const isCLightning = implementation === 'cln-rest';
 
-        const maxParts = AutoPayUtils.DEFAULT_MAX_PARTS;
-        const maxShardAmt = AutoPayUtils.DEFAULT_MAX_SHARD_AMT;
+        const maxParts = QuickPayUtils.DEFAULT_MAX_PARTS;
+        const maxShardAmt = QuickPayUtils.DEFAULT_MAX_SHARD_AMT;
         const dynamicFeeLimitSat = FeeUtils.calculateDefaultRoutingFee(
             Number(amount)
         );
@@ -79,10 +79,10 @@ class AutoPayUtils {
         const settings = await settingsStore.getSettings();
         const timeoutSeconds =
             settings?.payments?.timeoutSeconds ||
-            AutoPayUtils.DEFAULT_TIMEOUT_SECONDS;
+            QuickPayUtils.DEFAULT_TIMEOUT_SECONDS;
         const maxFeePercent =
             settings?.payments?.defaultFeePercentage ||
-            AutoPayUtils.DEFAULT_FEE_PERCENTAGE;
+            QuickPayUtils.DEFAULT_FEE_PERCENTAGE;
 
         let enableAmp = false;
         if (
@@ -100,10 +100,10 @@ class AutoPayUtils {
             max_shard_amt: maxShardAmt,
             fee_limit_sat: isLnd
                 ? dynamicFeeLimitSat.toString()
-                : AutoPayUtils.DEFAULT_FALLBACK_FEE_LIMIT,
+                : QuickPayUtils.DEFAULT_FALLBACK_FEE_LIMIT,
             max_fee_percent: isCLightning
                 ? maxFeePercent.replace(/,/g, '.')
-                : AutoPayUtils.DEFAULT_FEE_PERCENTAGE,
+                : QuickPayUtils.DEFAULT_FEE_PERCENTAGE,
             outgoing_chan_id: '',
             last_hop_pubkey: '',
             amp: enableAmp,
@@ -123,17 +123,17 @@ class AutoPayUtils {
         navigation.navigate(screenName, { enableDonations });
     };
 
-    checkAutoPayAndProcess = async (
+    checkQuickPayAndProcess = async (
         invoice: string,
         navigation: StackNavigationProp<any, any>,
         settingsStore: SettingsStore,
         transactionsStore: TransactionsStore
     ): Promise<boolean> => {
         try {
-            const { shouldAutoPay, enableDonations, amount } =
-                await this.checkAutoPayConditions(invoice, settingsStore);
+            const { shouldQuickPay, enableDonations, amount } =
+                await this.checkQuickPayConditions(invoice, settingsStore);
 
-            if (shouldAutoPay) {
+            if (shouldQuickPay) {
                 const paymentParams = await this.buildPaymentParams(
                     invoice,
                     amount,
@@ -151,12 +151,12 @@ class AutoPayUtils {
 
             return false;
         } catch (error) {
-            this.handleError('Auto-pay error', error);
+            this.handleError('Quick-pay error', error);
             return false;
         }
     };
 
-    checkCashuAutoPayAndProcess = async (
+    checkCashuQuickPayAndProcess = async (
         invoice: string,
         navigation: StackNavigationProp<any, any>,
         settingsStore: SettingsStore,
@@ -164,14 +164,14 @@ class AutoPayUtils {
     ): Promise<boolean> => {
         try {
             const hasPayReq = !!cashuStore.payReq;
-            const { shouldAutoPay, enableDonations } =
-                await this.checkAutoPayConditions(
+            const { shouldQuickPay, enableDonations } =
+                await this.checkQuickPayConditions(
                     invoice,
                     settingsStore,
                     hasPayReq
                 );
 
-            if (shouldAutoPay) {
+            if (shouldQuickPay) {
                 await cashuStore.payLnInvoiceFromEcash({});
                 this.navigateToSendingScreen(
                     navigation,
@@ -183,36 +183,36 @@ class AutoPayUtils {
 
             return false;
         } catch (error) {
-            this.handleError('Cashu auto-pay error', error);
+            this.handleError('Cashu quick-pay error', error);
             return false;
         }
     };
 
-    checkShouldAutoPay = async (
+    checkShouldQuickPay = async (
         invoice: string,
         settingsStore: SettingsStore,
         additionalCondition?: boolean
     ): Promise<{
-        shouldAutoPay: boolean;
+        shouldQuickPay: boolean;
         amount: number;
         enableDonations: boolean;
     }> => {
         try {
-            return await this.checkAutoPayConditions(
+            return await this.checkQuickPayConditions(
                 invoice,
                 settingsStore,
                 additionalCondition
             );
         } catch (error) {
-            this.handleError('Auto-pay conditions error', error);
-            return AutoPayUtils.DEFAULT_FAILED_RESULT;
+            this.handleError('Quick-pay conditions error', error);
+            return QuickPayUtils.DEFAULT_FAILED_RESULT;
         }
     };
 
-    shouldTryAutoPay = (text: string): boolean => {
+    shouldTryQuickPay = (text: string): boolean => {
         return AddressUtils.isValidLightningPaymentRequest(text);
     };
 }
 
-const autoPayUtils = new AutoPayUtils();
-export default autoPayUtils;
+const quickPayUtils = new QuickPayUtils();
+export default quickPayUtils;
