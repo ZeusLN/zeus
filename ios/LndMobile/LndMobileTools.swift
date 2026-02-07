@@ -243,24 +243,38 @@ class LndMobileTools: RCTEventEmitter {
     resolve(true)
   }
 
-  @objc(DEBUG_deleteNeutrinoFiles:network:resolver:rejecter:)
-  func DEBUG_deleteNeutrinoFiles(lndDir: String, network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(DEBUG_deleteNeutrinoFiles:network:isSqlite:resolver:rejecter:)
+  func DEBUG_deleteNeutrinoFiles(lndDir: String, network: String, isSqlite: Bool, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let folderName = lndDir.isEmpty ? "lnd" : lndDir
+    let networkName = network.isEmpty ? "mainnet" : network
     let chainPath = applicationSupport.appendingPathComponent(folderName, isDirectory: true)
                                       .appendingPathComponent("data", isDirectory: true)
                                       .appendingPathComponent("chain", isDirectory: true)
                                       .appendingPathComponent("bitcoin", isDirectory: true)
-                                      .appendingPathComponent(network.isEmpty ? "mainnet" : network, isDirectory: true)
+                                      .appendingPathComponent(networkName, isDirectory: true)
 
     let neutrinoDbPath = chainPath.appendingPathComponent("neutrino.db")
     let blockHeadersBinPath = chainPath.appendingPathComponent("block_headers.bin")
     let regFiltersHeadersBinPath = chainPath.appendingPathComponent("reg_filter_headers.bin")
 
     do {
-      try FileManager.default.removeItem(at: neutrinoDbPath)
-      try FileManager.default.removeItem(at: blockHeadersBinPath)
-      try FileManager.default.removeItem(at: regFiltersHeadersBinPath)
+      let baseFiles = [neutrinoDbPath, blockHeadersBinPath, regFiltersHeadersBinPath]
+      for filePath in baseFiles {
+        if FileManager.default.fileExists(atPath: filePath.path) {
+          try FileManager.default.removeItem(at: filePath)
+        }
+      }
+
+      if isSqlite {
+        let sqliteFiles = ["neutrino.sqlite", "neutrino.sqlite-shm", "neutrino.sqlite-wal"]
+        for filename in sqliteFiles {
+          let filePath = chainPath.appendingPathComponent(filename)
+          if FileManager.default.fileExists(atPath: filePath.path) {
+            try FileManager.default.removeItem(at: filePath)
+          }
+        }
+      }
     } catch {
       reject("error", error.localizedDescription, error)
       return

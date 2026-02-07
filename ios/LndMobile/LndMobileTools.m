@@ -68,6 +68,7 @@ RCT_EXTERN_METHOD(
 RCT_EXTERN_METHOD(
   DEBUG_deleteNeutrinoFiles: (NSString)lndDir
   network: (NSString)network
+  isSqlite: (BOOL)isSqlite
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )

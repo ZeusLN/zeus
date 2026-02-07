@@ -302,7 +302,8 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                                 lndDir || 'lnd',
                                                 embeddedLndNetwork === 'Mainnet'
                                                     ? 'mainnet'
-                                                    : 'testnet'
+                                                    : 'testnet',
+                                                isSqlite
                                             );
                                             this.setState({
                                                 deleteNeutrinoLoading: false,

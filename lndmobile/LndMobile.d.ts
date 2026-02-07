@@ -114,7 +114,8 @@ export interface ILndMobileTools {
     deleteLndDirectory(lndDir: string): Promise<null>;
     DEBUG_deleteNeutrinoFiles(
         lndDir: string,
-        network: string
+        network: string,
+        isSqlite: boolean
     ): Promise<boolean>;
 
     // Android-specific
