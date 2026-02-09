@@ -558,7 +558,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                             [
                                                 {
                                                     text: localeString(
-                                                        'views.Settings.Seed.channelBackupReminder.exportNow'
+                                                        'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
                                                     ),
                                                     onPress: () => {
                                                         this.handleExportChannels();
