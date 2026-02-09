@@ -1,6 +1,21 @@
 import RNFS from 'react-native-fs';
 import { Platform } from 'react-native';
 
+const isInvoiceLike = (item: any): boolean =>
+    item?.isPaid !== undefined ||
+    item?.getRHash !== undefined ||
+    item?.r_hash !== undefined ||
+    item?.quote !== undefined;
+
+const isPaymentLike = (item: any): boolean =>
+    !isInvoiceLike(item) &&
+    (item?.paymentHash !== undefined ||
+        item?.payment_hash !== undefined ||
+        item?.getDestination !== undefined ||
+        item?.destination !== undefined ||
+        item?.fee_sat !== undefined ||
+        item?.fee_msat !== undefined);
+
 //  Keys for CSV export.
 export const CSV_KEYS = {
     invoice: [
@@ -13,6 +28,7 @@ export const CSV_KEYS = {
         { label: 'Expiry', value: 'formattedTimeUntilExpiry' }
     ],
     payment: [
+        { label: 'Direction', value: 'direction' },
         { label: 'Destination', value: 'getDestination' },
         { label: 'Payment Request', value: 'getPaymentRequest' },
         { label: 'Payment Hash', value: 'paymentHash' },
@@ -28,6 +44,47 @@ export const CSV_KEYS = {
         { label: 'Note', value: 'getNote' },
         { label: 'Timestamp', value: 'getDate' }
     ]
+};
+
+export const isPaymentExportActivity = (item: any): boolean =>
+    isPaymentLike(item) || (isInvoiceLike(item) && !!item.isPaid);
+
+const getPaymentHashForCsv = (item: any): string => {
+    if (isInvoiceLike(item)) {
+        return (
+            item?.getRHash ||
+            item?.r_hash ||
+            item?.payment_hash ||
+            item?.quote ||
+            ''
+        );
+    }
+
+    return item?.paymentHash || item?.payment_hash || '';
+};
+
+export const toPaymentCsvRow = (item: any) => ({
+    direction: isInvoiceLike(item) ? 'Received' : 'Sent',
+    getDestination: item?.getDestination ?? item?.destination ?? '',
+    getPaymentRequest: item?.getPaymentRequest ?? item?.payment_request ?? '',
+    paymentHash: getPaymentHashForCsv(item),
+    getAmount: item?.getAmount ?? '',
+    getMemo: item?.getMemo ?? item?.memo ?? '',
+    getNote: item?.getNote ?? '',
+    getDate: item?.getDate ?? ''
+});
+
+const sanitizeCsvCell = (value: any): string => {
+    if (value === undefined || value === null) return '';
+
+    const stringValue = String(value);
+    const escapedValue = stringValue.replace(/"/g, '""');
+
+    if (/^[\s]*[=+\-@]/.test(escapedValue)) {
+        return `'${escapedValue}`;
+    }
+
+    return escapedValue;
 };
 
 // Generates a formatted timestamp string for file naming.
@@ -54,7 +111,7 @@ export const convertActivityToCsv = async (
         const rows = data
             .map((item) =>
                 keysToInclude
-                    .map((field) => `"${item[field.value] || ''}"`)
+                    .map((field) => `"${sanitizeCsvCell(item?.[field.value])}"`)
                     .join(',')
             )
             .join('\n');

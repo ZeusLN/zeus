@@ -2,7 +2,9 @@ import {
     getFormattedDateTime,
     convertActivityToCsv,
     saveCsvFile,
-    CSV_KEYS
+    CSV_KEYS,
+    isPaymentExportActivity,
+    toPaymentCsvRow
 } from '.././utils/ActivityCsvUtils';
 import RNFS from 'react-native-fs';
 import { Platform } from 'react-native';
@@ -63,6 +65,7 @@ describe('activityCsvUtils', () => {
         it('correctly formats Payment CSV data', async () => {
             const mockPayments = [
                 {
+                    direction: 'Sent',
                     getDestination: 'dest123',
                     getPaymentRequest: 'pay_req123',
                     paymentHash: 'hash_pay1',
@@ -72,6 +75,7 @@ describe('activityCsvUtils', () => {
                     getDate: '2024-02-09'
                 },
                 {
+                    direction: 'Received',
                     getDestination: 'dest456',
                     getPaymentRequest: 'pay_req456',
                     paymentHash: 'hash_pay2',
@@ -87,10 +91,10 @@ describe('activityCsvUtils', () => {
                 CSV_KEYS.payment
             );
             expect(result).toContain(
-                '"dest123","pay_req123","hash_pay1","800","Payment Memo","Payment Note","2024-02-09"'
+                '"Sent","dest123","pay_req123","hash_pay1","800","Payment Memo","Payment Note","2024-02-09"'
             );
             expect(result).toContain(
-                '"dest456","pay_req456","hash_pay2","1600","","","2024-02-08"'
+                '"Received","dest456","pay_req456","hash_pay2","1600","","","2024-02-08"'
             );
         });
 
@@ -137,7 +141,54 @@ describe('activityCsvUtils', () => {
                 mockPayments,
                 CSV_KEYS.payment
             );
-            expect(result).toContain('"dest123","","","","","",""');
+            expect(result).toContain('"","dest123","","","","","",""');
+        });
+
+        it('preserves zero values in CSV output', async () => {
+            const mockPayments = [
+                {
+                    direction: 'Sent',
+                    getDestination: 'dest123',
+                    getPaymentRequest: 'pay_req123',
+                    paymentHash: 'hash_pay1',
+                    getAmount: 0,
+                    getMemo: '',
+                    getNote: '',
+                    getDate: '2024-02-09'
+                }
+            ];
+
+            const result = await convertActivityToCsv(
+                mockPayments,
+                CSV_KEYS.payment
+            );
+
+            expect(result).toContain(
+                '"Sent","dest123","pay_req123","hash_pay1","0","","","2024-02-09"'
+            );
+        });
+
+        it('escapes quotes and neutralizes spreadsheet formulas', async () => {
+            const mockPayments = [
+                {
+                    direction: 'Sent',
+                    getDestination: 'dest123',
+                    getPaymentRequest: 'pay_req123',
+                    paymentHash: 'hash_pay1',
+                    getAmount: 1,
+                    getMemo: '=2+2',
+                    getNote: 'He said "hello"',
+                    getDate: '2024-02-09'
+                }
+            ];
+
+            const result = await convertActivityToCsv(
+                mockPayments,
+                CSV_KEYS.payment
+            );
+
+            expect(result).toContain('"\'=2+2"');
+            expect(result).toContain('"He said ""hello"""');
         });
 
         it('handles missing fields for Transaction CSV', async () => {
@@ -147,6 +198,82 @@ describe('activityCsvUtils', () => {
                 CSV_KEYS.transaction
             );
             expect(result).toContain('"txhash1","2000","","",""');
+        });
+    });
+
+    describe('payment CSV helpers', () => {
+        it('detects sent payments and paid invoices only', () => {
+            expect(
+                isPaymentExportActivity({
+                    paymentHash: 'sentHash',
+                    getDestination: 'dest'
+                })
+            ).toBe(true);
+            expect(
+                isPaymentExportActivity({
+                    isPaid: true,
+                    getRHash: 'recvHash'
+                })
+            ).toBe(true);
+            expect(
+                isPaymentExportActivity({
+                    isPaid: false,
+                    getRHash: 'unpaidHash'
+                })
+            ).toBe(false);
+        });
+
+        it('maps sent payment row for CSV', () => {
+            const row = toPaymentCsvRow({
+                getDestination: 'dest123',
+                getPaymentRequest: 'lnbc1sent',
+                paymentHash: 'sentHash',
+                getAmount: 100,
+                getMemo: 'memo',
+                getNote: 'note',
+                getDate: '2026-01-01'
+            });
+
+            expect(row).toEqual({
+                direction: 'Sent',
+                getDestination: 'dest123',
+                getPaymentRequest: 'lnbc1sent',
+                paymentHash: 'sentHash',
+                getAmount: 100,
+                getMemo: 'memo',
+                getNote: 'note',
+                getDate: '2026-01-01'
+            });
+        });
+
+        it('maps received invoice row and hash for CSV', () => {
+            const row = toPaymentCsvRow({
+                isPaid: true,
+                getPaymentRequest: 'lnbc1recv',
+                getRHash: 'recvHash',
+                getAmount: 200,
+                getDate: '2026-01-02'
+            });
+
+            expect(row).toEqual({
+                direction: 'Received',
+                getDestination: '',
+                getPaymentRequest: 'lnbc1recv',
+                paymentHash: 'recvHash',
+                getAmount: 200,
+                getMemo: '',
+                getNote: '',
+                getDate: '2026-01-02'
+            });
+        });
+
+        it('preserves zero amount in mapped payment row', () => {
+            const row = toPaymentCsvRow({
+                paymentHash: 'sentHash',
+                getAmount: 0
+            });
+
+            expect(row.getAmount).toBe(0);
         });
     });
 

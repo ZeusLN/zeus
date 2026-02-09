@@ -5,7 +5,6 @@ import Invoice from '../../models/Invoice';
 import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import CashuInvoice from '../../models/CashuInvoice';
-import CashuPayment from '../../models/CashuPayment';
 import Swap from '../../models/Swap';
 import { LSPActivity } from '../../models/LSP';
 
@@ -19,7 +18,9 @@ import {
     getFormattedDateTime,
     convertActivityToCsv,
     saveCsvFile,
-    CSV_KEYS
+    CSV_KEYS,
+    isPaymentExportActivity,
+    toPaymentCsvRow
 } from '../../utils/ActivityCsvUtils';
 
 type ActivityItem = Invoice | Payment | Transaction | Swap | LSPActivity;
@@ -54,10 +55,9 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                 CSV_KEYS.invoice
             );
             const paymentCsv = await convertActivityToCsv(
-                filteredActivity.filter(
-                    (item: any) =>
-                        item instanceof Payment || item instanceof CashuPayment
-                ),
+                filteredActivity
+                    .filter(isPaymentExportActivity)
+                    .map(toPaymentCsvRow),
                 CSV_KEYS.payment
             );
             const transactionCsv = await convertActivityToCsv(
