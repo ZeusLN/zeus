@@ -545,13 +545,42 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    if (isRefundRescueKey) navigation.goBack();
-                                    else {
-                                        await Storage.setItem(
-                                            IS_BACKED_UP_KEY,
-                                            true
+                                    if (isRefundRescueKey) {
+                                        navigation.goBack();
+                                    } else {
+                                        Alert.alert(
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.title'
+                                            ),
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.message'
+                                            ),
+                                            [
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.Seed.channelBackupReminder.exportNow'
+                                                    ),
+                                                    onPress: () => {
+                                                        this.handleExportChannels();
+                                                    }
+                                                },
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.Seed.channelBackupReminder.later'
+                                                    ),
+                                                    style: 'cancel',
+                                                    onPress: async () => {
+                                                        await Storage.setItem(
+                                                            IS_BACKED_UP_KEY,
+                                                            true
+                                                        );
+                                                        navigation.popTo(
+                                                            'Wallet'
+                                                        );
+                                                    }
+                                                }
+                                            ]
                                         );
-                                        navigation.popTo('Wallet');
                                     }
                                 }}
                                 title={
