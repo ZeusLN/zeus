@@ -2564,6 +2564,16 @@ export default class WalletConfiguration extends React.Component<
                                                 [
                                                     {
                                                         text: localeString(
+                                                            'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                                                        ),
+                                                        onPress: () =>
+                                                            navigation.navigate(
+                                                                'Seed'
+                                                            ),
+                                                        isPreferred: true
+                                                    },
+                                                    {
+                                                        text: localeString(
                                                             'views.Settings.WalletConfiguration.deleteWallet'
                                                         ),
                                                         onPress: () =>
@@ -2573,8 +2583,7 @@ export default class WalletConfiguration extends React.Component<
                                                         text: localeString(
                                                             'general.cancel'
                                                         ),
-                                                        onPress: () => void 0,
-                                                        isPreferred: true
+                                                        onPress: () => void 0
                                                     }
                                                 ],
                                                 { cancelable: false }
