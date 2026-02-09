@@ -52,6 +52,10 @@ interface NodesProps {
     route?: any;
 }
 
+interface RouteParams {
+    fromStartup?: boolean;
+    shareIntentData?: any;
+}
 interface NodesState {
     nodes: any[];
     selectedNode: number | null;
@@ -78,8 +82,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentDidMount() {
         this.refreshSettings();
 
+        const routeParams = this.props.route?.params as RouteParams;
+
         // Check if we're coming from startup based on route param
-        if (this.props.route?.params?.fromStartup) {
+        if (routeParams?.fromStartup) {
             this.setState({
                 fromStartup: true,
                 isSelecting: true, // Hide back button when coming from startup
@@ -90,9 +96,48 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         this.props.navigation.addListener('focus', this.handleFocus);
     }
 
-    componentWillUnmount() {
+    async componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
+
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings, setConnectingStatus } = SettingsStore;
+        const { nodes, selectedNode } = this.state;
+
+        // Handle post-deletion navigation and restart
+        if (settings?.justDeletedWallet && selectedNode != null) {
+            const newSelectedNode = nodes[selectedNode];
+            if (newSelectedNode) {
+                try {
+                    console.log(
+                        'Wallet deleted - restarting selected node:',
+                        selectedNode
+                    );
+
+                    // Clear the flag first
+                    await updateSettings({
+                        justDeletedWallet: false
+                    });
+
+                    // Trigger connection to new selected wallet
+                    setConnectingStatus(true);
+                    this.navigateAfterWalletSelection();
+                } catch (error) {
+                    console.error(
+                        'Error restarting after wallet deletion:',
+                        error
+                    );
+                    setConnectingStatus(false);
+                    await updateSettings({
+                        justDeletedWallet: false
+                    });
+                }
+            } else {
+                await updateSettings({
+                    justDeletedWallet: false
+                });
+            }
+        }
     }
 
     handleBackButton = () => {
@@ -127,6 +172,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         this.setState({
             loading: true
         });
+
         await this.props.SettingsStore.getSettings().then((settings) => {
             // If we're in startup mode, we don't want to set a selected node
             // Otherwise, use the one from settings
@@ -163,7 +209,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             implementation,
             embeddedLndStarted,
             initialStart
-        }: any = SettingsStore;
+        } = SettingsStore;
 
         const implementationDisplayValue: { [key: string]: string } = {};
 
@@ -220,6 +266,62 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 nodes: copy,
                 selectedNode
             });
+        };
+
+        const onWalletPress = async (
+            item: any,
+            nodeIndex: number,
+            nodeActive: boolean
+        ) => {
+            if (initialStart) {
+                setInitialStart(false);
+            }
+            if (nodeActive) {
+                // if already on selected node, just pop to
+                // the Wallet view, skip connecting procedures
+                this.navigateAfterWalletSelection();
+            } else {
+                // Immediately set isSelecting to true to hide back button
+                // This will prevent the back button from appearing
+                // even after fromStartup is set to false
+                this.setState({
+                    isSelecting: true
+                });
+
+                const currentImplementation = implementation;
+                if (currentImplementation === 'lightning-node-connect') {
+                    BackendUtils.disconnect();
+                }
+
+                // Store startup state before updating settings
+                const wasFromStartup = this.state.fromStartup;
+
+                // If in startup mode, update local state
+                if (wasFromStartup) {
+                    this.setState({
+                        fromStartup: false,
+                        selectedNode: nodeIndex // Highlight the selected wallet immediately
+                    });
+                }
+
+                await updateSettings({
+                    nodes,
+                    selectedNode: nodeIndex
+                }).then(() => {
+                    // Never show restart needed if coming from startup
+                    if (
+                        item.implementation === 'embedded-lnd' &&
+                        Platform.OS === 'android' &&
+                        embeddedLndStarted &&
+                        !wasFromStartup // Skip restart if coming from startup
+                    ) {
+                        restartNeeded(true);
+                    } else {
+                        setConnectingStatus(true);
+                        this.navigateAfterWalletSelection();
+                    }
+                });
+            }
         };
 
         return (
@@ -296,66 +398,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                   ) || themeColor('secondary')
                                                 : 'transparent'
                                         }}
-                                        onPress={async () => {
-                                            if (initialStart) {
-                                                setInitialStart(false);
-                                            }
-                                            if (nodeActive) {
-                                                // if already on selected node, just pop to
-                                                // the Wallet view, skip connecting procedures
-                                                this.navigateAfterWalletSelection();
-                                            } else {
-                                                // Immediately set isSelecting to true to hide back button
-                                                // This will prevent the back button from appearing
-                                                // even after fromStartup is set to false
-                                                this.setState({
-                                                    isSelecting: true
-                                                });
-
-                                                const currentImplementation =
-                                                    implementation;
-                                                if (
-                                                    currentImplementation ===
-                                                    'lightning-node-connect'
-                                                ) {
-                                                    BackendUtils.disconnect();
-                                                }
-
-                                                // Store startup state before updating settings
-                                                const wasFromStartup =
-                                                    this.state.fromStartup;
-
-                                                // If in startup mode, update local state
-                                                if (wasFromStartup) {
-                                                    this.setState({
-                                                        fromStartup: false,
-                                                        selectedNode: index // Highlight the selected wallet immediately
-                                                    });
-                                                }
-
-                                                await updateSettings({
-                                                    nodes,
-                                                    selectedNode: index
-                                                }).then(() => {
-                                                    // Never show restart needed if coming from startup
-                                                    if (
-                                                        item.implementation ===
-                                                            'embedded-lnd' &&
-                                                        Platform.OS ===
-                                                            'android' &&
-                                                        embeddedLndStarted &&
-                                                        !wasFromStartup // Skip restart if coming from startup
-                                                    ) {
-                                                        restartNeeded(true);
-                                                    } else {
-                                                        setConnectingStatus(
-                                                            true
-                                                        );
-                                                        this.navigateAfterWalletSelection();
-                                                    }
-                                                });
-                                            }
-                                        }}
+                                        onPress={() =>
+                                            onWalletPress(
+                                                item,
+                                                index,
+                                                nodeActive
+                                            )
+                                        }
                                     >
                                         <ListItem
                                             containerStyle={{

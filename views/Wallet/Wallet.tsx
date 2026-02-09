@@ -626,11 +626,40 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         isRecovery: recovery
                     });
                 } catch (error: any) {
-                    console.log('startLnd error:', error?.message);
+                    const errorMessage = error?.message ?? '';
+                    console.log('startLnd error:', errorMessage);
+
+                    // Handle folder missing error
                     if (isFolderMissingError(error)) {
                         showFolderMissingAlert();
                         return;
                     }
+
+                    // Handle transient errors - attempt restart
+                    if (
+                        errorMessage.includes('RPC connection closed') ||
+                        errorMessage.includes('Wallet directory not found') ||
+                        errorMessage.includes(
+                            'not yet ready to accept calls'
+                        ) ||
+                        errorMessage.includes('starting up')
+                    ) {
+                        console.log(
+                            'Transient error during startup - attempting restart:',
+                            errorMessage
+                        );
+                        setConnectingStatus(false);
+                        await new Promise((resolve) =>
+                            setTimeout(resolve, 2000)
+                        );
+                        setConnectingStatus(true);
+                        this.getSettingsAndNavigate();
+                        return;
+                    }
+
+                    // Fatal error - throw to outer handler
+                    console.error('Fatal startLnd error:', error);
+                    setConnectingStatus(false);
                     throw error;
                 }
 
@@ -725,48 +754,103 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }, 60000); // 60 seconds
                 }
             }
-            await waitForRpcReady();
-            SyncStore.checkRecoveryStatus();
-            await NodeInfoStore.getNodeInfo();
-            NodeInfoStore.getNetworkInfo();
-            await UTXOsStore.listAccounts();
-            await BalanceStore.getCombinedBalance(false);
-            ChannelsStore.getChannelsWithPolling().then(() => {
-                // Check for sweep to self-custody threshold after channels are online
-                if (settings?.ecash?.enableCashu) {
-                    CashuStore.checkAndSweepMints();
-                    // Check Cashu balance for upgrade prompts after channels are loaded
-                    CashuStore.checkAndShowUpgradeModal(
-                        0,
-                        CashuStore.totalBalanceSats || 0
-                    );
-                }
-            });
 
-            if (rescan) {
-                await updateSettings({
-                    rescan: false
+            // Wrap RPC ready check and data fetching in try-catch
+            try {
+                await waitForRpcReady();
+                SyncStore.checkRecoveryStatus();
+                await NodeInfoStore.getNodeInfo();
+                NodeInfoStore.getNetworkInfo();
+                await UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance(false);
+                ChannelsStore.getChannelsWithPolling().then(() => {
+                    // Check for sweep to self-custody threshold after channels are online
+                    if (settings?.ecash?.enableCashu) {
+                        CashuStore.checkAndSweepMints();
+                        // Check Cashu balance for upgrade prompts after channels are loaded
+                        CashuStore.checkAndShowUpgradeModal(
+                            0,
+                            CashuStore.totalBalanceSats || 0
+                        );
+                    }
                 });
-            }
-            if (recovery) {
-                const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
-                if (!isBackedUp) {
-                    await Storage.setItem(IS_BACKED_UP_KEY, true);
-                }
-                if (isSyncing) return;
-                try {
-                    await ChannelBackupStore.recoverStaticChannelBackup();
+
+                if (rescan) {
                     await updateSettings({
-                        recovery: false
+                        rescan: false
                     });
+                }
+                if (recovery) {
+                    const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
+                    if (!isBackedUp) {
+                        await Storage.setItem(IS_BACKED_UP_KEY, true);
+                    }
+                    if (isSyncing) return;
+                    try {
+                        await ChannelBackupStore.recoverStaticChannelBackup();
+                        await updateSettings({
+                            recovery: false
+                        });
+                        if (
+                            SettingsStore.settings
+                                .automaticDisasterRecoveryBackup
+                        )
+                            ChannelBackupStore.initSubscribeChannelEvents();
+                    } catch (recoverError) {
+                        console.error('recover error', recoverError);
+                    }
+                } else {
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
-                } catch (recoverError) {
-                    console.error('recover error', recoverError);
                 }
-            } else {
-                if (SettingsStore.settings.automaticDisasterRecoveryBackup)
-                    ChannelBackupStore.initSubscribeChannelEvents();
+            } catch (rpcError: any) {
+                const errorMessage = rpcError?.message ?? '';
+                console.error('RPC/Data fetching error:', errorMessage);
+
+                // Handle wallet directory not found (deleted wallet)
+                if (
+                    errorMessage.includes('Wallet directory not found') ||
+                    errorMessage.includes('wallet may have been deleted')
+                ) {
+                    setConnectingStatus(false);
+                    Alert.alert(
+                        localeString('views.Wallet.lndFolderMissing.title'),
+                        localeString('views.Wallet.lndFolderMissing.message'),
+                        [
+                            {
+                                text: localeString(
+                                    'views.Wallet.lndFolderMissing.deleteWallet'
+                                ),
+                                onPress: () =>
+                                    this.props.navigation.navigate('Wallets'),
+                                style: 'destructive' as const
+                            }
+                        ]
+                    );
+                    return;
+                }
+
+                // Handle transient RPC errors - attempt restart
+                if (
+                    errorMessage.includes('RPC connection closed') ||
+                    errorMessage.includes('not yet ready to accept calls') ||
+                    errorMessage.includes('starting up')
+                ) {
+                    console.log(
+                        'Transient RPC error - attempting restart:',
+                        errorMessage
+                    );
+                    setConnectingStatus(false);
+                    await new Promise((resolve) => setTimeout(resolve, 2000));
+                    setConnectingStatus(true);
+                    this.getSettingsAndNavigate();
+                    return;
+                }
+
+                // Fatal error - clear connecting status and re-throw
+                console.error('Fatal RPC error:', rpcError);
+                setConnectingStatus(false);
+                throw rpcError;
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {
