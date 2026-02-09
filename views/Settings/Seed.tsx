@@ -23,8 +23,10 @@ import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import {
     SWAPS_KEY,
@@ -35,6 +37,7 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
+import { exportChannelDb } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -44,6 +47,7 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface SeedProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     route: Route<
         'Seed',
         {
@@ -56,6 +60,7 @@ interface SeedState {
     understood: boolean;
     showModal: boolean;
     isDeleteModalVisible: boolean;
+    isChannelExporting: boolean;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -106,13 +111,14 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'NodeInfoStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
         understood: false,
         showModal: false,
-        isDeleteModalVisible: false
+        isDeleteModalVisible: false,
+        isChannelExporting: false
     };
 
     componentDidMount() {
@@ -188,9 +194,43 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         );
     };
 
+    handleExportChannels = () => {
+        Alert.alert(
+            localeString('views.Tools.migration.export.title'),
+
+            `${localeString('views.Tools.migration.export.text1')}\n\n` +
+                `⚠️ ${localeString('views.Tools.migration.export.text2')}`,
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('views.Tools.migration.export.confirm'),
+                    style: 'default',
+                    onPress: async () => {
+                        const { SettingsStore, NodeInfoStore } = this.props;
+                        const { isSqlite }: any = SettingsStore;
+                        const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
+                        const lndDir = () =>
+                            this.props.SettingsStore.lndDir || 'lnd';
+
+                        await exportChannelDb(
+                            lndDir(),
+                            isTestnet,
+                            isSqlite,
+                            (loading) =>
+                                this.setState({ isChannelExporting: loading })
+                        );
+                    }
+                }
+            ]
+        );
+    };
+
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { understood, showModal } = this.state;
+        const { understood, showModal, isChannelExporting } = this.state;
         const seedPhrase = route.params?.seedPhrase ?? SettingsStore.seedPhrase;
         const isRefundRescueKey = !!route.params?.seedPhrase;
 
@@ -274,6 +314,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     rightComponent={
                         understood && seedPhrase ? (
                             <Row>
+                                {isChannelExporting ? (
+                                    <LoadingIndicator size={28} />
+                                ) : (
+                                    <></>
+                                )}
                                 {isRefundRescueKey ? (
                                     <DownloadRescueKey
                                         seedPhrase={seedPhrase}
@@ -282,6 +327,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     <></>
                                 )}
                                 <DangerouslyCopySeed />
+
                                 {isRefundRescueKey ? <></> : <QRExport />}
                             </Row>
                         ) : undefined
@@ -499,13 +545,42 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    if (isRefundRescueKey) navigation.goBack();
-                                    else {
-                                        await Storage.setItem(
-                                            IS_BACKED_UP_KEY,
-                                            true
+                                    if (isRefundRescueKey) {
+                                        navigation.goBack();
+                                    } else {
+                                        Alert.alert(
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.title'
+                                            ),
+                                            localeString(
+                                                'views.Settings.Seed.channelBackupReminder.message'
+                                            ),
+                                            [
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                                                    ),
+                                                    onPress: () => {
+                                                        this.handleExportChannels();
+                                                    }
+                                                },
+                                                {
+                                                    text: localeString(
+                                                        'views.Settings.Seed.channelBackupReminder.later'
+                                                    ),
+                                                    style: 'cancel',
+                                                    onPress: async () => {
+                                                        await Storage.setItem(
+                                                            IS_BACKED_UP_KEY,
+                                                            true
+                                                        );
+                                                        navigation.popTo(
+                                                            'Wallet'
+                                                        );
+                                                    }
+                                                }
+                                            ]
                                         );
-                                        navigation.popTo('Wallet');
                                     }
                                 }}
                                 title={
@@ -519,6 +594,16 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 }
                                 containerStyle={{ marginBottom: 10 }}
                             />
+                            {!isRefundRescueKey && (
+                                <Button
+                                    onPress={this.handleExportChannels}
+                                    title={localeString(
+                                        'views.Tools.migration.export'
+                                    )}
+                                    secondary
+                                    containerStyle={{ marginBottom: 15 }}
+                                />
+                            )}
                             {isRefundRescueKey && (
                                 <Button
                                     onPress={() =>
