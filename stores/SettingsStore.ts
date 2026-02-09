@@ -34,6 +34,7 @@ export interface Node {
     nickname?: string;
     dismissCustodialWarning: boolean;
     photo?: string;
+    pubkey?: string;
     // LNC
     pairingPhrase?: string;
     mailboxServer?: string;
@@ -363,6 +364,7 @@ export const INTERFACE_KEYS: {
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
+    { key: 'Core Lightning (LNSocket)', value: 'lnsocket' },
     { key: 'Nostr Wallet Connect', value: 'nostr-wallet-connect' },
     { key: 'LNDHub', value: 'lndhub' }
 ];
@@ -373,7 +375,8 @@ export type Implementations =
     | 'lightning-node-connect'
     | 'cln-rest'
     | 'lndhub'
-    | 'nostr-wallet-connect';
+    | 'nostr-wallet-connect'
+    | 'lnsocket';
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
@@ -1526,6 +1529,7 @@ export default class SettingsStore {
     @observable public customMailboxServer: string;
     @observable public error = false;
     @observable public errorMsg: string;
+    @observable public pubkey: string;
     // Embedded lnd
     @observable public seedPhrase: Array<string>;
     @observable public walletPassword: string;
@@ -1688,6 +1692,7 @@ export default class SettingsStore {
             this.implementation = node.implementation || 'lnd';
             this.certVerification = node.certVerification || false;
             this.enableTor = node.enableTor;
+            this.pubkey = node.pubkey;
             // LNC
             this.pairingPhrase = node.pairingPhrase;
             this.mailboxServer = node.mailboxServer;
