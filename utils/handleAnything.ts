@@ -594,7 +594,8 @@ const handleAnything = async (
                         {
                             lnurlParams: response,
                             satAmount: setAmount,
-                            ecash
+                            ecash,
+                            lightningAddress: value
                         }
                     ];
                 })
@@ -655,7 +656,8 @@ const handleAnything = async (
                             {
                                 lnurlParams: lnurlpData,
                                 satAmount: setAmount,
-                                ecash
+                                ecash,
+                                lightningAddress: value
                             }
                         ];
                     } else {
