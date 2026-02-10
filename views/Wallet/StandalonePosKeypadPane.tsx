@@ -23,8 +23,10 @@ import {
     getDecimalPlaceholder,
     numberWithCommas
 } from '../../utils/UnitsUtils';
+import { appendValueToAmount } from '../../utils/AmountInputValidationUtils';
 import { calculateTaxSats } from '../../utils/PosUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import InvalidInputAnimationController from '../../utils/InvalidInputAnimationController';
 
 import { PricedIn } from '../../models/Product';
 
@@ -48,20 +50,24 @@ export default class PosKeypadPane extends React.PureComponent<
     PosKeypadPaneProps,
     PosKeypadPaneState
 > {
-    shakeAnimation = new Animated.Value(0);
-    textAnimation = new Animated.Value(0);
-    textAnimationRef: Animated.CompositeAnimation | null = null;
+    invalidInputAnimation = new InvalidInputAnimationController(
+        (isInputInvalid: boolean) => {
+            this.setState({ isInputInvalid });
+        }
+    );
+    shakeAnimation = this.invalidInputAnimation.shakeAnimation;
+    textAnimation = this.invalidInputAnimation.textAnimation;
     state = {
         amount: '0',
         isInputInvalid: false
     };
 
+    componentWillUnmount() {
+        this.invalidInputAnimation.dispose();
+    }
+
     resetTextAnimation = () => {
-        if (this.textAnimationRef) {
-            this.textAnimationRef.stop();
-            this.textAnimationRef = null;
-        }
-        this.textAnimation.setValue(0);
+        this.invalidInputAnimation.clearInvalidState();
     };
 
     appendValue = (value: string): boolean => {
@@ -69,74 +75,21 @@ export default class PosKeypadPane extends React.PureComponent<
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
+        const fiat = SettingsStore!.settings?.fiat || '';
+        const fiatProperties = FiatStore!.symbolLookup(fiat);
+        const { isValid, newAmount } = appendValueToAmount(
+            amount,
+            value,
+            units,
+            fiatProperties?.decimalPlaces
+        );
+
+        if (!isValid || !newAmount) {
+            this.startShake();
+            return false;
+        }
+
         this.resetTextAnimation();
-
-        let newAmount;
-
-        const getDecimalLimit = (): number | null => {
-            if (units === 'fiat') {
-                const fiat = SettingsStore!.settings?.fiat || '';
-                const fiatProperties = FiatStore!.symbolLookup(fiat);
-                return fiatProperties?.decimalPlaces !== undefined
-                    ? fiatProperties.decimalPlaces
-                    : 2;
-            }
-            if (units === 'sats') return 3;
-            if (units === 'BTC') return 8;
-            return null;
-        };
-
-        const decimalLimit = getDecimalLimit();
-        const [integerPart, decimalPart] = amount.split('.');
-
-        // limit decimal places depending on units
-        if (
-            decimalPart &&
-            decimalLimit !== null &&
-            decimalPart.length >= decimalLimit
-        ) {
-            this.startShake();
-            return false;
-        }
-
-        if (units === 'BTC') {
-            // deny if trying to add more than 8 figures of Bitcoin
-            if (
-                !decimalPart &&
-                integerPart &&
-                integerPart.length == 8 &&
-                !amount.includes('.') &&
-                value !== '.'
-            ) {
-                this.startShake();
-                return false;
-            }
-        }
-
-        // only allow one decimal, unless currency has zero decimal places
-        if (value === '.' && (amount.includes('.') || decimalLimit === 0)) {
-            this.startShake();
-            return false;
-        }
-
-        const proposedNewAmountStr = `${amount}${value}`;
-        const proposedNewAmount = new BigNumber(proposedNewAmountStr);
-
-        // deny if exceeding BTC 21 million capacity
-        if (units === 'BTC' && proposedNewAmount.gt(21000000)) {
-            this.startShake();
-            return false;
-        }
-        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0)) {
-            this.startShake();
-            return false;
-        }
-
-        if (amount === '0') {
-            newAmount = value;
-        } else {
-            newAmount = proposedNewAmountStr;
-        }
 
         this.setState({
             amount: newAmount,
@@ -196,50 +149,7 @@ export default class PosKeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        this.resetTextAnimation();
-        this.setState({ isInputInvalid: true });
-
-        this.textAnimationRef = Animated.parallel([
-            Animated.sequence([
-                Animated.timing(this.textAnimation, {
-                    toValue: 1,
-                    duration: 100,
-                    useNativeDriver: false
-                }),
-                Animated.timing(this.textAnimation, {
-                    toValue: 0,
-                    duration: 1000,
-                    useNativeDriver: false
-                })
-            ]),
-            Animated.sequence([
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: -10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 0,
-                    duration: 100,
-                    useNativeDriver: true
-                })
-            ])
-        ]);
-
-        this.textAnimationRef.start(() => {
-            this.textAnimationRef = null;
-            this.setState({ isInputInvalid: false });
-        });
+        this.invalidInputAnimation.start();
     };
 
     addItemAndCheckout = async () => {
