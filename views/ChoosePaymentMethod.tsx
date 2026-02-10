@@ -14,6 +14,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import ModalBox from '../components/ModalBox';
 import SyncingStatus from '../components/SyncingStatus';
+import EstimateFeesDisplay from '../components/EstimateFeesDisplay';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 
@@ -26,244 +27,6 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Invoice from '../models/Invoice';
-
-interface EstimateFeesDisplayProps {
-    satAmount: string;
-    lightning?: string;
-    lnurlParams?: any;
-    value?: string;
-    lightningEstimateFee?: number;
-    ecashEstimateFee?: number;
-    feeRate?: string;
-}
-
-const EstimateFeesDisplay: React.FC<EstimateFeesDisplayProps> = observer(
-    ({
-        satAmount,
-        lightning,
-        lnurlParams,
-        value,
-        lightningEstimateFee,
-        ecashEstimateFee,
-        feeRate
-    }) => {
-        const calculateOnchainFee = (feeRateSatPerVbyte: number): number => {
-            const estimatedVbytes = 140;
-            return Math.ceil(feeRateSatPerVbyte * estimatedVbytes);
-        };
-        if (!satAmount) return null;
-        const onchainFeeRate = feeRate ? Number(feeRate) : 10;
-        const onchainFee = value ? calculateOnchainFee(onchainFeeRate) : 0;
-        return (
-            <View style={{ paddingTop: 15 }}>
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        paddingHorizontal: 10,
-                        paddingBottom: 8
-                    }}
-                >
-                    <View style={{ flex: 1 }} />
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 12,
-                                textTransform: 'uppercase'
-                            }}
-                        >
-                            {localeString('views.PaymentRequest.feeEstimate')}
-                        </Text>
-                    </View>
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 12,
-                                textTransform: 'uppercase'
-                            }}
-                        >
-                            {localeString(
-                                'components.NWCPendingPayInvoiceModal.totalAmount'
-                            )}
-                        </Text>
-                    </View>
-                </View>
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        paddingVertical: 8,
-                        paddingHorizontal: 10
-                    }}
-                >
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 14
-                            }}
-                        >
-                            {localeString('general.lightning')}
-                        </Text>
-                    </View>
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                        {lightningEstimateFee !== undefined ? (
-                            <Amount
-                                sats={lightningEstimateFee}
-                                sensitive={false}
-                                colorOverride={themeColor('bitcoin')}
-                            />
-                        ) : (
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 12
-                                }}
-                            >
-                                -
-                            </Text>
-                        )}
-                    </View>
-                    <View style={{ flex: 1, alignItems: 'center' }}>
-                        {lightningEstimateFee !== undefined ? (
-                            <Amount
-                                sats={
-                                    Number(satAmount) +
-                                    (Number(lightningEstimateFee) || 0)
-                                }
-                                sensitive={false}
-                            />
-                        ) : (
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 12
-                                }}
-                            >
-                                -
-                            </Text>
-                        )}
-                    </View>
-                </View>
-                {BackendUtils.supportsCashuWallet() &&
-                    (lightning || lnurlParams) && (
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                paddingVertical: 8,
-                                paddingHorizontal: 10
-                            }}
-                        >
-                            <View style={{ flex: 1, alignItems: 'center' }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 14
-                                    }}
-                                >
-                                    {localeString('general.ecash')}
-                                </Text>
-                            </View>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                {ecashEstimateFee !== undefined ? (
-                                    <Amount
-                                        sats={ecashEstimateFee}
-                                        sensitive={false}
-                                        colorOverride={themeColor('bitcoin')}
-                                    />
-                                ) : (
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 12
-                                        }}
-                                    >
-                                        -
-                                    </Text>
-                                )}
-                            </View>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    alignItems: 'center'
-                                }}
-                            >
-                                {ecashEstimateFee ? (
-                                    <Amount
-                                        sats={
-                                            Number(satAmount) +
-                                            (Number(ecashEstimateFee) || 0)
-                                        }
-                                        sensitive={false}
-                                    />
-                                ) : (
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 12
-                                        }}
-                                    >
-                                        -
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-                    )}
-                {value && BackendUtils.supportsOnchainReceiving() && (
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            paddingVertical: 8,
-                            paddingHorizontal: 10
-                        }}
-                    >
-                        <View style={{ flex: 1, alignItems: 'center' }}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 14
-                                }}
-                            >
-                                {localeString('general.onchain')}
-                            </Text>
-                        </View>
-
-                        <View style={{ flex: 1, alignItems: 'center' }}>
-                            <Amount
-                                sats={onchainFee}
-                                sensitive={false}
-                                colorOverride={themeColor('bitcoin')}
-                            />
-                        </View>
-                        <View style={{ flex: 1, alignItems: 'center' }}>
-                            <Amount
-                                sats={Number(satAmount) + onchainFee}
-                                sensitive={false}
-                            />
-                        </View>
-                    </View>
-                )}
-            </View>
-        );
-    }
-);
 
 interface ChoosePaymentMethodProps {
     navigation: StackNavigationProp<any, any>;
@@ -404,48 +167,15 @@ export default class ChoosePaymentMethod extends React.Component<
     };
 
     hasInsufficientFunds = () => {
-        const { BalanceStore, CashuStore, UTXOsStore } = this.props;
-        const { satAmount, lightning, lnurlParams, lightningAddress, offer } =
-            this.state;
-
-        if (!satAmount) return false;
-
-        const amount = Number(satAmount);
-        if (isNaN(amount) || amount <= 0) return false;
-
-        const { accounts } = UTXOsStore!;
+        const { BalanceStore, CashuStore } = this.props;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats } = CashuStore!;
-
-        // Check lightning balance if using lightning payment
-        if (lightning || lnurlParams || lightningAddress || offer) {
-            if (Number(lightningBalance) >= amount) return false;
-            // Check ecash balance if available
-            if (
-                BackendUtils.supportsCashuWallet() &&
-                Number(totalBalanceSats) >= amount
-            ) {
-                return false;
-            }
-        }
-
-        // Check on-chain balance
-        if (Number(totalBlockchainBalance) >= amount) return false;
-
-        // Check individual accounts
-        if (accounts && accounts.length > 0) {
-            for (const account of accounts) {
-                if (
-                    !account.hidden &&
-                    !account.watch_only &&
-                    account.balance >= amount
-                ) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        // Calculate total balance across all sources
+        const totalBalance =
+            Number(totalBlockchainBalance) +
+            Number(lightningBalance) +
+            Number(totalBalanceSats);
+        return totalBalance === 0;
     };
 
     render() {
@@ -514,15 +244,20 @@ export default class ChoosePaymentMethod extends React.Component<
                             jumboText
                             toggleable
                         />
-                        {hasInsufficientFunds && (
-                            <View>
-                                <ErrorMessage
-                                    message={localeString(
-                                        'stores.CashuStore.notEnoughFunds'
-                                    )}
-                                />
-                            </View>
-                        )}
+                    </View>
+                )}
+                {hasInsufficientFunds && (
+                    <View
+                        style={{
+                            alignItems: 'center',
+                            paddingHorizontal: 20
+                        }}
+                    >
+                        <ErrorMessage
+                            message={localeString(
+                                'stores.CashuStore.notEnoughFunds'
+                            )}
+                        />
                     </View>
                 )}
 
