@@ -57,10 +57,8 @@ type DataRow = {
 
 const Row = ({ item }: { item: DataRow }) => {
     const hasInsufficientBalance =
-        item.satAmount !== undefined &&
-        item.balance !== undefined &&
-        Number(item.balance) < item.satAmount;
-
+        Number(item.balance) === 0 ||
+        (item.satAmount !== undefined && Number(item.balance) < item.satAmount);
     return (
         <RectButton>
             <LinearGradient
@@ -259,6 +257,11 @@ export default class PaymentMethodList extends Component<
             accounts
         } = this.props;
         let DATA: DataRow[] = [];
+
+        const isDisabled = (balance: number | string | undefined) =>
+            Number(balance) === 0 ||
+            (satAmount !== undefined && satAmount >= Number(balance));
+
         if (lightning || lnurlParams) {
             DATA.push({
                 layer: 'Lightning',
@@ -266,9 +269,7 @@ export default class PaymentMethodList extends Component<
                     ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
                     : lnurlParams?.tag,
                 balance: lightningBalance,
-                disabled:
-                    satAmount !== undefined &&
-                    satAmount > Number(lightningBalance),
+                disabled: isDisabled(lightningBalance),
                 satAmount
             });
         }
@@ -284,8 +285,7 @@ export default class PaymentMethodList extends Component<
                     ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
                     : lnurlParams?.tag,
                 balance: ecashBalance,
-                disabled:
-                    satAmount !== undefined && satAmount > Number(ecashBalance),
+                disabled: isDisabled(ecashBalance),
                 satAmount
             });
         }
@@ -295,9 +295,7 @@ export default class PaymentMethodList extends Component<
                 layer: 'Lightning address',
                 subtitle: lightningAddress,
                 balance: lightningBalance,
-                disabled:
-                    satAmount !== undefined &&
-                    satAmount > Number(lightningBalance),
+                disabled: isDisabled(lightningBalance),
                 satAmount
             });
         }
@@ -308,8 +306,7 @@ export default class PaymentMethodList extends Component<
                 subtitle: `${offer?.slice(0, 12)}...${offer?.slice(-12)}`,
                 disabled:
                     !nodeInfoStore.supportsOffers ||
-                    (satAmount !== undefined &&
-                        satAmount > Number(lightningBalance)),
+                    isDisabled(lightningBalance),
                 balance: lightningBalance,
                 satAmount
             });
@@ -324,8 +321,7 @@ export default class PaymentMethodList extends Component<
                     : undefined,
                 disabled:
                     !BackendUtils.supportsOnchainSends() ||
-                    (satAmount !== undefined &&
-                        satAmount > Number(onchainBalance)),
+                    isDisabled(onchainBalance),
                 balance: onchainBalance,
                 account: 'default',
                 satAmount
@@ -339,9 +335,7 @@ export default class PaymentMethodList extends Component<
                             subtitle: value
                                 ? `${value.slice(0, 12)}...${value.slice(-12)}`
                                 : account.XFP,
-                            disabled:
-                                satAmount !== undefined &&
-                                satAmount > account.balance,
+                            disabled: isDisabled(account.balance),
                             balance: account.balance,
                             account: account.name,
                             hidden: account.hidden,
