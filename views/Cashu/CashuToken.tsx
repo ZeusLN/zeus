@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View, Share } from 'react-native';
+import { StyleSheet, ScrollView, View, Share, Image } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -23,6 +23,7 @@ import {
 import Text from '../../components/Text';
 
 import CashuToken from '../../models/CashuToken';
+import Contact from '../../models/Contact';
 
 import { ZEUS_ECASH_GIFT_URL } from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -146,7 +147,7 @@ export default class CashuTokenView extends React.Component<
         const enableCashu = settingsStore.settings.ecash?.enableCashu;
 
         const groupStyles = getButtonGroupStyles();
-
+        const contactDetails = new Contact(decoded?.getContactDetails);
         const qrButton = () => (
             <Text
                 style={{
@@ -303,8 +304,31 @@ export default class CashuTokenView extends React.Component<
                                 <KeyValue
                                     keyValue={localeString('cashu.lockTo')}
                                     value={
-                                        decoded.getContactName ||
-                                        decoded.getLockPubkey
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            {contactDetails?.getPhoto ? (
+                                                <Image
+                                                    source={{
+                                                        uri: contactDetails.getPhoto
+                                                    }}
+                                                    style={{
+                                                        width: 22,
+                                                        height: 22,
+                                                        borderRadius: 11,
+                                                        marginRight: 6
+                                                    }}
+                                                />
+                                            ) : null}
+
+                                            <Text>
+                                                {contactDetails?.name ||
+                                                    decoded.getLockPubkey}
+                                            </Text>
+                                        </View>
                                     }
                                     sensitive
                                 />
