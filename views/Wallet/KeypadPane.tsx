@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    Animated,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -33,13 +27,14 @@ import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import {
-    validateKeypadInput,
     getAmountFontSize,
     deleteLastCharacter
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import { appendValueToAmount } from '../../utils/AmountInputValidationUtils';
+import InvalidInputAnimationController from '../../utils/InvalidInputAnimationController';
 
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import MintToken from './../../assets/images/SVG/MintToken.svg';
@@ -80,10 +75,14 @@ export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
     KeypadPaneState
 > {
-    shakeAnimation = new Animated.Value(0);
-    textAnimation = new Animated.Value(0);
+    invalidInputAnimation = new InvalidInputAnimationController(
+        (isInputInvalid: boolean) => {
+            this.setState({ isInputInvalid });
+        }
+    );
+    shakeAnimation = this.invalidInputAnimation.shakeAnimation;
+    textAnimation = this.invalidInputAnimation.textAnimation;
     focusListener: any = null;
-    textAnimationRef: Animated.CompositeAnimation | null = null;
 
     constructor(props: KeypadPaneProps) {
         super(props);
@@ -125,6 +124,7 @@ export default class KeypadPane extends React.PureComponent<
         if (this.focusListener) {
             this.focusListener();
         }
+        this.invalidInputAnimation.dispose();
     }
 
     async handleLsp() {
@@ -137,11 +137,7 @@ export default class KeypadPane extends React.PureComponent<
     }
 
     resetTextAnimation = () => {
-        if (this.textAnimationRef) {
-            this.textAnimationRef.stop();
-            this.textAnimationRef = null;
-        }
-        this.textAnimation.setValue(0);
+        this.invalidInputAnimation.clearInvalidState();
     };
 
     appendValue = (value: string): boolean => {
@@ -149,20 +145,21 @@ export default class KeypadPane extends React.PureComponent<
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        this.resetTextAnimation();
-
-        const { valid, newAmount } = validateKeypadInput(
+        const fiat = SettingsStore!.settings?.fiat || '';
+        const fiatProperties = FiatStore!.symbolLookup(fiat);
+        const { isValid, newAmount } = appendValueToAmount(
             amount,
             value,
             units,
-            FiatStore!,
-            SettingsStore!
+            fiatProperties?.decimalPlaces
         );
 
-        if (!valid) {
+        if (!isValid || !newAmount) {
             this.startShake();
             return false;
         }
+
+        this.resetTextAnimation();
 
         let needInbound = false;
         let belowMinAmount = false;
@@ -242,50 +239,7 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        this.resetTextAnimation();
-        this.setState({ isInputInvalid: true });
-
-        this.textAnimationRef = Animated.parallel([
-            Animated.sequence([
-                Animated.timing(this.textAnimation, {
-                    toValue: 1,
-                    duration: 100,
-                    useNativeDriver: false
-                }),
-                Animated.timing(this.textAnimation, {
-                    toValue: 0,
-                    duration: 1000,
-                    useNativeDriver: false
-                })
-            ]),
-            Animated.sequence([
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: -10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 0,
-                    duration: 100,
-                    useNativeDriver: true
-                })
-            ])
-        ]);
-
-        this.textAnimationRef.start(() => {
-            this.textAnimationRef = null;
-            this.setState({ isInputInvalid: false });
-        });
+        this.invalidInputAnimation.start();
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
