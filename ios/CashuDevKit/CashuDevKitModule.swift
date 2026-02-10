@@ -30,6 +30,42 @@ class CashuDevKitModule: RCTEventEmitter {
 
     // MARK: - Helper Methods
 
+    /// Parse P2PK spending conditions from JSON dictionary
+    private func parseP2PKConditions(from json: [String: Any]) -> SpendingConditions? {
+       guard let kind = json["kind"] as? String,
+          kind == "P2PK",
+          let condData = json["data"] as? [String: Any],
+          let pubkey = condData["pubkey"] as? String,
+          !pubkey.isEmpty else {
+        return nil
+    }
+    
+      let locktime: UInt64 = {
+        if let lt = condData["locktime"] as? NSNumber {
+            return lt.uint64Value
+        }
+        return 0
+    }()
+    
+    let refundKeys: [String] = {
+        if let keys = condData["refund_keys"] as? [String] {
+            return keys.filter { !$0.isEmpty }
+        }
+        return []
+    }()
+    
+    let conditions = Conditions(
+        locktime: locktime,
+        pubkeys: [],
+        refundKeys: refundKeys,
+        numSigs: 0,
+        sigFlag: 0,
+        numSigsRefund: 0
+    )
+    
+    return .p2pk(pubkey: pubkey, conditions: conditions)
+  }
+
     /// Returns the initialized wallet or rejects with NO_WALLET error
     private func getInitializedWallet(reject: @escaping RCTPromiseRejectBlock) -> MultiMintWallet? {
         guard isInitialized, let wallet = wallet else {
@@ -205,17 +241,26 @@ class CashuDevKitModule: RCTEventEmitter {
         return result
     }
 
-    private func encodeToken(_ token: Token) throws -> [String: Any] {
+    private func encodeToken(_ token: Token) async throws -> [String: Any] {
         let value = try token.value()
         let mintUrl = try token.mintUrl()
-
-        return [
-            "encoded": token.encode(),
-            "value": value.value,
-            "mint_url": mintUrl.url,
-            "memo": token.memo() ?? "",
-            "unit": token.unit().map { currencyUnitToString($0) } ?? "sat"
-        ]
+        var result: [String: Any] = [
+        "encoded": token.encode(),
+        "value": value.value,
+        "mint_url": mintUrl.url,
+        "memo": token.memo() ?? "",
+        "unit": token.unit().map { currencyUnitToString($0) } ?? "sat"
+    ]
+    do {
+        if let wallet = self.wallet {
+            let keysets = try await wallet.getMintKeysets(mintUrl: mintUrl)
+            let proofs = try token.proofs(mintKeysets: keysets)
+            result["proofs"] = proofs.map { encodeProof($0) }
+        }
+    } catch {
+        result["proofs"] = []
+    }
+    return result
     }
 
     private func encodeMintInfo(_ info: MintInfo) -> [String: Any] {
@@ -662,22 +707,7 @@ class CashuDevKitModule: RCTEventEmitter {
                 if let json = conditionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    // Parse P2PK conditions
-                    if let kind = parsed["kind"] as? String, kind == "P2PK",
-                       let condData = parsed["data"] as? [String: Any],
-                       let pubkey = condData["pubkey"] as? String {
-                        let locktime = condData["locktime"] as? UInt64
-                        let refundKeys = condData["refund_keys"] as? [String] ?? []
-                        let innerConditions = Conditions(
-                            locktime: locktime,
-                            pubkeys: [],
-                            refundKeys: refundKeys,
-                            numSigs: nil,
-                            sigFlag: 0,
-                            numSigsRefund: nil
-                        )
-                        conditions = .p2pk(pubkey: pubkey, conditions: innerConditions)
-                    }
+                   conditions = parseP2PKConditions(from: parsed)
                 }
 
                 let proofs = try await wallet.mint(mintUrl: url, quoteId: quoteId, spendingConditions: conditions)
@@ -769,17 +799,21 @@ class CashuDevKitModule: RCTEventEmitter {
 
                 // Parse options if provided
                 var includeFee = false
+                var spendingConditions: SpendingConditions? = nil
                 if let json = optionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     if let fee = parsed["include_fee"] as? Bool {
                         includeFee = fee
                     }
+                    if let cond = parsed["conditions"] as? [String: Any] {
+                    spendingConditions = parseP2PKConditions(from: cond)
+                    }
                 }
 
                 let innerSendOptions = SendOptions(
                     memo: nil,
-                    conditions: nil,
+                    conditions: spendingConditions,
                     amountSplitTarget: .none,
                     sendKind: .onlineExact,
                     includeFee: includeFee,
@@ -830,7 +864,7 @@ class CashuDevKitModule: RCTEventEmitter {
 
             do {
                 let token = try await prepared.confirm(memo: memo)
-                let encoded = try encodeToken(token)
+                let encoded = try await encodeToken(token)
                 resolve(encodeToJson(encoded))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
@@ -926,9 +960,10 @@ class CashuDevKitModule: RCTEventEmitter {
     func decodeToken(_ encodedToken: String,
                      resolve: @escaping RCTPromiseResolveBlock,
                      reject: @escaping RCTPromiseRejectBlock) {
+    Task {
         do {
             let token = try Token.fromString(encodedToken: encodedToken)
-            let encoded = try encodeToken(token)
+            let encoded = try await encodeToken(token)
             resolve(encodeToJson(encoded))
         } catch let error as FfiError {
             let (code, message) = mapFfiError(error)
@@ -936,6 +971,7 @@ class CashuDevKitModule: RCTEventEmitter {
         } catch {
             reject("DECODE_ERROR", error.localizedDescription, error)
         }
+     }
     }
 
     @objc(isValidToken:resolver:rejecter:)
