@@ -968,7 +968,7 @@ const handleAnything = async (
             unit: cdkToken.unit || 'sat',
             value: cdkToken.value,
             encodedToken: cdkToken.encoded,
-            proofs: [] // CDK doesn't expose proofs in decode, value is sufficient
+            proofs: cdkToken.proofs || []
         });
         return [
             'CashuToken',

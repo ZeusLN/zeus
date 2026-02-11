@@ -34,38 +34,38 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     // Helper Methods
     // ========================================================================
     /**
- * Parse P2PK spending conditions from JSON
- */
- private fun parseP2PKConditions(json: JSONObject): SpendingConditions? {
-    val kind = json.optString("kind")
-    if (kind != "P2PK") return null
+     * Parse P2PK spending conditions from JSON
+     */
+    private fun parseP2PKConditions(json: JSONObject): SpendingConditions? {
+        val kind = json.optString("kind")
+        if (kind != "P2PK") return null
 
-    val data = json.optJSONObject("data") ?: return null
-    val pubkeyHex = data.optString("pubkey").takeIf { it.isNotEmpty() } ?: return null
+        val data = json.optJSONObject("data") ?: return null
+        val pubkeyHex = data.optString("pubkey").takeIf { it.isNotEmpty() } ?: return null
 
-    val locktime = if (data.has("locktime") && !data.isNull("locktime")) {
-        data.optLong("locktime").toULong()
-    } else {
-        0UL
-    }
-    val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
-        (0 until arr.length()).mapNotNull { i ->
-            arr.optString(i).takeIf { it.isNotEmpty() }
+        val locktime = if (data.has("locktime") && !data.isNull("locktime")) {
+            data.optLong("locktime").toULong()
+        } else {
+            0UL
         }
-    } ?: emptyList()
+        val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
+            (0 until arr.length()).mapNotNull { i ->
+                arr.optString(i).takeIf { it.isNotEmpty() }
+            }
+        } ?: emptyList()
 
-    return SpendingConditions.P2pk(
-        pubkey = pubkeyHex,
-        conditions = Conditions(
-            locktime = locktime,
-            pubkeys = emptyList(),
-            refundKeys = refundKeys,
-            numSigs = 0UL,
-            sigFlag = 0.toUByte(),
-            numSigsRefund = 0UL
+        return SpendingConditions.P2pk(
+            pubkey = pubkeyHex,
+            conditions = Conditions(
+                locktime = locktime,
+                pubkeys = emptyList(),
+                refundKeys = refundKeys,
+                numSigs = 0UL,
+                sigFlag = 0.toUByte(),
+                numSigsRefund = 0UL
+            )
         )
-    )
-}
+    }
     /**
      * Returns the initialized wallet or rejects with NO_WALLET error and returns null
      */
@@ -1011,15 +1011,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val token = Token.fromString(encodedToken)
-                
-                // Debug: Log token info to help diagnose P2PK issues
-                try {
-                    val tokenMintUrl = token.mintUrl().url
-                    Log.d(TAG, "receive: token mintUrl = $tokenMintUrl")
-                    Log.d(TAG, "receive: token value = ${token.value().value}")
-                } catch (e: Exception) {
-                    Log.w(TAG, "receive: Could not log token info", e)
-                }
 
                 // Parse options if provided; be defensive so malformed JSON doesn't crash
                 var innerReceiveOptions = ReceiveOptions(
@@ -1054,9 +1045,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                         metadata = emptyMap()
                     )
                 }
-                
-                // Log for debugging: check if we're providing signing keys
-                Log.d(TAG, "receive: p2pkSigningKeys count = ${innerReceiveOptions.p2pkSigningKeys.size}")
 
                 val receiveOptions = MultiMintReceiveOptions(
                     allowUntrusted = false,
