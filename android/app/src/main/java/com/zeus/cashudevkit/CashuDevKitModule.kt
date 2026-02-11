@@ -66,6 +66,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             )
         )
     }
+
     /**
      * Returns the initialized wallet or rejects with NO_WALLET error and returns null
      */
@@ -210,7 +211,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             put("memo", token.memo() ?: "")
             put("unit", token.unit()?.let { currencyUnitToString(it) } ?: "sat")
             put("proofs", proofsArray)
-    
         }
     }
 
@@ -891,7 +891,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
                     includeFee = parsed.optBoolean("include_fee", false)
 
-                  // Parse spending conditions (P2PK) if provided
+                    // Parse spending conditions (P2PK) if provided
                     parsed.optJSONObject("conditions")?.let { cond ->
                         conditions = parseP2PKConditions(cond)
                     }
@@ -1081,18 +1081,21 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch{
             try {
                 val token = Token.fromString(encodedToken)
-                val encodedTokenJson = encodeToken(token) 
+                val encodedTokenJson = encodeToken(token)
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodedTokenJson.toString())
                 }
-                promise.resolve(encodeToken(token).toString())
             } catch (e: FfiException) {
                 val (code, message) = mapFfiException(e)
                 Log.e(TAG, "decodeToken error: $message", e)
-                promise.reject(code, message, e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "decodeToken error", e)
-                promise.reject("DECODE_ERROR", e.message, e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("DECODE_ERROR", e.message, e)
+                }
             }
         }
     }
