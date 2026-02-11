@@ -27,6 +27,7 @@ import Amount from '../components/Amount';
 import ModalBox from '../components/ModalBox';
 
 import BalanceStore from '../stores/BalanceStore';
+import ContactStore from '../stores/ContactStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -35,6 +36,7 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import BackendUtils from '../utils/BackendUtils';
+import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -46,11 +48,14 @@ import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import Gift from '../assets/images/SVG/gift.svg';
 import CopyBox from '../components/CopyBox';
 import LoadingIndicator from '../components/LoadingIndicator';
-import BigNumber from 'bignumber.js';
+import PaymentDetailsSheet from '../components/PaymentDetailsSheet';
+
+import { getFeePercentage } from '../utils/AmountUtils';
 
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
+    ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
@@ -79,10 +84,12 @@ interface SendingLightningState {
     donationPathExists: boolean;
     donationFee: string;
     donationFeePercentage: string;
+    showPaymentDetails: boolean;
 }
 
 @inject(
     'BalanceStore',
+    'ContactStore',
     'LnurlPayStore',
     'PaymentsStore',
     'SettingsStore',
@@ -113,7 +120,8 @@ export default class SendingLightning extends React.Component<
             donationEnhancedPath: null,
             donationPathExists: false,
             donationFee: '',
-            donationFeePercentage: ''
+            donationFeePercentage: '',
+            showPaymentDetails: false
         };
     }
 
@@ -239,15 +247,10 @@ export default class SendingLightning extends React.Component<
                 donationFee = (Number(payment.fee_msat) / 1000).toString();
             }
 
-            const donationFeePercentage =
-                Number(
-                    new BigNumber(donationFee)
-                        .div(amountDonated)
-                        .times(100)
-                        .toFixed(3)
-                )
-                    .toString()
-                    .replace(/-/g, '') + '%';
+            const donationFeePercentage = getFeePercentage(
+                donationFee,
+                amountDonated
+            );
 
             let donationEnhancedPath = null;
             let donationPathExists = false;
@@ -560,16 +563,21 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, SettingsStore, LnurlPayStore, navigation } =
-            this.props;
+        const {
+            TransactionsStore,
+            ContactStore,
+            SettingsStore,
+            LnurlPayStore,
+            navigation
+        } = this.props;
         const {
             loading,
             error,
             error_msg,
             payment_hash,
             payment_preimage,
+            payment_fee,
             payment_error,
-            isIncomplete,
             noteKey,
             paymentDuration
         } = TransactionsStore;
@@ -579,17 +587,24 @@ export default class SendingLightning extends React.Component<
             currentPayment,
             donationHandled,
             paymentType,
-            payingDonation
+            payingDonation,
+            showPaymentDetails
         } = this.state;
 
         const enhancedPath = currentPayment?.enhancedPath;
+        const paymentAmount = currentPayment?.getAmount;
+        const feeAmount = payment_fee || currentPayment?.getFee;
 
-        const paymentPathExists =
-            enhancedPath?.length > 0 && enhancedPath[0][0];
+        const lightningAddress = LnurlPayStore.lightningAddress;
+        const matchedContact = ContactUtils.findContactByLightningAddress(
+            lightningAddress,
+            ContactStore?.contacts
+        );
 
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
+        const amountFontSize = windowSize.width * windowSize.scale * 0.013;
 
         const stack = getRouteStack();
         const isSwap = stack.filter((route) => route.name === 'SwapDetails')[0];
@@ -689,6 +704,66 @@ export default class SendingLightning extends React.Component<
                                                 'views.SendingLightning.success'
                                             )}
                                         </Text>
+                                        {paymentAmount != null && (
+                                            <Row
+                                                style={{
+                                                    marginTop: 10,
+                                                    alignItems: 'baseline'
+                                                }}
+                                            >
+                                                <Amount
+                                                    sats={paymentAmount}
+                                                    sensitive
+                                                    toggleable
+                                                    fontSize={amountFontSize}
+                                                />
+                                                {feeAmount != null && (
+                                                    <Row
+                                                        style={{
+                                                            alignItems:
+                                                                'baseline'
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                fontSize:
+                                                                    amountFontSize
+                                                            }}
+                                                        >
+                                                            {' (+'}
+                                                        </Text>
+                                                        <Amount
+                                                            sats={feeAmount}
+                                                            sensitive
+                                                            toggleable
+                                                            fontSize={
+                                                                amountFontSize
+                                                            }
+                                                        />
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                fontSize:
+                                                                    amountFontSize
+                                                            }}
+                                                        >
+                                                            {` ${localeString(
+                                                                'views.Payment.fee'
+                                                            ).toLowerCase()})`}
+                                                        </Text>
+                                                    </Row>
+                                                )}
+                                            </Row>
+                                        )}
                                         {paymentDuration !== null && (
                                             <Text
                                                 style={{
@@ -840,59 +915,41 @@ export default class SendingLightning extends React.Component<
                                         />
                                     </View>
                                 )}
-                            {!!payment_preimage &&
-                                !isIncomplete &&
-                                !error &&
-                                !payment_error && (
-                                    <View style={{ width: '90%' }}>
-                                        <CopyBox
-                                            heading={localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )}
-                                            headingCopied={`${localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )} ${localeString(
-                                                'components.ExternalLinkModal.copied'
-                                            )}`}
-                                            theme="dark"
-                                            URL={payment_preimage}
-                                        />
-                                    </View>
-                                )}
                         </View>
+
+                        {!!success && !error && !payment_error && (
+                            <PaymentDetailsSheet
+                                isOpen={showPaymentDetails}
+                                onOpen={() =>
+                                    this.setState({
+                                        showPaymentDetails: true
+                                    })
+                                }
+                                onClose={() =>
+                                    this.setState({
+                                        showPaymentDetails: false
+                                    })
+                                }
+                                paymentAmount={paymentAmount}
+                                feeAmount={feeAmount}
+                                paymentDuration={paymentDuration}
+                                contact={matchedContact}
+                                lightningAddress={lightningAddress}
+                                paymentHash={payment_hash}
+                                paymentPreimage={payment_preimage || undefined}
+                                enhancedPath={enhancedPath}
+                                navigation={navigation}
+                            />
+                        )}
 
                         <Row
                             align="flex-end"
                             style={{
-                                marginBottom: 5,
-                                bottom: 25,
+                                marginTop: 10,
+                                marginBottom: 15,
                                 alignSelf: 'center'
                             }}
                         >
-                            {paymentPathExists && (
-                                <Button
-                                    title={`${localeString(
-                                        'views.Payment.title'
-                                    )} ${
-                                        enhancedPath?.length > 1
-                                            ? `${localeString(
-                                                  'views.Payment.paths'
-                                              )} (${enhancedPath.length})`
-                                            : localeString('views.Payment.path')
-                                    } `}
-                                    onPress={() =>
-                                        navigation.navigate('PaymentPaths', {
-                                            enhancedPath
-                                        })
-                                    }
-                                    secondary
-                                    buttonStyle={{ height: 40, width: '100%' }}
-                                    containerStyle={{
-                                        maxWidth: '45%',
-                                        paddingRight: 5
-                                    }}
-                                />
-                            )}
                             {noteKey && !error && !payment_error && (
                                 <Button
                                     title={
@@ -912,10 +969,7 @@ export default class SendingLightning extends React.Component<
                                     secondary
                                     buttonStyle={{ height: 40, width: '100%' }}
                                     containerStyle={{
-                                        maxWidth: paymentPathExists
-                                            ? '45%'
-                                            : '100%',
-                                        paddingLeft: paymentPathExists ? 5 : 0
+                                        maxWidth: '100%'
                                     }}
                                 />
                             )}
@@ -1081,7 +1135,6 @@ const styles = StyleSheet.create({
     buttons: {
         width: '100%',
         justifyContent: 'space-between',
-        gap: 15,
-        bottom: 15
+        gap: 15
     }
 });

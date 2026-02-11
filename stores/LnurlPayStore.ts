@@ -52,6 +52,7 @@ export default class LnurlPayStore {
     zaplockerNpub: string | undefined;
     relays: Array<string> | undefined;
     paymentRequest: string | undefined;
+    lightningAddress: string | undefined;
 
     constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
         this.settingsStore = settingsStore;
@@ -69,6 +70,7 @@ export default class LnurlPayStore {
         this.zaplockerNpub = undefined;
         this.relays = undefined;
         this.paymentRequest = undefined;
+        this.lightningAddress = undefined;
     };
 
     public load = async (paymentHash: string): Promise<LnurlPayTransaction> => {
@@ -97,7 +99,8 @@ export default class LnurlPayStore {
         user_pubkey?: string,
         relays?: Array<string>,
         relays_sig?: string,
-        pr?: string
+        pr?: string,
+        lightningAddress?: string
     ) => {
         this.reset();
         const now = new Date().getTime();
@@ -125,6 +128,7 @@ export default class LnurlPayStore {
             this.domain = domain;
 
             if (pr) this.paymentRequest = pr;
+            if (lightningAddress) this.lightningAddress = lightningAddress;
 
             // Zaplocker
             if (user_pubkey) {

@@ -2,6 +2,7 @@ import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 
 import BaseModel from './BaseModel';
+import { getFeePercentage } from '../utils/AmountUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { notesStore } from '../stores/Stores';
@@ -55,16 +56,7 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get getFeePercentage(): string {
-        const amount = this.getAmount;
-        const fee = this.getFee;
-        if (!fee || !amount || fee == '0' || amount == '0') return '';
-
-        // use at most 3 decimal places and remove trailing 0s
-        return (
-            Number(new BigNumber(fee).div(amount).times(100).toFixed(3))
-                .toString()
-                .replace(/-/g, '') + '%'
-        );
+        return getFeePercentage(this.getFee, this.getAmount);
     }
 
     @computed public get getTimestamp(): string | number {

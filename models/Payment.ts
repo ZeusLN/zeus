@@ -5,6 +5,7 @@ import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
+import { getFeePercentage } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
@@ -305,16 +306,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getFeePercentage(): string {
-        const amount = this.getAmount;
-        const fee = this.getFee;
-        if (!fee || !amount || fee == '0') return '';
-
-        // use at most 3 decimal places and remove trailing 0s
-        return (
-            Number(new BigNumber(fee).div(amount).times(100).toFixed(3))
-                .toString()
-                .replace(/-/g, '') + '%'
-        );
+        return getFeePercentage(this.getFee, this.getAmount);
     }
 
     @computed public get enhancedPath(): any[] {

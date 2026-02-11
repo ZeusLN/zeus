@@ -4,6 +4,7 @@ import {
     getUnformattedAmount,
     getAmountFromSats,
     getFormattedAmount,
+    getFeePercentage,
     getSatAmount
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
@@ -993,6 +994,58 @@ describe('AmountUtils', () => {
                 const result = getSatAmount('0');
                 expect(result).toBe(0);
             });
+        });
+    });
+
+    describe('getFeePercentage', () => {
+        it('calculates a simple percentage', () => {
+            expect(getFeePercentage(10, 1000)).toBe('1%');
+        });
+
+        it('calculates a fractional percentage', () => {
+            expect(getFeePercentage(15, 1000)).toBe('1.5%');
+        });
+
+        it('caps at 3 decimal places and removes trailing zeros', () => {
+            expect(getFeePercentage(1, 3000)).toBe('0.033%');
+        });
+
+        it('handles string inputs', () => {
+            expect(getFeePercentage('50', '1000')).toBe('5%');
+        });
+
+        it('returns empty string when fee is 0', () => {
+            expect(getFeePercentage(0, 1000)).toBe('');
+            expect(getFeePercentage('0', 1000)).toBe('');
+        });
+
+        it('returns empty string when amount is 0', () => {
+            expect(getFeePercentage(10, 0)).toBe('');
+            expect(getFeePercentage(10, '0')).toBe('');
+        });
+
+        it('returns empty string when fee is undefined', () => {
+            expect(getFeePercentage(undefined, 1000)).toBe('');
+        });
+
+        it('returns empty string when amount is undefined', () => {
+            expect(getFeePercentage(10, undefined)).toBe('');
+        });
+
+        it('handles negative fee by stripping the minus sign', () => {
+            expect(getFeePercentage(-10, 1000)).toBe('1%');
+        });
+
+        it('handles 100% fee', () => {
+            expect(getFeePercentage(1000, 1000)).toBe('100%');
+        });
+
+        it('handles fee larger than amount', () => {
+            expect(getFeePercentage(1500, 1000)).toBe('150%');
+        });
+
+        it('handles very small percentages', () => {
+            expect(getFeePercentage(1, 1000000)).toBe('0%');
         });
     });
 });

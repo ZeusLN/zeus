@@ -23,10 +23,12 @@ import SuccessAnimation from '../../components/SuccessAnimation';
 import { Row } from '../../components/layout/Row';
 
 import CashuStore from '../../stores/CashuStore';
+import ContactStore from '../../stores/ContactStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
+import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -44,10 +46,12 @@ import Amount from '../../components/Amount';
 import ModalBox from '../../components/ModalBox';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
+import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
 
 interface CashuSendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
@@ -71,9 +75,10 @@ interface CashuSendingLightningState {
     amountDonated: number | null;
     donationIsPaid: boolean;
     showZaplockerWarning: boolean;
+    showPaymentDetails: boolean;
 }
 
-@inject('CashuStore', 'LnurlPayStore', 'NodeInfoStore')
+@inject('CashuStore', 'ContactStore', 'LnurlPayStore', 'NodeInfoStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -93,7 +98,8 @@ export default class CashuSendingLightning extends React.Component<
             wasSuccessful: false,
             paymentType: 'main',
             donationIsPaid: false,
-            showZaplockerWarning: false
+            showZaplockerWarning: false,
+            showPaymentDetails: false
         };
     }
 
@@ -422,7 +428,8 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     render() {
-        const { CashuStore, LnurlPayStore, navigation } = this.props;
+        const { CashuStore, ContactStore, LnurlPayStore, navigation } =
+            this.props;
         const {
             loading,
             paymentError,
@@ -431,14 +438,28 @@ export default class CashuSendingLightning extends React.Component<
             paymentPreimage,
             paymentErrorMsg,
             noteKey,
-            paymentDuration
+            paymentDuration,
+            paymentFee
         } = CashuStore;
         const payment_hash = payReq && payReq.payment_hash;
-        const { storedNotes, donationHandled, paymentType, payingDonation } =
-            this.state;
+        const paymentAmount = payReq?.getRequestAmount;
+        const {
+            storedNotes,
+            donationHandled,
+            paymentType,
+            payingDonation,
+            showPaymentDetails
+        } = this.state;
+
+        const lightningAddress = LnurlPayStore.lightningAddress;
+        const matchedContact = ContactUtils.findContactByLightningAddress(
+            lightningAddress,
+            ContactStore?.contacts
+        );
 
         const success = this.successfullySent(CashuStore);
         const windowSize = Dimensions.get('window');
+        const amountFontSize = windowSize.width * windowSize.scale * 0.013;
 
         return (
             <Screen>
@@ -555,6 +576,66 @@ export default class CashuSendingLightning extends React.Component<
                                                 'views.SendingLightning.success'
                                             )}
                                         </Text>
+                                        {paymentAmount != null && (
+                                            <Row
+                                                style={{
+                                                    marginTop: 10,
+                                                    alignItems: 'baseline'
+                                                }}
+                                            >
+                                                <Amount
+                                                    sats={paymentAmount}
+                                                    sensitive
+                                                    toggleable
+                                                    fontSize={amountFontSize}
+                                                />
+                                                {paymentFee != null && (
+                                                    <Row
+                                                        style={{
+                                                            alignItems:
+                                                                'baseline'
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                fontSize:
+                                                                    amountFontSize
+                                                            }}
+                                                        >
+                                                            {' (+'}
+                                                        </Text>
+                                                        <Amount
+                                                            sats={paymentFee}
+                                                            sensitive
+                                                            toggleable
+                                                            fontSize={
+                                                                amountFontSize
+                                                            }
+                                                        />
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                fontSize:
+                                                                    amountFontSize
+                                                            }}
+                                                        >
+                                                            {` ${localeString(
+                                                                'views.Payment.fee'
+                                                            ).toLowerCase()})`}
+                                                        </Text>
+                                                    </Row>
+                                                )}
+                                            </Row>
+                                        )}
                                         {paymentDuration !== undefined && (
                                             <Text
                                                 style={{
@@ -638,30 +719,37 @@ export default class CashuSendingLightning extends React.Component<
                                         />
                                     </View>
                                 )}
-                            {!!paymentPreimage &&
-                                !paymentError &&
-                                !paymentErrorMsg && (
-                                    <View style={{ width: '90%' }}>
-                                        <CopyBox
-                                            heading={localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )}
-                                            headingCopied={`${localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )} ${localeString(
-                                                'components.ExternalLinkModal.copied'
-                                            )}`}
-                                            theme="dark"
-                                            URL={paymentPreimage}
-                                        />
-                                    </View>
-                                )}
                         </View>
+
+                        {!!success && !paymentError && !paymentErrorMsg && (
+                            <PaymentDetailsSheet
+                                isOpen={showPaymentDetails}
+                                onOpen={() =>
+                                    this.setState({
+                                        showPaymentDetails: true
+                                    })
+                                }
+                                onClose={() =>
+                                    this.setState({
+                                        showPaymentDetails: false
+                                    })
+                                }
+                                paymentAmount={paymentAmount}
+                                feeAmount={paymentFee}
+                                paymentDuration={paymentDuration}
+                                contact={matchedContact}
+                                lightningAddress={lightningAddress}
+                                paymentHash={payment_hash}
+                                paymentPreimage={paymentPreimage}
+                                navigation={navigation}
+                            />
+                        )}
 
                         <Row
                             align="flex-end"
                             style={{
-                                bottom: 25,
+                                marginTop: 10,
+                                marginBottom: 15,
                                 alignSelf: 'center'
                             }}
                         >
@@ -684,8 +772,7 @@ export default class CashuSendingLightning extends React.Component<
                                     secondary
                                     buttonStyle={{ height: 40, width: '100%' }}
                                     containerStyle={{
-                                        maxWidth: '100%',
-                                        margin: 10
+                                        maxWidth: '100%'
                                     }}
                                 />
                             )}
@@ -799,7 +886,6 @@ const styles = StyleSheet.create({
     buttons: {
         width: '100%',
         justifyContent: 'space-between',
-        gap: 15,
-        bottom: 15
+        gap: 15
     }
 });
