@@ -2591,6 +2591,10 @@ export default class CashuStore {
                     errorMessage: localeString('stores.CashuStore.invalidToken')
                 };
             }
+            const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
+            const signingKey = isLocked
+                ? this.deriveCashuSecretKey() ?? undefined
+                : undefined;
 
             if (toSelfCustody) {
                 // For toSelfCustody, receive the token first then sweep via melt
@@ -2606,12 +2610,9 @@ export default class CashuStore {
                     noLsp: true
                 };
 
-                // Providing our Cashu secret key; CDK will only use it if the token is P2PK-locked.
-                const signingKey = this.deriveCashuSecretKey();
-                await this.receiveTokenCDK(
-                    encodedToken,
-                    signingKey || undefined
-                );
+                // Pass signing key only when token is P2PK-locked (decoded has proofs)
+
+                await this.receiveTokenCDK(encodedToken, signingKey);
                 await this.syncCDKBalances();
 
                 // Create invoice for sweeping
@@ -2655,12 +2656,7 @@ export default class CashuStore {
                 await this.syncCDKBalances(true); // Include transactions for activity
             } else {
                 // Regular receive via CDK
-                // Providing our Cashu secret key; CDK will only use it if the token is P2PK-locked.
-                const signingKey = this.deriveCashuSecretKey();
-                await this.receiveTokenCDK(
-                    encodedToken,
-                    signingKey || undefined
-                );
+                await this.receiveTokenCDK(encodedToken, signingKey);
 
                 // Record received token activity
                 this.receivedTokens?.push(
