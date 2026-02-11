@@ -1122,6 +1122,13 @@ export default class CashuStore {
 
         if (!modalBg || !errorColor) return undefined;
 
+        // blendHexColors only supports 6-char hex strings (#rrggbb).
+        // Some themes use rgb(), 3-char hex, or color names which would
+        // produce invalid color strings and crash the app.
+        const hexRegex = /^#?[0-9a-fA-F]{6}$/;
+        if (!hexRegex.test(modalBg) || !hexRegex.test(errorColor))
+            return undefined;
+
         // Blend from modal background toward error/red based on balance ratio
         const ratio = Math.min(currentBalance / 100_000, 1);
         if (currentBalance >= 10_000) {
