@@ -9,6 +9,39 @@ export const cashuTokenPrefixes = [
     'cashu:'
 ];
 
+// Limits to mitigate resource exhaustion from malicious P2PK secret payloads
+const MAX_P2PK_SECRET_LENGTH = 2048;
+const MAX_P2PK_SECRET_DEPTH = 10;
+
+/**
+ * Safely parse JSON for P2PK secret. Rejects oversized or deeply nested
+ * payloads to prevent resource exhaustion (DoS) from attacker-controlled input.
+ */
+function safeParseP2PKSecret(secret: string): unknown | null {
+    if (typeof secret !== 'string') return null;
+    if (secret.length > MAX_P2PK_SECRET_LENGTH) return null;
+
+    let depth = 0;
+    let maxDepth = 0;
+    for (let i = 0; i < secret.length; i++) {
+        const c = secret[i];
+        if (c === '[' || c === '{') {
+            depth++;
+            maxDepth = Math.max(maxDepth, depth);
+            if (maxDepth > MAX_P2PK_SECRET_DEPTH) return null;
+        } else if (c === ']' || c === '}') {
+            depth--;
+        }
+    }
+    if (depth !== 0) return null; // unbalanced brackets
+
+    try {
+        return JSON.parse(secret);
+    } catch {
+        return null;
+    }
+}
+
 class CashuUtils {
     /**
      * Extract raw token string from various URL formats
@@ -141,10 +174,10 @@ class CashuUtils {
         if (!token.proofs || !Array.isArray(token.proofs)) {
             return false;
         }
-        const secrets = token.proofs.map((proof) => proof.secret);
-        for (const secret of secrets) {
-            if (this.getP2PKPubkeySecret(secret)) {
-                const locktime = this.getP2PKLocktime(secret);
+        for (const proof of token.proofs) {
+            if (typeof proof.secret !== 'string') continue;
+            if (this.getP2PKPubkeySecret(proof.secret)) {
+                const locktime = this.getP2PKLocktime(proof.secret);
                 const currentTime = Date.now() / 1000;
                 if (!locktime) {
                     return true;
@@ -156,36 +189,36 @@ class CashuUtils {
         return false;
     };
     getP2PKPubkeySecret = (secret: string) => {
-        try {
-            let secretObject = JSON.parse(secret);
-            if (
-                secretObject[0] == 'P2PK' &&
-                secretObject[1]['data'] != undefined
-            ) {
-                return secretObject[1]['data'];
-            }
-            return undefined;
-        } catch {
-            return undefined;
+        const secretObject = safeParseP2PKSecret(secret);
+        if (secretObject == null) return undefined;
+        if (
+            Array.isArray(secretObject) &&
+            secretObject[0] === 'P2PK' &&
+            secretObject[1] != null &&
+            typeof secretObject[1] === 'object' &&
+            secretObject[1]['data'] != undefined
+        ) {
+            return secretObject[1]['data'];
         }
+        return undefined;
     };
 
     getP2PKLocktime = (secret: string) => {
-        try {
-            let secretObject = JSON.parse(secret);
-            if (
-                secretObject[0] == 'P2PK' &&
-                secretObject[1]['tags'] != undefined
-            ) {
-                const tag = secretObject[1]['tags'].find(
-                    ([name]: [string, string]) => name === 'locktime'
-                );
-                return tag ? tag[1] : undefined;
-            }
-            return undefined;
-        } catch {
-            return undefined;
+        const secretObject = safeParseP2PKSecret(secret);
+        if (secretObject == null) return undefined;
+        if (
+            Array.isArray(secretObject) &&
+            secretObject[0] === 'P2PK' &&
+            secretObject[1] != null &&
+            typeof secretObject[1] === 'object' &&
+            Array.isArray(secretObject[1]['tags'])
+        ) {
+            const tag = secretObject[1]['tags'].find(
+                ([name]: [string, string]) => name === 'locktime'
+            );
+            return tag ? tag[1] : undefined;
         }
+        return undefined;
     };
 }
 
