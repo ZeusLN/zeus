@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: primero se debe habilitar la moneda",
     "pos.print.taxReceipt": "Comprobante",
     "pos.print.invoice": "Invoice",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Crear billetera mainnet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Crear billetera TestNet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Restaurar la billetera mainnet",
