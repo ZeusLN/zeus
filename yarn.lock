@@ -5045,13 +5045,13 @@ dunder-proto@^1.0.0, dunder-proto@^1.0.1:
     es-errors "^1.3.0"
     gopd "^1.2.0"
 
-ecpair@3.0.0-rc.0:
-  version "3.0.0-rc.0"
-  resolved "https://registry.yarnpkg.com/ecpair/-/ecpair-3.0.0-rc.0.tgz#411137d9a43f1d79a656d89715b5dc24c2b76310"
-  integrity sha512-y2CTHgI2MMeYiXd8IFgxgORWR1PpyeUACek4viZm12VcbooWhVnqFEHISO0NAiZKJb7CqXEOz5bnhv/UI0ULzw==
+ecpair@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/ecpair/-/ecpair-3.0.1.tgz#94be8bb9efbfc0fdb5c5b4bd9b5d1da53b42a621"
+  integrity sha512-uz8wMFvtdr58TLrXnAesBsoMEyY8UudLOfApcyg40XfZjP+gt1xO4cuZSIkZ8hTMTQ8+ETgt7xSIV4eM7M6VNw==
   dependencies:
     uint8array-tools "^0.0.8"
-    valibot "^0.37.0"
+    valibot "^1.2.0"
     wif "^5.0.0"
 
 ee-first@1.1.1:
@@ -10415,10 +10415,10 @@ v8-to-istanbul@^9.0.1:
     "@types/istanbul-lib-coverage" "^2.0.1"
     convert-source-map "^2.0.0"
 
-valibot@^0.37.0:
-  version "0.37.0"
-  resolved "https://registry.yarnpkg.com/valibot/-/valibot-0.37.0.tgz#b71f597a581c716f6546a3b53cefd2829b559c55"
-  integrity sha512-FQz52I8RXgFgOHym3XHYSREbNtkgSjF9prvMFH1nBsRyfL6SfCzoT1GuSDTlbsuPubM7/6Kbw0ZMQb8A+V+VsQ==
+valibot@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/valibot/-/valibot-1.2.0.tgz#8fc720d9e4082ba16e30a914064a39619b2f1d6f"
+  integrity sha512-mm1rxUsmOxzrwnX5arGS+U4T25RdvpPjPN4yR0u9pUBov9+zGVtO84tif1eY4r6zWxVxu3KzIyknJy3rxfRZZg==
 
 varuint-bitcoin@^1.1.2:
   version "1.1.2"
