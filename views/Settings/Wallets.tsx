@@ -5,8 +5,7 @@ import {
     TouchableOpacity,
     Image,
     StyleSheet,
-    FlatListProps,
-    Platform
+    FlatListProps
 } from 'react-native';
 
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -29,7 +28,6 @@ import SettingsStore, {
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
@@ -207,7 +205,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             setConnectingStatus,
             setInitialStart,
             implementation,
-            embeddedLndStarted,
             initialStart
         } = SettingsStore;
 
@@ -269,7 +266,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         };
 
         const onWalletPress = async (
-            item: any,
             nodeIndex: number,
             nodeActive: boolean
         ) => {
@@ -308,18 +304,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     nodes,
                     selectedNode: nodeIndex
                 }).then(() => {
-                    // Never show restart needed if coming from startup
-                    if (
-                        item.implementation === 'embedded-lnd' &&
-                        Platform.OS === 'android' &&
-                        embeddedLndStarted &&
-                        !wasFromStartup // Skip restart if coming from startup
-                    ) {
-                        restartNeeded(true);
-                    } else {
-                        setConnectingStatus(true);
-                        this.navigateAfterWalletSelection();
-                    }
+                    setConnectingStatus(true);
+                    this.navigateAfterWalletSelection();
                 });
             }
         };
@@ -399,11 +385,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 : 'transparent'
                                         }}
                                         onPress={() =>
-                                            onWalletPress(
-                                                item,
-                                                index,
-                                                nodeActive
-                                            )
+                                            onWalletPress(index, nodeActive)
                                         }
                                     >
                                         <ListItem

@@ -94,9 +94,10 @@ export function checkLndStreamErrorResponse(
             return null;
         }
 
-        // Handle closed connection
+        // Handle closed connection - this is expected when switching nodes or stopping LND
         if (errorDesc === 'closed') {
-            log.i('checkLndStreamErrorResponse: Got closed error');
+            log.d('Connection closed (expected during node switch/stop)');
+            return null; // Not an error, just connection closed
         }
 
         return new Error(errorDesc);
@@ -347,7 +348,7 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
     } catch (error) {
         const errorMessage = (error as Error)?.message ?? '';
 
-        // Handle cases where LND is already stopped, starting up, or directory doesn't exist
+        // Handle cases where LND is already stopped, starting up, or not initialized
         if (
             errorMessage.includes('wallet locked') ||
             errorMessage.includes('closed') ||
@@ -356,7 +357,9 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
             errorMessage.includes("doesn't exist") ||
             errorMessage.includes('not yet ready to accept calls') ||
             errorMessage.includes('starting up') ||
-            errorMessage.includes('not yet ready')
+            errorMessage.includes('not yet ready') ||
+            errorMessage.includes('unitialized') || // Android-specific error
+            errorMessage.includes('uninitialized')
         ) {
             log.d(`LND stop skipped (expected state): ${errorMessage}`);
             return;
@@ -466,7 +469,15 @@ async function startLndWithRetry({
         if (errorMessage.includes("doesn't exist")) {
             throw new Error(LND_FOLDER_MISSING_ERROR);
         }
-
+        if (
+            errorMessage.includes('already started') ||
+            errorMessage.includes('already running')
+        ) {
+            log.d(
+                'LND already started (likely from wallet creation) - continuing...'
+            );
+            return;
+        }
         log.e('Error starting LND, attempting retry', [error]);
 
         // Retry loop for handling transient errors
@@ -883,11 +894,23 @@ export async function createLndWallet({
     if (!seedMnemonic) {
         try {
             seed = await genSeed(undefined);
-        } catch (e) {
-            console.log('error generating seed', e);
+        } catch (e: any) {
+            const errorMessage = e?.message ?? '';
+            console.log('error generating seed', errorMessage);
+            if (
+                errorMessage.includes('wallet already unlocked') ||
+                errorMessage.includes(
+                    'WalletUnlocker service is no longer available'
+                )
+            ) {
+                throw new Error(
+                    'Wallet creation failed: LND unlocked too quickly. Please try again.'
+                );
+            }
+            throw new Error(`Failed to generate seed: ${errorMessage}`);
         }
         if (!seed) {
-            return;
+            throw new Error('Failed to generate seed: no seed returned');
         }
     } else {
         seed = {

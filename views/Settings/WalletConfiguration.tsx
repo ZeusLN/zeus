@@ -521,7 +521,9 @@ export default class WalletConfiguration extends React.Component<
                 nodes,
                 selectedNode: nodes.length - 1,
                 // Force Wallet view to restart connection for new wallet
-                justDeletedWallet: false
+                justDeletedWallet: false,
+                // Ensure Express Graph Sync runs for new wallet
+                initialLoad: false
             };
         } else {
             update = {
@@ -677,13 +679,13 @@ export default class WalletConfiguration extends React.Component<
             justDeletedWallet: active // Set flag only if active wallet was deleted
         });
 
-        if (
-            implementation === 'embedded-lnd' &&
-            Platform.OS === 'android' &&
-            embeddedLndStarted
-        ) {
-            restartNeeded(true);
-        } else if (newNodes.length === 0) {
+        // if (
+        //     implementation === 'embedded-lnd' &&
+        //     Platform.OS === 'android' &&
+        //     embeddedLndStarted
+        // ) {
+        //     restartNeeded(true);
+        if (newNodes.length === 0) {
             navigation.navigate('IntroSplash');
         } else {
             navigation.popTo('Wallets');
