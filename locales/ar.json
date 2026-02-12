@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "إيصال",
     "pos.print.invoice": "فاتورة",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "إنشاء محفظة على الشبكة الرئيسية",
     "views.Settings.NodeConfiguration.createTestnetWallet": "إنشاء محفظة على شبكة testnet ",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "إستعادة محفظة على الشبكة الرئيسية",
