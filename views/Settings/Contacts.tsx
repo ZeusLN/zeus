@@ -90,67 +90,19 @@ export default class Contacts extends React.Component<
             if (hasMultipleCashuPubkeys) {
                 return localeString('cashu.selectCashuPubkey');
             } else {
-                return contact.cashuPubkey[0].length > 23
-                    ? `${contact.cashuPubkey[0].slice(
-                          0,
-                          12
-                      )}...${contact.cashuPubkey[0].slice(-8)}`
-                    : contact.cashuPubkey[0];
+                return contact.cashuPubkey[0];
             }
         }
         if (hasMultiplePayableAddresses) {
             return localeString('views.Settings.Contacts.multipleAddresses');
         }
 
-        if (hasLnAddress) {
-            return item.lnAddress[0].length > 23
-                ? `${item.lnAddress[0].slice(
-                      0,
-                      10
-                  )}...${item.lnAddress[0].slice(-10)}`
-                : item.lnAddress[0];
-        }
-        if (hasBolt12Address) {
-            return item.bolt12Address[0].length > 23
-                ? `${item.bolt12Address[0].slice(
-                      0,
-                      10
-                  )}...${item.bolt12Address[0].slice(-10)}`
-                : item.bolt12Address[0];
-        }
-
-        if (hasBolt12Offer) {
-            return item.bolt12Offer[0].length > 23
-                ? `${item.bolt12Offer[0].slice(
-                      0,
-                      10
-                  )}...${item.bolt12Offer[0].slice(-10)}`
-                : item.bolt12Offer[0];
-        }
-
-        if (hasOnchainAddress) {
-            return item.onchainAddress[0].length > 23
-                ? `${item.onchainAddress[0].slice(
-                      0,
-                      12
-                  )}...${item.onchainAddress[0].slice(-8)}`
-                : item.onchainAddress[0];
-        }
-
-        if (hasPubkey) {
-            return item.pubkey[0].length > 23
-                ? `${item.pubkey[0].slice(0, 12)}...${item.pubkey[0].slice(-8)}`
-                : item.pubkey[0];
-        }
-
-        if (hasCashuPubkey) {
-            return item.cashuPubkey[0].length > 23
-                ? `${item.cashuPubkey[0].slice(
-                      0,
-                      12
-                  )}...${item.cashuPubkey[0].slice(-8)}`
-                : item.cashuPubkey[0];
-        }
+        if (hasLnAddress) return item.lnAddress[0];
+        if (hasBolt12Address) return item.bolt12Address[0];
+        if (hasBolt12Offer) return item.bolt12Offer[0];
+        if (hasOnchainAddress) return item.onchainAddress[0];
+        if (hasPubkey) return item.pubkey[0];
+        if (hasCashuPubkey) return item.cashuPubkey[0];
 
         return localeString('views.Settings.Contacts.noAddress');
     };
@@ -288,6 +240,8 @@ export default class Contacts extends React.Component<
                             {item.name}
                         </Text>
                         <Text
+                            numberOfLines={1}
+                            ellipsizeMode="middle"
                             style={{
                                 fontSize: 16,
                                 color: themeColor('secondaryText')
