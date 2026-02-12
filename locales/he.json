@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "קבלה",
     "pos.print.invoice": "חשבונית",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "יצירת ארנק ראשי",
     "views.Settings.NodeConfiguration.createTestnetWallet": "יצירת ארנק בדיקות",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "שחזור ארנק ראשי",
