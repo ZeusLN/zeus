@@ -154,7 +154,13 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     placeholder={placeholder}
                     value={value}
                     onChangeText={onChangeText}
-                    numberOfLines={numberOfLines || 1}
+                    numberOfLines={
+                        numberOfLines != null
+                            ? numberOfLines
+                            : multiline
+                            ? undefined
+                            : 1
+                    }
                     style={{
                         ...StyleSheet.flatten(textInputStyle),
                         ...styles.input,
