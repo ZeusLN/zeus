@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Virhe: Valuutta on otettava käyttöön ensin",
     "pos.print.taxReceipt": "Kuitti",
     "pos.print.invoice": "Lasku",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Luo pääverkon lompakko",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Luo testiverkon lompakko",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Palauta pääverkon lompakko",
