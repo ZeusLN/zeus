@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Kvitto",
     "pos.print.invoice": "Invoice",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Skapa mainnet-plånbok",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Skapa testnet-plånbok",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Återställ mainnet-plånboken",
