@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Terjadi kesalahan: mata uang harus diaktifkan dahulu",
     "pos.print.taxReceipt": "Tanda Terima",
     "pos.print.invoice": "Faktur",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Buat dompet mainet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Buat dompet testnet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Pulihkan dompet mainnet",
