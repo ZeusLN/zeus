@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Σφάλμα: πρώτα πρέπει να καθοριστεί νόμισμα",
     "pos.print.taxReceipt": "Απόδειξη",
     "pos.print.invoice": "Τιμολόγιο",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Δημιουργία πορτοφολιού mainnet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Δημιουργσίστε ένα δοκιμαστικό πορτοφολιού",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Αποκατάσταση πορτοφολιού mainnet",
