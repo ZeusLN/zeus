@@ -1112,7 +1112,9 @@ describe('handleAnything', () => {
                 {
                     lnurlParams: { callback: 'https://cryptoqr.net/callback' },
                     satAmount: undefined,
-                    ecash: false
+                    ecash: false,
+                    lightningAddress:
+                        'https%3A%2F%2Fzapper.com%2Fpayment%2F12345@cryptoqr.net'
                 }
             ]);
         });

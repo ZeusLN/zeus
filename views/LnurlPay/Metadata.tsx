@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, Image, View, ScrollView } from 'react-native';
+import { Text, Image, View } from 'react-native';
 import { Icon } from '@rneui/themed';
 
 import { themeColor } from '../../utils/ThemeUtils';
@@ -7,11 +7,12 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface LnurlPayMetadataProps {
     metadata: string;
     showArrow?: boolean;
+    hideImage?: boolean;
 }
 
 export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataProps> {
     render() {
-        const { metadata, showArrow = true } = this.props;
+        const { metadata, showArrow = true, hideImage = false } = this.props;
 
         let keypairs: Array<Array<string>>;
         try {
@@ -28,51 +29,50 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
             .map(([typ, content]: any) => `data:${typ},${content}`)[0];
 
         return (
-            <ScrollView keyboardShouldPersistTaps="handled">
+            <View
+                style={{
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}
+            >
+                {image && !hideImage ? (
+                    <Image
+                        style={{
+                            width: 90,
+                            height: 90,
+                            marginBottom: 10
+                        }}
+                        source={{ uri: image }}
+                    />
+                ) : null}
                 <View
                     style={{
-                        flexDirection: 'column',
-                        justifyContent: 'center',
+                        flexDirection: 'row',
                         alignItems: 'center'
                     }}
                 >
-                    {image ? (
-                        <Image
-                            style={{
-                                width: 90,
-                                height: 90,
-                                marginBottom: 10
-                            }}
-                            source={{ uri: image }}
-                        />
-                    ) : null}
-                    <View
+                    <Text
                         style={{
-                            flexDirection: 'row',
-                            alignItems: 'center'
+                            color: showArrow
+                                ? themeColor('highlight')
+                                : themeColor('secondaryText'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            textAlign: 'center'
                         }}
                     >
-                        <Text
-                            style={{
-                                color: showArrow
-                                    ? themeColor('highlight')
-                                    : themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {text}
-                        </Text>
-                        {showArrow && (
-                            <Icon
-                                name="keyboard-arrow-down"
-                                type="material"
-                                size={15}
-                                color={themeColor('highlight')}
-                            />
-                        )}
-                    </View>
+                        {text}
+                    </Text>
+                    {showArrow && (
+                        <Icon
+                            name="keyboard-arrow-down"
+                            type="material"
+                            size={15}
+                            color={themeColor('highlight')}
+                        />
+                    )}
                 </View>
-            </ScrollView>
+            </View>
         );
     }
 }
