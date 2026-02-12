@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Chyba: nejdříve musí být povolena měna",
     "pos.print.taxReceipt": "Účtenka",
     "pos.print.invoice": "Faktura",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Vytvořit mainnet peněženku",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Vytvořit testnet peněženku",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Obnovit mainnet peněženku",
