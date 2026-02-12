@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "त्रुटि: पहले मुद्रा सक्षम होनी चाहिए",
     "pos.print.taxReceipt": "रसीद",
     "pos.print.invoice": "इनवॉइस",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "मेननेट वॉलेट बनाएं",
     "views.Settings.NodeConfiguration.createTestnetWallet": "टेस्टनेट वॉलेट बनाएं",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "मेननेट वॉलेट रिस्टोर करें",

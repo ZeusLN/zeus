@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Eroare: moneda trebuie activată mai întâi",
     "pos.print.taxReceipt": "Chitanță",
     "pos.print.invoice": "Factură",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Creați portofelul Mainnet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Creați portofelul Testnet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Restaurați portofelul Mainnet",

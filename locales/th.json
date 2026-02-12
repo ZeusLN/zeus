@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "ใบกำกับภาษี",
     "pos.print.invoice": "ใบแจ้งหนี้",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "สร้างกระเป๋า mainnet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "สร้างกระเป๋า testnet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "กู้คืนกระเป๋า mainnet",

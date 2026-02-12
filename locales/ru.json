@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Квитанция",
     "pos.print.invoice": "Инвойс",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Создать кошелек в основной сети",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Создать кошелек в тестовой сети",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Восстановить кошелек в основной сети",

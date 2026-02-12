@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "رسید",
     "pos.print.invoice": "رسید",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "ایجاد کیف پول شبکه اصلی",
     "views.Settings.NodeConfiguration.createTestnetWallet": "ایجاد کیف پول شبکه آزمایشی",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "بازنشانی کیف پول شبکه اصلی",

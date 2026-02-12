@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Stakabadhi",
     "pos.print.invoice": "Invoice",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Unda mkoba wa mainnet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Unda mkoba wa testnet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Rejesha mkoba wa mainnet",

@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "错误：必须先启用该货币",
     "pos.print.taxReceipt": "收款人",
     "pos.print.invoice": "发票",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "创建主网钱包",
     "views.Settings.NodeConfiguration.createTestnetWallet": "创建测试网钱包",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "恢复主网钱包",
