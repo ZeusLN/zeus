@@ -139,4 +139,23 @@ public class FcmToken implements IFcmToken {
 
     fs.writeFileSync(fcmTokenPath, fcmTokenContent);
     console.log('  - Patched FcmToken.java for New Architecture support');
+
+    // Fix autolinking config for RN 0.84+
+    // The library's react-native.config.js uses reactNativeHost.getApplication()
+    // but in RN 0.84, PackageList(Application) sets reactNativeHost to null.
+    // Change to use the application field directly.
+    const configPath =
+        './node_modules/react-native-notifications/react-native.config.js';
+
+    if (fs.existsSync(configPath)) {
+        let configContent = fs.readFileSync(configPath, 'utf8');
+        if (configContent.includes('reactNativeHost.getApplication()')) {
+            configContent = configContent.replace(
+                'reactNativeHost.getApplication()',
+                'application'
+            );
+            fs.writeFileSync(configPath, configContent);
+            console.log('  - Patched react-native.config.js for RN 0.84 compatibility');
+        }
+    }
 }
