@@ -737,6 +737,7 @@ export default class CashuSendingLightning extends React.Component<
                                 paymentAmount={paymentAmount}
                                 feeAmount={paymentFee}
                                 paymentDuration={paymentDuration}
+                                memo={payReq?.getMemo}
                                 contact={matchedContact}
                                 lightningAddress={lightningAddress}
                                 paymentHash={payment_hash}

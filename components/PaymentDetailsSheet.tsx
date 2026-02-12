@@ -37,6 +37,7 @@ interface PaymentDetailsSheetProps {
     paymentDuration?: number | null;
     contact?: Contact | null;
     lightningAddress?: string;
+    memo?: string;
     paymentHash?: string;
     paymentPreimage?: string;
     enhancedPath?: any;
@@ -187,6 +188,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
             paymentAmount,
             feeAmount,
             paymentDuration,
+            memo,
             paymentHash,
             paymentPreimage
         } = this.props;
@@ -319,6 +321,15 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                                 disableCopy
                                             />
                                         )}
+
+                                        {memo ? (
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Invoice.memo'
+                                                )}
+                                                value={memo}
+                                            />
+                                        ) : null}
 
                                         {this.renderContactRow()}
 

@@ -933,6 +933,7 @@ export default class SendingLightning extends React.Component<
                                 paymentAmount={paymentAmount}
                                 feeAmount={feeAmount}
                                 paymentDuration={paymentDuration}
+                                memo={currentPayment?.getMemo}
                                 contact={matchedContact}
                                 lightningAddress={lightningAddress}
                                 paymentHash={payment_hash}
