@@ -45,6 +45,7 @@ interface LnurlPayState {
     satAmount: string | number;
     domain: string;
     comment: string;
+    nickname: string;
     loading: boolean;
 }
 
@@ -68,6 +69,7 @@ export default class LnurlPay extends React.Component<
                 satAmount: '',
                 domain: '',
                 comment: '',
+                nickname: '',
                 loading: false
             };
 
@@ -142,7 +144,8 @@ export default class LnurlPay extends React.Component<
             amount: finalAmount,
             satAmount: finalSatAmount,
             domain: lnurl.domain,
-            comment: ''
+            comment: '',
+            nickname: ''
         };
     }
 
@@ -151,7 +154,7 @@ export default class LnurlPay extends React.Component<
 
         const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
             this.props;
-        const { domain, comment } = this.state;
+        const { domain, comment, nickname } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
@@ -160,6 +163,9 @@ export default class LnurlPay extends React.Component<
             (parseFloat(satAmount.toString()) * 1000).toString()
         );
         qs.comment = comment;
+        if (nickname) {
+            qs.payerData = JSON.stringify({ name: nickname });
+        }
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
@@ -309,7 +315,7 @@ export default class LnurlPay extends React.Component<
 
     render() {
         const { navigation, route } = this.props;
-        const { amount, satAmount, domain, comment, loading } = this.state;
+        const { amount, satAmount, domain, comment, nickname, loading } = this.state;
 
         const lnurl = route.params?.lnurlParams;
 
@@ -423,7 +429,7 @@ export default class LnurlPay extends React.Component<
                                 locked={
                                     loading ||
                                     (lnurl &&
-                                    lnurl.minSendable === lnurl.maxSendable
+                                        lnurl.minSendable === lnurl.maxSendable
                                         ? true
                                         : false)
                                 }
@@ -461,6 +467,23 @@ export default class LnurlPay extends React.Component<
                                 />
                             </>
                         ) : null}
+
+                        <Text
+                            style={{
+                                ...styles.text,
+                                marginTop: 10,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {localeString('views.LnurlPay.LnurlPay.nickname') || 'Nickname (optional)'}
+                        </Text>
+                        <TextInput
+                            value={nickname}
+                            onChangeText={(text: string) => {
+                                this.setState({ nickname: text });
+                            }}
+                            locked={loading}
+                        />
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
