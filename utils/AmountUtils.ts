@@ -312,6 +312,27 @@ export function getFormattedAmount(
 }
 
 /**
+ * Calculates the fee as a percentage of the payment amount.
+ * Returns a string like "1.5%" or empty string if not applicable.
+ *
+ * @param fee - The fee amount (string or number)
+ * @param amount - The payment amount (string or number)
+ * @returns Formatted percentage string (e.g., "1.5%") or empty string
+ */
+export function getFeePercentage(
+    fee: string | number | undefined,
+    amount: string | number | undefined
+): string {
+    if (!fee || !amount || fee == '0' || amount == '0') return '';
+
+    return (
+        Number(new BigNumber(fee).div(amount).times(100).toFixed(3))
+            .toString()
+            .replace(/-/g, '') + '%'
+    );
+}
+
+/**
  * Converts satoshis to millisatoshis
  * @param sats - Amount in satoshis
  * @returns Amount in millisatoshis

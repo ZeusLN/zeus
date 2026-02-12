@@ -184,6 +184,7 @@ export default class CashuStore {
     @observable public noteKey?: string;
     @observable public paymentStartTime?: number;
     @observable public paymentDuration?: number;
+    @observable public paymentFee?: number;
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable public trustedMintRecommendations?: MintRecommendation[];
@@ -266,6 +267,7 @@ export default class CashuStore {
         this.paymentErrorMsg = undefined;
         this.paymentStartTime = undefined;
         this.paymentDuration = undefined;
+        this.paymentFee = undefined;
     };
 
     getLndDir = () => {
@@ -2159,6 +2161,7 @@ export default class CashuStore {
 
             if (!isDonationPayment) {
                 this.paymentPreimage = paymentPreimage;
+                this.paymentFee = realFee;
             }
 
             if (this.paymentStartTime) {

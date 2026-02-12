@@ -193,7 +193,7 @@ export default class LnurlPay extends React.Component<
 
         const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
             this.props;
-        const { domain, comment } = this.state;
+        const { domain, comment, lightningAddress } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
@@ -291,7 +291,8 @@ export default class LnurlPay extends React.Component<
                             user_pubkey,
                             relays,
                             relays_sig,
-                            pr
+                            pr,
+                            lightningAddress
                         );
 
                         navigation.navigate('ChoosePaymentMethod', {
@@ -341,7 +342,8 @@ export default class LnurlPay extends React.Component<
                             user_pubkey,
                             relays,
                             relays_sig,
-                            pr
+                            pr,
+                            lightningAddress
                         );
                         navigation.navigate('PaymentRequest');
                     });
