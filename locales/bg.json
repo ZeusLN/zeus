@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Касова бележка",
     "pos.print.invoice": "Фактура",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Create mainnet wallet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Create testnet wallet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Restore mainnet wallet",
