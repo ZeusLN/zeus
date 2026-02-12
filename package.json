@@ -39,7 +39,7 @@
     "prettier-write": "prettier --check --write \"**/*.ts*\"",
     "gen-proto": "pbjs -t static-module --keep-case -w es6 --force-long -o proto/lightning.js proto/*.proto proto/*/*.proto && pbts -o proto/lightning.d.ts proto/lightning.js",
     "gradlew": "cd android && ./gradlew",
-    "android:clean": "yarn gradlew clean",
+    "android:clean": "yarn gradlew clean && rm -rf android/build",
     "fetch-libraries": "bash fetch-libraries.sh",
     "fix-all": "yarn prettier-write && yarn lint-fix",
     "lint-fix": "eslint . --fix"
