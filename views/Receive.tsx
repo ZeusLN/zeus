@@ -291,6 +291,22 @@ export default class Receive extends React.Component<
             BackendUtils.supportsFlowLSP() &&
             !flowLspNotConfigured;
 
+        // Calculate invoice options once to avoid duplication
+        const routeHints =
+            (settings?.invoices?.routeHints ||
+                !this.props.ChannelsStore.haveAnnouncedChannels) &&
+            !(
+                settings?.invoices?.blindedPaths &&
+                BackendUtils.supportsBolt11BlindedRoutes()
+            );
+        const ampInvoice =
+            (settings?.invoices?.ampInvoice && BackendUtils.supportsAMP()) ||
+            false;
+        const blindedPaths =
+            (settings?.invoices?.blindedPaths &&
+                BackendUtils.supportsBolt11BlindedRoutes()) ||
+            false;
+
         this.setState({
             addressType: settings?.invoices?.addressType || '0',
             expirationIndex,
@@ -299,23 +315,9 @@ export default class Receive extends React.Component<
             expiry: settings?.invoices?.expiry || '1',
             timePeriod: settings?.invoices?.timePeriod || 'Hours',
             expirySeconds: newExpirySeconds,
-            routeHints:
-                (settings?.invoices?.routeHints ||
-                    !this.props.ChannelsStore.haveAnnouncedChannels) &&
-                !(
-                    settings?.invoices?.blindedPaths &&
-                    BackendUtils.supportsBolt11BlindedRoutes()
-                )
-                    ? true
-                    : false,
-            ampInvoice:
-                (settings?.invoices?.ampInvoice &&
-                    BackendUtils.supportsAMP()) ||
-                false,
-            blindedPaths:
-                (settings?.invoices?.blindedPaths &&
-                    BackendUtils.supportsBolt11BlindedRoutes()) ||
-                false,
+            routeHints,
+            ampInvoice,
+            blindedPaths,
             enableLSP: settings?.enableLSP,
             lspIsActive,
             flowLspNotConfigured
@@ -357,22 +359,6 @@ export default class Receive extends React.Component<
         } else if (!lnOnly && !onChainOnly) {
             this.setState({ selectedIndex: this.getDefaultIndex() });
         }
-
-        const expirySeconds = settings?.invoices?.expirySeconds || '3600';
-        const routeHints =
-            (settings?.invoices?.routeHints ||
-                !this.props.ChannelsStore.haveAnnouncedChannels) &&
-            !(
-                settings?.invoices?.blindedPaths &&
-                BackendUtils.supportsBolt11BlindedRoutes()
-            );
-        const ampInvoice =
-            (settings?.invoices?.ampInvoice && BackendUtils.supportsAMP()) ||
-            false;
-        const blindedPaths =
-            (settings?.invoices?.blindedPaths &&
-                BackendUtils.supportsBolt11BlindedRoutes()) ||
-            false;
 
         const addressType =
             route.params?.addressType || settings?.invoices?.addressType || '0';
@@ -445,7 +431,7 @@ export default class Receive extends React.Component<
             this.autoGenerateInvoice(
                 getSatAmount(amount).toString(),
                 memo,
-                expirySeconds,
+                newExpirySeconds,
                 routeHints,
                 ampInvoice,
                 blindedPaths,
