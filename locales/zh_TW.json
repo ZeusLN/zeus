@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "請先啟用顯示貨幣",
     "pos.print.taxReceipt": "收據",
     "pos.print.invoice": "帳單",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "新增主鏈錢包",
     "views.Settings.NodeConfiguration.createTestnetWallet": "新增測試錢包",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "還原主鏈錢包",
