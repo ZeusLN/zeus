@@ -29,6 +29,11 @@ export default class UnitsStore {
         await Storage.setItem(UNIT_KEY, this.units);
     };
 
+    public setUnits = async (unit: Units | string) => {
+        this.units = unit;
+        await Storage.setItem(UNIT_KEY, this.units);
+    };
+
     public getNextUnit = () => {
         const { settings } = this.settingsStore;
         const { fiatEnabled } = settings;
