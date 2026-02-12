@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Error: currency must be enabled first",
     "pos.print.taxReceipt": "Fiş",
     "pos.print.invoice": "Fatura",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Mainnet cüzdanı oluştur",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Testnet cüzdanı oluştur",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Mainnet cüzdanını geri yükle",
