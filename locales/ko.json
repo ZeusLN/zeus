@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "오류: 해당 통화를 먼저 활성화해야 합니다.",
     "pos.print.taxReceipt": "영수증",
     "pos.print.invoice": "인보이스",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "메인넷 지갑 생성",
     "views.Settings.NodeConfiguration.createTestnetWallet": "테스트넷 지갑 생성",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "메인넷 지갑 복구",
