@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Erro: a moeda deve ser habilitada primeiro",
     "pos.print.taxReceipt": "Recibo",
     "pos.print.invoice": "Conbrança",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Criar carteira da rede principal",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Criar carteira da rede de teste",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Restaurar carteira da rede principal",
