@@ -1517,6 +1517,7 @@
     "pos.views.Settings.PointOfSale.currencyMustBeEnabledError": "Errore: la valuta deve essere prima abilitata",
     "pos.print.taxReceipt": "Ricevuta",
     "pos.print.invoice": "Fattura",
+    "views.Settings.NodeConfiguration.invalidSeedWord": "Invalid seed word",
     "views.Settings.NodeConfiguration.createMainnetWallet": "Crea il portafoglio Mainnet",
     "views.Settings.NodeConfiguration.createTestnetWallet": "Crea un portafoglio testnet",
     "views.Settings.NodeConfiguration.restoreMainnetWallet": "Ripristina il portafoglio principale",
