@@ -44,6 +44,8 @@ export default class SendingOnChain extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
 
+    private focusListener: (() => void) | undefined;
+
     state = {
         storedNotes: ''
     };
@@ -55,7 +57,7 @@ export default class SendingOnChain extends React.Component<
             this.handleBackPress
         );
 
-        navigation.addListener('focus', () => {
+        this.focusListener = navigation.addListener('focus', () => {
             if (!TransactionsStore.txid) return;
             Storage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
@@ -70,6 +72,9 @@ export default class SendingOnChain extends React.Component<
     }
 
     componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
         this.backPressSubscription?.remove();
     }
 
