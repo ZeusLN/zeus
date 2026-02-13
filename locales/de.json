@@ -108,7 +108,7 @@
     "general.peers": "Peers",
     "general.selected": "Ausgewählt",
     "general.unselect": "Abwählen",
-    "general.removeSelected": "Remove the selected item",
+    "general.removeSelected": "Ausgewähltes Element entfernen",
     "general.noneSelected": "Keine ausgewählt",
     "general.zeusDefaults": "Verwende Zeus-Voreinstellungen",
     "general.restartZeusChanges": "Änderungen werden erst nach Neustart von Zeus wirksam",
