@@ -117,12 +117,17 @@ const Row = ({ item }: { item: DataRow }) => {
                         </Text>
                         {item.subtitle && (
                             <Text
-                                style={{
-                                    ...styles.layerText,
-                                    color:
-                                        themeColor('buttonTextSecondary') ||
-                                        themeColor('secondaryText')
-                                }}
+                                numberOfLines={1}
+                                ellipsizeMode="middle"
+                                style={[
+                                    styles.layerText,
+                                    styles.subtitle,
+                                    {
+                                        color:
+                                            themeColor('buttonTextSecondary') ||
+                                            themeColor('secondaryText')
+                                    }
+                                ]}
                             >
                                 {item.subtitle}
                             </Text>
@@ -136,7 +141,7 @@ const Row = ({ item }: { item: DataRow }) => {
                             sensitive
                             colorOverride={
                                 hasInsufficientBalance
-                                    ? '#FF2800'
+                                    ? themeColor('error')
                                     : themeColor('buttonText')
                             }
                         />
@@ -265,9 +270,7 @@ export default class PaymentMethodList extends Component<
         if (lightning || lnurlParams) {
             DATA.push({
                 layer: 'Lightning',
-                subtitle: lightning
-                    ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag,
+                subtitle: lightning ?? lnurlParams?.tag,
                 balance: lightningBalance,
                 disabled: isDisabled(lightningBalance),
                 satAmount
@@ -281,9 +284,7 @@ export default class PaymentMethodList extends Component<
         ) {
             DATA.push({
                 layer: 'Lightning via ecash',
-                subtitle: lightning
-                    ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag,
+                subtitle: lightning ?? lnurlParams?.tag,
                 balance: ecashBalance,
                 disabled: isDisabled(ecashBalance),
                 satAmount
@@ -303,7 +304,7 @@ export default class PaymentMethodList extends Component<
         if (offer) {
             DATA.push({
                 layer: 'Offer',
-                subtitle: `${offer?.slice(0, 12)}...${offer?.slice(-12)}`,
+                subtitle: offer,
                 disabled:
                     !nodeInfoStore.supportsOffers ||
                     isDisabled(lightningBalance),
@@ -316,9 +317,7 @@ export default class PaymentMethodList extends Component<
         if (value && BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
                 layer: 'On-chain',
-                subtitle: value
-                    ? `${value.slice(0, 12)}...${value.slice(-12)}`
-                    : undefined,
+                subtitle: value,
                 disabled:
                     !BackendUtils.supportsOnchainSends() ||
                     isDisabled(onchainBalance),
@@ -332,9 +331,7 @@ export default class PaymentMethodList extends Component<
                     if (!account.hidden && !account.watch_only) {
                         DATA.push({
                             layer: account.name,
-                            subtitle: value
-                                ? `${value.slice(0, 12)}...${value.slice(-12)}`
-                                : account.XFP,
+                            subtitle: value ?? account.XFP,
                             disabled: isDisabled(account.balance),
                             balance: account.balance,
                             account: account.name,
@@ -367,7 +364,11 @@ export default class PaymentMethodList extends Component<
                             lnurlParams={lnurlParams}
                         />
                     )}
-                    keyExtractor={(_item, index) => `message ${index}`}
+                    keyExtractor={(item) =>
+                        item.account
+                            ? `account-${item.account}`
+                            : `layer-${item.layer}`
+                    }
                     style={{ marginTop: 20 }}
                     refreshing={false}
                 />
@@ -420,6 +421,9 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         fontSize: 15,
         fontFamily: 'PPNeueMontreal-Medium'
+    },
+    subtitle: {
+        marginTop: 2
     },
     eyeIcon: { alignSelf: 'center', margin: 15, marginLeft: 25 }
 });
