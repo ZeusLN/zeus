@@ -945,7 +945,10 @@ export default class SwapDetails extends React.Component<
                                 )}
                                 value={
                                     <Amount
-                                        sats={swapData?.getAmount}
+                                        sats={
+                                            (swapData?.getAmount || 0) -
+                                            (SwapStore?.reverseSwapClaimFee || 0)
+                                        }
                                         sensitive
                                         toggleable
                                     />
