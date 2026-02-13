@@ -493,7 +493,13 @@ export default class Lockscreen extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('views.Lockscreen.enterPassword')}
+                                {modifySecurityScreen === 'SetDuressPassword'
+                                    ? localeString(
+                                          'views.Lockscreen.enterExistingPassword'
+                                      )
+                                    : localeString(
+                                          'views.Lockscreen.enterPassword'
+                                      )}
                             </Text>
                         </View>
                         <View style={styles.inputContainer}>
@@ -579,7 +585,11 @@ export default class Lockscreen extends React.Component<
                                         justifyContent: 'flex-end'
                                     }}
                                 >
-                                    {localeString('views.Lockscreen.pin')}
+                                    {modifySecurityScreen === 'SetDuressPin'
+                                        ? localeString(
+                                              'views.Lockscreen.existingPin'
+                                          )
+                                        : localeString('views.Lockscreen.pin')}
                                 </Text>
                                 <View
                                     style={{
