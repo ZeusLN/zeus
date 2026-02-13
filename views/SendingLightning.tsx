@@ -526,6 +526,7 @@ export default class SendingLightning extends React.Component<
             console.error('Failed to fetch payments', error);
         }
     };
+
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
         if (
