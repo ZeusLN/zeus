@@ -161,7 +161,7 @@ const SwipeableRow = ({
     index: number;
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    satAmount?: string;
+    satAmount?: number;
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
@@ -260,7 +260,7 @@ export default class PaymentMethodList extends Component<
 
         const isDisabled = (balance: number | string | undefined) =>
             Number(balance) === 0 ||
-            (satAmount !== undefined && satAmount >= Number(balance));
+            (satAmount !== undefined && satAmount > Number(balance));
 
         if (lightning || lnurlParams) {
             DATA.push({
@@ -360,11 +360,7 @@ export default class PaymentMethodList extends Component<
                             navigation={navigation}
                             // select pay method vars
                             value={value}
-                            satAmount={
-                                satAmount !== undefined
-                                    ? String(satAmount)
-                                    : undefined
-                            }
+                            satAmount={satAmount}
                             lightning={lightning}
                             lightningAddress={lightningAddress}
                             offer={offer}

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
-import { Text, View, TouchableOpacity } from 'react-native';
+import { Dimensions, Text, View, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
@@ -14,7 +14,8 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import ModalBox from '../components/ModalBox';
 import SyncingStatus from '../components/SyncingStatus';
-import EstimateFeesDisplay from '../components/EstimateFeesDisplay';
+import RecoveryStatus from '../components/RecoveryStatus';
+import FeeEstimate from '../components/FeeEstimate';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 
@@ -55,7 +56,6 @@ interface ChoosePaymentMethodState {
     offer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
-    feeLoadingError: boolean;
     showFeeModal: boolean;
 }
 
@@ -75,7 +75,6 @@ export default class ChoosePaymentMethod extends React.Component<
         offer: '',
         lnurlParams: undefined,
         feeRate: '10',
-        feeLoadingError: false,
         showFeeModal: false
     };
 
@@ -127,7 +126,7 @@ export default class ChoosePaymentMethod extends React.Component<
         if (lnurlParams) {
             this.setState({ lnurlParams });
         }
-        this.fetchFeeEstimates();
+        this.fetchFeeEstimates({ lightning, lnurlParams });
 
         this.focusUnsubscribe = navigation.addListener('focus', () => {
             this.fetchFeeEstimates();
@@ -140,8 +139,11 @@ export default class ChoosePaymentMethod extends React.Component<
         }
     }
 
-    fetchFeeEstimates = async () => {
-        const { lightning, lnurlParams } = this.state;
+    fetchFeeEstimates = async (override?: {
+        lightning?: string;
+        lnurlParams?: LNURLWithdrawParams;
+    }) => {
+        const lightning = override?.lightning ?? this.state.lightning;
         const { InvoicesStore, CashuStore } = this.props;
 
         if (lightning && InvoicesStore) {
@@ -152,14 +154,9 @@ export default class ChoosePaymentMethod extends React.Component<
                 console.log('Error fetching Lightning payment request:', error);
             }
         }
-        if (
-            (lightning || lnurlParams) &&
-            BackendUtils.supportsCashuWallet() &&
-            CashuStore
-        ) {
+        if (lightning && BackendUtils.supportsCashuWallet() && CashuStore) {
             try {
-                await CashuStore.getPayReq(lightning || '');
-                // CashuStore.feeEstimate is set automatically
+                await CashuStore.getPayReq(lightning);
             } catch (error) {
                 console.log('Error fetching eCash payment request:', error);
             }
@@ -211,6 +208,12 @@ export default class ChoosePaymentMethod extends React.Component<
         const showFees =
             !!satAmount && (isLightningPayment || isOnchainPayment);
 
+        const feeModalMaxHeight = (() => {
+            const h = Dimensions.get('window').height;
+            const pct = isOnchainPayment ? 0.45 : 0.3;
+            return Math.min(Math.max(h * pct, 280), 500);
+        })();
+
         return (
             <Screen>
                 <Header
@@ -222,6 +225,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     navigation={navigation}
                 />
 
+                <RecoveryStatus navigation={navigation} />
                 <SyncingStatus navigation={navigation} />
 
                 {!!satAmount && (
@@ -333,10 +337,7 @@ export default class ChoosePaymentMethod extends React.Component<
                         paddingHorizontal: 20,
                         paddingTop: 24,
                         paddingBottom: 40,
-                        maxHeight:
-                            !!value && BackendUtils.supportsOnchainReceiving()
-                                ? '45%'
-                                : '30%'
+                        maxHeight: feeModalMaxHeight
                     }}
                     swipeToClose={true}
                     backButtonClose={true}
@@ -358,7 +359,7 @@ export default class ChoosePaymentMethod extends React.Component<
                         >
                             {localeString('views.PaymentRequest.feeEstimate')}
                         </Text>
-                        <EstimateFeesDisplay
+                        <FeeEstimate
                             satAmount={satAmount}
                             lightning={lightning}
                             lnurlParams={lnurlParams}
@@ -391,15 +392,7 @@ export default class ChoosePaymentMethod extends React.Component<
                                     <OnchainFeeInput
                                         fee={feeRate}
                                         onChangeFee={(text: string) =>
-                                            this.setState({
-                                                feeRate: text,
-                                                feeLoadingError: false
-                                            })
-                                        }
-                                        onFeeError={(error: boolean) =>
-                                            this.setState({
-                                                feeLoadingError: error
-                                            })
+                                            this.setState({ feeRate: text })
                                         }
                                         navigation={navigation}
                                     />

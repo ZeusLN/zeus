@@ -8,7 +8,10 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
 
-interface EstimateFeesDisplayProps {
+/** Typical vbytes for a 1-input, 2-output P2WPKH tx (payment + change). */
+const ESTIMATED_ONCHAIN_VBYTES = 140;
+
+interface FeeEstimateProps {
     satAmount: string;
     lightning?: string;
     lnurlParams?: any;
@@ -18,7 +21,7 @@ interface EstimateFeesDisplayProps {
     feeRate?: string;
 }
 
-const EstimateFeesDisplay: React.FC<EstimateFeesDisplayProps> = observer(
+const FeeEstimate: React.FC<FeeEstimateProps> = observer(
     ({
         satAmount,
         lightning,
@@ -28,14 +31,12 @@ const EstimateFeesDisplay: React.FC<EstimateFeesDisplayProps> = observer(
         ecashEstimateFee,
         feeRate
     }) => {
-        const calculateOnchainFee = (feeRateSatPerVbyte: number): number => {
-            const estimatedVbytes = 140;
-            return Math.ceil(feeRateSatPerVbyte * estimatedVbytes);
-        };
-
+        const calculateOnchainFee = (feeRateSatPerVbyte: number): number =>
+            Math.ceil(feeRateSatPerVbyte * ESTIMATED_ONCHAIN_VBYTES);
         if (!satAmount) return null;
-
-        const onchainFeeRate = feeRate ? Number(feeRate) : 10;
+        const parsed = feeRate != null ? Number(feeRate) : NaN;
+        const onchainFeeRate =
+            !isNaN(parsed) && !isNaN(Number(feeRate)) ? Number(feeRate) : 0;
         const onchainFee = value ? calculateOnchainFee(onchainFeeRate) : 0;
 
         return (
@@ -186,7 +187,7 @@ const EstimateFeesDisplay: React.FC<EstimateFeesDisplayProps> = observer(
                                     alignItems: 'center'
                                 }}
                             >
-                                {ecashEstimateFee ? (
+                                {ecashEstimateFee !== undefined ? (
                                     <Amount
                                         sats={
                                             Number(satAmount) +
@@ -249,4 +250,4 @@ const EstimateFeesDisplay: React.FC<EstimateFeesDisplayProps> = observer(
     }
 );
 
-export default EstimateFeesDisplay;
+export default FeeEstimate;

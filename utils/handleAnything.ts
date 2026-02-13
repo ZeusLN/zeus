@@ -2,12 +2,7 @@ import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import {
-    nodeInfoStore,
-    invoicesStore,
-    settingsStore,
-    cashuStore
-} from '../stores/Stores';
+import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
 import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
 import BackendUtils from './BackendUtils';
@@ -254,12 +249,6 @@ const handleAnything = async (
 
     if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
-        if (ecash && lightning) {
-            await cashuStore.getPayReq(lightning);
-        }
-        if (lightning) {
-            await invoicesStore.getPayReq(lightning);
-        }
         return [
             'ChoosePaymentMethod',
             {
@@ -312,7 +301,6 @@ const handleAnything = async (
                 }
             } else {
                 if (ecash) {
-                    await cashuStore.getPayReq(lightning);
                     return [
                         'ChoosePaymentMethod',
                         {
@@ -369,7 +357,6 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         if (ecash) {
             const invoice = value || lightning;
-            await cashuStore.getPayReq(invoice);
             return [
                 'ChoosePaymentMethod',
                 {

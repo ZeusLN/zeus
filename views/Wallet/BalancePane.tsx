@@ -7,7 +7,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { LinearProgress } from '@rneui/themed';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -16,6 +15,7 @@ import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
 import SyncingStatus from '../../components/SyncingStatus';
+import RecoveryStatus from '../../components/RecoveryStatus';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -83,7 +83,6 @@ export default class BalancePane extends React.PureComponent<
             loading
         } = this.props;
         const { showBackupPrompt } = this.state;
-        const { recoveryProgress, isRecovering } = SyncStore;
         const {
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
@@ -183,89 +182,7 @@ export default class BalancePane extends React.PureComponent<
                         loading={loading}
                     />
                     <View style={styles.contentContainer}>
-                        {isRecovering && recoveryProgress !== 1 && (
-                            <TouchableOpacity
-                                onPress={() => {
-                                    if (recoveryProgress) {
-                                        navigation.navigate('SyncRecovery');
-                                    }
-                                }}
-                            >
-                                <View
-                                    style={[
-                                        styles.card,
-                                        {
-                                            backgroundColor:
-                                                themeColor('highlight')
-                                        }
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.cardTitleText,
-                                            { color: themeColor('background') }
-                                        ]}
-                                    >
-                                        {`${localeString(
-                                            'views.Wallet.BalancePane.recovery.title'
-                                        )}${
-                                            !recoveryProgress
-                                                ? ` - ${localeString(
-                                                      'views.Wallet.BalancePane.recovery.textAlt'
-                                                  ).replace('Zeus', 'ZEUS')}`
-                                                : ''
-                                        }`}
-                                    </Text>
-                                    {recoveryProgress && (
-                                        <Text
-                                            style={[
-                                                styles.cardBodyText,
-                                                {
-                                                    color: themeColor(
-                                                        'background'
-                                                    )
-                                                }
-                                            ]}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.BalancePane.recovery.text'
-                                            ).replace('Zeus', 'ZEUS')}
-                                        </Text>
-                                    )}
-                                    {recoveryProgress && (
-                                        <View style={styles.progressContainer}>
-                                            <LinearProgress
-                                                value={
-                                                    Math.floor(
-                                                        recoveryProgress * 100
-                                                    ) / 100
-                                                }
-                                                variant="determinate"
-                                                color={themeColor('background')}
-                                                trackColor={themeColor(
-                                                    'secondaryBackground'
-                                                )}
-                                                style={styles.progressBar}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.progressText,
-                                                    {
-                                                        color: themeColor(
-                                                            'background'
-                                                        )
-                                                    }
-                                                ]}
-                                            >
-                                                {`${Math.floor(
-                                                    recoveryProgress * 100
-                                                ).toString()}%`}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
+                        <RecoveryStatus navigation={navigation} />
                         <SyncingStatus navigation={navigation} />
                         {implementation === 'embedded-lnd' &&
                             !SyncStore.isSyncing &&
