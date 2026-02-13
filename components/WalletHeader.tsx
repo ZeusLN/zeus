@@ -32,7 +32,6 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
 import NostrWalletConnectStore from '../stores/NostrWalletConnectStore';
-import TransactionsStore from '../stores/TransactionsStore';
 
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -263,7 +262,6 @@ interface WalletHeaderProps {
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     NostrWalletConnectStore?: NostrWalletConnectStore;
-    TransactionsStore?: TransactionsStore;
     navigation: StackNavigationProp<any, any>;
     connecting?: boolean;
     loading?: boolean;
@@ -286,8 +284,7 @@ interface WalletHeaderState {
     'NodeInfoStore',
     'PosStore',
     'SyncStore',
-    'NostrWalletConnectStore',
-    'TransactionsStore'
+    'NostrWalletConnectStore'
 )
 @observer
 export default class WalletHeader extends React.Component<

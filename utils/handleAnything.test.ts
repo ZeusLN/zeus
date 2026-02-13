@@ -17,7 +17,7 @@ import handleAnything, {
     convertMerchantQRToLightningAddress,
     isMerchantQR
 } from './handleAnything';
-import AutoPayUtils from './AutoPayUtils';
+import QuickPayUtils from './QuickPayUtils';
 import BackendUtils from './BackendUtils';
 
 let mockProcessBIP21Uri = jest.fn();
@@ -57,10 +57,10 @@ jest.mock('./BackendUtils', () => ({
     supportsLnurlAuth: () => false,
     decodePaymentRequest: jest.fn()
 }));
-jest.mock('./AutoPayUtils', () => ({
-    shouldTryAutoPay: jest.fn(),
-    checkAutoPayAndProcess: jest.fn(),
-    checkShouldAutoPay: jest.fn(),
+jest.mock('./QuickPayUtils', () => ({
+    shouldTryQuickPay: jest.fn(),
+    checkQuickPayAndProcess: jest.fn(),
+    checkQuickPayAndReturnRoute: jest.fn(),
     buildPaymentParams: jest.fn().mockResolvedValue({
         payment_request: 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee',
         max_parts: '16',
@@ -106,8 +106,8 @@ jest.mock('../stores/Stores', () => ({
             locale: 'en',
             ecash: { enableCashu: false },
             payments: {
-                autoPayEnabled: false,
-                autoPayThreshold: 0,
+                quickPayEnabled: false,
+                quickPayThreshold: 0,
                 enableDonations: false
             }
         }
@@ -147,6 +147,11 @@ describe('handleAnything', () => {
         mockIsValidNodeUri = false;
         mockIsValidCashuToken = false;
         mockDecodedCashuToken = {};
+
+        // Default behavior: quick-pay not applied, return PaymentRequest route
+        (
+            QuickPayUtils.checkQuickPayAndReturnRoute as jest.Mock
+        ).mockResolvedValue(['PaymentRequest', {}]);
     });
 
     describe('input sanitization', () => {
@@ -1752,7 +1757,7 @@ describe('handleAnything', () => {
         });
     });
 
-    describe('Auto-pay integration', () => {
+    describe('Quick-pay integration', () => {
         beforeEach(() => {
             jest.clearAllMocks();
             mockSupportsCashuWallet = false;
@@ -1764,15 +1769,17 @@ describe('handleAnything', () => {
             });
         });
 
-        it('should process auto-pay for valid Lightning invoice when enabled', async () => {
+        it('should process quick-pay for valid Lightning invoice when enabled', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockResolvedValue({
-                shouldAutoPay: true,
-                amount: 1500,
-                enableDonations: false
-            });
+            (
+                QuickPayUtils.checkQuickPayAndReturnRoute as jest.Mock
+            ).mockResolvedValue([
+                'SendingLightning',
+                {
+                    enableDonations: false
+                }
+            ]);
 
             const result = await handleAnything(invoice);
 
@@ -1782,87 +1789,86 @@ describe('handleAnything', () => {
                     enableDonations: false
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).toHaveBeenCalledWith(
                 invoice,
-                settingsStore
+                settingsStore,
+                transactionsStore,
+                undefined
             );
-            expect(transactionsStore.sendPayment).toHaveBeenCalledWith({
-                payment_request: invoice,
-                max_parts: '16',
-                max_shard_amt: '',
-                fee_limit_sat: '100',
-                max_fee_percent: '5.0',
-                outgoing_chan_id: '',
-                last_hop_pubkey: '',
-                amp: false,
-                timeout_seconds: '60'
-            });
         });
 
-        it('should fallback to PaymentRequest when auto-pay threshold is exceeded', async () => {
+        it('should fallback to PaymentRequest when quick-pay threshold is exceeded', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockResolvedValue({
-                shouldAutoPay: false,
-                amount: 1500,
-                enableDonations: false
-            });
+            (
+                QuickPayUtils.checkQuickPayAndReturnRoute as jest.Mock
+            ).mockResolvedValue(['PaymentRequest', {}]);
 
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).toHaveBeenCalledWith(
                 invoice,
-                settingsStore
+                settingsStore,
+                transactionsStore,
+                undefined
             );
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
-        it('should skip auto-pay when AutoPayUtils.shouldTryAutoPay returns false', async () => {
+        it('should skip quick-pay when QuickPayUtils.shouldTryQuickPay returns false', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(false);
+            (
+                QuickPayUtils.checkQuickPayAndReturnRoute as jest.Mock
+            ).mockResolvedValue(['PaymentRequest', {}]);
 
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).not.toHaveBeenCalled();
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).toHaveBeenCalledWith(
+                invoice,
+                settingsStore,
+                transactionsStore,
+                undefined
+            );
         });
 
-        it('should handle auto-pay errors gracefully', async () => {
+        it('should handle quick-pay errors gracefully', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
             const error = new Error('Decode failed');
             const consoleSpy = jest
                 .spyOn(console, 'error')
                 .mockImplementation();
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockRejectedValue(
-                error
-            );
+            (
+                QuickPayUtils.checkQuickPayAndReturnRoute as jest.Mock
+            ).mockRejectedValue(error);
 
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).toHaveBeenCalledWith(
                 invoice,
-                settingsStore
+                settingsStore,
+                transactionsStore,
+                undefined
             );
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
             expect(consoleSpy).toHaveBeenCalledWith(
-                'Auto-pay check failed:',
+                'Quick-pay check failed:',
                 error
             );
             consoleSpy.mockRestore();
         });
 
-        it('should return ChoosePaymentMethod in ecash mode without auto-pay check', async () => {
+        it('should return ChoosePaymentMethod in ecash mode without quick-pay check', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
             mockSupportsCashuWallet = true;
@@ -1877,8 +1883,9 @@ describe('handleAnything', () => {
                     locked: true
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).not.toHaveBeenCalled();
         });
 
         it('should return ChoosePaymentMethod in ecash mode for Lightning invoices', async () => {
@@ -1896,8 +1903,9 @@ describe('handleAnything', () => {
                     locked: true
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).not.toHaveBeenCalled();
         });
 
         it('should not interfere with non-lightning addresses', async () => {
@@ -1916,8 +1924,9 @@ describe('handleAnything', () => {
                     isValid: true
                 }
             ]);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
-            expect(AutoPayUtils.checkAutoPayAndProcess).not.toHaveBeenCalled();
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).not.toHaveBeenCalled();
         });
 
         it('should return true from clipboard for Lightning invoices', async () => {
@@ -1926,30 +1935,30 @@ describe('handleAnything', () => {
             const result = await handleAnything(invoice, undefined, true);
 
             expect(result).toEqual(true);
-            expect(AutoPayUtils.shouldTryAutoPay).not.toHaveBeenCalled();
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).not.toHaveBeenCalled();
             expect(BackendUtils.decodePaymentRequest).not.toHaveBeenCalled();
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
 
-        it('should handle auto-pay when not disabled by settings', async () => {
+        it('should handle quick-pay when not disabled by settings', async () => {
             const invoice = 'lnbc1500n1pnw42nnpp5w9e5k7s9ep83vee83vee83vee';
 
-            (AutoPayUtils.shouldTryAutoPay as jest.Mock).mockReturnValue(true);
-            (AutoPayUtils.checkShouldAutoPay as jest.Mock).mockResolvedValue({
-                shouldAutoPay: false,
-                amount: 1500,
-                enableDonations: false
-            });
+            (
+                QuickPayUtils.checkQuickPayAndReturnRoute as jest.Mock
+            ).mockResolvedValue(['PaymentRequest', {}]);
 
             const result = await handleAnything(invoice);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(AutoPayUtils.shouldTryAutoPay).toHaveBeenCalledWith(invoice);
-            expect(AutoPayUtils.checkShouldAutoPay).toHaveBeenCalledWith(
+            expect(
+                QuickPayUtils.checkQuickPayAndReturnRoute
+            ).toHaveBeenCalledWith(
                 invoice,
-                settingsStore
+                settingsStore,
+                transactionsStore,
+                undefined
             );
-            expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         });
     });
 });

@@ -103,8 +103,8 @@ interface PaymentsSettings {
     slideToPayThreshold: number;
     enableDonations?: boolean;
     defaultDonationPercentage?: number;
-    autoPayEnabled?: boolean;
-    autoPayThreshold?: number;
+    quickPayEnabled?: boolean;
+    quickPayThreshold?: number;
 }
 
 interface InvoicesSettings {
@@ -1395,8 +1395,8 @@ export default class SettingsStore {
             slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
             enableDonations: false,
             defaultDonationPercentage: 5,
-            autoPayEnabled: false,
-            autoPayThreshold: 0
+            quickPayEnabled: false,
+            quickPayThreshold: 0
         },
         invoices: {
             addressType: '0',

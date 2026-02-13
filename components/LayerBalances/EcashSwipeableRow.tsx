@@ -16,7 +16,7 @@ import { inject, observer } from 'mobx-react';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import AutoPayUtils from '../../utils/AutoPayUtils';
+import QuickPayUtils from '../../utils/QuickPayUtils';
 
 import { cashuStore, settingsStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
@@ -234,33 +234,29 @@ export default class EcashSwipeableRow extends Component<
             this.handleLnurlRequest(lightning, lnurlParams, navigation);
             return;
         } else if (lightning) {
-            if (AutoPayUtils.shouldTryAutoPay(lightning)) {
-                try {
-                    await cashuStore.getPayReq(lightning);
+            cashuStore.getPayReq(lightning);
 
-                    const autoPayProcessed =
-                        await AutoPayUtils.checkCashuAutoPayAndProcess(
+            if (QuickPayUtils.shouldTryQuickPay(lightning)) {
+                try {
+                    const quickPayProcessed =
+                        await QuickPayUtils.checkCashuQuickPayAndProcess(
                             lightning,
                             navigation,
                             settingsStore,
                             cashuStore
                         );
 
-                    if (autoPayProcessed) {
+                    if (quickPayProcessed) {
                         return;
                     }
-
-                    navigation.navigate('CashuPaymentRequest', {});
-                    return;
                 } catch (error) {
                     console.error(
-                        'Cashu auto-pay failed, falling back to manual ecash flow:',
+                        'Cashu quick-pay failed, falling back to manual ecash flow:',
                         error
                     );
                 }
             }
 
-            cashuStore.getPayReq(lightning);
             navigation.navigate('CashuPaymentRequest', {});
         }
     };

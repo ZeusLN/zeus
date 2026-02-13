@@ -36,8 +36,8 @@ interface PaymentsSettingsState {
     slideToPayThreshold: string;
     enableDonations: boolean;
     donationPercentage: number;
-    autoPayEnabled: boolean;
-    autoPayThreshold: string;
+    quickPayEnabled: boolean;
+    quickPayThreshold: string;
     mounted?: boolean;
 }
 
@@ -57,8 +57,8 @@ export default class PaymentsSettings extends React.Component<
         slideToPayThreshold: '10000',
         enableDonations: false,
         donationPercentage: 5,
-        autoPayEnabled: false,
-        autoPayThreshold: '0',
+        quickPayEnabled: false,
+        quickPayThreshold: '0',
         mounted: false
     };
 
@@ -80,9 +80,9 @@ export default class PaymentsSettings extends React.Component<
             enableDonations: settings?.payments?.enableDonations || false,
             donationPercentage:
                 settings?.payments?.defaultDonationPercentage || 5,
-            autoPayEnabled: settings?.payments?.autoPayEnabled || false,
-            autoPayThreshold:
-                settings?.payments?.autoPayThreshold?.toString() || '0',
+            quickPayEnabled: settings?.payments?.quickPayEnabled || false,
+            quickPayThreshold:
+                settings?.payments?.quickPayThreshold?.toString() || '0',
             mounted: true
         });
     }
@@ -107,8 +107,8 @@ export default class PaymentsSettings extends React.Component<
             slideToPayThreshold,
             enableDonations,
             donationPercentage,
-            autoPayEnabled,
-            autoPayThreshold
+            quickPayEnabled,
+            quickPayThreshold
         } = this.state;
         const { SettingsStore, NodeInfoStore } = this.props;
         const { nodeInfo } = NodeInfoStore;
@@ -529,7 +529,7 @@ export default class PaymentsSettings extends React.Component<
                         </>
                     )}
 
-                    {/* Auto-Pay Settings */}
+                    {/* Quick-Pay Settings */}
                     <View
                         style={{
                             flexDirection: 'row',
@@ -562,15 +562,15 @@ export default class PaymentsSettings extends React.Component<
                         </View>
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
-                                value={autoPayEnabled}
+                                value={quickPayEnabled}
                                 onValueChange={async () => {
                                     this.setState({
-                                        autoPayEnabled: !autoPayEnabled
+                                        quickPayEnabled: !quickPayEnabled
                                     });
                                     await updateSettings({
                                         payments: {
                                             ...settings.payments,
-                                            autoPayEnabled: !autoPayEnabled
+                                            quickPayEnabled: !quickPayEnabled
                                         }
                                     });
                                 }}
@@ -578,10 +578,10 @@ export default class PaymentsSettings extends React.Component<
                         </View>
                     </View>
 
-                    {autoPayEnabled && (
+                    {quickPayEnabled && (
                         <View style={{ marginTop: 20 }}>
                             <AmountInput
-                                amount={autoPayThreshold.toString()}
+                                amount={quickPayThreshold.toString()}
                                 title={
                                     localeString('general.lightning') +
                                     ' - ' +
@@ -591,9 +591,13 @@ export default class PaymentsSettings extends React.Component<
                                 }
                                 onAmountChange={async (amount, _) => {
                                     this.setState({
-                                        autoPayThreshold: amount
+                                        quickPayThreshold: amount
                                     });
-                                    const amountNumber = Number(amount);
+                                }}
+                                onBlur={async () => {
+                                    const amountNumber = Number(
+                                        this.state.quickPayThreshold
+                                    );
                                     if (
                                         this.state.mounted &&
                                         !Number.isNaN(amountNumber)
@@ -601,7 +605,7 @@ export default class PaymentsSettings extends React.Component<
                                         await updateSettings({
                                             payments: {
                                                 ...settings.payments,
-                                                autoPayThreshold: Number(amount)
+                                                quickPayThreshold: amountNumber
                                             }
                                         });
                                     }
