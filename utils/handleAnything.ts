@@ -10,7 +10,7 @@ import {
 } from '../stores/Stores';
 
 import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
-import AutoPayUtils from './AutoPayUtils';
+import QuickPayUtils from './QuickPayUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
@@ -30,42 +30,21 @@ import wifUtils from './WIFUtils';
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
 
-const checkAutoPayAndRedirect = async (paymentRequest: string) => {
-    const shouldTryAutoPay = AutoPayUtils.shouldTryAutoPay(paymentRequest);
-
-    if (shouldTryAutoPay) {
-        try {
-            const { shouldAutoPay, enableDonations, amount } =
-                await AutoPayUtils.checkShouldAutoPay(
-                    paymentRequest,
-                    settingsStore
-                );
-
-            if (shouldAutoPay) {
-                const pay_req = invoicesStore.pay_req;
-                const finalPaymentParams =
-                    await AutoPayUtils.buildPaymentParams(
-                        paymentRequest,
-                        amount,
-                        settingsStore,
-                        pay_req
-                    );
-
-                transactionsStore.sendPayment(finalPaymentParams);
-
-                return [
-                    'SendingLightning',
-                    {
-                        enableDonations
-                    }
-                ];
-            }
-        } catch (error) {
-            console.error('Auto-pay check failed:', error);
-        }
+const checkQuickPayAndRedirect = async (
+    paymentRequest: string
+): Promise<[string, any]> => {
+    try {
+        const pay_req = invoicesStore.pay_req;
+        return await QuickPayUtils.checkQuickPayAndReturnRoute(
+            paymentRequest,
+            settingsStore,
+            transactionsStore,
+            pay_req
+        );
+    } catch (error) {
+        console.error('Quick-pay check failed:', error);
+        return ['PaymentRequest', {}];
     }
-
-    return ['PaymentRequest', {}];
 };
 
 const attemptNip05Lookup = async (data: string) => {
@@ -354,7 +333,7 @@ const handleAnything = async (
                     ];
                 } else {
                     await invoicesStore.getPayReq(lightning);
-                    return await checkAutoPayAndRedirect(lightning);
+                    return await checkQuickPayAndRedirect(lightning);
                 }
             }
         }
@@ -409,7 +388,7 @@ const handleAnything = async (
             ];
         } else {
             await invoicesStore.getPayReq(value || lightning);
-            return await checkAutoPayAndRedirect(value || lightning);
+            return await checkQuickPayAndRedirect(value || lightning);
         }
     } else if (
         !hasAt &&
