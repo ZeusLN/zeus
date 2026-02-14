@@ -2012,7 +2012,7 @@
     "views.Swaps.title": "스왑",
     "views.Swaps.submarine": "서브마린 스왑",
     "views.Swaps.reverse": "리버스 스왑",
-    "views.Swaps.create": "아토믹 스왑 생성",
+    "views.Swaps.create": "Create swap",
     "views.Swaps.initiate": "스왑 시작",
     "views.Swaps.refundSwap": "스왑 환불",
     "views.Swaps.uncooperative": "협조되지 않은 환불",
