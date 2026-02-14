@@ -2012,7 +2012,7 @@
     "views.Swaps.title": "Intercambios",
     "views.Swaps.submarine": "Intercambio submarino",
     "views.Swaps.reverse": "Intercambio inverso",
-    "views.Swaps.create": "Crear intercambio atómico",
+    "views.Swaps.create": "Create swap",
     "views.Swaps.initiate": "Iniciar intercambio",
     "views.Swaps.refundSwap": "Reembolso de Intercambio",
     "views.Swaps.uncooperative": "Reembolso por falta de cooperación",
