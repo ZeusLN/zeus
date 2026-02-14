@@ -242,6 +242,7 @@
     "components.UTXOPicker.defaultTitle": "UTXOs to use",
     "components.UTXOPicker.selectUTXOs": "Select UTXOs to use",
     "components.QRCodeScanner.noCameraAccess": "No access to camera",
+    "components.QRCodeScanner.openSettings": "Open Settings",
     "components.QRCodeScanner.noCameraFound": "No camera device found",
     "components.QRCodeScanner.notRecognized": "QR code could not be recognized",
     "components.NWCPendingPayInvoiceModal.title": "Pending Payment Requests",

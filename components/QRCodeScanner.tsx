@@ -6,7 +6,8 @@ import {
     TouchableOpacity,
     BackHandler,
     AppState,
-    Alert
+    Alert,
+    Linking
 } from 'react-native';
 import {
     Camera,
@@ -141,7 +142,15 @@ export default function QRCodeScanner({
             navigation.addListener('focus', handleFocus);
             const appStateChangeSubscription = AppState.addEventListener(
                 'change',
-                (state) => setCameraIsActive(state === 'active')
+                (state) => {
+                    setCameraIsActive(state === 'active');
+                    if (state === 'active') {
+                        const permission = Camera.getCameraPermissionStatus();
+                        if (permission === 'granted') {
+                            setCameraStatus(CameraAuthStatus.AUTHORIZED);
+                        }
+                    }
+                }
             );
 
             const hasPermission = Camera.getCameraPermissionStatus();
@@ -288,6 +297,14 @@ export default function QRCodeScanner({
                             'components.QRCodeScanner.noCameraAccess'
                         )}
                     </Text>
+                    <Button
+                        title={localeString(
+                            'components.QRCodeScanner.openSettings'
+                        )}
+                        onPress={() => Linking.openSettings()}
+                        containerStyle={{ width: 200, marginBottom: 10 }}
+                        adaptiveWidth
+                    />
                     <Button
                         title={localeString('general.goBack')}
                         onPress={() => goBack()}
