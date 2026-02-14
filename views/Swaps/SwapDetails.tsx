@@ -648,6 +648,13 @@ export default class SwapDetails extends React.Component<
         }
     };
 
+    reverseSwapReceiveAmount = (): number => {
+        const { SwapStore } = this.props;
+        return new BigNumber(this.state.swapData?.getAmount || 0)
+            .minus(SwapStore?.reverseSwapClaimFee || 0)
+            .toNumber();
+    };
+
     /**
      * Create and send a claim transaction for a reverse swap
      */
@@ -691,6 +698,7 @@ export default class SwapDetails extends React.Component<
                         lockupAddress,
                         destinationAddress,
                         feeRate: Number(fee || 2),
+                        receiveAmount: this.reverseSwapReceiveAmount(),
                         isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
                     });
 
@@ -945,10 +953,7 @@ export default class SwapDetails extends React.Component<
                                 )}
                                 value={
                                     <Amount
-                                        sats={
-                                            (swapData?.getAmount || 0) -
-                                            (SwapStore?.reverseSwapClaimFee || 0)
-                                        }
+                                        sats={this.reverseSwapReceiveAmount()}
                                         sensitive
                                         toggleable
                                     />
