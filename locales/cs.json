@@ -2012,7 +2012,7 @@
     "views.Swaps.title": "Swapy",
     "views.Swaps.submarine": "Submarine swap",
     "views.Swaps.reverse": "Reverzní swap",
-    "views.Swaps.create": "Vytvořit atomic swap",
+    "views.Swaps.create": "Create swap",
     "views.Swaps.initiate": "Zahájit swap",
     "views.Swaps.refundSwap": "Refundovat swap",
     "views.Swaps.uncooperative": "Nekooperativní refundace",
