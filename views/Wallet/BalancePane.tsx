@@ -16,6 +16,7 @@ import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
 import SyncingStatus from '../../components/SyncingStatus';
 import RecoveryStatus from '../../components/RecoveryStatus';
+import RescanStatus from '../../components/RescanStatus';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -183,6 +184,7 @@ export default class BalancePane extends React.PureComponent<
                     />
                     <View style={styles.contentContainer}>
                         <RecoveryStatus navigation={navigation} />
+                        <RescanStatus navigation={navigation} />
                         <SyncingStatus navigation={navigation} />
                         {implementation === 'embedded-lnd' &&
                             !SyncStore.isSyncing &&

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
-import { Dimensions, Text, View, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
@@ -11,18 +11,16 @@ import PaymentMethodList from '../components/LayerBalances/PaymentMethodList';
 import Screen from '../components/Screen';
 import Amount from '../components/Amount';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
-import OnchainFeeInput from '../components/OnchainFeeInput';
-import ModalBox from '../components/ModalBox';
 import SyncingStatus from '../components/SyncingStatus';
 import RecoveryStatus from '../components/RecoveryStatus';
+import RescanStatus from '../components/RescanStatus';
 import FeeEstimate from '../components/FeeEstimate';
-
-import CaretDown from '../assets/images/SVG/Caret Down.svg';
 
 import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import { feeStore, settingsStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -56,7 +54,6 @@ interface ChoosePaymentMethodState {
     offer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
-    showFeeModal: boolean;
 }
 
 @inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'InvoicesStore')
@@ -74,12 +71,12 @@ export default class ChoosePaymentMethod extends React.Component<
         lightningAddress: '',
         offer: '',
         lnurlParams: undefined,
-        feeRate: '10',
-        showFeeModal: false
+        feeRate: '10'
     };
 
     async componentDidMount() {
         const { route, navigation } = this.props;
+        const params = route.params ?? {};
         const {
             value,
             satAmount,
@@ -87,46 +84,49 @@ export default class ChoosePaymentMethod extends React.Component<
             lightningAddress,
             offer,
             lnurlParams
-        } = route.params ?? {};
+        } = params;
 
-        if (value) {
-            this.setState({ value });
-        }
-
-        // If satAmount is provided, use it directly
-        if (satAmount) {
-            this.setState({ satAmount });
-        } else if (lightning) {
+        let resolvedSatAmount = satAmount;
+        if (!satAmount && lightning) {
             try {
-                const decodedInvoice = bolt11.decode(lightning);
-                const invoice = new Invoice(decodedInvoice);
-
-                if (invoice && invoice.getRequestAmount) {
-                    this.setState({
-                        satAmount: invoice.getRequestAmount.toString()
-                    });
-                }
+                const decoded = bolt11.decode(lightning);
+                const invoice = new Invoice(decoded);
+                resolvedSatAmount =
+                    invoice?.getRequestAmount?.toString() ?? undefined;
             } catch (error) {
                 console.log('Error decoding invoice for amount:', error);
             }
         }
 
-        if (lightning) {
-            this.setState({ lightning });
+        const stateUpdate: Partial<ChoosePaymentMethodState> = {};
+        if (value) stateUpdate.value = value;
+        if (resolvedSatAmount) stateUpdate.satAmount = resolvedSatAmount;
+        if (lightning) stateUpdate.lightning = lightning;
+        if (lightningAddress) stateUpdate.lightningAddress = lightningAddress;
+        if (offer) stateUpdate.offer = offer;
+        if (lnurlParams) stateUpdate.lnurlParams = lnurlParams;
+
+        if (Object.keys(stateUpdate).length > 0) {
+            this.setState((prev) => ({ ...prev, ...stateUpdate }));
         }
 
-        if (lightningAddress) {
-            this.setState({ lightningAddress });
-        }
-
-        if (offer) {
-            this.setState({ offer });
-        }
-
-        if (lnurlParams) {
-            this.setState({ lnurlParams });
-        }
         this.fetchFeeEstimates({ lightning, lnurlParams });
+
+        if (
+            value &&
+            BackendUtils.supportsOnchainReceiving() &&
+            settingsStore?.settings?.privacy?.enableMempoolRates
+        ) {
+            const preferredRate =
+                settingsStore.settings?.payments?.preferredMempoolRate ||
+                'fastestFee';
+            feeStore.getOnchainFeesviaMempool().then((fees) => {
+                const rate = fees?.[preferredRate];
+                if (rate != null) {
+                    this.setState({ feeRate: String(rate) });
+                }
+            });
+        }
 
         this.focusUnsubscribe = navigation.addListener('focus', () => {
             this.fetchFeeEstimates();
@@ -166,13 +166,52 @@ export default class ChoosePaymentMethod extends React.Component<
     hasInsufficientFunds = () => {
         const { BalanceStore, CashuStore } = this.props;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
-        const { totalBalanceSats } = CashuStore!;
-        // Calculate total balance across all sources
+        const { totalBalanceSats: ecashBalance } = CashuStore!;
+        const { value, lightning, lightningAddress, offer, lnurlParams } =
+            this.state;
+        const satAmount = Number(this.state.satAmount);
+
         const totalBalance =
             Number(totalBlockchainBalance) +
             Number(lightningBalance) +
-            Number(totalBalanceSats);
-        return totalBalance === 0;
+            Number(ecashBalance);
+
+        if (totalBalance === 0) return true;
+        if (isNaN(satAmount) || satAmount <= 0) return false;
+
+        const hasOnchain = Number(totalBlockchainBalance) >= satAmount;
+        const hasLightning = Number(lightningBalance) >= satAmount;
+        const hasEcash = Number(ecashBalance) >= satAmount;
+
+        const isLightningOnly =
+            !value &&
+            (!!lightning || !!lnurlParams || !!lightningAddress || !!offer);
+        const isOnchainOnly =
+            !!value &&
+            !lightning &&
+            !lnurlParams &&
+            !lightningAddress &&
+            !offer &&
+            BackendUtils.supportsOnchainReceiving();
+        const supportsAllThree =
+            !!value &&
+            (!!lightning || !!lnurlParams || !!lightningAddress || !!offer) &&
+            BackendUtils.supportsOnchainReceiving() &&
+            BackendUtils.supportsCashuWallet();
+
+        if (isLightningOnly) {
+            return !hasLightning && !hasEcash;
+        }
+
+        if (isOnchainOnly) {
+            return !hasOnchain;
+        }
+
+        if (supportsAllThree) {
+            return !hasOnchain && !hasLightning && !hasEcash;
+        }
+
+        return totalBalance < satAmount;
     };
 
     render() {
@@ -190,8 +229,7 @@ export default class ChoosePaymentMethod extends React.Component<
             lightningAddress,
             offer,
             lnurlParams,
-            feeRate,
-            showFeeModal
+            feeRate
         } = this.state;
 
         const { accounts } = UTXOsStore!;
@@ -208,12 +246,6 @@ export default class ChoosePaymentMethod extends React.Component<
         const showFees =
             !!satAmount && (isLightningPayment || isOnchainPayment);
 
-        const feeModalMaxHeight = (() => {
-            const h = Dimensions.get('window').height;
-            const pct = isOnchainPayment ? 0.45 : 0.3;
-            return Math.min(Math.max(h * pct, 280), 500);
-        })();
-
         return (
             <Screen>
                 <Header
@@ -226,19 +258,18 @@ export default class ChoosePaymentMethod extends React.Component<
                 />
 
                 <RecoveryStatus navigation={navigation} />
+                <RescanStatus navigation={navigation} />
                 <SyncingStatus navigation={navigation} />
 
                 {!!satAmount && (
-                    <View style={{ paddingVertical: 15, alignItems: 'center' }}>
+                    <View style={styles.amountSection}>
                         <Text
-                            style={{
-                                fontSize: 12,
-                                fontFamily: 'PPNeueMontreal-Medium',
-                                color: themeColor('secondaryText'),
-                                textTransform: 'uppercase',
-                                letterSpacing: 1,
-                                marginBottom: 8
-                            }}
+                            style={[
+                                styles.amountLabel,
+                                {
+                                    color: themeColor('secondaryText')
+                                }
+                            ]}
                         >
                             {localeString('views.Payment.paymentAmount')}
                         </Text>
@@ -251,12 +282,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     </View>
                 )}
                 {hasInsufficientFunds && (
-                    <View
-                        style={{
-                            alignItems: 'center',
-                            paddingHorizontal: 20
-                        }}
-                    >
+                    <View style={styles.errorSection}>
                         <ErrorMessage
                             message={localeString(
                                 'stores.CashuStore.notEnoughFunds'
@@ -285,122 +311,44 @@ export default class ChoosePaymentMethod extends React.Component<
                     accounts={accounts}
                 />
 
-                {showFees && !hasInsufficientFunds && (
-                    <View
-                        style={{
-                            paddingHorizontal: 20,
-                            paddingVertical: 15
-                        }}
-                    >
-                        <TouchableOpacity
-                            onPress={() =>
-                                this.setState({
-                                    showFeeModal: true
-                                })
-                            }
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                backgroundColor: themeColor('secondary'),
-                                borderRadius: 8,
-                                paddingVertical: 14,
-                                paddingHorizontal: 20
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Medium',
-                                    fontSize: 16,
-                                    marginRight: 8
-                                }}
-                            >
-                                {localeString(
-                                    'views.PaymentRequest.feeEstimate'
-                                )}
-                            </Text>
-                            <CaretDown
-                                fill={themeColor('text')}
-                                width="16"
-                                height="16"
-                            />
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                <ModalBox
-                    style={{
-                        borderTopLeftRadius: 20,
-                        borderTopRightRadius: 20,
-                        backgroundColor: themeColor('background'),
-                        paddingHorizontal: 20,
-                        paddingTop: 24,
-                        paddingBottom: 40,
-                        maxHeight: feeModalMaxHeight
-                    }}
-                    swipeToClose={true}
-                    backButtonClose={true}
-                    backdropPressToClose={true}
-                    backdrop={true}
-                    position="bottom"
-                    isOpen={showFeeModal}
-                    onClosed={() => this.setState({ showFeeModal: false })}
-                >
-                    <View>
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Medium',
-                                color: themeColor('text'),
-                                fontSize: 18,
-                                marginBottom: 20,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {localeString('views.PaymentRequest.feeEstimate')}
-                        </Text>
-                        <FeeEstimate
-                            satAmount={satAmount}
-                            lightning={lightning}
-                            lnurlParams={lnurlParams}
-                            value={value}
-                            lightningEstimateFee={lightningEstimateFee ?? 0}
-                            ecashEstimateFee={ecashEstimateFee ?? 0}
-                            feeRate={feeRate}
-                        />
-                        {!!value &&
-                            BackendUtils.supportsOnchainReceiving() &&
-                            !hasInsufficientFunds &&
-                            showFees && (
-                                <View
-                                    style={{
-                                        paddingTop: 20
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 14,
-                                            marginBottom: 5
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Send.feeSatsVbyte'
-                                        )}
-                                    </Text>
-                                    <OnchainFeeInput
-                                        fee={feeRate}
-                                        onChangeFee={(text: string) =>
-                                            this.setState({ feeRate: text })
-                                        }
-                                        navigation={navigation}
-                                    />
-                                </View>
-                            )}
-                    </View>
-                </ModalBox>
+                <FeeEstimate
+                    satAmount={satAmount}
+                    lightning={lightning}
+                    lnurlParams={lnurlParams}
+                    lightningEstimateFee={lightningEstimateFee ?? 0}
+                    ecashEstimateFee={ecashEstimateFee ?? 0}
+                    visible={showFees && !hasInsufficientFunds}
+                    showOnchainFeeInput={
+                        !!value &&
+                        BackendUtils.supportsOnchainReceiving() &&
+                        !hasInsufficientFunds &&
+                        showFees
+                    }
+                    feeRate={feeRate}
+                    onChangeFee={(text: string) =>
+                        this.setState({ feeRate: text })
+                    }
+                    navigation={navigation}
+                />
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    amountSection: {
+        paddingVertical: 15,
+        alignItems: 'center'
+    },
+    amountLabel: {
+        fontSize: 12,
+        fontFamily: 'PPNeueMontreal-Medium',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 8
+    },
+    errorSection: {
+        alignItems: 'center',
+        paddingHorizontal: 20
+    }
+});
