@@ -2012,7 +2012,7 @@
     "views.Swaps.title": "Swaps",
     "views.Swaps.submarine": "Submarine swap",
     "views.Swaps.reverse": "Reverse swap",
-    "views.Swaps.create": "Create atomic swap",
+    "views.Swaps.create": "Create swap",
     "views.Swaps.initiate": "Започване на размяна",
     "views.Swaps.refundSwap": "Възстановяване на сумата на размяна",
     "views.Swaps.uncooperative": "Uncooperative refund",
