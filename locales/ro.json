@@ -2012,7 +2012,7 @@
     "views.Swaps.title": "Schimburi",
     "views.Swaps.submarine": "Schimb submarin",
     "views.Swaps.reverse": "Schimb invers",
-    "views.Swaps.create": "Creați un schimb atomic",
+    "views.Swaps.create": "Create swap",
     "views.Swaps.initiate": "Inițiază schimbul",
     "views.Swaps.refundSwap": "Schimb de rambursare",
     "views.Swaps.uncooperative": "Rambursare pentru necooperare",
