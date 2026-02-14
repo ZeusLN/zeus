@@ -63,6 +63,7 @@ import { getAmountFromSats } from '../../utils/AmountUtils';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import AddressSvg from '../../assets/images/SVG/DynamicSVG/AddressSvg';
 import ScanSvg from '../../assets/images/SVG/Scan.svg';
+import NfcIcon from '../../assets/images/SVG/NFC-alt.svg';
 
 interface ReceiveEcashProps {
     exitSetup: any;
@@ -791,10 +792,18 @@ export default class ReceiveEcash extends React.Component<
                                                                           'general.receiveNfc'
                                                                       )
                                                             }
-                                                            icon={{
-                                                                name: 'nfc',
-                                                                size: 25
-                                                            }}
+                                                            icon={
+                                                                <NfcIcon
+                                                                    stroke={themeColor(
+                                                                        'highlight'
+                                                                    )}
+                                                                    width={25}
+                                                                    height={25}
+                                                                    style={{
+                                                                        marginRight: 10
+                                                                    }}
+                                                                />
+                                                            }
                                                             onPress={() =>
                                                                 this.enableNfc()
                                                             }

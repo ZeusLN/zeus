@@ -274,7 +274,7 @@ export default function QRCodeScanner({
                 </View>
             )}
 
-            {device && cameraStatus === CameraAuthStatus.NOT_AUTHORIZED && (
+            {true && (
                 <View style={styles.content}>
                     <Text
                         style={{
@@ -298,7 +298,7 @@ export default function QRCodeScanner({
                 </View>
             )}
 
-            {!device && (
+            {false && (
                 <View style={styles.content}>
                     <Text
                         style={{
