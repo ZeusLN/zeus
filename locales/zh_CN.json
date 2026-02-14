@@ -2012,7 +2012,7 @@
     "views.Swaps.title": "兑换",
     "views.Swaps.submarine": "潜水交换",
     "views.Swaps.reverse": "反向交换",
-    "views.Swaps.create": "创建原子兑换",
+    "views.Swaps.create": "Create swap",
     "views.Swaps.initiate": "发起兑换",
     "views.Swaps.refundSwap": "退款兑换",
     "views.Swaps.uncooperative": "非合作式退款",
