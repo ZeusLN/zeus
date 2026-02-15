@@ -38,6 +38,8 @@ import {
     formatBitcoinWithSpaces,
     numberWithCommas
 } from '../../utils/UnitsUtils';
+import { appendValueToAmount } from '../../utils/AmountInputValidationUtils';
+import InvalidInputAnimationController from '../../utils/InvalidInputAnimationController';
 
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import MintToken from './../../assets/images/SVG/MintToken.svg';
@@ -61,6 +63,7 @@ interface KeypadPaneState {
     overrideBelowMinAmount: boolean;
     flowLspNotConfigured: boolean;
     ecashMode: boolean;
+    isInputInvalid: boolean;
 }
 
 @inject(
@@ -77,8 +80,13 @@ export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
     KeypadPaneState
 > {
-    shakeAnimation = new Animated.Value(0);
-    textAnimation = new Animated.Value(0);
+    invalidInputAnimation = new InvalidInputAnimationController(
+        (isInputInvalid: boolean) => {
+            this.setState({ isInputInvalid });
+        }
+    );
+    shakeAnimation = this.invalidInputAnimation.shakeAnimation;
+    textAnimation = this.invalidInputAnimation.textAnimation;
     focusListener: any = null;
 
     constructor(props: KeypadPaneProps) {
@@ -101,7 +109,8 @@ export default class KeypadPane extends React.PureComponent<
             belowMinAmount: false,
             overrideBelowMinAmount: false,
             flowLspNotConfigured: true,
-            ecashMode: initialEcashMode
+            ecashMode: initialEcashMode,
+            isInputInvalid: false
         };
     }
 
@@ -120,6 +129,7 @@ export default class KeypadPane extends React.PureComponent<
         if (this.focusListener) {
             this.focusListener();
         }
+        this.invalidInputAnimation.dispose();
     }
 
     async handleLsp() {
@@ -131,77 +141,30 @@ export default class KeypadPane extends React.PureComponent<
         });
     }
 
+    resetTextAnimation = () => {
+        this.invalidInputAnimation.clearInvalidState();
+    };
+
     appendValue = (value: string): boolean => {
         const { amount } = this.state;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        let newAmount;
+        const fiat = SettingsStore!.settings?.fiat || '';
+        const fiatProperties = FiatStore!.symbolLookup(fiat);
+        const { isValid, newAmount } = appendValueToAmount(
+            amount,
+            value,
+            units,
+            fiatProperties?.decimalPlaces
+        );
 
-        const getDecimalLimit = (): number | null => {
-            if (units === 'fiat') {
-                const fiat = SettingsStore!.settings?.fiat || '';
-                const fiatProperties = FiatStore!.symbolLookup(fiat);
-                return fiatProperties?.decimalPlaces !== undefined
-                    ? fiatProperties.decimalPlaces
-                    : 2;
-            }
-            if (units === 'sats') return 3;
-            if (units === 'BTC') return 8;
-            return null;
-        };
-
-        const decimalLimit = getDecimalLimit();
-        const [integerPart, decimalPart] = amount.split('.');
-
-        // limit decimal places depending on units
-        if (
-            decimalPart &&
-            decimalLimit !== null &&
-            decimalPart.length >= decimalLimit
-        ) {
+        if (!isValid || !newAmount) {
             this.startShake();
             return false;
         }
 
-        if (units === 'BTC') {
-            // deny if trying to add more than 8 figures of Bitcoin
-            if (
-                !decimalPart &&
-                integerPart &&
-                integerPart.length == 8 &&
-                !amount.includes('.') &&
-                value !== '.'
-            ) {
-                this.startShake();
-                return false;
-            }
-        }
-
-        // only allow one decimal, unless currency has zero decimal places
-        if (value === '.' && (amount.includes('.') || decimalLimit === 0)) {
-            this.startShake();
-            return false;
-        }
-
-        const proposedNewAmountStr = `${amount}${value}`;
-        const proposedNewAmount = new BigNumber(proposedNewAmountStr);
-
-        // deny if exceeding BTC 21 million capacity
-        if (units === 'BTC' && proposedNewAmount.gt(21000000)) {
-            this.startShake();
-            return false;
-        }
-        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0)) {
-            this.startShake();
-            return false;
-        }
-
-        if (amount === '0') {
-            newAmount = value;
-        } else {
-            newAmount = proposedNewAmountStr;
-        }
+        this.resetTextAnimation();
 
         let needInbound = false;
         let belowMinAmount = false;
@@ -223,23 +186,28 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: newAmount,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            isInputInvalid: false
         });
 
         return true;
     };
 
     clearValue = () => {
+        this.resetTextAnimation();
         this.setState({
             amount: '0',
             needInbound: false,
             belowMinAmount: false,
-            overrideBelowMinAmount: false
+            overrideBelowMinAmount: false,
+            isInputInvalid: false
         });
     };
 
     deleteValue = () => {
         const { amount } = this.state;
+
+        this.resetTextAnimation();
 
         let newAmount;
 
@@ -269,7 +237,8 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: newAmount,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            isInputInvalid: false
         });
     };
 
@@ -298,42 +267,7 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        Animated.parallel([
-            Animated.sequence([
-                Animated.timing(this.textAnimation, {
-                    toValue: 1,
-                    duration: 100,
-                    useNativeDriver: false
-                }),
-                Animated.timing(this.textAnimation, {
-                    toValue: 0,
-                    duration: 1000,
-                    useNativeDriver: false
-                })
-            ]),
-            Animated.sequence([
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: -10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 10,
-                    duration: 100,
-                    useNativeDriver: true
-                }),
-                Animated.timing(this.shakeAnimation, {
-                    toValue: 0,
-                    duration: 100,
-                    useNativeDriver: true
-                })
-            ])
-        ]).start();
+        this.invalidInputAnimation.start();
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
@@ -352,17 +286,19 @@ export default class KeypadPane extends React.PureComponent<
             needInbound,
             belowMinAmount,
             overrideBelowMinAmount,
-            ecashMode
+            ecashMode,
+            isInputInvalid
         } = this.state;
         const { units } = UnitsStore!;
         const { settings } = SettingsStore!;
         const { isSyncing } = SyncStore!;
 
-        const color = this.textAnimation.interpolate({
+        const animatedColor = this.textAnimation.interpolate({
             inputRange: [0, 1],
             outputRange: [themeColor('text'), 'red']
         });
 
+        const color = isInputInvalid ? animatedColor : themeColor('text');
         const noMints = CashuStore?.mintUrls.length === 0;
 
         return (
