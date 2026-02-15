@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "Keine Swaps für diesen Rettungsschlüssel gefunden",
     "views.Swaps.rescueKey.incorrectHost": "Could not connect to the specified host. Please check the host and try again",
     "views.Swaps.rescueKey.delete": "Rettungsschlüssel löschen",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Bist du sicher, dass du den Rettungsschlüssel löschen willst? Es werden auch alle Swaps aus deiner Swap-Historie gelöscht.​ Bitte sichere den Schlüssel, bevor du fortfährst, da er für eine Wiederherstellen dieser Swaps benötigt wird.",
     "views.SwapDetails.title": "Swap Details",
     "views.SwapDetails.acceptZeroConf": "Accept Zero Conf",
