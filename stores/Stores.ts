@@ -27,6 +27,7 @@ import UnitsStore from './UnitsStore';
 import UTXOsStore from './UTXOsStore';
 import SweepStore from './SweepStore';
 import NostrWalletConnectStore from './NostrWalletConnectStore';
+import RecurringPaymentsStore from './RecurringPaymentsStore';
 
 export const settingsStore = new SettingsStore();
 export const modalStore = new ModalStore();
@@ -101,4 +102,8 @@ export const nostrWalletConnectStore = new NostrWalletConnectStore(
     lightningAddressStore,
     modalStore,
     paymentsStore
+);
+export const recurringPaymentsStore = new RecurringPaymentsStore(
+    settingsStore,
+    fiatStore
 );
