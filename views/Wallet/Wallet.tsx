@@ -1312,23 +1312,20 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 >
                                     {posEnabled !== PosEnabled.Disabled &&
                                     posStatus === 'active' ? (
-                                        <Tab.Screen
-                                            name="Products"
-                                            component={PosScreen}
-                                        />
+                                        <Tab.Screen name="Products">
+                                            {PosScreen}
+                                        </Tab.Screen>
                                     ) : (
-                                        <Tab.Screen
-                                            name="Balance"
-                                            component={BalanceScreen}
-                                        />
+                                        <Tab.Screen name="Balance">
+                                            {BalanceScreen}
+                                        </Tab.Screen>
                                     )}
                                     {posEnabled === PosEnabled.Standalone &&
                                         posStatus === 'active' &&
                                         showKeypad && (
-                                            <Tab.Screen
-                                                name="POS Keypad"
-                                                component={PosKeypadScreen}
-                                            />
+                                            <Tab.Screen name="POS Keypad">
+                                                {PosKeypadScreen}
+                                            </Tab.Screen>
                                         )}
                                     {posStatus !== 'active' && (
                                         <>
@@ -1338,10 +1335,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                     !settings?.ecash
                                                         ?.enableCashu
                                                 ) && (
-                                                    <Tab.Screen
-                                                        name="Keypad"
-                                                        component={KeypadScreen}
-                                                    />
+                                                    <Tab.Screen name="Keypad">
+                                                        {KeypadScreen}
+                                                    </Tab.Screen>
                                                 )}
                                             {BackendUtils.supportsChannelManagement() &&
                                                 !error &&
@@ -1350,17 +1346,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                         name={localeString(
                                                             'views.Wallet.Wallet.channels'
                                                         )}
-                                                        component={
-                                                            ChannelsScreen
-                                                        }
-                                                    />
+                                                    >
+                                                        {ChannelsScreen}
+                                                    </Tab.Screen>
                                                 )}
                                         </>
                                     )}
                                     {posStatus !== 'active' && !error && (
                                         <Tab.Screen
                                             name="Camera"
-                                            component={CameraScreen}
                                             listeners={{
                                                 tabPress: (e) => {
                                                     // Prevent default action
@@ -1370,7 +1364,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                     );
                                                 }
                                             }}
-                                        />
+                                        >
+                                            {CameraScreen}
+                                        </Tab.Screen>
                                     )}
                                 </Tab.Navigator>
                             </NavigationContainer>
