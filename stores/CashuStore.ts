@@ -2746,6 +2746,14 @@ export default class CashuStore {
                     await this.sweepMint(mintUrl);
                 } catch (error) {
                     console.error(`Error sweeping mint ${mintUrl}:`, error);
+                } finally {
+                    // Auto-sweep should fail silently —
+                    // clear any error state set by sweepMint
+                    // so it doesn't leak into other views
+                    runInAction(() => {
+                        this.error = false;
+                        this.error_msg = undefined;
+                    });
                 }
             } else {
                 console.log(
@@ -2828,11 +2836,18 @@ export default class CashuStore {
             if (!finalInvoice?.paymentRequest)
                 throw new Error('Failed to create final invoice for sweep.');
 
-            // 4. Execute melt via CDK (handles quote creation internally)
+            // 4. Create melt quote for final invoice and execute melt
+            console.log(
+                `Sweep ${mintUrl}: Creating melt quote for final invoice`
+            );
+            const finalMeltQuote = await CashuDevKit.createMeltQuote(
+                mintUrl,
+                finalInvoice.paymentRequest
+            );
             console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
             const meltResponse = await CashuDevKit.melt(
                 mintUrl,
-                finalInvoice.paymentRequest
+                finalMeltQuote.id
             );
             console.log(
                 `Sweep ${mintUrl}: Melt response received`,
@@ -2840,7 +2855,7 @@ export default class CashuStore {
             );
 
             // 6. Update balances from CDK
-            await this.calculateTotalBalance();
+            await this.syncCDKBalances(true);
 
             console.log(
                 `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats.`
