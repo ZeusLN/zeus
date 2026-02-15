@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "Nessuno scambio trovato per questa chiave di salvataggio",
     "views.Swaps.rescueKey.incorrectHost": "Impossibile connettersi all'host specificato. Controllare l'host e riprovare.",
     "views.Swaps.rescueKey.delete": "Elimina la chiave di salvataggio",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Vuoi davvero eliminare la chiave di recupero? Tutti gli swap verranno eliminati anche dalla cronologia degli swap. Esegui il backup delle chiavi prima di procedere, in modo da poterle utilizzare in seguito per recuperare gli swap.",
     "views.SwapDetails.title": "Dettagli dello scambio",
     "views.SwapDetails.acceptZeroConf": "Accetta Zero Conf",
