@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "Nu s-au găsit swaps-uri pentru această cheie de salvare",
     "views.Swaps.rescueKey.incorrectHost": "Nu s-a putut conecta la gazda specificată. Vă rugăm să verificați gazda și să încercați din nou.",
     "views.Swaps.rescueKey.delete": "Ștergeți cheia de salvare",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Sigur vrei să ștergi cheia de salvare? Toate swap-urile vor fi, de asemenea, șterse din istoricul swap-urilor. Te rugăm să creezi o copie de rezervă a cheilor înainte de a continua, deoarece le poți folosi ulterior pentru a recupera acele swap-uri.",
     "views.SwapDetails.title": "Detalii schimb",
     "views.SwapDetails.acceptZeroConf": "Acceptă Zero Conf",
