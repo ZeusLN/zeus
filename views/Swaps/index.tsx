@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { TouchableOpacity, View, ScrollView } from 'react-native';
+import {
+    KeyboardAvoidingView,
+    Platform,
+    TouchableOpacity,
+    View,
+    ScrollView
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -833,255 +839,61 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     }}
                     navigation={navigation}
                 />
-                <ScrollView
-                    contentContainerStyle={{ flexGrow: 1 }}
-                    keyboardShouldPersistTaps="handled"
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
-                    <View style={{ flex: 1, margin: 10 }}>
-                        {loading && <LoadingIndicator />}
-                        {!loading && (
-                            <>
-                                {(error || apiError) && (
-                                    <ErrorMessage
-                                        message={error || apiError}
-                                        dismissable
-                                    />
-                                )}
+                    <ScrollView
+                        contentContainerStyle={{ flexGrow: 1 }}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        <View style={{ flex: 1, margin: 10 }}>
+                            {loading && <LoadingIndicator />}
+                            {!loading && (
+                                <>
+                                    {(error || apiError) && (
+                                        <ErrorMessage
+                                            message={error || apiError}
+                                            dismissable
+                                        />
+                                    )}
 
-                                {apiUpdates && (
-                                    <SuccessMessage
-                                        message={apiUpdates}
-                                        dismissable
-                                    />
-                                )}
+                                    {apiUpdates && (
+                                        <SuccessMessage
+                                            message={apiUpdates}
+                                            dismissable
+                                        />
+                                    )}
 
-                                <View style={{ alignItems: 'center' }}>
-                                    <Text
-                                        style={{
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 20,
-                                            marginBottom: 20
-                                        }}
-                                    >
-                                        {localeString('views.Swaps.create')}
-                                    </Text>
-                                </View>
-
-                                <View
-                                    style={{
-                                        flex: 1
-                                    }}
-                                >
-                                    <Row>
-                                        <View
+                                    <View style={{ alignItems: 'center' }}>
+                                        <Text
                                             style={{
-                                                flexDirection: 'column',
-                                                width: '89%'
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 20,
+                                                marginBottom: 20
                                             }}
                                         >
-                                            <Row
+                                            {localeString('views.Swaps.create')}
+                                        </Text>
+                                    </View>
+
+                                    <View
+                                        style={{
+                                            flex: 1
+                                        }}
+                                    >
+                                        <Row>
+                                            <View
                                                 style={{
-                                                    zIndex: 1,
-                                                    marginBottom: 10,
-                                                    marginRight: 5
+                                                    flexDirection: 'column',
+                                                    width: '89%'
                                                 }}
                                             >
-                                                <AmountInput
-                                                    prefix={
-                                                        <TouchableOpacity
-                                                            onPress={() => {
-                                                                this.setState(
-                                                                    {
-                                                                        reverse:
-                                                                            !reverse,
-                                                                        inputSats: 0,
-                                                                        outputSats: 0,
-                                                                        inputFiat:
-                                                                            '',
-                                                                        outputFiat:
-                                                                            '',
-                                                                        serviceFeeSats: 0,
-                                                                        invoice:
-                                                                            ''
-                                                                    },
-                                                                    () =>
-                                                                        this.checkIsValid()
-                                                                );
-                                                            }}
-                                                            style={{
-                                                                marginLeft: -10
-                                                            }}
-                                                        >
-                                                            {reverse ? (
-                                                                <LightningSvg
-                                                                    width={60}
-                                                                    circle={
-                                                                        false
-                                                                    }
-                                                                />
-                                                            ) : (
-                                                                <OnChainSvg
-                                                                    width={60}
-                                                                    circle={
-                                                                        false
-                                                                    }
-                                                                />
-                                                            )}
-                                                        </TouchableOpacity>
-                                                    }
-                                                    onAmountChange={(
-                                                        amount,
-                                                        satAmount:
-                                                            | string
-                                                            | number
-                                                    ) => {
-                                                        this.setState(
-                                                            (prevState) => ({
-                                                                error: '',
-                                                                invoice:
-                                                                    prevState.reverse
-                                                                        ? prevState.invoice
-                                                                        : ''
-                                                            })
-                                                        );
-
-                                                        if (
-                                                            !satAmount ||
-                                                            satAmount === '0'
-                                                        ) {
-                                                            this.setState({
-                                                                serviceFeeSats: 0,
-                                                                outputSats: 0
-                                                            });
-                                                        }
-
-                                                        const satAmountNew =
-                                                            new BigNumber(
-                                                                satAmount || 0
-                                                            );
-
-                                                        const outputSats =
-                                                            calculateReceiveAmount(
-                                                                satAmountNew,
-                                                                serviceFeePct,
-                                                                networkFee,
-                                                                reverse
-                                                            );
-
-                                                        let newOutputDisplayString =
-                                                            '';
-                                                        if (
-                                                            outputSats.isGreaterThan(
-                                                                0
-                                                            )
-                                                        ) {
-                                                            if (
-                                                                units === 'fiat'
-                                                            ) {
-                                                                newOutputDisplayString =
-                                                                    outputSats
-                                                                        .div(
-                                                                            SATS_PER_BTC
-                                                                        )
-                                                                        .times(
-                                                                            rate
-                                                                        )
-                                                                        .toFixed(
-                                                                            2
-                                                                        );
-                                                            } else if (
-                                                                units === 'BTC'
-                                                            ) {
-                                                                newOutputDisplayString =
-                                                                    outputSats
-                                                                        .div(
-                                                                            SATS_PER_BTC
-                                                                        )
-                                                                        .toFixed(
-                                                                            8
-                                                                        );
-                                                            } else if (
-                                                                units === 'sats'
-                                                            ) {
-                                                                newOutputDisplayString =
-                                                                    outputSats.toFixed(
-                                                                        0
-                                                                    );
-                                                            }
-                                                        }
-
-                                                        this.setState(
-                                                            {
-                                                                serviceFeeSats:
-                                                                    calculateServiceFeeOnSend(
-                                                                        satAmountNew,
-                                                                        serviceFeePct,
-                                                                        networkFee,
-                                                                        reverse
-                                                                    ),
-                                                                inputSats:
-                                                                    satAmountNew.toNumber(),
-                                                                outputSats,
-                                                                inputFiat:
-                                                                    amount &&
-                                                                    amount.toString(),
-                                                                outputFiat:
-                                                                    newOutputDisplayString
-                                                            },
-                                                            () =>
-                                                                this.checkIsValid()
-                                                        );
-                                                    }}
-                                                    amount={inputFiat}
-                                                    hideConversion
-                                                    hideUnitChangeButton
-                                                    error={errorInput}
-                                                />
-                                            </Row>
-                                            <TouchableOpacity
-                                                style={{
-                                                    alignSelf: 'center',
-                                                    position: 'absolute',
-                                                    zIndex: 100,
-                                                    top: 50
-                                                }}
-                                                onPress={() => {
-                                                    this.setState({
-                                                        reverse: !reverse,
-                                                        inputSats: 0,
-                                                        outputSats: 0,
-                                                        inputFiat: '',
-                                                        outputFiat: '',
-                                                        serviceFeeSats: 0,
-                                                        invoice: ''
-                                                    });
-                                                }}
-                                            >
-                                                <View
-                                                    style={{
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'background'
-                                                            ),
-                                                        borderRadius: 30,
-                                                        padding: 10,
-                                                        position: 'absolute'
-                                                    }}
-                                                >
-                                                    <ArrowDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        height="30"
-                                                        width="30"
-                                                    />
-                                                </View>
-                                            </TouchableOpacity>
-                                            <View style={{ zIndex: 2 }}>
                                                 <Row
                                                     style={{
                                                         zIndex: 1,
-                                                        top: -20,
+                                                        marginBottom: 10,
                                                         marginRight: 5
                                                     }}
                                                 >
@@ -1113,7 +925,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 }}
                                                             >
                                                                 {reverse ? (
-                                                                    <OnChainSvg
+                                                                    <LightningSvg
                                                                         width={
                                                                             60
                                                                         }
@@ -1122,7 +934,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                         }
                                                                     />
                                                                 ) : (
-                                                                    <LightningSvg
+                                                                    <OnChainSvg
                                                                         width={
                                                                             60
                                                                         }
@@ -1158,7 +970,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             ) {
                                                                 this.setState({
                                                                     serviceFeeSats: 0,
-                                                                    inputSats: 0
+                                                                    outputSats: 0
                                                                 });
                                                             }
 
@@ -1168,30 +980,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                         0
                                                                 );
 
-                                                            let input: any;
-                                                            if (
-                                                                satAmountNew.isEqualTo(
-                                                                    0
-                                                                )
-                                                            ) {
-                                                                input = 0;
-                                                            } else
-                                                                input =
-                                                                    calculateSendAmount(
-                                                                        satAmountNew,
-                                                                        serviceFeePct,
-                                                                        networkFee,
-                                                                        reverse
-                                                                    );
-
-                                                            const newInputSatsBN =
-                                                                new BigNumber(
-                                                                    input || 0
+                                                            const outputSats =
+                                                                calculateReceiveAmount(
+                                                                    satAmountNew,
+                                                                    serviceFeePct,
+                                                                    networkFee,
+                                                                    reverse
                                                                 );
-                                                            let newInputDisplayString =
+
+                                                            let newOutputDisplayString =
                                                                 '';
                                                             if (
-                                                                newInputSatsBN.isGreaterThan(
+                                                                outputSats.isGreaterThan(
                                                                     0
                                                                 )
                                                             ) {
@@ -1199,8 +999,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     units ===
                                                                     'fiat'
                                                                 ) {
-                                                                    newInputDisplayString =
-                                                                        newInputSatsBN
+                                                                    newOutputDisplayString =
+                                                                        outputSats
                                                                             .div(
                                                                                 SATS_PER_BTC
                                                                             )
@@ -1214,8 +1014,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     units ===
                                                                     'BTC'
                                                                 ) {
-                                                                    newInputDisplayString =
-                                                                        newInputSatsBN
+                                                                    newOutputDisplayString =
+                                                                        outputSats
                                                                             .div(
                                                                                 SATS_PER_BTC
                                                                             )
@@ -1226,950 +1026,1227 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     units ===
                                                                     'sats'
                                                                 ) {
-                                                                    newInputDisplayString =
-                                                                        newInputSatsBN.toFixed(
+                                                                    newOutputDisplayString =
+                                                                        outputSats.toFixed(
                                                                             0
                                                                         );
                                                                 }
                                                             }
-
-                                                            const serviceFeeSats =
-                                                                reverse && input
-                                                                    ? input
-                                                                          .times(
-                                                                              serviceFeePct
-                                                                          )
-                                                                          .div(
-                                                                              100
-                                                                          )
-                                                                    : satAmountNew
-                                                                          .times(
-                                                                              serviceFeePct
-                                                                          )
-                                                                          .div(
-                                                                              100
-                                                                          );
 
                                                             this.setState(
                                                                 {
                                                                     serviceFeeSats:
-                                                                        bigCeil(
-                                                                            serviceFeeSats
+                                                                        calculateServiceFeeOnSend(
+                                                                            satAmountNew,
+                                                                            serviceFeePct,
+                                                                            networkFee,
+                                                                            reverse
                                                                         ),
                                                                     inputSats:
-                                                                        input,
-                                                                    outputSats:
                                                                         satAmountNew.toNumber(),
+                                                                    outputSats,
                                                                     inputFiat:
-                                                                        newInputDisplayString,
-                                                                    outputFiat:
                                                                         amount &&
-                                                                        amount.toString()
+                                                                        amount.toString(),
+                                                                    outputFiat:
+                                                                        newOutputDisplayString
                                                                 },
                                                                 () =>
                                                                     this.checkIsValid()
                                                             );
                                                         }}
-                                                        amount={outputFiat}
+                                                        amount={inputFiat}
                                                         hideConversion
                                                         hideUnitChangeButton
-                                                        error={errorOutput}
+                                                        error={errorInput}
                                                     />
                                                 </Row>
-                                            </View>
-                                        </View>
-                                        <View
-                                            style={{
-                                                flexDirection: 'column',
-                                                width: '11%'
-                                            }}
-                                        >
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    const {
-                                                        FiatStore,
-                                                        SettingsStore
-                                                    } = this.props;
-                                                    const { fiatRates } =
-                                                        FiatStore;
-                                                    const { settings } =
-                                                        SettingsStore;
-                                                    const { fiat } = settings;
-
-                                                    const fiatEntry =
-                                                        fiat && fiatRates
-                                                            ? fiatRates.filter(
-                                                                  (entry) =>
-                                                                      entry.code ===
-                                                                      fiat
-                                                              )[0]
-                                                            : null;
-                                                    const rate =
-                                                        fiat &&
-                                                        fiatRates &&
-                                                        fiatEntry
-                                                            ? fiatEntry.rate
-                                                            : 0;
-
-                                                    UnitsStore.changeUnits();
-                                                    const newUnit =
-                                                        UnitsStore.units;
-
-                                                    this.setState(
-                                                        (prevState) => {
-                                                            const currentInputSats =
-                                                                new BigNumber(
-                                                                    prevState.inputSats ||
-                                                                        0
-                                                                );
-                                                            const currentOutputSats =
-                                                                new BigNumber(
-                                                                    prevState.outputSats ||
-                                                                        0
-                                                                );
-                                                            let newInputDisplayAmount =
-                                                                '';
-                                                            let newOutputDisplayAmount =
-                                                                '';
-
-                                                            if (
-                                                                newUnit ===
-                                                                    'fiat' &&
-                                                                rate > 0
-                                                            ) {
-                                                                if (
-                                                                    currentInputSats.isGreaterThan(
-                                                                        0
-                                                                    )
-                                                                ) {
-                                                                    newInputDisplayAmount =
-                                                                        currentInputSats
-                                                                            .div(
-                                                                                SATS_PER_BTC
-                                                                            )
-                                                                            .times(
-                                                                                rate
-                                                                            )
-                                                                            .toFixed(
-                                                                                2
-                                                                            );
-                                                                }
-                                                                if (
-                                                                    currentOutputSats.isGreaterThan(
-                                                                        0
-                                                                    )
-                                                                ) {
-                                                                    newOutputDisplayAmount =
-                                                                        currentOutputSats
-                                                                            .div(
-                                                                                SATS_PER_BTC
-                                                                            )
-                                                                            .times(
-                                                                                rate
-                                                                            )
-                                                                            .toFixed(
-                                                                                2
-                                                                            );
-                                                                }
-                                                            } else if (
-                                                                newUnit ===
-                                                                'BTC'
-                                                            ) {
-                                                                if (
-                                                                    currentInputSats.isGreaterThan(
-                                                                        0
-                                                                    )
-                                                                ) {
-                                                                    newInputDisplayAmount =
-                                                                        currentInputSats
-                                                                            .div(
-                                                                                SATS_PER_BTC
-                                                                            )
-                                                                            .toFixed(
-                                                                                8
-                                                                            );
-                                                                }
-                                                                if (
-                                                                    currentOutputSats.isGreaterThan(
-                                                                        0
-                                                                    )
-                                                                ) {
-                                                                    newOutputDisplayAmount =
-                                                                        currentOutputSats
-                                                                            .div(
-                                                                                SATS_PER_BTC
-                                                                            )
-                                                                            .toFixed(
-                                                                                8
-                                                                            );
-                                                                }
-                                                            } else if (
-                                                                newUnit ===
-                                                                'sats'
-                                                            ) {
-                                                                if (
-                                                                    currentInputSats.isGreaterThan(
-                                                                        0
-                                                                    )
-                                                                ) {
-                                                                    newInputDisplayAmount =
-                                                                        currentInputSats.toFixed(
-                                                                            0
+                                                <TouchableOpacity
+                                                    style={{
+                                                        alignSelf: 'center',
+                                                        position: 'absolute',
+                                                        zIndex: 100,
+                                                        top: 50
+                                                    }}
+                                                    onPress={() => {
+                                                        this.setState({
+                                                            reverse: !reverse,
+                                                            inputSats: 0,
+                                                            outputSats: 0,
+                                                            inputFiat: '',
+                                                            outputFiat: '',
+                                                            serviceFeeSats: 0,
+                                                            invoice: ''
+                                                        });
+                                                    }}
+                                                >
+                                                    <View
+                                                        style={{
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'background'
+                                                                ),
+                                                            borderRadius: 30,
+                                                            padding: 10,
+                                                            position: 'absolute'
+                                                        }}
+                                                    >
+                                                        <ArrowDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            height="30"
+                                                            width="30"
+                                                        />
+                                                    </View>
+                                                </TouchableOpacity>
+                                                <View style={{ zIndex: 2 }}>
+                                                    <Row
+                                                        style={{
+                                                            zIndex: 1,
+                                                            top: -20,
+                                                            marginRight: 5
+                                                        }}
+                                                    >
+                                                        <AmountInput
+                                                            prefix={
+                                                                <TouchableOpacity
+                                                                    onPress={() => {
+                                                                        this.setState(
+                                                                            {
+                                                                                reverse:
+                                                                                    !reverse,
+                                                                                inputSats: 0,
+                                                                                outputSats: 0,
+                                                                                inputFiat:
+                                                                                    '',
+                                                                                outputFiat:
+                                                                                    '',
+                                                                                serviceFeeSats: 0,
+                                                                                invoice:
+                                                                                    ''
+                                                                            },
+                                                                            () =>
+                                                                                this.checkIsValid()
                                                                         );
-                                                                }
-                                                                if (
-                                                                    currentOutputSats.isGreaterThan(
-                                                                        0
-                                                                    )
-                                                                ) {
-                                                                    newOutputDisplayAmount =
-                                                                        currentOutputSats.toFixed(
-                                                                            0
-                                                                        );
-                                                                }
+                                                                    }}
+                                                                    style={{
+                                                                        marginLeft:
+                                                                            -10
+                                                                    }}
+                                                                >
+                                                                    {reverse ? (
+                                                                        <OnChainSvg
+                                                                            width={
+                                                                                60
+                                                                            }
+                                                                            circle={
+                                                                                false
+                                                                            }
+                                                                        />
+                                                                    ) : (
+                                                                        <LightningSvg
+                                                                            width={
+                                                                                60
+                                                                            }
+                                                                            circle={
+                                                                                false
+                                                                            }
+                                                                        />
+                                                                    )}
+                                                                </TouchableOpacity>
                                                             }
-
-                                                            return {
-                                                                inputFiat:
-                                                                    newInputDisplayAmount,
-                                                                outputFiat:
-                                                                    newOutputDisplayAmount
-                                                            };
-                                                        }
-                                                    );
-                                                }}
-                                                style={{
-                                                    marginLeft: 10,
-                                                    top: -10
-                                                }}
-                                            >
-                                                {UnitsStore!.getNextUnit() ===
-                                                'fiat' ? (
-                                                    <ExchangeFiatSVG
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="35"
-                                                        height="35"
-                                                    />
-                                                ) : (
-                                                    <ExchangeBitcoinSVG
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="35"
-                                                        height="35"
-                                                    />
-                                                )}
-                                            </TouchableOpacity>
-                                        </View>
-                                    </Row>
-
-                                    <Row justify="space-between">
-                                        <View>
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {`${localeString(
-                                                        'views.Swaps.networkFee'
-                                                    )}: `}
-                                                </Text>
-                                                <Amount sats={networkFee} />
-                                            </Row>
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {`${localeString(
-                                                        'views.Swaps.serviceFee'
-                                                    )}: `}
-                                                </Text>
-                                                <Amount sats={serviceFeeSats} />
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {` (${serviceFeePct}%)`}
-                                                </Text>
-                                            </Row>
-                                        </View>
-                                        <View>
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    this.setState({
-                                                        error: ''
-                                                    });
-
-                                                    const satAmountNew =
-                                                        new BigNumber(min || 0);
-
-                                                    let inputFiat = '';
-                                                    if (
-                                                        satAmountNew.isGreaterThan(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        if (units === 'fiat') {
-                                                            inputFiat =
-                                                                satAmountNew
-                                                                    .div(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .times(rate)
-                                                                    .toFixed(2);
-                                                        } else if (
-                                                            units === 'BTC'
-                                                        ) {
-                                                            inputFiat =
-                                                                satAmountNew
-                                                                    .div(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .toFixed(8);
-                                                        } else if (
-                                                            units === 'sats'
-                                                        ) {
-                                                            inputFiat =
-                                                                satAmountNew.toFixed(
-                                                                    0
+                                                            onAmountChange={(
+                                                                amount,
+                                                                satAmount:
+                                                                    | string
+                                                                    | number
+                                                            ) => {
+                                                                this.setState(
+                                                                    (
+                                                                        prevState
+                                                                    ) => ({
+                                                                        error: '',
+                                                                        invoice:
+                                                                            prevState.reverse
+                                                                                ? prevState.invoice
+                                                                                : ''
+                                                                    })
                                                                 );
-                                                        }
-                                                    }
 
-                                                    if (
-                                                        satAmountNew.isEqualTo(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        this.setState({
-                                                            serviceFeeSats: 0,
-                                                            outputSats: 0
-                                                        });
-                                                    }
+                                                                if (
+                                                                    !satAmount ||
+                                                                    satAmount ===
+                                                                        '0'
+                                                                ) {
+                                                                    this.setState(
+                                                                        {
+                                                                            serviceFeeSats: 0,
+                                                                            inputSats: 0
+                                                                        }
+                                                                    );
+                                                                }
 
-                                                    const outputSats =
-                                                        calculateReceiveAmount(
-                                                            satAmountNew,
-                                                            serviceFeePct,
-                                                            networkFee,
-                                                            reverse
-                                                        );
+                                                                const satAmountNew =
+                                                                    new BigNumber(
+                                                                        satAmount ||
+                                                                            0
+                                                                    );
 
-                                                    let outputFiat = '';
-                                                    if (
-                                                        outputSats.isGreaterThan(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        if (units === 'fiat') {
-                                                            outputFiat =
-                                                                outputSats
-                                                                    .div(
-                                                                        SATS_PER_BTC
+                                                                let input: any;
+                                                                if (
+                                                                    satAmountNew.isEqualTo(
+                                                                        0
                                                                     )
-                                                                    .times(rate)
-                                                                    .toFixed(2);
-                                                        } else if (
-                                                            units === 'BTC'
-                                                        ) {
-                                                            outputFiat =
-                                                                outputSats
-                                                                    .div(
-                                                                        SATS_PER_BTC
+                                                                ) {
+                                                                    input = 0;
+                                                                } else
+                                                                    input =
+                                                                        calculateSendAmount(
+                                                                            satAmountNew,
+                                                                            serviceFeePct,
+                                                                            networkFee,
+                                                                            reverse
+                                                                        );
+
+                                                                const newInputSatsBN =
+                                                                    new BigNumber(
+                                                                        input ||
+                                                                            0
+                                                                    );
+                                                                let newInputDisplayString =
+                                                                    '';
+                                                                if (
+                                                                    newInputSatsBN.isGreaterThan(
+                                                                        0
                                                                     )
-                                                                    .toFixed(8);
-                                                        } else if (
-                                                            units === 'sats'
-                                                        ) {
-                                                            outputFiat =
-                                                                outputSats.toFixed(
-                                                                    0
+                                                                ) {
+                                                                    if (
+                                                                        units ===
+                                                                        'fiat'
+                                                                    ) {
+                                                                        newInputDisplayString =
+                                                                            newInputSatsBN
+                                                                                .div(
+                                                                                    SATS_PER_BTC
+                                                                                )
+                                                                                .times(
+                                                                                    rate
+                                                                                )
+                                                                                .toFixed(
+                                                                                    2
+                                                                                );
+                                                                    } else if (
+                                                                        units ===
+                                                                        'BTC'
+                                                                    ) {
+                                                                        newInputDisplayString =
+                                                                            newInputSatsBN
+                                                                                .div(
+                                                                                    SATS_PER_BTC
+                                                                                )
+                                                                                .toFixed(
+                                                                                    8
+                                                                                );
+                                                                    } else if (
+                                                                        units ===
+                                                                        'sats'
+                                                                    ) {
+                                                                        newInputDisplayString =
+                                                                            newInputSatsBN.toFixed(
+                                                                                0
+                                                                            );
+                                                                    }
+                                                                }
+
+                                                                const serviceFeeSats =
+                                                                    reverse &&
+                                                                    input
+                                                                        ? input
+                                                                              .times(
+                                                                                  serviceFeePct
+                                                                              )
+                                                                              .div(
+                                                                                  100
+                                                                              )
+                                                                        : satAmountNew
+                                                                              .times(
+                                                                                  serviceFeePct
+                                                                              )
+                                                                              .div(
+                                                                                  100
+                                                                              );
+
+                                                                this.setState(
+                                                                    {
+                                                                        serviceFeeSats:
+                                                                            bigCeil(
+                                                                                serviceFeeSats
+                                                                            ),
+                                                                        inputSats:
+                                                                            input,
+                                                                        outputSats:
+                                                                            satAmountNew.toNumber(),
+                                                                        inputFiat:
+                                                                            newInputDisplayString,
+                                                                        outputFiat:
+                                                                            amount &&
+                                                                            amount.toString()
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
                                                                 );
-                                                        }
-                                                    }
-
-                                                    this.setState({
-                                                        serviceFeeSats:
-                                                            calculateServiceFeeOnSend(
-                                                                satAmountNew,
-                                                                serviceFeePct,
-                                                                networkFee,
-                                                                reverse
-                                                            ),
-                                                        inputSats:
-                                                            satAmountNew.toNumber(),
-                                                        outputSats,
-                                                        inputFiat,
-                                                        outputFiat
-                                                    });
-                                                }}
-                                            >
-                                                <Row>
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book'
-                                                        }}
-                                                    >
-                                                        {`${localeString(
-                                                            'general.min'
-                                                        )}: `}
-                                                    </Text>
-                                                    <Amount sats={min} />
-                                                </Row>
-                                            </TouchableOpacity>
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    this.setState({
-                                                        error: ''
-                                                    });
-
-                                                    const satAmountNew =
-                                                        new BigNumber(max || 0);
-
-                                                    let inputFiat = '';
-                                                    if (
-                                                        satAmountNew.isGreaterThan(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        if (units === 'fiat') {
-                                                            inputFiat =
-                                                                satAmountNew
-                                                                    .div(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .times(rate)
-                                                                    .toFixed(2);
-                                                        } else if (
-                                                            units === 'BTC'
-                                                        ) {
-                                                            inputFiat =
-                                                                satAmountNew
-                                                                    .div(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .toFixed(8);
-                                                        } else if (
-                                                            units === 'sats'
-                                                        ) {
-                                                            inputFiat =
-                                                                satAmountNew.toFixed(
-                                                                    0
-                                                                );
-                                                        }
-                                                    }
-
-                                                    if (
-                                                        satAmountNew.isEqualTo(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        this.setState({
-                                                            serviceFeeSats: 0,
-                                                            outputSats: 0
-                                                        });
-                                                    }
-
-                                                    const outputSats =
-                                                        calculateReceiveAmount(
-                                                            satAmountNew,
-                                                            serviceFeePct,
-                                                            networkFee,
-                                                            reverse
-                                                        );
-
-                                                    let outputFiat = '';
-                                                    if (
-                                                        outputSats.isGreaterThan(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        if (units === 'fiat') {
-                                                            outputFiat =
-                                                                outputSats
-                                                                    .div(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .times(rate)
-                                                                    .toFixed(2);
-                                                        } else if (
-                                                            units === 'BTC'
-                                                        ) {
-                                                            outputFiat =
-                                                                outputSats
-                                                                    .div(
-                                                                        SATS_PER_BTC
-                                                                    )
-                                                                    .toFixed(8);
-                                                        } else if (
-                                                            units === 'sats'
-                                                        ) {
-                                                            outputFiat =
-                                                                outputSats.toFixed(
-                                                                    0
-                                                                );
-                                                        }
-                                                    }
-
-                                                    this.setState({
-                                                        serviceFeeSats:
-                                                            calculateServiceFeeOnSend(
-                                                                satAmountNew,
-                                                                serviceFeePct,
-                                                                networkFee,
-                                                                reverse
-                                                            ),
-                                                        inputSats:
-                                                            satAmountNew.toNumber(),
-                                                        outputSats,
-                                                        inputFiat,
-                                                        outputFiat
-                                                    });
-                                                }}
-                                            >
-                                                <Row>
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book'
-                                                        }}
-                                                    >
-                                                        {`${localeString(
-                                                            'general.max'
-                                                        )}: `}
-                                                    </Text>
-                                                    <Amount sats={max} />
-                                                </Row>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </Row>
-                                </View>
-                                {BackendUtils.supportsFlowLSP() &&
-                                    !flowLspNotConfigured &&
-                                    !reverse && (
-                                        <View
-                                            style={{
-                                                paddingHorizontal: 20,
-                                                flexDirection: 'column',
-                                                marginBottom: 15
-                                            }}
-                                        >
+                                                            }}
+                                                            amount={outputFiat}
+                                                            hideConversion
+                                                            hideUnitChangeButton
+                                                            error={errorOutput}
+                                                        />
+                                                    </Row>
+                                                </View>
+                                            </View>
                                             <View
                                                 style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    alignItems: 'center',
-                                                    marginBottom:
-                                                        zeroConfFee !==
-                                                            undefined &&
-                                                        invoice &&
-                                                        enableLSP
-                                                            ? 8
-                                                            : 0
+                                                    flexDirection: 'column',
+                                                    width: '11%'
                                                 }}
                                             >
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book',
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        fontSize: 16
-                                                    }}
-                                                    infoModalText={[
-                                                        localeString(
-                                                            'views.Receive.lspSwitchExplainer1'
-                                                        ),
-                                                        localeString(
-                                                            'views.Receive.lspSwitchExplainer2'
-                                                        )
-                                                    ]}
-                                                    infoModalAdditionalButtons={[
-                                                        {
-                                                            title: localeString(
-                                                                'general.learnMore'
-                                                            ),
-                                                            callback: () =>
-                                                                navigation.navigate(
-                                                                    'LspExplanationOverview'
-                                                                )
-                                                        }
-                                                    ]}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.LSP.enableLSP'
-                                                    )}
-                                                </Text>
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        const {
+                                                            FiatStore,
+                                                            SettingsStore
+                                                        } = this.props;
+                                                        const { fiatRates } =
+                                                            FiatStore;
+                                                        const { settings } =
+                                                            SettingsStore;
+                                                        const { fiat } =
+                                                            settings;
 
-                                                <Switch
-                                                    value={enableLSP}
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            enableLSP:
-                                                                !enableLSP,
-                                                            invoice: '',
-                                                            error: ''
-                                                        });
-                                                        SwapStore.apiError = '';
-                                                        await updateSettings({
-                                                            enableLSP:
-                                                                !enableLSP
-                                                        });
+                                                        const fiatEntry =
+                                                            fiat && fiatRates
+                                                                ? fiatRates.filter(
+                                                                      (entry) =>
+                                                                          entry.code ===
+                                                                          fiat
+                                                                  )[0]
+                                                                : null;
+                                                        const rate =
+                                                            fiat &&
+                                                            fiatRates &&
+                                                            fiatEntry
+                                                                ? fiatEntry.rate
+                                                                : 0;
+
+                                                        UnitsStore.changeUnits();
+                                                        const newUnit =
+                                                            UnitsStore.units;
+
+                                                        this.setState(
+                                                            (prevState) => {
+                                                                const currentInputSats =
+                                                                    new BigNumber(
+                                                                        prevState.inputSats ||
+                                                                            0
+                                                                    );
+                                                                const currentOutputSats =
+                                                                    new BigNumber(
+                                                                        prevState.outputSats ||
+                                                                            0
+                                                                    );
+                                                                let newInputDisplayAmount =
+                                                                    '';
+                                                                let newOutputDisplayAmount =
+                                                                    '';
+
+                                                                if (
+                                                                    newUnit ===
+                                                                        'fiat' &&
+                                                                    rate > 0
+                                                                ) {
+                                                                    if (
+                                                                        currentInputSats.isGreaterThan(
+                                                                            0
+                                                                        )
+                                                                    ) {
+                                                                        newInputDisplayAmount =
+                                                                            currentInputSats
+                                                                                .div(
+                                                                                    SATS_PER_BTC
+                                                                                )
+                                                                                .times(
+                                                                                    rate
+                                                                                )
+                                                                                .toFixed(
+                                                                                    2
+                                                                                );
+                                                                    }
+                                                                    if (
+                                                                        currentOutputSats.isGreaterThan(
+                                                                            0
+                                                                        )
+                                                                    ) {
+                                                                        newOutputDisplayAmount =
+                                                                            currentOutputSats
+                                                                                .div(
+                                                                                    SATS_PER_BTC
+                                                                                )
+                                                                                .times(
+                                                                                    rate
+                                                                                )
+                                                                                .toFixed(
+                                                                                    2
+                                                                                );
+                                                                    }
+                                                                } else if (
+                                                                    newUnit ===
+                                                                    'BTC'
+                                                                ) {
+                                                                    if (
+                                                                        currentInputSats.isGreaterThan(
+                                                                            0
+                                                                        )
+                                                                    ) {
+                                                                        newInputDisplayAmount =
+                                                                            currentInputSats
+                                                                                .div(
+                                                                                    SATS_PER_BTC
+                                                                                )
+                                                                                .toFixed(
+                                                                                    8
+                                                                                );
+                                                                    }
+                                                                    if (
+                                                                        currentOutputSats.isGreaterThan(
+                                                                            0
+                                                                        )
+                                                                    ) {
+                                                                        newOutputDisplayAmount =
+                                                                            currentOutputSats
+                                                                                .div(
+                                                                                    SATS_PER_BTC
+                                                                                )
+                                                                                .toFixed(
+                                                                                    8
+                                                                                );
+                                                                    }
+                                                                } else if (
+                                                                    newUnit ===
+                                                                    'sats'
+                                                                ) {
+                                                                    if (
+                                                                        currentInputSats.isGreaterThan(
+                                                                            0
+                                                                        )
+                                                                    ) {
+                                                                        newInputDisplayAmount =
+                                                                            currentInputSats.toFixed(
+                                                                                0
+                                                                            );
+                                                                    }
+                                                                    if (
+                                                                        currentOutputSats.isGreaterThan(
+                                                                            0
+                                                                        )
+                                                                    ) {
+                                                                        newOutputDisplayAmount =
+                                                                            currentOutputSats.toFixed(
+                                                                                0
+                                                                            );
+                                                                    }
+                                                                }
+
+                                                                return {
+                                                                    inputFiat:
+                                                                        newInputDisplayAmount,
+                                                                    outputFiat:
+                                                                        newOutputDisplayAmount
+                                                                };
+                                                            }
+                                                        );
                                                     }}
-                                                />
+                                                    style={{
+                                                        marginLeft: 10,
+                                                        top: -10
+                                                    }}
+                                                >
+                                                    {UnitsStore!.getNextUnit() ===
+                                                    'fiat' ? (
+                                                        <ExchangeFiatSVG
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="35"
+                                                            height="35"
+                                                        />
+                                                    ) : (
+                                                        <ExchangeBitcoinSVG
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="35"
+                                                            height="35"
+                                                        />
+                                                    )}
+                                                </TouchableOpacity>
                                             </View>
-                                            {zeroConfFee !== undefined &&
-                                                enableLSP &&
-                                                invoice && (
-                                                    <TouchableOpacity
-                                                        onPress={() => {
-                                                            this.isNavigatingToLSPFees =
-                                                                true;
-                                                            navigation.navigate(
-                                                                new BigNumber(
-                                                                    zeroConfFee
-                                                                ).gt(1000)
-                                                                    ? 'LspExplanationFees'
-                                                                    : 'LspExplanationRouting'
-                                                            );
+                                        </Row>
+
+                                        <Row justify="space-between">
+                                            <View>
+                                                <Row>
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
                                                         }}
                                                     >
-                                                        <View
+                                                        {`${localeString(
+                                                            'views.Swaps.networkFee'
+                                                        )}: `}
+                                                    </Text>
+                                                    <Amount sats={networkFee} />
+                                                </Row>
+                                                <Row>
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
+                                                        }}
+                                                    >
+                                                        {`${localeString(
+                                                            'views.Swaps.serviceFee'
+                                                        )}: `}
+                                                    </Text>
+                                                    <Amount
+                                                        sats={serviceFeeSats}
+                                                    />
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book'
+                                                        }}
+                                                    >
+                                                        {` (${serviceFeePct}%)`}
+                                                    </Text>
+                                                </Row>
+                                            </View>
+                                            <View>
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        this.setState({
+                                                            error: ''
+                                                        });
+
+                                                        const satAmountNew =
+                                                            new BigNumber(
+                                                                min || 0
+                                                            );
+
+                                                        let inputFiat = '';
+                                                        if (
+                                                            satAmountNew.isGreaterThan(
+                                                                0
+                                                            )
+                                                        ) {
+                                                            if (
+                                                                units === 'fiat'
+                                                            ) {
+                                                                inputFiat =
+                                                                    satAmountNew
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .times(
+                                                                            rate
+                                                                        )
+                                                                        .toFixed(
+                                                                            2
+                                                                        );
+                                                            } else if (
+                                                                units === 'BTC'
+                                                            ) {
+                                                                inputFiat =
+                                                                    satAmountNew
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .toFixed(
+                                                                            8
+                                                                        );
+                                                            } else if (
+                                                                units === 'sats'
+                                                            ) {
+                                                                inputFiat =
+                                                                    satAmountNew.toFixed(
+                                                                        0
+                                                                    );
+                                                            }
+                                                        }
+
+                                                        if (
+                                                            satAmountNew.isEqualTo(
+                                                                0
+                                                            )
+                                                        ) {
+                                                            this.setState({
+                                                                serviceFeeSats: 0,
+                                                                outputSats: 0
+                                                            });
+                                                        }
+
+                                                        const outputSats =
+                                                            calculateReceiveAmount(
+                                                                satAmountNew,
+                                                                serviceFeePct,
+                                                                networkFee,
+                                                                reverse
+                                                            );
+
+                                                        let outputFiat = '';
+                                                        if (
+                                                            outputSats.isGreaterThan(
+                                                                0
+                                                            )
+                                                        ) {
+                                                            if (
+                                                                units === 'fiat'
+                                                            ) {
+                                                                outputFiat =
+                                                                    outputSats
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .times(
+                                                                            rate
+                                                                        )
+                                                                        .toFixed(
+                                                                            2
+                                                                        );
+                                                            } else if (
+                                                                units === 'BTC'
+                                                            ) {
+                                                                outputFiat =
+                                                                    outputSats
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .toFixed(
+                                                                            8
+                                                                        );
+                                                            } else if (
+                                                                units === 'sats'
+                                                            ) {
+                                                                outputFiat =
+                                                                    outputSats.toFixed(
+                                                                        0
+                                                                    );
+                                                            }
+                                                        }
+
+                                                        this.setState({
+                                                            serviceFeeSats:
+                                                                calculateServiceFeeOnSend(
+                                                                    satAmountNew,
+                                                                    serviceFeePct,
+                                                                    networkFee,
+                                                                    reverse
+                                                                ),
+                                                            inputSats:
+                                                                satAmountNew.toNumber(),
+                                                            outputSats,
+                                                            inputFiat,
+                                                            outputFiat
+                                                        });
+                                                    }}
+                                                >
+                                                    <Row>
+                                                        <Text
                                                             style={{
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'secondary'
-                                                                    ),
-                                                                borderRadius: 10,
-                                                                top: 10,
-                                                                padding: 15,
-                                                                borderWidth: 0.5
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book'
                                                             }}
                                                         >
-                                                            <Text
-                                                                style={{
-                                                                    fontFamily:
-                                                                        'PPNeueMontreal-Medium',
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    ),
-                                                                    marginBottom: 5
-                                                                }}
-                                                            >
-                                                                {localeString(
+                                                            {`${localeString(
+                                                                'general.min'
+                                                            )}: `}
+                                                        </Text>
+                                                        <Amount sats={min} />
+                                                    </Row>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        this.setState({
+                                                            error: ''
+                                                        });
+
+                                                        const satAmountNew =
+                                                            new BigNumber(
+                                                                max || 0
+                                                            );
+
+                                                        let inputFiat = '';
+                                                        if (
+                                                            satAmountNew.isGreaterThan(
+                                                                0
+                                                            )
+                                                        ) {
+                                                            if (
+                                                                units === 'fiat'
+                                                            ) {
+                                                                inputFiat =
+                                                                    satAmountNew
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .times(
+                                                                            rate
+                                                                        )
+                                                                        .toFixed(
+                                                                            2
+                                                                        );
+                                                            } else if (
+                                                                units === 'BTC'
+                                                            ) {
+                                                                inputFiat =
+                                                                    satAmountNew
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .toFixed(
+                                                                            8
+                                                                        );
+                                                            } else if (
+                                                                units === 'sats'
+                                                            ) {
+                                                                inputFiat =
+                                                                    satAmountNew.toFixed(
+                                                                        0
+                                                                    );
+                                                            }
+                                                        }
+
+                                                        if (
+                                                            satAmountNew.isEqualTo(
+                                                                0
+                                                            )
+                                                        ) {
+                                                            this.setState({
+                                                                serviceFeeSats: 0,
+                                                                outputSats: 0
+                                                            });
+                                                        }
+
+                                                        const outputSats =
+                                                            calculateReceiveAmount(
+                                                                satAmountNew,
+                                                                serviceFeePct,
+                                                                networkFee,
+                                                                reverse
+                                                            );
+
+                                                        let outputFiat = '';
+                                                        if (
+                                                            outputSats.isGreaterThan(
+                                                                0
+                                                            )
+                                                        ) {
+                                                            if (
+                                                                units === 'fiat'
+                                                            ) {
+                                                                outputFiat =
+                                                                    outputSats
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .times(
+                                                                            rate
+                                                                        )
+                                                                        .toFixed(
+                                                                            2
+                                                                        );
+                                                            } else if (
+                                                                units === 'BTC'
+                                                            ) {
+                                                                outputFiat =
+                                                                    outputSats
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .toFixed(
+                                                                            8
+                                                                        );
+                                                            } else if (
+                                                                units === 'sats'
+                                                            ) {
+                                                                outputFiat =
+                                                                    outputSats.toFixed(
+                                                                        0
+                                                                    );
+                                                            }
+                                                        }
+
+                                                        this.setState({
+                                                            serviceFeeSats:
+                                                                calculateServiceFeeOnSend(
+                                                                    satAmountNew,
+                                                                    serviceFeePct,
+                                                                    networkFee,
+                                                                    reverse
+                                                                ),
+                                                            inputSats:
+                                                                satAmountNew.toNumber(),
+                                                            outputSats,
+                                                            inputFiat,
+                                                            outputFiat
+                                                        });
+                                                    }}
+                                                >
+                                                    <Row>
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book'
+                                                            }}
+                                                        >
+                                                            {`${localeString(
+                                                                'general.max'
+                                                            )}: `}
+                                                        </Text>
+                                                        <Amount sats={max} />
+                                                    </Row>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </Row>
+                                    </View>
+                                    {BackendUtils.supportsFlowLSP() &&
+                                        !flowLspNotConfigured &&
+                                        !reverse && (
+                                            <View
+                                                style={{
+                                                    paddingHorizontal: 20,
+                                                    flexDirection: 'column',
+                                                    marginBottom: 15
+                                                }}
+                                            >
+                                                <View
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row',
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems: 'center',
+                                                        marginBottom:
+                                                            zeroConfFee !==
+                                                                undefined &&
+                                                            invoice &&
+                                                            enableLSP
+                                                                ? 8
+                                                                : 0
+                                                    }}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 16
+                                                        }}
+                                                        infoModalText={[
+                                                            localeString(
+                                                                'views.Receive.lspSwitchExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.lspSwitchExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoModalAdditionalButtons={[
+                                                            {
+                                                                title: localeString(
+                                                                    'general.learnMore'
+                                                                ),
+                                                                callback: () =>
+                                                                    navigation.navigate(
+                                                                        'LspExplanationOverview'
+                                                                    )
+                                                            }
+                                                        ]}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.LSP.enableLSP'
+                                                        )}
+                                                    </Text>
+
+                                                    <Switch
+                                                        value={enableLSP}
+                                                        onValueChange={async () => {
+                                                            this.setState({
+                                                                enableLSP:
+                                                                    !enableLSP,
+                                                                invoice: '',
+                                                                error: ''
+                                                            });
+                                                            SwapStore.apiError =
+                                                                '';
+                                                            await updateSettings(
+                                                                {
+                                                                    enableLSP:
+                                                                        !enableLSP
+                                                                }
+                                                            );
+                                                        }}
+                                                    />
+                                                </View>
+                                                {zeroConfFee !== undefined &&
+                                                    enableLSP &&
+                                                    invoice && (
+                                                        <TouchableOpacity
+                                                            onPress={() => {
+                                                                this.isNavigatingToLSPFees =
+                                                                    true;
+                                                                navigation.navigate(
                                                                     new BigNumber(
                                                                         zeroConfFee
                                                                     ).gt(1000)
-                                                                        ? 'views.Receive.lspExplainer'
-                                                                        : 'views.Receive.lspExplainerRouting'
-                                                                )}
-                                                            </Text>
-                                                            <Amount
-                                                                sats={
-                                                                    zeroConfFee
-                                                                }
-                                                                fixedUnits="sats"
-                                                            />
-                                                            <Text
+                                                                        ? 'LspExplanationFees'
+                                                                        : 'LspExplanationRouting'
+                                                                );
+                                                            }}
+                                                        >
+                                                            <View
                                                                 style={{
-                                                                    fontFamily:
-                                                                        'PPNeueMontreal-Medium',
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    ),
-                                                                    fontSize: 15,
-                                                                    top: 5,
-                                                                    textAlign:
-                                                                        'right'
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'secondary'
+                                                                        ),
+                                                                    borderRadius: 10,
+                                                                    top: 10,
+                                                                    padding: 15,
+                                                                    borderWidth: 0.5
                                                                 }}
                                                             >
-                                                                {localeString(
-                                                                    'general.tapToLearnMore'
-                                                                )}
-                                                            </Text>
-                                                        </View>
-                                                    </TouchableOpacity>
-                                                )}
-                                        </View>
-                                    )}
+                                                                <Text
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            'PPNeueMontreal-Medium',
+                                                                        color: themeColor(
+                                                                            'text'
+                                                                        ),
+                                                                        marginBottom: 5
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        new BigNumber(
+                                                                            zeroConfFee
+                                                                        ).gt(
+                                                                            1000
+                                                                        )
+                                                                            ? 'views.Receive.lspExplainer'
+                                                                            : 'views.Receive.lspExplainerRouting'
+                                                                    )}
+                                                                </Text>
+                                                                <Amount
+                                                                    sats={
+                                                                        zeroConfFee
+                                                                    }
+                                                                    fixedUnits="sats"
+                                                                />
+                                                                <Text
+                                                                    style={{
+                                                                        fontFamily:
+                                                                            'PPNeueMontreal-Medium',
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        ),
+                                                                        fontSize: 15,
+                                                                        top: 5,
+                                                                        textAlign:
+                                                                            'right'
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        'general.tapToLearnMore'
+                                                                    )}
+                                                                </Text>
+                                                            </View>
+                                                        </TouchableOpacity>
+                                                    )}
+                                            </View>
+                                        )}
 
-                                <AddressInput
-                                    value={invoice}
-                                    onChangeText={(text: string) => {
-                                        this.setState(
-                                            {
-                                                invoice: text,
-                                                error: '',
-                                                apiUpdates: ''
-                                            },
-                                            () => this.checkIsValid()
-                                        );
-                                    }}
-                                    onScan={() =>
-                                        navigation.navigate(
-                                            'HandleAnythingQRScanner',
-                                            { view: 'Swaps' }
-                                        )
-                                    }
-                                    placeholder={
-                                        fetchingInvoice
-                                            ? ''
-                                            : reverse
-                                            ? localeString(
-                                                  'views.Settings.AddContact.onchainAddress'
-                                              )
-                                            : localeString(
-                                                  'views.PaymentRequest.title'
-                                              )
-                                    }
-                                    loading={fetchingInvoice}
-                                    style={{ marginHorizontal: 20 }}
-                                />
+                                    <AddressInput
+                                        value={invoice}
+                                        onChangeText={(text: string) => {
+                                            this.setState(
+                                                {
+                                                    invoice: text,
+                                                    error: '',
+                                                    apiUpdates: ''
+                                                },
+                                                () => this.checkIsValid()
+                                            );
+                                        }}
+                                        onScan={() =>
+                                            navigation.navigate(
+                                                'HandleAnythingQRScanner',
+                                                { view: 'Swaps' }
+                                            )
+                                        }
+                                        placeholder={
+                                            fetchingInvoice
+                                                ? ''
+                                                : reverse
+                                                ? localeString(
+                                                      'views.Settings.AddContact.onchainAddress'
+                                                  )
+                                                : localeString(
+                                                      'views.PaymentRequest.title'
+                                                  )
+                                        }
+                                        loading={fetchingInvoice}
+                                        style={{ marginHorizontal: 20 }}
+                                    />
 
-                                <View
-                                    style={{
-                                        marginVertical: 5
-                                    }}
-                                >
-                                    {!(
-                                        reverse &&
-                                        !BackendUtils.supportsOnchainSends()
-                                    ) && (
-                                        <Button
-                                            onPress={async () => {
-                                                this.setState({
-                                                    invoice: '',
-                                                    fetchingInvoice: true
-                                                });
-                                                try {
-                                                    if (!outputSats) {
+                                    <View
+                                        style={{
+                                            marginVertical: 5
+                                        }}
+                                    >
+                                        {!(
+                                            reverse &&
+                                            !BackendUtils.supportsOnchainSends()
+                                        ) && (
+                                            <Button
+                                                onPress={async () => {
+                                                    this.setState({
+                                                        invoice: '',
+                                                        fetchingInvoice: true
+                                                    });
+                                                    try {
+                                                        if (!outputSats) {
+                                                            this.setState({
+                                                                error: localeString(
+                                                                    'views.Swaps.missingAmount'
+                                                                ),
+                                                                fetchingInvoice:
+                                                                    false
+                                                            });
+                                                            return;
+                                                        }
+
+                                                        await InvoicesStore.createUnifiedInvoice(
+                                                            {
+                                                                memo: '',
+                                                                value:
+                                                                    outputSats.toString() ||
+                                                                    '0',
+                                                                expirySeconds:
+                                                                    '3600'
+                                                            }
+                                                        );
+
+                                                        if (reverse) {
+                                                            if (
+                                                                InvoicesStore.onChainAddress
+                                                            ) {
+                                                                this.setState(
+                                                                    {
+                                                                        invoice:
+                                                                            InvoicesStore.onChainAddress,
+                                                                        error: ''
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
+                                                                );
+                                                            } else {
+                                                                this.setState({
+                                                                    error: localeString(
+                                                                        'views.Swaps.generateOnchainAddressFailed'
+                                                                    ),
+                                                                    fetchingInvoice:
+                                                                        false
+                                                                });
+                                                            }
+                                                        } else {
+                                                            if (
+                                                                InvoicesStore.payment_request
+                                                            ) {
+                                                                this.setState(
+                                                                    {
+                                                                        invoice:
+                                                                            InvoicesStore.payment_request,
+                                                                        error: ''
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
+                                                                );
+                                                            } else {
+                                                                this.setState({
+                                                                    error: localeString(
+                                                                        'views.Swaps.generateInvoiceFailed'
+                                                                    ),
+                                                                    fetchingInvoice:
+                                                                        false
+                                                                });
+                                                            }
+                                                        }
+                                                        this.setState({
+                                                            fetchingInvoice:
+                                                                false
+                                                        });
+                                                    } catch (e: any) {
+                                                        console.error(
+                                                            'Error generating invoice:',
+                                                            e
+                                                        );
                                                         this.setState({
                                                             error: localeString(
-                                                                'views.Swaps.missingAmount'
+                                                                'views.Swaps.generateInvoiceFailed'
                                                             ),
                                                             fetchingInvoice:
                                                                 false
                                                         });
-                                                        return;
                                                     }
-
-                                                    await InvoicesStore.createUnifiedInvoice(
-                                                        {
-                                                            memo: '',
-                                                            value:
-                                                                outputSats.toString() ||
-                                                                '0',
-                                                            expirySeconds:
-                                                                '3600'
-                                                        }
-                                                    );
-
-                                                    if (reverse) {
-                                                        if (
-                                                            InvoicesStore.onChainAddress
-                                                        ) {
-                                                            this.setState(
-                                                                {
-                                                                    invoice:
-                                                                        InvoicesStore.onChainAddress,
-                                                                    error: ''
-                                                                },
-                                                                () =>
-                                                                    this.checkIsValid()
-                                                            );
-                                                        } else {
-                                                            this.setState({
-                                                                error: localeString(
-                                                                    'views.Swaps.generateOnchainAddressFailed'
-                                                                ),
-                                                                fetchingInvoice:
-                                                                    false
-                                                            });
-                                                        }
-                                                    } else {
-                                                        if (
-                                                            InvoicesStore.payment_request
-                                                        ) {
-                                                            this.setState(
-                                                                {
-                                                                    invoice:
-                                                                        InvoicesStore.payment_request,
-                                                                    error: ''
-                                                                },
-                                                                () =>
-                                                                    this.checkIsValid()
-                                                            );
-                                                        } else {
-                                                            this.setState({
-                                                                error: localeString(
-                                                                    'views.Swaps.generateInvoiceFailed'
-                                                                ),
-                                                                fetchingInvoice:
-                                                                    false
-                                                            });
-                                                        }
-                                                    }
-                                                    this.setState({
-                                                        fetchingInvoice: false
-                                                    });
-                                                } catch (e: any) {
-                                                    console.error(
-                                                        'Error generating invoice:',
-                                                        e
-                                                    );
-                                                    this.setState({
-                                                        error: localeString(
-                                                            'views.Swaps.generateInvoiceFailed'
-                                                        ),
-                                                        fetchingInvoice: false
-                                                    });
-                                                }
-                                            }}
-                                            title={
-                                                !reverse
-                                                    ? localeString(
-                                                          'views.Swaps.generateInvoice'
-                                                      )
-                                                    : localeString(
-                                                          'views.Swaps.generateOnchainAddress'
-                                                      )
-                                            }
-                                            secondary
-                                            disabled={
-                                                errorMsg ||
-                                                !!invoice ||
-                                                loading ||
-                                                inputSats === 0 ||
-                                                outputSats === 0 ||
-                                                fetchingInvoice
-                                            }
-                                        />
-                                    )}
-                                </View>
-                                {reverse && (
-                                    <View style={{ paddingHorizontal: 20 }}>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.setState({
-                                                    feeSettingToggle:
-                                                        !feeSettingToggle
-                                                });
-                                            }}
-                                        >
-                                            <View
-                                                style={{
-                                                    marginTop:
-                                                        reverse &&
-                                                        !BackendUtils.supportsOnchainSends()
-                                                            ? 0
-                                                            : 10,
-                                                    marginBottom: 20
                                                 }}
-                                            >
-                                                <Row justify="space-between">
-                                                    <View style={{ flex: 1 }}>
-                                                        <KeyValue
-                                                            keyValue={localeString(
-                                                                'views.Swaps.setFeeRate'
-                                                            )}
-                                                        />
-                                                    </View>
-                                                    {feeSettingToggle ? (
-                                                        <CaretDown
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    ) : (
-                                                        <CaretRight
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                            width="20"
-                                                            height="20"
-                                                        />
-                                                    )}
-                                                </Row>
-                                            </View>
-                                        </TouchableOpacity>
-                                        {feeSettingToggle && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Send.feeSatsVbyte'
-                                                    )}
-                                                </Text>
-                                                <OnchainFeeInput
-                                                    fee={fee}
-                                                    onChangeFee={(
-                                                        text: string
-                                                    ) =>
-                                                        this.setState({
-                                                            fee: text
-                                                        })
-                                                    }
-                                                    navigation={navigation}
-                                                />
-                                            </>
+                                                title={
+                                                    !reverse
+                                                        ? localeString(
+                                                              'views.Swaps.generateInvoice'
+                                                          )
+                                                        : localeString(
+                                                              'views.Swaps.generateOnchainAddress'
+                                                          )
+                                                }
+                                                secondary
+                                                disabled={
+                                                    errorMsg ||
+                                                    !!invoice ||
+                                                    loading ||
+                                                    inputSats === 0 ||
+                                                    outputSats === 0 ||
+                                                    fetchingInvoice
+                                                }
+                                            />
                                         )}
                                     </View>
-                                )}
+                                    {reverse && (
+                                        <View style={{ paddingHorizontal: 20 }}>
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    this.setState({
+                                                        feeSettingToggle:
+                                                            !feeSettingToggle
+                                                    });
+                                                }}
+                                            >
+                                                <View
+                                                    style={{
+                                                        marginTop:
+                                                            reverse &&
+                                                            !BackendUtils.supportsOnchainSends()
+                                                                ? 0
+                                                                : 10,
+                                                        marginBottom: 20
+                                                    }}
+                                                >
+                                                    <Row justify="space-between">
+                                                        <View
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            <KeyValue
+                                                                keyValue={localeString(
+                                                                    'views.Swaps.setFeeRate'
+                                                                )}
+                                                            />
+                                                        </View>
+                                                        {feeSettingToggle ? (
+                                                            <CaretDown
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="20"
+                                                                height="20"
+                                                            />
+                                                        ) : (
+                                                            <CaretRight
+                                                                fill={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                width="20"
+                                                                height="20"
+                                                            />
+                                                        )}
+                                                    </Row>
+                                                </View>
+                                            </TouchableOpacity>
+                                            {feeSettingToggle && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Send.feeSatsVbyte'
+                                                        )}
+                                                    </Text>
+                                                    <OnchainFeeInput
+                                                        fee={fee}
+                                                        onChangeFee={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                fee: text
+                                                            })
+                                                        }
+                                                        navigation={navigation}
+                                                    />
+                                                </>
+                                            )}
+                                        </View>
+                                    )}
 
-                                <View>
-                                    <Button
-                                        title={localeString(
-                                            'views.Swaps.initiate'
-                                        )}
-                                        onPress={() => {
-                                            reverse
-                                                ? SwapStore?.createReverseSwap(
-                                                      invoice,
-                                                      Number(
-                                                          this.state.inputSats
-                                                      ),
-                                                      this.state.fee,
-                                                      navigation
-                                                  )
-                                                : SwapStore?.createSubmarineSwap(
-                                                      invoice,
-                                                      navigation
-                                                  );
-                                        }}
-                                        {...(!reverse
-                                            ? {
-                                                  containerStyle: {
-                                                      marginTop: 10
+                                    <View>
+                                        <Button
+                                            title={localeString(
+                                                'views.Swaps.initiate'
+                                            )}
+                                            onPress={() => {
+                                                reverse
+                                                    ? SwapStore?.createReverseSwap(
+                                                          invoice,
+                                                          Number(
+                                                              this.state
+                                                                  .inputSats
+                                                          ),
+                                                          this.state.fee,
+                                                          navigation
+                                                      )
+                                                    : SwapStore?.createSubmarineSwap(
+                                                          invoice,
+                                                          navigation
+                                                      );
+                                            }}
+                                            {...(!reverse
+                                                ? {
+                                                      containerStyle: {
+                                                          marginTop: 10
+                                                      }
                                                   }
-                                              }
-                                            : {})}
-                                        disabled={!isValid}
-                                    />
-                                </View>
-                            </>
-                        )}
-                    </View>
-                </ScrollView>
+                                                : {})}
+                                            disabled={!isValid}
+                                        />
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </Screen>
         );
     }
