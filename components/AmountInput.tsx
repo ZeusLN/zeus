@@ -36,6 +36,7 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
+    onBlur?: () => void;
 }
 
 interface AmountInputState {
@@ -143,7 +144,8 @@ export default class AmountInput extends React.Component<
             SettingsStore,
             forceUnit,
             prefix,
-            error
+            error,
+            onBlur
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
@@ -238,6 +240,7 @@ export default class AmountInput extends React.Component<
                             onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
                         }}
+                        onBlur={onBlur}
                         locked={locked}
                         prefix={
                             effectiveUnits !== 'sats' &&
