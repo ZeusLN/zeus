@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "Tidak ada pertukaran untuk kunci penyelamatan ini",
     "views.Swaps.rescueKey.incorrectHost": "Tidak bisa terhubung ke host yang ditentukan. Mohon cek host dan coba lagi",
     "views.Swaps.rescueKey.delete": "Hapus kunci penyelamatan",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Yakin ingin menghapus kunci penyelamatan? Semua pertukaran akan langsung dihapus dari riwayat pertukaran Anda. Mohon cadangkan kunci sebelum melanjutkan, karena kunci bisa digunakan nanti untuk memulihkan pertukaran itu.",
     "views.SwapDetails.title": "Detail Pertukaran",
     "views.SwapDetails.acceptZeroConf": "Terima Zero Conf",
