@@ -17,7 +17,9 @@ function bytesFromIndexedObject(raw: any): number[] | null {
 
 export function privateKeyFromKeys(
     keys:
-        | { __D?: Uint8Array | number[] | { data?: number[] } }
+        | {
+              __D?: Uint8Array | number[] | { data?: number[] | Uint8Array };
+          }
         | null
         | undefined
 ): string | null {
@@ -32,7 +34,7 @@ export function privateKeyFromKeys(
     const bytes: Uint8Array | number[] | null =
         raw instanceof Uint8Array || Array.isArray(raw)
             ? raw
-            : Array.isArray(raw?.data)
+            : Array.isArray(raw?.data) || raw?.data instanceof Uint8Array
             ? raw.data
             : bytesFromIndexedObject(raw);
 
@@ -45,11 +47,22 @@ export function privateKeyFromKeys(
 }
 
 export function preimageHexFrom(
-    preimage: string | Buffer | { data?: number[] } | null | undefined
+    preimage:
+        | string
+        | Buffer
+        | Uint8Array
+        | { data?: number[] | Uint8Array }
+        | null
+        | undefined
 ): string {
     if (typeof preimage === 'string') return preimage;
     if (Buffer.isBuffer(preimage)) return preimage.toString('hex');
+    if (preimage instanceof Uint8Array)
+        return Buffer.from(preimage).toString('hex');
     if (preimage?.data) return Buffer.from(preimage.data).toString('hex');
+    // JSON.stringify turns a plain Uint8Array into { "0": b0, "1": b1, ... }
+    const indexed = bytesFromIndexedObject(preimage);
+    if (indexed) return Buffer.from(indexed).toString('hex');
     return '';
 }
 

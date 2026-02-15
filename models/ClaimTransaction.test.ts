@@ -223,6 +223,13 @@ describe('private key deserialization (via SubmarineClaimTransaction.build)', ()
         );
     });
 
+    it('handles a key whose data is a Uint8Array', () => {
+        const privateKey = Uint8Array.from([0x0a, 0x0b, 0x0c, 0x0d]);
+        expect(buildWith({ __D: { data: privateKey } })?.privateKey).toBe(
+            '0a0b0c0d'
+        );
+    });
+
     it('handles a JSON-round-tripped Uint8Array (index-keyed object)', () => {
         const keys = ECPairFactory(ecc).makeRandom();
         const rehydrated = JSON.parse(JSON.stringify(keys));
@@ -266,6 +273,19 @@ describe('preimage deserialization (via ReverseClaimTransaction.build)', () => {
         expect(buildWith({ data: [0x0a, 0x0b, 0x0c, 0x0d] })?.preimageHex).toBe(
             '0a0b0c0d'
         );
+    });
+
+    it('converts a Uint8Array to hex', () => {
+        expect(
+            buildWith(Uint8Array.from([0x0a, 0x0b, 0x0c, 0x0d]))?.preimageHex
+        ).toBe('0a0b0c0d');
+    });
+
+    it('converts a JSON-round-tripped Uint8Array to hex', () => {
+        const rehydrated = JSON.parse(
+            JSON.stringify(Uint8Array.from([0x0a, 0x0b, 0x0c, 0x0d]))
+        );
+        expect(buildWith(rehydrated)?.preimageHex).toBe('0a0b0c0d');
     });
 
     it('converts a JSON-round-tripped Buffer to hex', () => {
