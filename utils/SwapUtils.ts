@@ -115,3 +115,41 @@ export const calculateLimit = (
           ).toNumber()
         : limit;
 };
+
+export const privateKeyFromSwapKeys = (
+    keys:
+        | { __D?: number[] | Uint8Array | { data?: number[] | Uint8Array } }
+        | null
+        | undefined
+): string | null => {
+    const raw = keys?.__D;
+    if (!raw) {
+        return null;
+    }
+
+    let bytes: number[] | Uint8Array | null = null;
+
+    if (Array.isArray(raw) || raw instanceof Uint8Array) {
+        bytes = raw;
+    } else if (Array.isArray(raw.data) || raw.data instanceof Uint8Array) {
+        bytes = raw.data;
+    } else if (typeof raw === 'object') {
+        const numericValues = Object.keys(raw)
+            .filter((key) => /^\d+$/.test(key))
+            .sort((a, b) => parseInt(a, 10) - parseInt(b, 10))
+            .map((key) =>
+                Number((raw as Record<string, number | undefined>)[key])
+            )
+            .filter((value) => Number.isInteger(value));
+
+        if (numericValues.length > 0) {
+            bytes = numericValues;
+        }
+    }
+
+    if (!bytes) {
+        return null;
+    }
+
+    return Buffer.from(bytes).toString('hex');
+};
