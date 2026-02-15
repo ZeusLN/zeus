@@ -286,6 +286,12 @@ export default class App extends React.PureComponent {
     private appStateSubscription: NativeEventSubscription;
     private navigation: any = null;
 
+    private static SCREENS_WITH_CUSTOM_BACK_HANDLER = [
+        'SendingLightning',
+        'SendingOnChain',
+        'CashuSendingLightning'
+    ];
+
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
         if (dialogHasBeenClosed) {
@@ -298,6 +304,13 @@ export default class App extends React.PureComponent {
         }
 
         const navigationState = navigation.getState();
+        const currentRoute =
+            navigationState.routes[navigationState.routes.length - 1];
+
+        if (App.SCREENS_WITH_CUSTOM_BACK_HANDLER.includes(currentRoute?.name)) {
+            return false;
+        }
+
         if (navigationState.routes.length > 1) {
             navigation.pop();
             return true;

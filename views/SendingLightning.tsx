@@ -103,7 +103,7 @@ export default class SendingLightning extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
 
-    focusListener: any;
+    private focusListener: (() => void) | undefined;
 
     constructor(props: SendingLightningProps) {
         super(props);
@@ -526,6 +526,7 @@ export default class SendingLightning extends React.Component<
             console.error('Failed to fetch payments', error);
         }
     };
+
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
         if (
