@@ -356,10 +356,11 @@ const handleAnything = async (
     ) {
         if (isClipboardValue) return true;
         if (ecash) {
+            const invoice = value || lightning;
             return [
                 'ChoosePaymentMethod',
                 {
-                    lightning: value || lightning,
+                    lightning: invoice,
                     locked: true
                 }
             ];

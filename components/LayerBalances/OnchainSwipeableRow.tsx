@@ -25,7 +25,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 interface OnchainSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    satAmount?: string;
+    satAmount?: number;
     locked?: boolean;
     account?: string;
     hidden?: boolean;
