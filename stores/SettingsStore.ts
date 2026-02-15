@@ -160,6 +160,7 @@ interface SwapsSettings {
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
+    justDeletedWallet?: boolean;
     passphrase?: string;
     duressPassphrase?: string;
     pin?: string;

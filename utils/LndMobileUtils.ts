@@ -71,19 +71,36 @@ export function checkLndStreamErrorResponse(
     console.log('name', name);
     console.log('checkLndStreamErrorResponse error_desc:', event.error_desc);
     if (event.error_code) {
+        const errorDesc = event.error_desc || '';
+
         // TODO SubscribeState for some reason
         // returns error code "error reading from server: EOF" instead of simply "EOF"
         if (
-            event.error_desc === 'EOF' ||
-            event.error_desc === 'error reading from server: EOF' ||
-            event.error_desc === 'channel event store shutting down'
+            errorDesc === 'EOF' ||
+            errorDesc === 'error reading from server: EOF' ||
+            errorDesc === 'channel event store shutting down'
         ) {
             log.i('Got EOF for stream: ' + name);
             return 'EOF';
-        } else if (event.error_desc === 'closed') {
-            log.i('checkLndStreamErrorResponse: Got closed error');
         }
-        return new Error(event.error_desc);
+
+        // Ignore transient startup errors (RPC not ready yet)
+        if (
+            errorDesc.includes('starting up') ||
+            errorDesc.includes('not yet ready to accept calls') ||
+            errorDesc.includes('not yet ready')
+        ) {
+            log.d(`Transient startup error for ${name}: ${errorDesc}`);
+            return null;
+        }
+
+        // Handle closed connection - this is expected when switching nodes or stopping LND
+        if (errorDesc === 'closed') {
+            log.d('Connection closed (expected during node switch/stop)');
+            return null; // Not an error, just connection closed
+        }
+
+        return new Error(errorDesc);
     }
     return null;
 }
@@ -277,23 +294,92 @@ export async function initializeLnd({
     await initialize();
 }
 
-export async function stopLnd() {
+/**
+ * Stops the LND process gracefully with retry mechanism
+ * @param maxRetries - Maximum number of polling attempts to verify shutdown (default: 10)
+ * @param delayMs - Delay between polling attempts in milliseconds (default: 500)
+ * @throws Error if LND fails to stop after max retries or if wallet is locked/closed
+ */
+export async function stopLnd(maxRetries = 10, delayMs = 500) {
     const { checkStatus, stopLnd } = lndMobile.index;
+
     try {
+        // Check if LND is currently running
         const status = await checkStatus();
-        if (
+        const isRunning =
             (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
-            ELndMobileStatusCodes.STATUS_PROCESS_STARTED
-        ) {
-            await stopLnd();
-            await NativeModules.LndMobileTools.killLnd();
+            ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
+
+        log.d(`LND running status: ${isRunning}`);
+
+        if (!isRunning) {
+            log.d('LND is not running, stop not required');
             return;
         }
-    } catch (e) {
-        console.log('error stopping LND', e);
+
+        // Initiate graceful shutdown
+        log.d('Stopping LND...');
+        await stopLnd();
+        await NativeModules.LndMobileTools.killLnd();
+
+        // Poll until LND process has fully stopped
+        for (let i = 0; i < maxRetries; i++) {
+            await sleep(delayMs);
+
+            const currentStatus = await checkStatus();
+            const stillRunning =
+                (currentStatus &
+                    ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+                ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
+
+            log.d(
+                `Stop polling attempt ${
+                    i + 1
+                }/${maxRetries}, still running: ${stillRunning}`
+            );
+
+            if (!stillRunning) {
+                log.d('LND stopped successfully');
+                return;
+            }
+        }
+
+        throw new Error(`LND failed to stop after ${maxRetries} attempts`);
+    } catch (error) {
+        const errorMessage = (error as Error)?.message ?? '';
+
+        // Handle cases where LND is already stopped, starting up, or not initialized
+        if (
+            errorMessage.includes('wallet locked') ||
+            errorMessage.includes('closed') ||
+            errorMessage.includes('unable to read TLS cert') ||
+            errorMessage.includes('no such file or directory') ||
+            errorMessage.includes("doesn't exist") ||
+            errorMessage.includes('not yet ready to accept calls') ||
+            errorMessage.includes('starting up') ||
+            errorMessage.includes('not yet ready') ||
+            errorMessage.includes('unitialized') || // Android-specific error
+            errorMessage.includes('uninitialized')
+        ) {
+            log.d(`LND stop skipped (expected state): ${errorMessage}`);
+            return;
+        }
+
+        // Only log as error if it's a real unexpected error
+        log.e('Error stopping LND', [error]);
+        throw error;
     }
 }
 
+/**
+ * Starts the LND process and waits for it to reach a ready state
+ * @param lndDir - LND data directory path
+ * @param walletPassword - Password to unlock the wallet (empty for new wallet creation)
+ * @param isTorEnabled - Whether Tor is enabled
+ * @param isTestnet - Whether to run on testnet
+ * @param isRecovery - Whether this is a wallet recovery (skips folder existence check)
+ * @throws Error if LND folder is missing, startup fails, or timeout occurs
+ */
 export async function startLnd({
     lndDir = 'lnd',
     walletPassword,
@@ -307,8 +393,7 @@ export async function startLnd({
     isTestnet: boolean;
     isRecovery?: boolean;
 }) {
-    const { checkStatus, startLnd, decodeState, subscribeState } =
-        lndMobile.index;
+    const { startLnd, decodeState, subscribeState } = lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
     // Check if LND folder exists before starting (iOS issue: keychain data persists after uninstall)
@@ -317,103 +402,271 @@ export async function startLnd({
         try {
             const folderExists = await checkLndFolderExists(lndDir);
             if (!folderExists) {
-                console.log(
+                log.e(
                     'LND folder does not exist but wallet config exists - likely app was reinstalled'
                 );
                 throw new Error(LND_FOLDER_MISSING_ERROR);
             }
-        } catch (e: any) {
+        } catch (error: any) {
             if (
-                e?.message === LND_FOLDER_MISSING_ERROR ||
-                e?.message?.includes("doesn't exist")
+                error?.message === LND_FOLDER_MISSING_ERROR ||
+                error?.message?.includes("doesn't exist")
             ) {
                 throw new Error(LND_FOLDER_MISSING_ERROR);
             }
             // Other errors during check - continue and let startLnd handle it
-            console.log('Error checking LND folder:', e);
+            log.e('Error checking LND folder', [error]);
         }
     }
 
-    // don't mark as started on wallet creation, only on proper start-up
-    if (walletPassword) settingsStore.embeddedLndStarted = true;
+    // Mark as started only on proper start-up, not on wallet creation
+    if (walletPassword) {
+        settingsStore.embeddedLndStarted = true;
+    }
 
-    const status = await checkStatus();
-    if (
-        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
-        ELndMobileStatusCodes.STATUS_PROCESS_STARTED
-    ) {
-        try {
-            await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
-        } catch (e: any) {
-            // Check for folder missing error before retrying
-            if (e?.message?.includes("doesn't exist")) {
-                throw new Error(LND_FOLDER_MISSING_ERROR);
-            }
-            let started;
-            while (!started) {
-                try {
-                    console.log('error starting LND - retrying momentarily', e);
-                    await sleep(3000);
-                    await startLnd({
-                        args: '',
-                        lndDir,
-                        isTorEnabled,
-                        isTestnet
-                    });
-                    started = true;
-                } catch (e2: any) {
-                    // Stop retrying if folder is missing
-                    if (e2?.message?.includes("doesn't exist")) {
-                        throw new Error(LND_FOLDER_MISSING_ERROR);
+    await startLndWithRetry({
+        startLnd,
+        lndDir,
+        isTorEnabled,
+        isTestnet,
+        walletPassword,
+        unlockWallet
+    });
+    // Wait for state subscription to be ready
+    await sleep(500);
+    await waitForLndReady({
+        decodeState,
+        subscribeState,
+        walletPassword,
+        unlockWallet
+    });
+}
+
+/**
+ * Helper function to start LND with retry logic
+ */
+async function startLndWithRetry({
+    startLnd,
+    lndDir,
+    isTorEnabled,
+    isTestnet,
+    walletPassword,
+    unlockWallet
+}: {
+    startLnd: any;
+    lndDir: string;
+    isTorEnabled: boolean;
+    isTestnet: boolean;
+    walletPassword: string;
+    unlockWallet: any;
+}) {
+    try {
+        await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+    } catch (error: any) {
+        const errorMessage = error?.message ?? '';
+
+        // Check for folder missing error before retrying
+        if (errorMessage.includes("doesn't exist")) {
+            throw new Error(LND_FOLDER_MISSING_ERROR);
+        }
+        if (
+            errorMessage.includes('already started') ||
+            errorMessage.includes('already running')
+        ) {
+            log.d(
+                'LND already started (likely from wallet creation) - continuing...'
+            );
+            return;
+        }
+        log.e('Error starting LND, attempting retry', [error]);
+
+        // Retry loop for handling transient errors
+        let started = false;
+        while (!started) {
+            try {
+                // If LND is already running, stop it first
+                if (
+                    errorMessage.includes('already started') ||
+                    errorMessage.includes('already running')
+                ) {
+                    log.d('LND already running, stopping before restart');
+                    await stopLnd();
+                }
+
+                await sleep(3000);
+                await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+                started = true;
+                log.d('LND started successfully after retry');
+            } catch (retryError: any) {
+                const retryErrorMessage = retryError?.message ?? '';
+
+                // Stop retrying if folder is missing
+                if (retryErrorMessage.includes("doesn't exist")) {
+                    throw new Error(LND_FOLDER_MISSING_ERROR);
+                }
+
+                // Handle wallet locked state
+                if (
+                    retryErrorMessage.includes('wallet locked') ||
+                    retryErrorMessage.includes('locked')
+                ) {
+                    log.d('Wallet is locked, attempting to unlock');
+                    if (walletPassword) {
+                        try {
+                            await unlockWallet(walletPassword);
+                            log.d('Wallet unlocked successfully');
+                        } catch (unlockError: any) {
+                            log.e('Error unlocking wallet', [unlockError]);
+                        }
                     }
+                    break;
                 }
             }
         }
     }
+}
 
-    await new Promise(async (res) => {
-        LndMobileEventEmitter.addListener('SubscribeState', async (e: any) => {
+/**
+ * Helper function to wait for LND to reach a ready state
+ */
+async function waitForLndReady({
+    decodeState,
+    subscribeState,
+    walletPassword,
+    unlockWallet
+}: {
+    decodeState: (data: string) => lnrpc.SubscribeStateResponse;
+    subscribeState: () => Promise<string>;
+    walletPassword: string;
+    unlockWallet: (password: string) => Promise<void>;
+}) {
+    return new Promise(async (resolve, reject) => {
+        let isResolved = false;
+        let unlockAttempted = false;
+
+        const timeout = setTimeout(() => {
+            if (!isResolved) {
+                isResolved = true;
+                cleanup();
+                reject(new Error('Timeout waiting for LND to become ready'));
+            }
+        }, 60000);
+
+        const cleanup = () => {
+            if (timeout) clearTimeout(timeout);
+            LndMobileEventEmitter.removeAllListeners('SubscribeState');
+        };
+
+        const stateHandler = async (event: any) => {
+            if (isResolved) return;
+
             try {
-                log.d('SubscribeState', [e]);
-                const error = checkLndStreamErrorResponse('SubscribeState', e);
+                log.d('SubscribeState event received', [event]);
+
+                const error = checkLndStreamErrorResponse(
+                    'SubscribeState',
+                    event
+                );
                 if (error === 'EOF') {
                     return;
                 } else if (error) {
-                    throw error;
+                    isResolved = true;
+                    cleanup();
+                    reject(error);
+                    return;
                 }
 
-                const state = decodeState(e.data ?? '');
-                console.log('Current lnd state', state);
-                if (state.state === lnrpc.WalletState.NON_EXISTING) {
-                    log.d('Got lnrpc.WalletState.NON_EXISTING');
-                    res(true);
-                } else if (state.state === lnrpc.WalletState.LOCKED) {
-                    log.d('Got lnrpc.WalletState.LOCKED');
-                    log.d('Wallet locked, unlocking wallet');
-                    await unlockWallet(walletPassword);
-                } else if (state.state === lnrpc.WalletState.UNLOCKED) {
-                    log.d('Got lnrpc.WalletState.UNLOCKED');
-                } else if (state.state === lnrpc.WalletState.RPC_ACTIVE) {
-                    log.d('Got lnrpc.WalletState.RPC_ACTIVE');
-                    syncStore.startSyncing();
-                    // Start rescan tracking if rescan setting is enabled
-                    if (settingsStore?.settings?.rescan) {
-                        syncStore.startRescanTracking(0);
-                    }
-                    res(true);
-                    LndMobileEventEmitter.removeAllListeners('SubscribeState');
-                } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
-                    log.d('Got lnrpc.WalletState.SERVER_ACTIVE');
-                    res(true);
-                    LndMobileEventEmitter.removeAllListeners('SubscribeState');
-                } else {
-                    log.d('Got unknown lnrpc.WalletState', [state.state]);
+                const state = decodeState(event.data ?? '');
+                log.d(`Current LND state: ${state.state}`);
+
+                switch (state.state) {
+                    case lnrpc.WalletState.NON_EXISTING:
+                        log.d('Wallet does not exist - ready for creation');
+                        isResolved = true;
+                        cleanup();
+                        await sleep(500);
+                        resolve(true);
+                        break;
+
+                    case lnrpc.WalletState.LOCKED:
+                        log.d('Wallet is locked');
+                        if (!unlockAttempted && walletPassword) {
+                            unlockAttempted = true;
+                            try {
+                                await unlockWallet(walletPassword);
+                                log.d('Wallet unlocked successfully');
+                            } catch (unlockError: any) {
+                                log.e('Error unlocking wallet', [unlockError]);
+                                isResolved = true;
+                                cleanup();
+                                reject(unlockError);
+                            }
+                        }
+                        break;
+
+                    case lnrpc.WalletState.UNLOCKED:
+                        log.d(
+                            'Wallet unlocked - waiting for RPC to become active'
+                        );
+                        // Don't resolve - wait for RPC_ACTIVE or SERVER_ACTIVE
+                        break;
+
+                    case lnrpc.WalletState.RPC_ACTIVE:
+                        log.d('RPC is active - waiting for RPC ready');
+                        try {
+                            await waitForRpcReady();
+                            syncStore.startSyncing();
+                            if (settingsStore?.settings?.rescan) {
+                                syncStore.startRescanTracking(0);
+                            }
+                            isResolved = true;
+                            cleanup();
+                            resolve(true);
+                        } catch (rpcError: any) {
+                            log.e('RPC ready check failed', [rpcError]);
+                            isResolved = true;
+                            cleanup();
+                            reject(rpcError);
+                        }
+                        break;
+
+                    case lnrpc.WalletState.SERVER_ACTIVE:
+                        log.d('Server is active');
+                        isResolved = true;
+                        cleanup();
+                        resolve(true);
+                        break;
+
+                    default:
+                        log.d('Unknown wallet state', [state.state]);
+                        break;
                 }
             } catch (error: any) {
-                console.log('SubscribeState err', error.message);
+                log.e('SubscribeState handler error', [error]);
+                if (!isResolved) {
+                    isResolved = true;
+                    cleanup();
+                    reject(error);
+                }
             }
-        });
-        await subscribeState();
+        };
+
+        LndMobileEventEmitter.addListener('SubscribeState', stateHandler);
+
+        // Give the listener time to fully register
+        await sleep(100);
+
+        try {
+            log.d('Starting state subscription');
+            await subscribeState();
+            log.d('State subscription started successfully');
+        } catch (error) {
+            if (!isResolved) {
+                isResolved = true;
+                cleanup();
+                reject(error);
+            }
+        }
     });
 }
 
@@ -613,11 +866,11 @@ export async function createLndWallet({
     isTestnet?: boolean;
     channelBackupsBase64?: string;
 }) {
+    console.log('creating new LND');
     const {
         initialize,
         createIOSApplicationSupportAndLndDirectories,
-        excludeLndICloudBackup,
-        checkStatus
+        excludeLndICloudBackup
     } = lndMobile.index;
     const { genSeed, initWallet } = lndMobile.wallet;
 
@@ -630,28 +883,34 @@ export async function createLndWallet({
     await writeLndConfig({ lndDir, isTestnet, isSqlite: true });
     await initialize();
 
-    let status = await checkStatus();
-    if (
-        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
-        ELndMobileStatusCodes.STATUS_PROCESS_STARTED
-    ) {
-        await startLnd({
-            lndDir,
-            walletPassword: '',
-            isTorEnabled: false,
-            isTestnet: isTestnet || false
-        });
-    }
+    await startLnd({
+        lndDir,
+        walletPassword: '',
+        isTorEnabled: false,
+        isTestnet: isTestnet || false
+    });
 
     let seed: any;
     if (!seedMnemonic) {
         try {
             seed = await genSeed(undefined);
-        } catch (e) {
-            console.log('error generating seed', e);
+        } catch (e: any) {
+            const errorMessage = e?.message ?? '';
+            console.log('error generating seed', errorMessage);
+            if (
+                errorMessage.includes('wallet already unlocked') ||
+                errorMessage.includes(
+                    'WalletUnlocker service is no longer available'
+                )
+            ) {
+                throw new Error(
+                    'Wallet creation failed: LND unlocked too quickly. Please try again.'
+                );
+            }
+            throw new Error(`Failed to generate seed: ${errorMessage}`);
         }
         if (!seed) {
-            return;
+            throw new Error('Failed to generate seed: no seed returned');
         }
     } else {
         seed = {
@@ -671,4 +930,42 @@ export async function createLndWallet({
         walletPassphrase ? walletPassphrase : undefined
     );
     return { wallet, seed, randomBase64 };
+}
+
+/**
+ * Waits for LND RPC to become ready by polling getInfo
+ * @param timeoutMs - Maximum time to wait in milliseconds (default: 30000)
+ * @throws Error if RPC doesn't become ready within timeout or encounters a fatal error
+ */
+export async function waitForRpcReady(timeoutMs = 30000) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeoutMs) {
+        try {
+            const info = await lndMobile.index.getInfo();
+            log.d(`RPC ready - Node pubkey: ${info.identity_pubkey}`);
+            return;
+        } catch (error: any) {
+            const errorMessage = error?.message ?? '';
+            log.d(`RPC not ready yet: ${errorMessage}`);
+
+            // Connection closed - stop polling
+            if (errorMessage.includes('closed')) {
+                throw new Error('RPC connection closed');
+            }
+            if (
+                errorMessage.includes('starting up') ||
+                errorMessage.includes('not yet ready')
+            ) {
+                await sleep(500);
+                continue;
+            }
+
+            // Fatal error - stop immediately
+            log.e('Fatal error while waiting for RPC', [error]);
+            throw error;
+        }
+    }
+
+    throw new Error(`RPC did not become ready within ${timeoutMs}ms`);
 }
