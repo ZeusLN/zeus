@@ -39,7 +39,7 @@ export default class Swap extends BaseModel {
     nodePubkey: string;
     onchainAmount?: number;
     amount?: number;
-    preimage?: { data: number[]; type: string };
+    preimage?: string | Uint8Array | { data?: number[] | Uint8Array };
     refundPublicKey?: string;
     serviceProvider: string;
     swapTree?: any;
