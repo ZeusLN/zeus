@@ -17,6 +17,7 @@ import EcashMintPicker from '../../components/EcashMintPicker';
 import EcashToggle from '../../components/EcashToggle';
 import ModalBox from '../../components/ModalBox';
 import UnitToggle from '../../components/UnitToggle';
+import CurrencySelectorModal from '../../components/CurrencySelectorModal';
 import WalletHeader from '../../components/WalletHeader';
 import { getSatAmount } from '../../components/AmountInput';
 import { Row } from '../../components/layout/Row';
@@ -337,6 +338,15 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
+    private currencySelectorModalRef = React.createRef<CurrencySelectorModal>();
+
+    handleOpenCurrencyModal = () => {
+        this.currencySelectorModalRef.current?.open();
+    };
+
+    handleCurrencyModalClose = () => {
+        this.clearValue();
+    };
 
     render() {
         const {
@@ -503,7 +513,10 @@ export default class KeypadPane extends React.PureComponent<
                                             )}
                                         </>
                                     )}
-                                <UnitToggle onToggle={this.clearValue} />
+                                <UnitToggle
+                                    onToggle={this.clearValue}
+                                    onOpenModal={this.handleOpenCurrencyModal}
+                                />
                             </Row>
                         </Animated.View>
                     </View>
@@ -784,6 +797,11 @@ export default class KeypadPane extends React.PureComponent<
                         </TouchableOpacity>
                     </View>
                 </ModalBox>
+                <CurrencySelectorModal
+                    ref={this.currencySelectorModalRef}
+                    navigation={navigation}
+                    onClose={this.handleCurrencyModalClose}
+                />
             </>
         );
     }
