@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "Aucun échange trouvé pour cette clé de secours",
     "views.Swaps.rescueKey.incorrectHost": "Impossible de se connecter à l'hôte spécifié. Veuillez vérifier l'hôte et réessayer.",
     "views.Swaps.rescueKey.delete": "Supprimer la clé de secours",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Êtes-vous sûr de vouloir supprimer la clé de secours ? Tous les échanges seront également supprimés de votre historique. Veuillez sauvegarder vos clés avant de continuer, car vous pourrez les utiliser ultérieurement pour récupérer ces échanges.",
     "views.SwapDetails.title": "Détails de l'échange",
     "views.SwapDetails.acceptZeroConf": "Accepter Zero Conf",
