@@ -296,7 +296,9 @@ export default class BumpFee extends React.PureComponent<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('views.BumpFee.targetConfs')}
+                                {localeString(
+                                    'views.BumpFee.targetConfsInputDescription'
+                                )}
                             </Text>
                             <View style={styles.targetForm}>
                                 <TextInput
