@@ -22,7 +22,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
-import Payment from '../../models/Payment';
+import CashuPaymentModel from '../../models/CashuPayment';
 
 import LnurlPayStore, { LnurlPayTransaction } from '../../stores/LnurlPayStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -38,7 +38,7 @@ interface CashuPaymentProps {
     LnurlPayStore?: LnurlPayStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
-    route: Route<'Payment', { payment: Payment }>;
+    route: Route<'Payment', { payment: CashuPaymentModel }>;
 }
 
 interface CashuPaymentState {
@@ -99,6 +99,7 @@ export default class CashuPayment extends React.Component<
             enhancedPath,
             getKeysendMessage,
             getMemo,
+            getMintUrl,
             isIncomplete,
             isInTransit,
             isFailed,
@@ -209,6 +210,14 @@ export default class CashuPayment extends React.Component<
                                         )}
                                     </Row>
                                 }
+                            />
+                        )}
+
+                        {getMintUrl && (
+                            <KeyValue
+                                keyValue={localeString('cashu.mintUrl')}
+                                value={getMintUrl}
+                                sensitive
                             />
                         )}
 

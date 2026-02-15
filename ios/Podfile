@@ -3,6 +3,9 @@ require_relative '../node_modules/react-native/scripts/react_native_pods'
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# CashuDevKit framework path
+cashudevkit_framework_path = File.join(__dir__, 'Cdk', 'cdkFFI.xcframework')
+
 target 'zeus' do
   config = use_native_modules!
 
@@ -22,6 +25,9 @@ target 'zeus' do
 
   pod 'react-native-blob-util', :path => '../node_modules/react-native-blob-util'
 
+  # CashuDevKit - Cashu wallet FFI bindings (local xcframework)
+  pod 'CashuDevKit', :path => '.'
+
   # Enables Flipper.
   #
   # Note that if you have use_frameworks! enabled, Flipper will not work and
@@ -38,8 +44,11 @@ target 'zeus' do
 
     installer.pods_project.targets.each do |target|
       target.build_configurations.each do |config|
-        # Disable arm64 builds for the simulator
-        config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+        # CashuDevKit framework search path
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= ['$(inherited)']
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(SRCROOT)/Cdk"'
+        # Lndmobile framework search path
+        config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(SRCROOT)/LncMobile"'
       end
     end
   end

@@ -54,7 +54,9 @@ let mockIsValidCashuToken = false;
 let mockDecodedCashuToken = {};
 jest.mock('./CashuUtils', () => ({
     isValidCashuToken: () => mockIsValidCashuToken,
-    decodeCashuToken: () => mockDecodedCashuToken
+    decodeCashuToken: () => mockDecodedCashuToken,
+    isValidCashuTokenAsync: () => Promise.resolve(mockIsValidCashuToken),
+    decodeCashuTokenAsync: () => Promise.resolve(mockDecodedCashuToken)
 }));
 
 const mockProcessLndConnectUrl = jest.fn();

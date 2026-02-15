@@ -77,3 +77,9 @@ ios/Pods
 android/lndmobile/Lndmobile.aar
 ios/LncMobile/Lndmobile.xcframework
 ios/LndMobileLibZipFile
+
+# Cashu binaries
+android/cdk/cashudevkit.aar
+ios/Cdk/cdkFFI.xcframework
+ios/CashuDevKitLibZipFile
+ios/CashuDevKit/CashuDevKit.swift
