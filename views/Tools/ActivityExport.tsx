@@ -25,17 +25,17 @@ import {
     getFormattedDateTime,
     convertActivityToCsv,
     saveCsvFile,
-    CSV_KEYS
-} from '../.././utils/ActivityCsvUtils';
+    CSV_KEYS,
+    isPaymentExportActivity,
+    toPaymentCsvRow
+} from '../../utils/ActivityCsvUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Invoice from '../../models/Invoice';
-import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import CashuInvoice from '../../models/CashuInvoice';
-import CashuPayment from '../../models/CashuPayment';
 
 interface ActivityExportProps {
     navigation: any;
@@ -143,13 +143,15 @@ export default class ActivityExport extends React.Component<
                     return (
                         item instanceof Invoice || item instanceof CashuInvoice
                     );
-                if (type === 'payment')
-                    return (
-                        item instanceof Payment || item instanceof CashuPayment
-                    );
+                if (type === 'payment') return isPaymentExportActivity(item);
                 if (type === 'transaction') return item instanceof Transaction;
                 return false;
             });
+
+            if (type === 'payment') {
+                filteredData = filteredData.map(toPaymentCsvRow);
+            }
+
             filteredData = this.filterDataByDate(filteredData);
 
             if (!filteredData || filteredData.length === 0) {
