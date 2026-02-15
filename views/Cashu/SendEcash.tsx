@@ -110,6 +110,7 @@ export default class SendEcash extends React.Component<
     }
 
     componentWillUnmount() {
+        this.props.CashuStore.clearToken();
         if (this.focusListener) {
             this.focusListener();
         }
