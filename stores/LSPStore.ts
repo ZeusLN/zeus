@@ -72,9 +72,14 @@ export default class LSPStore {
         reaction(
             () => this.channelsStore.channels,
             () => {
+                const lspPubkey = this.getLSPSPubkey();
                 if (
-                    this.channelsStore.channels.length !== 0 &&
-                    BackendUtils.supportsLSPScustomMessage()
+                    BackendUtils.supportsLSPScustomMessage() &&
+                    lspPubkey &&
+                    this.channelsStore.channels.some(
+                        (channel: { remotePubkey: string }) =>
+                            channel.remotePubkey === lspPubkey
+                    )
                 ) {
                     this.getExtendableChannels();
                 }
