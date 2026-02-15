@@ -733,18 +733,19 @@ export default class SwapDetails extends React.Component<
         const { navigation, SwapStore } = this.props;
 
         const { updates, error, failureReason, swapData } = this.state;
+        const currStatus = updates || swapData.status;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
         const progressUpdate = swapData.isSubmarineSwap
-            ? updates === SwapState.InvoiceSet
+            ? currStatus === SwapState.InvoiceSet
                 ? localeString('views.SwapDetails.waitingForOnchainTx')
-                : updates === SwapState.TransactionMempool
+                : currStatus === SwapState.TransactionMempool
                 ? localeString('views.SwapDetails.waitingForConf')
                 : ''
-            : updates === SwapState.Created
+            : currStatus === SwapState.Created
             ? localeString('views.SwapDetails.waitingForInvoicePayment')
-            : updates === SwapState.TransactionMempool
+            : currStatus === SwapState.TransactionMempool
             ? localeString('views.SwapDetails.waitingForConf')
             : '';
 
@@ -773,11 +774,15 @@ export default class SwapDetails extends React.Component<
 
         const showRefundButton =
             swapData.lockupTransaction &&
-            (updates === SwapState.InvoiceFailedToPay ||
-                updates === SwapState.TransactionLockupFailed ||
+            (currStatus === SwapState.InvoiceFailedToPay ||
+                currStatus === SwapState.TransactionLockupFailed ||
                 (swapData.isSubmarineSwap &&
-                    updates === SwapState.SwapExpired) ||
+                    currStatus === SwapState.SwapExpired) ||
                 (failure && error));
+
+        const showReverseRedeemButton =
+            swapData.isReverseSwap &&
+            currStatus === SwapState.TransactionClaimed;
 
         return (
             <Screen>
@@ -864,11 +869,13 @@ export default class SwapDetails extends React.Component<
                         />
                     )}
 
-                    {updates && (
+                    {currStatus && (
                         <KeyValue
                             keyValue={localeString('views.Channel.status')}
-                            value={SwapStore?.formatStatus(updates)}
-                            color={SwapStore?.statusColor(updates as SwapState)}
+                            value={SwapStore?.formatStatus(currStatus)}
+                            color={SwapStore?.statusColor(
+                                currStatus as SwapState
+                            )}
                         />
                     )}
 
@@ -1001,8 +1008,8 @@ export default class SwapDetails extends React.Component<
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData?.swapTree || swapData?.tree)}
                 </ScrollView>
-                {(updates === SwapState.InvoiceSet ||
-                    updates === SwapState.Created) && (
+                {(currStatus === SwapState.InvoiceSet ||
+                    currStatus === SwapState.Created) && (
                     <Button
                         title={localeString('views.PaymentRequest.payInvoice')}
                         containerStyle={{
@@ -1031,6 +1038,20 @@ export default class SwapDetails extends React.Component<
                                     ...swapData,
                                     endpoint
                                 })
+                            });
+                        }}
+                        secondary
+                    />
+                )}
+                {showReverseRedeemButton && (
+                    <Button
+                        title={localeString(
+                            'views.Settings.LightningAddressInfo.redeem'
+                        )}
+                        containerStyle={{ paddingVertical: 10 }}
+                        onPress={() => {
+                            navigation.navigate('RefundSwap', {
+                                swapData
                             });
                         }}
                         secondary
