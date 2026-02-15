@@ -168,7 +168,8 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                             textColor ||
                             (locked
                                 ? themeColor('secondaryText')
-                                : themeColor('text'))
+                                : themeColor('text')),
+                        ...(multiline ? { paddingVertical: 10 } : {})
                     }}
                     placeholderTextColor={
                         placeholderTextColor || themeColor('secondaryText')
