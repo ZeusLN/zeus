@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "Nenhuma troca encontrada para esta chave de resgate",
     "views.Swaps.rescueKey.incorrectHost": "Não foi possível conectar ao host especificado. Verifique o host e tente novamente.",
     "views.Swaps.rescueKey.delete": "Excluir chave de resgate",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Tem certeza de que deseja excluir a chave de resgate? Todas as trocas também serão excluídas do seu histórico de trocas. Faça backup das suas chaves antes de prosseguir, pois você poderá usá-las posteriormente para recuperar essas trocas.",
     "views.SwapDetails.title": "Detalhes da troca",
     "views.SwapDetails.acceptZeroConf": "Aceitar Zero Conf",
