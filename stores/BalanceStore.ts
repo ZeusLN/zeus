@@ -10,6 +10,7 @@ export default class BalanceStore {
     @observable public totalBlockchainBalanceAccounts: number | string;
     @observable public confirmedBlockchainBalance: number | string;
     @observable public unconfirmedBlockchainBalance: number | string;
+    @observable public reservedBalanceAnchorChan: number | string;
     @observable public loadingBlockchainBalance = false;
     @observable public loadingLightningBalance = false;
     @observable public error = false;
@@ -44,6 +45,7 @@ export default class BalanceStore {
         this.unconfirmedBlockchainBalance = 0;
         this.confirmedBlockchainBalance = 0;
         this.totalBlockchainBalance = 0;
+        this.reservedBalanceAnchorChan = 0;
         this.otherAccounts = {};
         this.loadingBlockchainBalance = false;
     };
@@ -92,6 +94,10 @@ export default class BalanceStore {
                 data.total_balance || 0
             );
 
+            const reservedBalanceAnchorChan = Number(
+                data.reserved_balance_anchor_chan || 0
+            );
+
             runInAction(() => {
                 if (set) {
                     if (accounts && accounts.default && data.confirmed_balance)
@@ -105,6 +111,7 @@ export default class BalanceStore {
                     this.totalBlockchainBalance = totalBlockchainBalance;
                     this.totalBlockchainBalanceAccounts =
                         totalBlockchainBalanceAccounts;
+                    this.reservedBalanceAnchorChan = reservedBalanceAnchorChan;
                 }
                 this.loadingBlockchainBalance = false;
             });
@@ -112,6 +119,7 @@ export default class BalanceStore {
                 unconfirmedBlockchainBalance,
                 confirmedBlockchainBalance,
                 totalBlockchainBalance,
+                reservedBalanceAnchorChan,
                 accounts
             };
         } catch {
@@ -166,6 +174,8 @@ export default class BalanceStore {
             this.confirmedBlockchainBalance =
                 onChain?.confirmedBlockchainBalance || 0;
             this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
+            this.reservedBalanceAnchorChan =
+                onChain?.reservedBalanceAnchorChan || 0;
         });
 
         return {

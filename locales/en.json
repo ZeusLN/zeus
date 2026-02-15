@@ -46,6 +46,7 @@
     "general.transaction": "Transaction",
     "general.confirmed": "Confirmed",
     "general.unconfirmed": "Unconfirmed",
+    "general.reservedBalanceAnchorChan": "Reserved for anchor channels",
     "general.sent": "Sent",
     "general.received": "Received",
     "general.date": "Date",
