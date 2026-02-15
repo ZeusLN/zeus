@@ -21,6 +21,8 @@ export default class ModalStore {
         title: string;
         callback?: () => void;
     }>;
+    @observable public infoModalBackgroundColor?: string;
+    public infoModalOnClose?: () => void;
     @observable public alertModalText: string | Array<string> | undefined;
     @observable public alertModalLink: string | undefined;
     @observable public alertModalNav: string | undefined;
@@ -40,18 +42,24 @@ export default class ModalStore {
         title,
         text,
         link,
-        buttons
+        buttons,
+        backgroundColor,
+        onClose
     }: {
         title?: string;
         text?: string | Array<string>;
         link?: string;
         buttons?: Array<{ title: string; callback?: () => void }>;
+        backgroundColor?: string;
+        onClose?: () => void;
     }) => {
         this.showInfoModal = title || text ? true : false; // Show if title or text exists
         this.infoModalTitle = title;
         this.infoModalText = text;
         this.infoModalLink = link;
         this.infoModalAdditionalButtons = buttons;
+        this.infoModalBackgroundColor = backgroundColor;
+        this.infoModalOnClose = onClose;
     };
 
     @action
@@ -144,6 +152,8 @@ export default class ModalStore {
             this.infoModalText = undefined;
             this.infoModalLink = undefined;
             this.infoModalAdditionalButtons = undefined;
+            this.infoModalBackgroundColor = undefined;
+            this.infoModalOnClose = undefined;
             return true;
         }
         if (this.showShareModal) {

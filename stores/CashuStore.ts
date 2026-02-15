@@ -50,7 +50,7 @@ import CashuUtils from '../utils/CashuUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
-import UrlUtils from '../utils/UrlUtils';
+import { themeColor, blendHexColors } from '../utils/ThemeUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -66,6 +66,12 @@ const UPGRADE_MESSAGES: { [key: number]: string } = {
     25000: 'cashu.upgradePrompt.message25k',
     50000: 'cashu.upgradePrompt.message50k',
     100000: 'cashu.upgradePrompt.message100k'
+};
+const UPGRADE_TITLES: { [key: number]: string } = {
+    10000: 'cashu.upgradePrompt.title10k',
+    25000: 'cashu.upgradePrompt.title25k',
+    50000: 'cashu.upgradePrompt.title50k',
+    100000: 'cashu.upgradePrompt.title100k'
 };
 
 // ZEUS official npub for trusted mint recommendations
@@ -198,6 +204,7 @@ export default class CashuStore {
     @observable public reviewSubmitError = false;
     @observable loadingFeeEstimate = false;
     @observable shownThresholdModals: number[] = [];
+    @observable dismissedUpgradeThreshold: number = 0;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -1074,50 +1081,122 @@ export default class CashuStore {
     };
 
     @action
-    public checkAndShowUpgradeModal = (
+    public loadDismissedUpgradeThreshold = async () => {
+        const stored = await Storage.getItem(
+            `${this.getLndDir()}-cashu-dismissedUpgradeThreshold`
+        );
+        runInAction(() => {
+            this.dismissedUpgradeThreshold = stored ? Number(stored) : 0;
+        });
+    };
+
+    @action
+    private dismissUpgradeThreshold = async (threshold: number) => {
+        runInAction(() => {
+            this.dismissedUpgradeThreshold = threshold;
+        });
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-dismissedUpgradeThreshold`,
+            threshold
+        );
+
+        // Find the next threshold above the dismissed one
+        const nextThreshold = UPGRADE_THRESHOLDS.find((t) => t > threshold);
+
+        if (nextThreshold) {
+            this.modalStore.toggleInfoModal({
+                title: localeString('cashu.upgradePrompt.title'),
+                text: localeString('cashu.upgradePrompt.dismissed')
+            });
+        } else {
+            this.modalStore.toggleInfoModal({
+                title: localeString('cashu.upgradePrompt.title'),
+                text: localeString('cashu.upgradePrompt.dismissedFinal')
+            });
+        }
+    };
+
+    private getUpgradeModalBackgroundColor = (
+        currentBalance: number
+    ): string | undefined => {
+        const modalBg = themeColor('modalBackground');
+        const errorColor = themeColor('error');
+
+        if (!modalBg || !errorColor) return undefined;
+
+        // blendHexColors only supports 6-char hex strings (#rrggbb).
+        // Some themes use rgb(), 3-char hex, or color names which would
+        // produce invalid color strings and crash the app.
+        const hexRegex = /^#?[0-9a-fA-F]{6}$/;
+        if (!hexRegex.test(modalBg) || !hexRegex.test(errorColor))
+            return undefined;
+
+        // Blend from modal background toward error/red based on balance ratio
+        const ratio = Math.min(currentBalance / 100_000, 1);
+        if (currentBalance >= 10_000) {
+            return blendHexColors(modalBg, errorColor, ratio * 0.6);
+        }
+        return undefined;
+    };
+
+    @action
+    public checkAndShowUpgradeModal = async (
         previousBalance: number,
         currentBalance: number
     ) => {
-        for (const threshold of UPGRADE_THRESHOLDS.reverse()) {
+        // Load persisted dismissed threshold if not yet loaded
+        if (this.dismissedUpgradeThreshold === 0) {
+            await this.loadDismissedUpgradeThreshold();
+        }
+
+        for (const threshold of [...UPGRADE_THRESHOLDS].reverse()) {
             // TODO ecash add checks for on-chain rates to determine
             // if amounts are sufficient for channels
             if (
                 previousBalance < threshold &&
                 currentBalance >= threshold &&
                 !this.shownThresholdModals.includes(threshold) &&
+                threshold > this.dismissedUpgradeThreshold &&
                 this.channelsStore.channels.length === 0
             ) {
                 const messageKey =
                     UPGRADE_MESSAGES[threshold] ||
-                    'cashu.upgradePrompt.messageGeneral'; // Fallback message
+                    'cashu.upgradePrompt.messageGeneral';
                 const message = localeString(messageKey);
-                const title = localeString('cashu.upgradePrompt.title');
+                const titleKey =
+                    UPGRADE_TITLES[threshold] || 'cashu.upgradePrompt.title';
+                const title = localeString(titleKey);
+                const backgroundColor =
+                    this.getUpgradeModalBackgroundColor(currentBalance);
 
                 this.modalStore.toggleInfoModal({
                     title,
                     text: message,
+                    backgroundColor,
+                    link: 'https://docs.zeusln.app/self-custody',
                     buttons: [
                         {
                             title: localeString(
                                 'cashu.upgradePrompt.purchaseChannel'
                             ),
                             callback: () => {
-                                this.modalStore.toggleInfoModal({}); // Close current modal first
+                                this.modalStore.toggleInfoModal({});
                                 NavigationService.navigate('LSPS1');
                             }
                         },
                         {
                             title: localeString(
-                                'cashu.upgradePrompt.learnMore'
+                                'cashu.upgradePrompt.transferOnChain'
                             ),
                             callback: () => {
-                                this.modalStore.toggleInfoModal({}); // Close current modal first
-                                UrlUtils.goToUrl(
-                                    'https://docs.zeusln.app/self-custody'
-                                );
+                                this.modalStore.toggleInfoModal({});
+                                NavigationService.navigate('Swaps');
                             }
                         }
-                    ]
+                    ],
+                    onClose: () => {
+                        this.dismissUpgradeThreshold(threshold);
+                    }
                 });
 
                 // Mark this threshold modal as shown for the current session
