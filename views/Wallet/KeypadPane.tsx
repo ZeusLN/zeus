@@ -503,7 +503,10 @@ export default class KeypadPane extends React.PureComponent<
                                             )}
                                         </>
                                     )}
-                                <UnitToggle onToggle={this.clearValue} />
+                                <UnitToggle
+                                    onToggle={this.clearValue}
+                                    amount={amount}
+                                />
                             </Row>
                         </Animated.View>
                     </View>

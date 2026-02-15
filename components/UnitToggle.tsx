@@ -12,16 +12,36 @@ interface UnitToggleProps {
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
     onToggle?: () => void;
+    amount?: string;
 }
 
 @inject('UnitsStore', 'SettingsStore')
 @observer
 export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
     render() {
-        const { UnitsStore, SettingsStore, onToggle } = this.props;
+        const { UnitsStore, SettingsStore, onToggle, amount } = this.props;
         const { changeUnits, units } = UnitsStore!;
-        const { settings } = SettingsStore!;
-        const { fiat } = settings;
+        const { settings, cycleFiat } = SettingsStore!;
+        const { fiat, fiats } = settings;
+
+        // Check if amount is effectively zero
+        const isAmountZero = !amount || amount === '0' || amount === '';
+
+        const handlePress = () => {
+            // If amount > 0 AND in fiat mode AND multiple fiats: cycle fiats (keep amount)
+            if (
+                !isAmountZero &&
+                units === 'fiat' &&
+                fiats &&
+                fiats.length > 1
+            ) {
+                cycleFiat();
+            } else {
+                // Normal unit change: sats → BTC → fiat (clears amount)
+                if (onToggle) onToggle();
+                changeUnits();
+            }
+        };
 
         return (
             <React.Fragment>
@@ -35,10 +55,7 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
                     adaptiveWidth
                     quaternary
                     noUppercase
-                    onPress={() => {
-                        if (onToggle) onToggle();
-                        changeUnits();
-                    }}
+                    onPress={handlePress}
                 />
             </React.Fragment>
         );
