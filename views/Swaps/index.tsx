@@ -95,6 +95,7 @@ interface SwapState {
     lastUsedKey?: number;
     seedPhrase?: string[];
     isModalVisible: boolean;
+    isIntroModalVisible: boolean;
     showRescueKeyBtn: boolean;
     enableLSP: boolean;
     flowLspNotConfigured: boolean;
@@ -135,6 +136,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         lastUsedKey: 0,
         seedPhrase: [],
         isModalVisible: false,
+        isIntroModalVisible: false,
         showRescueKeyBtn: false,
         enableLSP: true,
         flowLspNotConfigured: true
@@ -236,13 +238,20 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const checkAndShowModal = async () => {
             if (!SwapStore.loading) {
                 const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+
                 if (mnemonic) {
                     this.setState({
                         showRescueKeyBtn: true,
-                        seedPhrase: mnemonic.split(' ')
+                        seedPhrase: mnemonic.split(' '),
+                        isModalVisible: false,
+                        isIntroModalVisible: false
                     });
                 } else {
-                    this.setState({ isModalVisible: true });
+                    this.setState({
+                        isIntroModalVisible: true,
+                        isModalVisible: false,
+                        showRescueKeyBtn: false
+                    });
                 }
             } else {
                 setTimeout(checkAndShowModal, 100);
@@ -265,15 +274,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             'focus',
             async () => {
                 const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+
                 if (mnemonic) {
                     this.setState({
                         isModalVisible: false,
+                        isIntroModalVisible: false,
                         showRescueKeyBtn: true,
                         seedPhrase: mnemonic.split(' ')
                     });
                 } else {
                     this.setState({
-                        isModalVisible: true,
+                        isIntroModalVisible: true,
+                        isModalVisible: false,
                         showRescueKeyBtn: false
                     });
                 }
@@ -467,6 +479,98 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
     };
 
+    renderIntroModal = () => {
+        const { isIntroModalVisible } = this.state;
+        const { navigation } = this.props;
+
+        return (
+            <ModalBox
+                isOpen={isIntroModalVisible}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        isIntroModalVisible: false
+                    });
+                }}
+                position="center"
+                backdropPressToClose={false}
+                swipeToClose={false}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('modalBackground'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: font('marlideBold'),
+                                marginBottom: 12,
+                                fontSize: 32,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.Swaps.title')}
+                        </Text>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('text'),
+                                marginBottom: 12,
+                                fontSize: 18,
+                                textAlign: 'left'
+                            }}
+                        >
+                            {localeString('views.Swaps.intro.description')}
+                        </Text>
+
+                        <Row
+                            justify="space-between"
+                            style={{ marginTop: 16, width: '100%' }}
+                        >
+                            <Button
+                                title={localeString('general.goBack')}
+                                onPress={() => {
+                                    this.setState({
+                                        isIntroModalVisible: false
+                                    });
+                                    navigation.goBack();
+                                }}
+                                containerStyle={{ flex: 1, marginRight: 8 }}
+                                secondary
+                            />
+                            <Button
+                                title={localeString(
+                                    'views.Swaps.intro.continue'
+                                )}
+                                onPress={() => {
+                                    this.setState({
+                                        isIntroModalVisible: false,
+                                        isModalVisible: true
+                                    });
+                                }}
+                                containerStyle={{ flex: 1, marginLeft: 8 }}
+                                tertiary
+                            />
+                        </Row>
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
+
     renderRescueKeyModal = () => {
         const { isModalVisible } = this.state;
 
@@ -558,6 +662,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                 'views.Swaps.rescueKey.restore'
                             )}
                             onPress={() => {
+                                this.setState({
+                                    isModalVisible: false,
+                                    isIntroModalVisible: false
+                                });
                                 navigation.navigate('SeedRecovery', {
                                     restoreRescueKey: true
                                 });
@@ -694,6 +802,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         return (
             <Screen>
+                {this.renderIntroModal()}
                 {this.renderRescueKeyModal()}
                 <Header
                     leftComponent="Back"
