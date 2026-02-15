@@ -2052,6 +2052,8 @@
     "views.Swaps.rescueKey.noSwapsFound": "未找到与此救援密钥对应的兑换记录",
     "views.Swaps.rescueKey.incorrectHost": "无法连接到指定主机。请检查主机地址并重试。",
     "views.Swaps.rescueKey.delete": "删除救援密钥",
+    "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
+    "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "确定要删除救援密钥吗？所有兑换记录也将从您的兑换历史中删除。请先备份密钥，因为您可以稍后使用它们来恢复这些兑换记录。",
     "views.SwapDetails.title": "兑换详情",
     "views.SwapDetails.acceptZeroConf": "接受零确认",
