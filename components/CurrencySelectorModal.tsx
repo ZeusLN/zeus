@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import ModalBox from './ModalBox';
 import ToggleButton from './ToggleButton';
 import CurrencyList from './CurrencyList';
+import CurrencyConverterContent from './CurrencyConverterContent';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -25,6 +26,9 @@ export default class CurrencySelectorModal extends React.Component<
     CurrencySelectorModalState
 > {
     private modalRef = React.createRef<ModalBox>();
+    private converterRef = React.createRef<CurrencyConverterContent>();
+    private focusListener: any = null;
+    private pendingReopen = false;
 
     constructor(props: CurrencySelectorModalProps) {
         super(props);
@@ -33,8 +37,27 @@ export default class CurrencySelectorModal extends React.Component<
         };
     }
 
+    componentDidMount() {
+        const { navigation } = this.props;
+        if (navigation) {
+            this.focusListener = navigation.addListener('focus', () => {
+                if (this.pendingReopen) {
+                    this.pendingReopen = false;
+                    this.open();
+                }
+            });
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
+    }
+
     open = () => {
         this.modalRef.current?.open();
+        this.converterRef.current?.refresh();
     };
 
     close = () => {
@@ -42,21 +65,17 @@ export default class CurrencySelectorModal extends React.Component<
     };
 
     handleClose = () => {
+        // Don't reset tab or call onClose if we're about to reopen
+        if (this.pendingReopen) return;
         const { onClose } = this.props;
         if (onClose) onClose();
         this.setState({ activeTab: 'currencies' });
     };
 
     handleTabToggle = (key: string) => {
+        this.setState({ activeTab: key as 'currencies' | 'converter' });
         if (key === 'converter') {
-            // Navigate to the existing CurrencyConverter screen
-            const { navigation } = this.props;
-            if (navigation) {
-                this.close();
-                navigation.navigate('CurrencyConverter');
-            }
-        } else {
-            this.setState({ activeTab: key as 'currencies' | 'converter' });
+            this.converterRef.current?.refresh();
         }
     };
 
@@ -64,7 +83,13 @@ export default class CurrencySelectorModal extends React.Component<
         this.close();
     };
 
+    handleConverterNavigateAway = () => {
+        this.pendingReopen = true;
+        this.close();
+    };
+
     render() {
+        const { navigation } = this.props;
         const { activeTab } = this.state;
 
         const TAB_OPTIONS = [
@@ -115,7 +140,21 @@ export default class CurrencySelectorModal extends React.Component<
                     />
 
                     <View style={{ flex: 1, marginTop: 16 }}>
-                        <CurrencyList onSelect={this.handleCurrencySelect} />
+                        {activeTab === 'currencies' && (
+                            <CurrencyList
+                                onSelect={this.handleCurrencySelect}
+                            />
+                        )}
+                        {activeTab === 'converter' && navigation && (
+                            <CurrencyConverterContent
+                                ref={this.converterRef}
+                                navigation={navigation}
+                                fromModal
+                                onNavigateAway={
+                                    this.handleConverterNavigateAway
+                                }
+                            />
+                        )}
                     </View>
                 </View>
             </ModalBox>
