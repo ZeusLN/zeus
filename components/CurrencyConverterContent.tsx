@@ -247,7 +247,7 @@ export default class CurrencyConverterContent extends React.Component<
                     const btcToRate = fiatRates.find(
                         (rate) => rate.currencyPair === `BTC_${key}`
                     )?.rate;
-                    const btcFromRate: any = fiatRates.find(
+                    const btcFromRate: number | undefined = fiatRates.find(
                         (rate) => rate.currencyPair === `BTC_${currency}`
                     )?.rate;
 
