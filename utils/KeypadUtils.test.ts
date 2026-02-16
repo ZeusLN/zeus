@@ -2,7 +2,6 @@ import {
     getDecimalLimit,
     validateKeypadInput,
     getAmountFontSize,
-    getAmountFontSizeWithInbound,
     deleteLastCharacter
 } from './KeypadUtils';
 
@@ -384,46 +383,48 @@ describe('KeypadUtils', () => {
 
         describe('compact sizing', () => {
             it('returns 80 for short amounts (1-2 chars)', () => {
-                expect(getAmountFontSize(1, 0, true)).toBe(80);
-                expect(getAmountFontSize(2, 0, true)).toBe(80);
+                expect(getAmountFontSize(1, 0, { compact: true })).toBe(80);
+                expect(getAmountFontSize(2, 0, { compact: true })).toBe(80);
             });
 
             it('returns different sizes than standard mode', () => {
-                expect(getAmountFontSize(3, 0, true)).toBe(65);
-                expect(getAmountFontSize(4, 0, true)).toBe(65);
-                expect(getAmountFontSize(5, 0, true)).toBe(55);
-                expect(getAmountFontSize(6, 0, true)).toBe(55);
-                expect(getAmountFontSize(7, 0, true)).toBe(50);
-                expect(getAmountFontSize(8, 0, true)).toBe(45);
-                expect(getAmountFontSize(10, 0, true)).toBe(35);
+                expect(getAmountFontSize(3, 0, { compact: true })).toBe(65);
+                expect(getAmountFontSize(4, 0, { compact: true })).toBe(65);
+                expect(getAmountFontSize(5, 0, { compact: true })).toBe(55);
+                expect(getAmountFontSize(6, 0, { compact: true })).toBe(55);
+                expect(getAmountFontSize(7, 0, { compact: true })).toBe(50);
+                expect(getAmountFontSize(8, 0, { compact: true })).toBe(45);
+                expect(getAmountFontSize(10, 0, { compact: true })).toBe(35);
             });
         });
-    });
 
-    describe('getAmountFontSizeWithInbound', () => {
-        it('returns larger size when not needing inbound', () => {
-            expect(getAmountFontSizeWithInbound(4, 0, false)).toBe(80);
-            expect(getAmountFontSizeWithInbound(4, 0, true)).toBe(70);
-        });
+        describe('needInbound sizing', () => {
+            it('returns larger size when not needing inbound', () => {
+                expect(getAmountFontSize(4, 0)).toBe(80);
+                expect(getAmountFontSize(4, 0, { needInbound: true })).toBe(70);
+            });
 
-        it('returns smaller sizes when needing inbound', () => {
-            expect(getAmountFontSizeWithInbound(5, 0, false)).toBe(75);
-            expect(getAmountFontSizeWithInbound(5, 0, true)).toBe(65);
+            it('returns smaller sizes when needing inbound', () => {
+                expect(getAmountFontSize(5, 0)).toBe(75);
+                expect(getAmountFontSize(5, 0, { needInbound: true })).toBe(65);
 
-            expect(getAmountFontSizeWithInbound(6, 0, false)).toBe(65);
-            expect(getAmountFontSizeWithInbound(6, 0, true)).toBe(60);
+                expect(getAmountFontSize(6, 0)).toBe(65);
+                expect(getAmountFontSize(6, 0, { needInbound: true })).toBe(60);
 
-            expect(getAmountFontSizeWithInbound(7, 0, false)).toBe(60);
-            expect(getAmountFontSizeWithInbound(7, 0, true)).toBe(55);
+                expect(getAmountFontSize(7, 0)).toBe(60);
+                expect(getAmountFontSize(7, 0, { needInbound: true })).toBe(55);
 
-            expect(getAmountFontSizeWithInbound(8, 0, false)).toBe(55);
-            expect(getAmountFontSizeWithInbound(8, 0, true)).toBe(50);
+                expect(getAmountFontSize(8, 0)).toBe(55);
+                expect(getAmountFontSize(8, 0, { needInbound: true })).toBe(50);
 
-            expect(getAmountFontSizeWithInbound(9, 0, false)).toBe(50);
-            expect(getAmountFontSizeWithInbound(9, 0, true)).toBe(45);
+                expect(getAmountFontSize(9, 0)).toBe(50);
+                expect(getAmountFontSize(9, 0, { needInbound: true })).toBe(45);
 
-            expect(getAmountFontSizeWithInbound(10, 0, false)).toBe(45);
-            expect(getAmountFontSizeWithInbound(10, 0, true)).toBe(40);
+                expect(getAmountFontSize(10, 0)).toBe(45);
+                expect(getAmountFontSize(10, 0, { needInbound: true })).toBe(
+                    40
+                );
+            });
         });
     });
 

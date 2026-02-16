@@ -34,7 +34,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import {
     validateKeypadInput,
     startShakeAnimation,
-    getAmountFontSizeWithInbound,
+    getAmountFontSize,
     deleteLastCharacter
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -218,7 +218,7 @@ export default class KeypadPane extends React.PureComponent<
         const { amount, needInbound } = this.state;
         const { units } = this.props.UnitsStore!;
         const { count } = getDecimalPlaceholder(amount, units);
-        return getAmountFontSizeWithInbound(amount.length, count, needInbound);
+        return getAmountFontSize(amount.length, count, { needInbound });
     };
 
     startShake = () => {

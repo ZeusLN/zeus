@@ -116,17 +116,18 @@ export const validateKeypadInput = (
  * Calculate font size for amount display based on length.
  * @param amountLength - Length of the amount string
  * @param placeholderCount - Number of placeholder characters
- * @param compact - Use smaller sizes (for displays with additional UI elements)
+ * @param options.compact - Use smaller sizes (for POS view with additional UI elements)
+ * @param options.needInbound - Reduce sizes for LSP inbound capacity warning
  */
 export const getAmountFontSize = (
     amountLength: number,
     placeholderCount: number,
-    compact: boolean = false
+    options: { compact?: boolean; needInbound?: boolean } = {}
 ): number => {
+    const { compact = false, needInbound = false } = options;
     const totalLength = amountLength + placeholderCount;
 
     if (compact) {
-        // Compact sizing for POS view
         switch (totalLength) {
             case 1:
             case 2:
@@ -146,39 +147,7 @@ export const getAmountFontSize = (
         }
     }
 
-    // Standard sizing
-    switch (totalLength) {
-        case 1:
-        case 2:
-        case 3:
-        case 4:
-            return 80;
-        case 5:
-            return 75;
-        case 6:
-            return 65;
-        case 7:
-            return 60;
-        case 8:
-            return 55;
-        case 9:
-            return 50;
-        default:
-            return 45;
-    }
-};
-
-/**
- * Calculate font size with inbound capacity warning adjustment.
- * Used when displaying LSP inbound capacity warnings.
- */
-export const getAmountFontSizeWithInbound = (
-    amountLength: number,
-    placeholderCount: number,
-    needInbound: boolean
-): number => {
-    const totalLength = amountLength + placeholderCount;
-
+    // Standard sizing with optional inbound adjustment
     switch (totalLength) {
         case 1:
         case 2:

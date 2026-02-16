@@ -97,7 +97,7 @@ export default class PosKeypadPane extends React.PureComponent<
         const { amount } = this.state;
         const { units } = this.props.UnitsStore!;
         const { count } = getDecimalPlaceholder(amount, units);
-        return getAmountFontSize(amount.length, count, true);
+        return getAmountFontSize(amount.length, count, { compact: true });
     };
 
     startShake = () => {
