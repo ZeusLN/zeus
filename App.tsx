@@ -643,6 +643,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             VerifyOnChain
                                                         }
+                                                        options={{
+                                                            gestureEnabled:
+                                                                false // disables swipe back
+                                                        }}
                                                     />
                                                     <Stack.Screen
                                                         name="SendingOnChain" // @ts-ignore:next-line

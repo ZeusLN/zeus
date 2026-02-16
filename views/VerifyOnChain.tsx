@@ -33,6 +33,7 @@ interface VerifyOnChainParams {
     additionalOutputs: AdditionalOutput[];
     fundMax: boolean;
 }
+
 interface VerifyOnChainProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'VerifyOnChain', VerifyOnChainParams>;
@@ -45,6 +46,7 @@ interface VerifyOnChainState {
     bitcoinUnits: 'sats' | 'BTC';
     slideToPayThreshold: number;
 }
+
 @inject('TransactionsStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
@@ -60,6 +62,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
     }
+
     toggleBitcoinUnits = () => {
         const { UnitsStore } = this.props;
         if (UnitsStore.units === 'fiat') {
@@ -143,6 +146,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
             </View>
         );
     };
+
     onConfirm = () => {
         const { navigation, TransactionsStore, SettingsStore, route } =
             this.props;
