@@ -27,8 +27,7 @@ import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
 
-const LNURL_HOST = 'https://zeuspay.com/api';
-const LNURL_SOCKET_HOST = 'https://zeuspay.com';
+const LNURL_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
 export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
@@ -120,7 +119,7 @@ export default class LightningAddressStore {
         } else {
             const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/auth`,
+                `${LNURL_HOST}/api/lnurl/auth`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
@@ -261,7 +260,7 @@ export default class LightningAddressStore {
 
             const submitResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/submitHashes`,
+                `${LNURL_HOST}/api/lnurl/submitHashes`,
                 {
                     'Content-Type': 'application/json'
                 },
@@ -310,7 +309,7 @@ export default class LightningAddressStore {
 
             const createResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/create`,
+                `${LNURL_HOST}/api/lnurl/create`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -379,7 +378,7 @@ export default class LightningAddressStore {
 
             const createResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/create`,
+                `${LNURL_HOST}/api/lnurl/create`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -441,7 +440,7 @@ export default class LightningAddressStore {
 
             const createResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/create`,
+                `${LNURL_HOST}/api/lnurl/create`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -499,7 +498,7 @@ export default class LightningAddressStore {
         try {
             const createResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/nwc/test`,
+                `${LNURL_HOST}/api/lnurl/nwc/test`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     nwc_string
@@ -544,7 +543,7 @@ export default class LightningAddressStore {
 
             const updateResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/update`,
+                `${LNURL_HOST}/api/lnurl/update`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -603,7 +602,7 @@ export default class LightningAddressStore {
 
             const statusResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/status`,
+                `${LNURL_HOST}/api/lnurl/status`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -711,7 +710,7 @@ export default class LightningAddressStore {
 
             const redeemResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/redeem`,
+                `${LNURL_HOST}/api/lnurl/redeem`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -801,7 +800,7 @@ export default class LightningAddressStore {
 
                     const redeemResponse = await ReactNativeBlobUtil.fetch(
                         'POST',
-                        `${LNURL_HOST}/lnurl/nuts/redeem`,
+                        `${LNURL_HOST}/api/lnurl/nuts/redeem`,
                         { 'Content-Type': 'application/json' },
                         JSON.stringify({
                             pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -1224,7 +1223,7 @@ export default class LightningAddressStore {
     private subscribeUpdatesZaplocker = async () => {
         const { verification, signature } = await this.getAuthData();
 
-        this.socket = io(LNURL_SOCKET_HOST, {
+        this.socket = io(LNURL_HOST, {
             path: LNURL_SOCKET_PATH
         }).connect();
         this.socket.emit('auth', {
@@ -1275,7 +1274,7 @@ export default class LightningAddressStore {
     private subscribeUpdatesCashu = async () => {
         const { verification, signature } = await this.getAuthData();
 
-        this.socket = io(LNURL_SOCKET_HOST, {
+        this.socket = io(LNURL_HOST, {
             path: LNURL_SOCKET_PATH
         }).connect();
         this.socket.emit('auth', {
@@ -1347,7 +1346,7 @@ export default class LightningAddressStore {
 
             const deleteResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/lnurl/delete`,
+                `${LNURL_HOST}/api/lnurl/delete`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -1391,7 +1390,7 @@ export default class LightningAddressStore {
 
             const orderResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${LNURL_HOST}/plus/order`,
+                `${LNURL_HOST}/api/plus/order`,
                 { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
