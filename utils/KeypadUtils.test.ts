@@ -261,6 +261,64 @@ describe('KeypadUtils', () => {
             });
         });
 
+        describe('fiat integer limit', () => {
+            it('rejects more than 10 integer digits for fiat', () => {
+                const result = validateKeypadInput(
+                    '1234567890',
+                    '1',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: false,
+                    newAmount: '1234567890'
+                });
+            });
+
+            it('allows decimal point after 10 integer digits for fiat', () => {
+                const result = validateKeypadInput(
+                    '1234567890',
+                    '.',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: true,
+                    newAmount: '1234567890.'
+                });
+            });
+
+            it('allows digits after decimal with 10 integer digits for fiat', () => {
+                const result = validateKeypadInput(
+                    '1234567890.',
+                    '1',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: true,
+                    newAmount: '1234567890.1'
+                });
+            });
+
+            it('accepts 10th integer digit for fiat', () => {
+                const result = validateKeypadInput(
+                    '123456789',
+                    '0',
+                    'fiat',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: true,
+                    newAmount: '1234567890'
+                });
+            });
+        });
+
         describe('capacity limits', () => {
             it('rejects BTC amount exceeding 21 million', () => {
                 const result = validateKeypadInput(

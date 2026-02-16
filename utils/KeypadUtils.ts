@@ -69,6 +69,19 @@ export const validateKeypadInput = (
         }
     }
 
+    // For fiat: deny if trying to add more than 10 figures before decimal
+    if (units === 'fiat') {
+        if (
+            !decimalPart &&
+            integerPart &&
+            integerPart.length >= 10 &&
+            !currentAmount.includes('.') &&
+            inputValue !== '.'
+        ) {
+            return { valid: false, newAmount: currentAmount };
+        }
+    }
+
     // Only allow one decimal, unless currency has zero decimal places
     if (
         inputValue === '.' &&
