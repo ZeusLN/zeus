@@ -27,7 +27,6 @@ interface CurrencyListProps {
 interface CurrencyListState {
     search: string;
     currencies: typeof CURRENCY_KEYS;
-    fiatRatesSource: string;
 }
 
 const BITCOIN_UNITS = [
@@ -45,8 +44,7 @@ export default class CurrencyList extends React.Component<
         super(props);
         this.state = {
             search: '',
-            currencies: CURRENCY_KEYS,
-            fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE
+            currencies: CURRENCY_KEYS
         };
     }
 
@@ -146,7 +144,10 @@ export default class CurrencyList extends React.Component<
 
     render() {
         const { SettingsStore, UnitsStore, FiatStore } = this.props;
-        const { search, fiatRatesSource } = this.state;
+        const { search } = this.state;
+        const fiatRatesSource =
+            SettingsStore!.settings.fiatRatesSource ||
+            DEFAULT_FIAT_RATES_SOURCE;
         const currentUnit = UnitsStore!.units;
         const currentFiat = SettingsStore!.settings.fiat || DEFAULT_FIAT;
         const fiatRates = FiatStore?.fiatRates;
