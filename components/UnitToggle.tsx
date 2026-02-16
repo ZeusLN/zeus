@@ -100,18 +100,19 @@ export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
                     title={getDisplayTitle()}
                     icon={{
                         name: 'import-export',
-                        size: 25,
+                        size: 20,
                         color: themeColor('buttonText')
                     }}
                     adaptiveWidth
                     quaternary
                     noUppercase
                     onPress={handlePress}
+                    containerStyle={{ height: 40 }}
                     buttonStyle={{
-                        height: 38,
+                        height: 40,
+                        paddingVertical: 0,
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        paddingVertical: 0
+                        justifyContent: 'center'
                     }}
                 />
             </React.Fragment>
