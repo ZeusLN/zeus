@@ -1558,17 +1558,13 @@ export default class SettingsStore {
 
     @action
     public toggleFavoriteCurrency = async (currencyCode: string) => {
-        const index = this.favoriteCurrencies.indexOf(currencyCode);
-        if (index >= 0) {
-            this.favoriteCurrencies = this.favoriteCurrencies.filter(
-                (c) => c !== currencyCode
-            );
+        const favorites = new Set(this.favoriteCurrencies);
+        if (favorites.has(currencyCode)) {
+            favorites.delete(currencyCode);
         } else {
-            this.favoriteCurrencies = [
-                ...this.favoriteCurrencies,
-                currencyCode
-            ];
+            favorites.add(currencyCode);
         }
+        this.favoriteCurrencies = Array.from(favorites);
         await Storage.setItem(
             FAVORITE_CURRENCIES_KEY,
             JSON.stringify(this.favoriteCurrencies)
