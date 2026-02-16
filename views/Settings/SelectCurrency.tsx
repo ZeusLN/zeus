@@ -125,10 +125,9 @@ export default class SelectCurrency extends React.Component<
                     } else {
                         await updateSettings({
                             fiat: item.value
-                        }).then(() => {
-                            getSettings();
-                            navigation.goBack();
                         });
+                        getSettings();
+                        navigation.goBack();
                     }
                 }}
             >
