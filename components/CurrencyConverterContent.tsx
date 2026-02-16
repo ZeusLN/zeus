@@ -57,6 +57,7 @@ interface CurrencyConverterContentState {
     selectedCurrency: string;
     editMode: boolean;
     fadeAnim: Animated.Value;
+    isDragging: boolean;
 }
 
 const EMOJI_REPLACEMENTS = {
@@ -81,7 +82,8 @@ export default class CurrencyConverterContent extends React.Component<
             },
             selectedCurrency: '',
             editMode: false,
-            fadeAnim: new Animated.Value(0)
+            fadeAnim: new Animated.Value(0),
+            isDragging: false
         };
     }
 
@@ -446,6 +448,7 @@ export default class CurrencyConverterContent extends React.Component<
                 <ScrollView
                     keyboardShouldPersistTaps="handled"
                     keyboardDismissMode="on-drag"
+                    scrollEnabled={!this.state.isDragging}
                 >
                     {showToolbar && (
                         <Row
@@ -616,11 +619,22 @@ export default class CurrencyConverterContent extends React.Component<
                                                 item !== 'BTC' &&
                                                 item !== 'sats' && (
                                                     <TouchableOpacity
-                                                        onPressIn={onDragStart}
-                                                        onPressOut={onDragEnd}
-                                                        accessibilityLabel={
-                                                            'Reorder'
-                                                        }
+                                                        onPressIn={() => {
+                                                            this.setState({
+                                                                isDragging: true
+                                                            });
+                                                            onDragStart();
+                                                        }}
+                                                        onPressOut={() => {
+                                                            this.setState({
+                                                                isDragging:
+                                                                    false
+                                                            });
+                                                            onDragEnd();
+                                                        }}
+                                                        accessibilityLabel={localeString(
+                                                            'general.reorder'
+                                                        )}
                                                     >
                                                         <Animated.View
                                                             style={[
