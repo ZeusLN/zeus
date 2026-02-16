@@ -340,7 +340,9 @@ export default class CurrencyList extends React.Component<
                                         }}
                                     >
                                         {localeString(
-                                            'views.Settings.Currency.title'
+                                            favoriteCurrencyItems.length > 0
+                                                ? 'views.Settings.Currency.otherCurrencies'
+                                                : 'views.Settings.Currency.currencies'
                                         )}
                                     </Text>
                                 </View>

@@ -290,31 +290,32 @@ export default class SelectCurrency extends React.Component<
                                     {this.renderFavorites(
                                         favoriteCurrencyItems
                                     )}
-                                    {!currencyConverter && (
-                                        <View
-                                            style={{
-                                                paddingHorizontal: 16,
-                                                paddingVertical: 8,
-                                                backgroundColor:
-                                                    themeColor('secondary')
-                                            }}
-                                        >
-                                            <Text
+                                    {!currencyConverter &&
+                                        favoriteCurrencyItems.length > 0 && (
+                                            <View
                                                 style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
-                                                    fontSize: 14
+                                                    paddingHorizontal: 16,
+                                                    paddingVertical: 8,
+                                                    backgroundColor:
+                                                        themeColor('secondary')
                                                 }}
                                             >
-                                                {localeString(
-                                                    'views.Settings.Currency.title'
-                                                )}
-                                            </Text>
-                                        </View>
-                                    )}
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        fontSize: 14
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Currency.otherCurrencies'
+                                                    )}
+                                                </Text>
+                                            </View>
+                                        )}
                                 </>
                             ) : undefined
                         }
