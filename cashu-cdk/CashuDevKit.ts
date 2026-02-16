@@ -701,26 +701,6 @@ class CashuDevKit {
         }
     }
 
-    /**
-     * Pay to a human-readable address (convenience method)
-     * @param mintUrl - The mint's URL
-     * @param address - Human readable address
-     * @param amountSats - Amount in satoshis
-     */
-    async payToAddress(
-        mintUrl: string,
-        address: string,
-        amountSats: number
-    ): Promise<CDKMelted> {
-        const quote = await this.createMeltHumanReadableQuote(
-            mintUrl,
-            address,
-            amountSats * 1000 // Convert to msat
-        );
-        // Use the request (bolt11/bolt12) from the quote for melt
-        return await this.melt(mintUrl, quote.request);
-    }
-
     // ========================================================================
     // Transactions
     // ========================================================================

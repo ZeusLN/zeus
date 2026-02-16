@@ -859,28 +859,6 @@ export default class CashuStore {
         return await CashuDevKit.decodeToken(encodedToken);
     };
 
-    /**
-     * CDK: Pay to human-readable address (BOLT12/BIP353)
-     */
-    public payToAddressCDK = async (
-        mintUrl: string,
-        address: string,
-        amountSats: number
-    ): Promise<CDKMelted> => {
-        if (!this.cdkInitialized) {
-            throw new Error('CDK not initialized');
-        }
-
-        const result = await CashuDevKit.payToAddress(
-            mintUrl,
-            address,
-            amountSats
-        );
-        await this.syncCDKBalances();
-
-        return result;
-    };
-
     // =========================================================================
     // End CDK Integration Methods
     // =========================================================================
