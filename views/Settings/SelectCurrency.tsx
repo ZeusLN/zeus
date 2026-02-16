@@ -10,9 +10,12 @@ import Header from '../../components/Header';
 
 import SettingsStore, {
     CURRENCY_KEYS,
+    CURRENCY_CODES_KEY,
     DEFAULT_FIAT,
     DEFAULT_FIAT_RATES_SOURCE
 } from '../../stores/SettingsStore';
+
+import Storage from '../../storage';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -20,7 +23,10 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface SelectCurrencyProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    route: Route<'SelectCurrency', { currencyConverter: boolean }>;
+    route: Route<
+        'SelectCurrency',
+        { currencyConverter: boolean; fromModal: boolean }
+    >;
 }
 
 interface SelectCurrencyState {
@@ -86,6 +92,7 @@ export default class SelectCurrency extends React.Component<
         const { updateSettings, getSettings }: any = SettingsStore;
 
         const currencyConverter = route.params?.currencyConverter;
+        const fromModal = route.params?.fromModal;
 
         return (
             <Screen>
@@ -138,7 +145,28 @@ export default class SelectCurrency extends React.Component<
                                     backgroundColor: 'transparent'
                                 }}
                                 onPress={async () => {
-                                    if (currencyConverter) {
+                                    if (currencyConverter && fromModal) {
+                                        // Save directly to storage when coming from modal
+                                        const inputValuesString =
+                                            await Storage.getItem(
+                                                CURRENCY_CODES_KEY
+                                            );
+                                        const inputValues = inputValuesString
+                                            ? JSON.parse(inputValuesString)
+                                            : {};
+                                        if (
+                                            !inputValues.hasOwnProperty(
+                                                item.value
+                                            )
+                                        ) {
+                                            inputValues[item.value] = '';
+                                            await Storage.setItem(
+                                                CURRENCY_CODES_KEY,
+                                                inputValues
+                                            );
+                                        }
+                                        navigation.goBack();
+                                    } else if (currencyConverter) {
                                         navigation.popTo('CurrencyConverter', {
                                             selectedCurrency: item.value
                                         });
