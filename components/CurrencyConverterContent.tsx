@@ -54,7 +54,6 @@ interface CurrencyConverterContentProps {
 
 interface CurrencyConverterContentState {
     inputValues: { [key: string]: string };
-    selectedCurrency: string;
     editMode: boolean;
     fadeAnim: Animated.Value;
     isDragging: boolean;
@@ -80,7 +79,6 @@ export default class CurrencyConverterContent extends React.Component<
                 BTC: '',
                 sats: ''
             },
-            selectedCurrency: '',
             editMode: false,
             fadeAnim: new Animated.Value(0),
             isDragging: false
@@ -168,17 +166,9 @@ export default class CurrencyConverterContent extends React.Component<
 
         if (!inputValues.hasOwnProperty(currency)) {
             const updatedInputValues = { ...inputValues, [currency]: '' };
-            this.setState(
-                {
-                    inputValues: updatedInputValues,
-                    selectedCurrency: currency
-                },
-                () => {
-                    this.saveInputValues();
-                }
-            );
-        } else {
-            this.setState({ selectedCurrency: currency });
+            this.setState({ inputValues: updatedInputValues }, () => {
+                this.saveInputValues();
+            });
         }
     };
 
