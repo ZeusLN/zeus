@@ -129,6 +129,19 @@ export default class Contact extends BaseModel {
         return !this.isAddressArrayEmpty(this.cashuPubkey);
     }
 
+    @computed public get hasOnlyCashuPubkey(): boolean {
+        return (
+            this.hasCashuPubkey &&
+            !this.hasLnAddress &&
+            !this.hasBolt12Address &&
+            !this.hasBolt12Offer &&
+            !this.hasOnchainAddress &&
+            !this.hasPubkey &&
+            !this.hasNip05 &&
+            !this.hasNpub
+        );
+    }
+
     @computed public get hasMultiplePayableAddresses(): boolean {
         let count = 0;
         this.lnAddress.forEach((address) => {
@@ -168,5 +181,15 @@ export default class Contact extends BaseModel {
             return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
         }
         return this.banner || '';
+    }
+
+    @computed public get getAvatarInitials(): string {
+        const name = (this.name || '').trim();
+        if (!name) return '';
+        const words = name.split(/\s+/).filter(Boolean);
+        const firstInitial = words[0][0] || '';
+        const lastInitial =
+            words.length > 1 ? words[words.length - 1][0] || '' : '';
+        return (firstInitial + lastInitial).toUpperCase();
     }
 }
