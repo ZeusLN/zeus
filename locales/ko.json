@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "검증 작업이 지원되지 않습니다.",
     "views.Settings.Language.title": "언어",
     "views.Settings.Currency.title": "통화",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "출처",
     "views.Settings.Currency.selectCurrency": "통화 선택",
     "views.Settings.SelectCurrency.title": "통화 선택",
