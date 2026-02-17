@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
     "views.Settings.Language.title": "Sprache",
     "views.Settings.Currency.title": "Währung",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Quelle",
     "views.Settings.Currency.selectCurrency": "Währung auswählen",
     "views.Settings.SelectCurrency.title": "Währung auswählen",
