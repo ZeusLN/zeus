@@ -214,15 +214,13 @@ export default class SelectCurrency extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, route } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { search, fiatRatesSource } = this.state;
         const favoriteCurrencies = SettingsStore.favoriteCurrencies;
 
         const currencies = this.state.currencies
             .sort((a, b) => a.key.localeCompare(b.key))
             .filter((c) => c.supportedSources?.includes(fiatRatesSource));
-
-        const currencyConverter = route.params?.currencyConverter;
 
         const favoriteCurrencyItems = currencies.filter((c) =>
             favoriteCurrencies.includes(c.value)
@@ -289,32 +287,31 @@ export default class SelectCurrency extends React.Component<
                                     {this.renderFavorites(
                                         favoriteCurrencyItems
                                     )}
-                                    {!currencyConverter &&
-                                        favoriteCurrencyItems.length > 0 && (
-                                            <View
+                                    {favoriteCurrencyItems.length > 0 && (
+                                        <View
+                                            style={{
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 8,
+                                                backgroundColor:
+                                                    themeColor('secondary')
+                                            }}
+                                        >
+                                            <Text
                                                 style={{
-                                                    paddingHorizontal: 16,
-                                                    paddingVertical: 8,
-                                                    backgroundColor:
-                                                        themeColor('secondary')
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
+                                                    fontSize: 14
                                                 }}
                                             >
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Medium',
-                                                        fontSize: 14
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.Currency.otherCurrencies'
-                                                    )}
-                                                </Text>
-                                            </View>
-                                        )}
+                                                {localeString(
+                                                    'views.Settings.Currency.otherCurrencies'
+                                                )}
+                                            </Text>
+                                        </View>
+                                    )}
                                 </>
                             ) : undefined
                         }
