@@ -98,7 +98,7 @@ export default class SetDuressPassphrase extends React.Component<
 
         await updateSettings({ duressPassphrase }).then(() => {
             getSettings();
-            navigation.popTo('Settings');
+            navigation.popTo('Security');
         });
     };
 
@@ -107,7 +107,7 @@ export default class SetDuressPassphrase extends React.Component<
         const { updateSettings } = SettingsStore;
 
         await updateSettings({ duressPassphrase: '' }).then(() => {
-            navigation.popTo('Settings');
+            navigation.popTo('Security');
         });
     };
 
@@ -261,10 +261,7 @@ export default class SetDuressPassphrase extends React.Component<
                                         this.deleteDuressPassword();
                                     }
                                 }}
-                                titleStyle={{
-                                    color: themeColor('delete')
-                                }}
-                                secondary
+                                warning
                             />
                         </View>
                     )}
