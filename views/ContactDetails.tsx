@@ -398,7 +398,7 @@ export default class ContactDetails extends React.Component<
                                     }}
                                 />
                             )}
-                            {contact.photo && (
+                            {contact.photo ? (
                                 <Image
                                     source={{ uri: contact.getPhoto }}
                                     style={{
@@ -409,6 +409,40 @@ export default class ContactDetails extends React.Component<
                                         marginTop: contact.banner ? -100 : 0
                                     }}
                                 />
+                            ) : (
+                                <View
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20,
+                                        marginTop: contact.banner ? -100 : 0,
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {contact.getAvatarInitials ? (
+                                        <Text
+                                            style={{
+                                                fontSize: 48,
+                                                fontWeight: 'bold',
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {contact.getAvatarInitials}
+                                        </Text>
+                                    ) : contact.hasOnlyCashuPubkey ? (
+                                        <Ecash
+                                            fill="#FACC15"
+                                            width={64}
+                                            height={64}
+                                        />
+                                    ) : (
+                                        <Text style={{ fontSize: 64 }}>⚡</Text>
+                                    )}
+                                </View>
                             )}
                             <Text
                                 style={{

@@ -28,6 +28,7 @@ import ContactStore, { CONTACTS_KEY } from '../../stores/ContactStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
+import Ecash from '../../assets/images/SVG/Ecash.svg';
 import { CashuLockSettingsParams } from '../Cashu/CashuLockSettings';
 
 export interface ContactsParams extends CashuLockSettingsParams {
@@ -222,7 +223,7 @@ export default class Contacts extends React.Component<
                         alignItems: 'center'
                     }}
                 >
-                    {contact.photo && (
+                    {contact.photo ? (
                         <Image
                             source={{ uri: contact.getPhoto }}
                             style={{
@@ -232,6 +233,34 @@ export default class Contacts extends React.Component<
                                 marginRight: 10
                             }}
                         />
+                    ) : (
+                        <View
+                            style={{
+                                width: 40,
+                                height: 40,
+                                borderRadius: 20,
+                                marginRight: 10,
+                                backgroundColor: themeColor('secondary'),
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            {contact.getAvatarInitials ? (
+                                <Text
+                                    style={{
+                                        fontSize: 16,
+                                        fontWeight: 'bold',
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {contact.getAvatarInitials}
+                                </Text>
+                            ) : contact.hasOnlyCashuPubkey ? (
+                                <Ecash fill="#FACC15" width={24} height={24} />
+                            ) : (
+                                <Text style={{ fontSize: 20 }}>⚡</Text>
+                            )}
+                        </View>
                     )}
                     <View style={{ flex: 1 }}>
                         <Text
