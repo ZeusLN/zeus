@@ -16,12 +16,11 @@ import {
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
-import Feather from '@react-native-vector-icons/feather';
 
 import NavigationService from '../NavigationService';
 
@@ -174,11 +173,6 @@ export default class AmountInput extends React.Component<
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
-        const fiat = settings.fiat;
-        const flag: string | undefined = CURRENCY_KEYS.find(
-            (c) => c.value === fiat
-        )?.flag;
-
         const displayValue = this.getDisplayValue();
 
         // Format display value
@@ -208,63 +202,16 @@ export default class AmountInput extends React.Component<
         return (
             <React.Fragment>
                 {title && (
-                    <View
+                    <Text
                         style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 5,
-                            height: 24
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: themeColor('secondaryText'),
+                            fontSize: 14,
+                            marginBottom: 5
                         }}
                     >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('secondaryText'),
-                                fontSize: 14
-                            }}
-                        >
-                            {title}
-                        </Text>
-                        {fiatEnabled && effectiveUnits === 'fiat' && (
-                            <TouchableOpacity
-                                onPress={() => {
-                                    NavigationService.navigate(
-                                        'SelectCurrency'
-                                    );
-                                }}
-                                activeOpacity={0.5}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    height: 28,
-                                    paddingHorizontal: 10,
-                                    borderRadius: 16,
-                                    backgroundColor: themeColor('secondary'),
-                                    borderWidth: 1,
-                                    borderColor: themeColor('highlight')
-                                }}
-                            >
-                                <Row style={styles.row}>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            marginRight: 4
-                                        }}
-                                    >
-                                        {`${flag ? `${flag} ` : ''}${fiat}`}
-                                    </Text>
-                                    <Feather
-                                        name="chevron-right"
-                                        size={12}
-                                        color={themeColor('text')}
-                                    />
-                                </Row>
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                        {title}
+                    </Text>
                 )}
                 <Row>
                     {prefix ? prefix : undefined}
