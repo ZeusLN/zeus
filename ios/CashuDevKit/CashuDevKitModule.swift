@@ -369,9 +369,26 @@ class CashuDevKitModule: RCTEventEmitter {
         guard let wallet = getInitializedWallet(reject: reject) else { return }
 
         Task {
-            let url = MintUrl(url: mintUrl)
-            await wallet.removeMint(mintUrl: url)
-            resolve(nil)
+            do {
+                let url = MintUrl(url: mintUrl)
+                await wallet.removeMint(mintUrl: url)
+                if let db = self.db {
+                    try await db.removeMint(mintUrl: url)
+                } else {
+                    reject(
+                        "DATABASE_NOT_INITIALIZED",
+                        "Database not initialized",
+                        nil
+                    )
+                    return
+                }
+                resolve(nil)
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("REMOVE_MINT_ERROR", error.localizedDescription, error)
+            }
         }
     }
 

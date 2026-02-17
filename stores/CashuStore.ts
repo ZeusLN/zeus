@@ -1507,23 +1507,28 @@ export default class CashuStore {
     @action
     public removeMint = async (mintUrl: string) => {
         this.loading = true;
-
-        // Remove from CDK (CDK is source of truth for mints)
         try {
             await CashuDevKit.removeMint(mintUrl);
             console.log(`CDK: Removed mint ${mintUrl}`);
         } catch (e) {
-            console.warn(`CDK: Failed to remove mint ${mintUrl}:`, e);
+            runInAction(() => {
+                this.loading = false;
+            });
+            throw e;
         }
 
-        // Remove from local wallet state
         delete this.cashuWallets[mintUrl];
-
-        // Update local mintUrls from CDK
         this.mintUrls = await CashuDevKit.getMintUrls();
 
-        // if selected mint is deleted, set the next in line
-        if (this.selectedMintUrl === mintUrl) {
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-mintUrls`,
+            JSON.stringify(this.mintUrls)
+        );
+
+        if (
+            this.selectedMintUrl === mintUrl ||
+            this.normalizeMintUrl(this.selectedMintUrl) === mintUrl
+        ) {
             if (this.mintUrls[0]) {
                 await this.setSelectedMint(this.mintUrls[0]);
             } else {
@@ -1775,14 +1780,34 @@ export default class CashuStore {
                 }
                 console.log('CDK initialized during wallet startup');
 
-                // Migrate any mints from local storage to CDK
                 const localMintUrls = storedMintUrls
                     ? JSON.parse(storedMintUrls)
                     : [];
-                const cdkMintUrls = await CashuDevKit.getMintUrls();
+                const localNorm = new Set(
+                    localMintUrls.map((u: string) => this.normalizeMintUrl(u))
+                );
+                let cdkMintUrls = await CashuDevKit.getMintUrls();
+                for (const cdkKey of cdkMintUrls) {
+                    if (!localNorm.has(this.normalizeMintUrl(cdkKey))) {
+                        try {
+                            await CashuDevKit.removeMint(cdkKey);
+                        } catch (e) {
+                            console.warn(
+                                `CDK: Failed to remove orphan mint ${cdkKey}:`,
+                                e
+                            );
+                        }
+                    }
+                }
+                cdkMintUrls = await CashuDevKit.getMintUrls();
 
                 for (const mintUrl of localMintUrls) {
-                    if (!cdkMintUrls.includes(mintUrl)) {
+                    const inCdk = cdkMintUrls.some(
+                        (k) =>
+                            this.normalizeMintUrl(k) ===
+                            this.normalizeMintUrl(mintUrl)
+                    );
+                    if (!inCdk) {
                         try {
                             await CashuDevKit.addMint(mintUrl);
                             this.addedMintsCache.add(
@@ -1835,8 +1860,10 @@ export default class CashuStore {
                 // Enrich tokens with proofs if missing (migration for old tokens)
                 await this.enrichTokensWithProofs();
 
-                // Clean up legacy local storage (mint URLs now in CDK)
-                await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
+                await Storage.setItem(
+                    `${lndDir}-cashu-mintUrls`,
+                    JSON.stringify(this.mintUrls)
+                );
                 await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
 
                 // Clean up legacy per-wallet storage keys (now handled by CDK)
