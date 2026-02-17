@@ -189,6 +189,10 @@ export default class KeypadPane extends React.PureComponent<
 
     deleteValue = () => {
         const { amount } = this.state;
+        if (amount === '0') {
+            this.startShake();
+            return;
+        }
         const newAmount = deleteLastCharacter(amount);
 
         let needInbound = false;

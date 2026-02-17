@@ -66,47 +66,52 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
         );
 
         return (
-            <Animated.View
+            <View
                 style={[
                     {
                         flex: 1,
                         flexDirection: 'column',
                         justifyContent: 'center',
                         zIndex: 10,
-                        transform: [{ translateX: shakeAnimation }],
                         height: 50
                     },
                     containerStyle
                 ]}
             >
-                <Animated.Text
+                <Animated.View
                     style={{
-                        color:
-                            amount === '0'
-                                ? themeColor('secondaryText')
-                                : color,
-                        fontSize,
-                        textAlign: 'center',
-                        fontFamily: 'PPNeueMontreal-Medium',
-                        lineHeight
+                        transform: [{ translateX: shakeAnimation }]
                     }}
                 >
-                    {units === 'BTC'
-                        ? formatBitcoinWithSpaces(amount)
-                        : numberWithCommas(amount)}
-                    <Text
+                    <Animated.Text
                         style={{
-                            color: themeColor('secondaryText')
+                            color:
+                                amount === '0'
+                                    ? themeColor('secondaryText')
+                                    : color,
+                            fontSize,
+                            textAlign: 'center',
+                            fontFamily: 'PPNeueMontreal-Medium',
+                            lineHeight
                         }}
                     >
-                        {decimalPlaceholder.string}
-                    </Text>
-                </Animated.Text>
+                        {units === 'BTC'
+                            ? formatBitcoinWithSpaces(amount)
+                            : numberWithCommas(amount)}
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {decimalPlaceholder.string}
+                        </Text>
+                    </Animated.Text>
+                </Animated.View>
 
                 {childrenBeforeConversion && children}
                 {conversionElement}
                 {!childrenBeforeConversion && children}
-            </Animated.View>
+            </View>
         );
     }
 }
