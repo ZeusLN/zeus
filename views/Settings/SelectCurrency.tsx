@@ -221,7 +221,7 @@ export default class SelectCurrency extends React.Component<
         const { search, fiatRatesSource } = this.state;
         const favoriteCurrencies = SettingsStore.favoriteCurrencies;
 
-        const currencies = this.state.currencies
+        const currencies = [...this.state.currencies]
             .sort((a, b) => a.key.localeCompare(b.key))
             .filter((c) => c.supportedSources?.includes(fiatRatesSource));
 
