@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    FlatList,
-    Image,
-    View,
-    StyleSheet,
-    TouchableOpacity
-} from 'react-native';
+import { FlatList, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -14,6 +8,7 @@ import cloneDeep from 'lodash/cloneDeep';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
+import MintAvatar from '../../components/MintAvatar';
 import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
 
@@ -169,19 +164,12 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             });
                                         }}
                                     >
-                                        {mintInfo?.icon_url && (
-                                            <Image
-                                                source={{
-                                                    uri: mintInfo?.icon_url
-                                                }}
-                                                style={{
-                                                    alignSelf: 'center',
-                                                    width: 42,
-                                                    height: 42,
-                                                    borderRadius: 68
-                                                }}
-                                            />
-                                        )}
+                                        <MintAvatar
+                                            iconUrl={mintInfo?.icon_url}
+                                            name={mintInfo?.name}
+                                            size="medium"
+                                            style={{ alignSelf: 'center' }}
+                                        />
                                         <ListItem.Content>
                                             <View>
                                                 <View style={styles.row}>

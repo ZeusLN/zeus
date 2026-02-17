@@ -90,5 +90,14 @@ class CashuUtils {
     };
 }
 
+export const getMintAvatarInitials = (name: string | undefined): string => {
+    const n = (name || '').trim();
+    if (!n) return '';
+    const words = n.split(/\s+/).filter(Boolean);
+    const first = words[0][0] || '';
+    const last = words.length > 1 ? words[words.length - 1][0] || '' : '';
+    return (first + last).toUpperCase();
+};
+
 const cashuUtils = new CashuUtils();
 export default cashuUtils;
