@@ -395,11 +395,13 @@ export default class CashuStore {
         if (!this.cdkInitialized) return;
 
         try {
-            const balances = await CashuDevKit.getBalances();
-            const totalBalance = await CashuDevKit.getTotalBalance();
+            const [balances, totalBalance] = await Promise.all([
+                CashuDevKit.getBalances(),
+                CashuDevKit.getTotalBalance()
+            ]);
 
             runInAction(() => {
-                this.mintBalances = balances;
+                this.mintBalances = { ...balances };
                 this.totalBalanceSats = totalBalance;
             });
 
