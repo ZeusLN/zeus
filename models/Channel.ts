@@ -71,6 +71,8 @@ export default class Channel extends BaseModel {
     alias?: string;
     // pending
     remote_node_pub?: string;
+    confirmations_until_active?: number;
+    confirmation_height?: number;
 
     // enrichments
     displayName?: string;
