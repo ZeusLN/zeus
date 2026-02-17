@@ -51,7 +51,7 @@ const getAmount = (sats: string | number) => {
     const { units } = unitsStore;
 
     // replace , with . for unit separator
-    const value = sats ? sats.toString().replace(/,/g, ',') : '';
+    const value = sats ? sats.toString().replace(/,/g, '.') : '';
 
     const fiatEntry =
         fiat && fiatRates
@@ -69,12 +69,14 @@ const getAmount = (sats: string | number) => {
             amount = new BigNumber(value || 0).div(SATS_PER_BTC).toString();
             break;
         case 'fiat':
+            const { decimalPlaces } = fiatStore.getSymbol();
+            const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
             amount = rate
                 ? new BigNumber(value.toString().replace(/,/g, '.'))
                       .times(rate)
                       .div(SATS_PER_BTC)
                       .toNumber()
-                      .toFixed(0)
+                      .toFixed(decimals)
                 : '0';
             break;
     }
@@ -138,7 +140,16 @@ export default class AmountInput extends React.Component<
     openKeypad = () => {
         if (!this.props.locked) {
             const { hideUnitChangeButton } = this.props;
-            const displayValue = this.getDisplayValue();
+            let displayValue = this.getDisplayValue();
+
+            // Strip trailing zeros after decimal point so the keypad
+            // doesn't think decimal places are already filled
+            // e.g. "0.00" → "0", "50.20" → "50.2", "50.25" → "50.25"
+            if (displayValue.includes('.')) {
+                displayValue = displayValue
+                    .replace(/0+$/, '')
+                    .replace(/\.$/, '');
+            }
 
             // Navigate to keypad view with callback
             NavigationService.navigate('AmountKeypad', {
