@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
     "views.Settings.Language.title": "भाषा",
     "views.Settings.Currency.title": "मुद्रा",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "स्रोत",
     "views.Settings.Currency.selectCurrency": "मुद्रा चुनें",
     "views.Settings.SelectCurrency.title": "मुद्रा चुनें",

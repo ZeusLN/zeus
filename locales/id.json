@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Operasi verifikasi tidak didukung",
     "views.Settings.Language.title": "Bahasa",
     "views.Settings.Currency.title": "Mata Uang",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Sumber",
     "views.Settings.Currency.selectCurrency": "Pilih Mata Uang",
     "views.Settings.SelectCurrency.title": "Pilih Mata Uang",
