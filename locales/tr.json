@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
     "views.Settings.Language.title": "Dil",
     "views.Settings.Currency.title": "Parabirimi",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Kaynak",
     "views.Settings.Currency.selectCurrency": "Para Birimi Seç",
     "views.Settings.SelectCurrency.title": "Para Birimi Seç",
