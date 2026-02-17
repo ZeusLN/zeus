@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Không hỗ trợ nghiệp vụ xác thực",
     "views.Settings.Language.title": "Ngôn ngữ",
     "views.Settings.Currency.title": "Tiền tệ",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Nguồn",
     "views.Settings.Currency.selectCurrency": "Chọn tiền tệ",
     "views.Settings.SelectCurrency.title": "Chọn tiền tệ",
