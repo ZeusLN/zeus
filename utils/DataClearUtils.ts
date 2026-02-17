@@ -6,7 +6,8 @@ import Storage from '../storage';
 import {
     STORAGE_KEY,
     CURRENCY_CODES_KEY,
-    LEGACY_CURRENCY_CODES_KEY
+    LEGACY_CURRENCY_CODES_KEY,
+    FAVORITE_CURRENCIES_KEY
 } from '../stores/SettingsStore';
 import { NOTES_KEY, LEGACY_NOTES_KEY } from '../stores/NotesStore';
 import { CONTACTS_KEY, LEGACY_CONTACTS_KEY } from '../stores/ContactStore';
@@ -71,6 +72,7 @@ const STORAGE_KEYS = [
     UNIT_KEY,
     HIDDEN_ACCOUNTS_KEY,
     CURRENCY_CODES_KEY,
+    FAVORITE_CURRENCIES_KEY,
     ACTIVITY_FILTERS_KEY,
     IS_BACKED_UP_KEY,
     LSPS_ORDERS_KEY,

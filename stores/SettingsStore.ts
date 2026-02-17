@@ -20,6 +20,7 @@ export const STORAGE_KEY = 'zeus-settings-v2';
 
 export const LEGACY_CURRENCY_CODES_KEY = 'currency-codes';
 export const CURRENCY_CODES_KEY = 'zeus-currency-codes';
+export const FAVORITE_CURRENCIES_KEY = 'zeus-favorite-currencies';
 
 export interface Node {
     host?: string;
@@ -1538,6 +1539,37 @@ export default class SettingsStore {
     @observable public lndFolderMissing: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;
+    // Favorite currencies
+    @observable public favoriteCurrencies: string[] = [];
+
+    @action
+    public loadFavoriteCurrencies = async () => {
+        try {
+            const stored = await Storage.getItem(FAVORITE_CURRENCIES_KEY);
+            if (stored) {
+                runInAction(() => {
+                    this.favoriteCurrencies = JSON.parse(stored);
+                });
+            }
+        } catch (e) {
+            console.error('Error loading favorite currencies:', e);
+        }
+    };
+
+    @action
+    public toggleFavoriteCurrency = async (currencyCode: string) => {
+        const favorites = new Set(this.favoriteCurrencies);
+        if (favorites.has(currencyCode)) {
+            favorites.delete(currencyCode);
+        } else {
+            favorites.add(currencyCode);
+        }
+        this.favoriteCurrencies = Array.from(favorites);
+        await Storage.setItem(
+            FAVORITE_CURRENCIES_KEY,
+            JSON.stringify(this.favoriteCurrencies)
+        );
+    };
 
     public setInitialStart = (status: boolean) => {
         this.initialStart = status;

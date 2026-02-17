@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, TouchableOpacity, View, Text } from 'react-native';
 import { Icon, ListItem, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -14,15 +14,19 @@ import SettingsStore, {
     DEFAULT_FIAT,
     DEFAULT_FIAT_RATES_SOURCE
 } from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import Storage from '../../storage';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import Star from '../../assets/images/SVG/Star.svg';
+
 interface SelectCurrencyProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
     route: Route<
         'SelectCurrency',
         { currencyConverter: boolean; fromModal: boolean }
@@ -36,7 +40,7 @@ interface SelectCurrencyState {
     fiatRatesSource: string;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class SelectCurrency extends React.Component<
     SelectCurrencyProps,
@@ -58,6 +62,8 @@ export default class SelectCurrency extends React.Component<
             selectedCurrency: settings.fiat,
             fiatRatesSource: settings.fiatRatesSource
         });
+
+        SettingsStore.loadFavoriteCurrencies();
     }
 
     renderSeparator = () => (
@@ -82,17 +88,149 @@ export default class SelectCurrency extends React.Component<
         });
     };
 
-    render() {
+    renderCurrencyItem = (
+        item: typeof CURRENCY_KEYS[0],
+        isFavorite: boolean
+    ) => {
         const { navigation, SettingsStore, route } = this.props;
-        const { selectedCurrency, search, fiatRatesSource } = this.state;
-        const currencies = this.state.currencies
+        const { selectedCurrency } = this.state;
+        const { updateSettings, getSettings }: any = SettingsStore;
+        const currencyConverter = route.params?.currencyConverter;
+        const fromModal = route.params?.fromModal;
+
+        return (
+            <ListItem
+                containerStyle={{
+                    borderBottomWidth: 0,
+                    backgroundColor: 'transparent'
+                }}
+                onPress={async () => {
+                    if (currencyConverter && fromModal) {
+                        const inputValuesString = await Storage.getItem(
+                            CURRENCY_CODES_KEY
+                        );
+                        const inputValues = inputValuesString
+                            ? JSON.parse(inputValuesString)
+                            : {};
+                        if (!inputValues.hasOwnProperty(item.value)) {
+                            inputValues[item.value] = '';
+                            await Storage.setItem(
+                                CURRENCY_CODES_KEY,
+                                inputValues
+                            );
+                        }
+                        navigation.goBack();
+                    } else if (currencyConverter) {
+                        navigation.popTo('CurrencyConverter', {
+                            selectedCurrency: item.value
+                        });
+                    } else {
+                        await updateSettings({
+                            fiat: item.value
+                        });
+                        getSettings();
+                        await this.props.UnitsStore.setUnits('fiat');
+                        navigation.goBack();
+                    }
+                }}
+            >
+                <TouchableOpacity
+                    onPress={() =>
+                        SettingsStore.toggleFavoriteCurrency(item.value)
+                    }
+                    style={{ padding: 4 }}
+                >
+                    <Star
+                        fill={isFavorite ? themeColor('text') : 'none'}
+                        stroke={isFavorite ? 'none' : themeColor('text')}
+                        strokeWidth={2}
+                        width={20}
+                        height={20}
+                    />
+                </TouchableOpacity>
+                <ListItem.Content>
+                    <ListItem.Title
+                        style={{
+                            color:
+                                (!currencyConverter &&
+                                    selectedCurrency === item.value) ||
+                                (!selectedCurrency &&
+                                    item.value === DEFAULT_FIAT)
+                                    ? themeColor('highlight')
+                                    : themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {`${item.flag ? item.flag : ''} ${item.key} ${
+                            item.value ? `(${item.value})` : ''
+                        }`}
+                    </ListItem.Title>
+                </ListItem.Content>
+                {(selectedCurrency === item.value ||
+                    (!selectedCurrency && item.value === DEFAULT_FIAT)) &&
+                    !currencyConverter && (
+                        <View>
+                            <Icon
+                                name="check"
+                                color={themeColor('highlight')}
+                                style={{ textAlign: 'right' }}
+                            />
+                        </View>
+                    )}
+            </ListItem>
+        );
+    };
+
+    renderFavorites = (favoriteCurrencyItems: typeof CURRENCY_KEYS[0][]) => {
+        if (favoriteCurrencyItems.length === 0) return null;
+
+        return (
+            <>
+                <View
+                    style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        backgroundColor: themeColor('secondary')
+                    }}
+                >
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontFamily: 'PPNeueMontreal-Medium',
+                            fontSize: 14
+                        }}
+                    >
+                        {localeString('views.Settings.Contacts.favorites')}
+                    </Text>
+                </View>
+                <View style={{ marginBottom: 8 }}>
+                    {favoriteCurrencyItems.map((item, index) => (
+                        <React.Fragment key={`fav-${item.value}`}>
+                            {this.renderCurrencyItem(item, true)}
+                            {index < favoriteCurrencyItems.length - 1 &&
+                                this.renderSeparator()}
+                        </React.Fragment>
+                    ))}
+                </View>
+            </>
+        );
+    };
+
+    render() {
+        const { navigation, SettingsStore } = this.props;
+        const { search, fiatRatesSource } = this.state;
+        const favoriteCurrencies = SettingsStore.favoriteCurrencies;
+
+        const currencies = [...this.state.currencies]
             .sort((a, b) => a.key.localeCompare(b.key))
             .filter((c) => c.supportedSources?.includes(fiatRatesSource));
 
-        const { updateSettings, getSettings }: any = SettingsStore;
-
-        const currencyConverter = route.params?.currencyConverter;
-        const fromModal = route.params?.fromModal;
+        const favoriteCurrencyItems = currencies.filter((c) =>
+            favoriteCurrencies.includes(c.value)
+        );
+        const nonFavoriteCurrencyItems = currencies.filter(
+            (c) => !favoriteCurrencies.includes(c.value)
+        );
 
         return (
             <Screen>
@@ -137,86 +275,49 @@ export default class SelectCurrency extends React.Component<
                         autoCorrect={false}
                     />
                     <FlatList
-                        data={currencies}
-                        renderItem={({ item }) => (
-                            <ListItem
-                                containerStyle={{
-                                    borderBottomWidth: 0,
-                                    backgroundColor: 'transparent'
-                                }}
-                                onPress={async () => {
-                                    if (currencyConverter && fromModal) {
-                                        // Save directly to storage when coming from modal
-                                        const inputValuesString =
-                                            await Storage.getItem(
-                                                CURRENCY_CODES_KEY
-                                            );
-                                        const inputValues = inputValuesString
-                                            ? JSON.parse(inputValuesString)
-                                            : {};
-                                        if (
-                                            !inputValues.hasOwnProperty(
-                                                item.value
-                                            )
-                                        ) {
-                                            inputValues[item.value] = '';
-                                            await Storage.setItem(
-                                                CURRENCY_CODES_KEY,
-                                                inputValues
-                                            );
-                                        }
-                                        navigation.goBack();
-                                    } else if (currencyConverter) {
-                                        navigation.popTo('CurrencyConverter', {
-                                            selectedCurrency: item.value
-                                        });
-                                    } else {
-                                        await updateSettings({
-                                            fiat: item.value
-                                        }).then(() => {
-                                            getSettings();
-                                            navigation.goBack();
-                                        });
-                                    }
-                                }}
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color:
-                                                (!currencyConverter &&
-                                                    selectedCurrency ===
-                                                        item.value) ||
-                                                (!selectedCurrency &&
-                                                    item.value === DEFAULT_FIAT)
-                                                    ? themeColor('highlight')
-                                                    : themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {`${item.flag ? item.flag : ''} ${
-                                            item.key
-                                        } ${
-                                            item.value ? `(${item.value})` : ''
-                                        }`}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                                {(selectedCurrency === item.value ||
-                                    (!selectedCurrency &&
-                                        item.value === DEFAULT_FIAT)) &&
-                                    !currencyConverter && (
-                                        <View>
-                                            <Icon
-                                                name="check"
-                                                color={themeColor('highlight')}
-                                                style={{ textAlign: 'right' }}
-                                            />
+                        data={search ? currencies : nonFavoriteCurrencyItems}
+                        renderItem={({ item }) =>
+                            this.renderCurrencyItem(
+                                item,
+                                favoriteCurrencies.includes(item.value)
+                            )
+                        }
+                        keyExtractor={(item) => item.value}
+                        ItemSeparatorComponent={this.renderSeparator}
+                        ListHeaderComponent={
+                            !search ? (
+                                <>
+                                    {this.renderFavorites(
+                                        favoriteCurrencyItems
+                                    )}
+                                    {favoriteCurrencyItems.length > 0 && (
+                                        <View
+                                            style={{
+                                                paddingHorizontal: 16,
+                                                paddingVertical: 8,
+                                                backgroundColor:
+                                                    themeColor('secondary')
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Medium',
+                                                    fontSize: 14
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.Currency.otherCurrencies'
+                                                )}
+                                            </Text>
                                         </View>
                                     )}
-                            </ListItem>
-                        )}
-                        keyExtractor={(_, index) => index.toString()}
-                        ItemSeparatorComponent={this.renderSeparator}
+                                </>
+                            ) : undefined
+                        }
                     />
                 </View>
             </Screen>
