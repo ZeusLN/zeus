@@ -49,8 +49,15 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             children
         } = this.props;
         const { units } = UnitsStore!;
-        const separatorSwap =
-            units === 'fiat' && FiatStore!.getSymbol().separatorSwap;
+        const { symbol, space, rtl, separatorSwap } =
+            units === 'fiat'
+                ? FiatStore!.getSymbol()
+                : {
+                      symbol: '',
+                      space: false,
+                      rtl: false,
+                      separatorSwap: false
+                  };
 
         const color = textAnimation.interpolate({
             inputRange: [0, 1],
@@ -58,6 +65,29 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
         });
 
         const decimalPlaceholder = getDecimalPlaceholder(amount, units);
+
+        const formattedNumber =
+            units === 'BTC'
+                ? formatBitcoinWithSpaces(amount)
+                : separatorSwap
+                ? numberWithDecimals(amount)
+                : numberWithCommas(amount);
+
+        const isSingularSat = units === 'sats' && parseFloat(amount) === 1;
+
+        let prefix = '';
+        let suffix = '';
+        if (units === 'BTC') {
+            prefix = '₿';
+        } else if (units === 'sats') {
+            suffix = ` ${isSingularSat ? 'sat' : 'sats'}`;
+        } else if (units === 'fiat') {
+            if (rtl) {
+                suffix = `${space ? ' ' : ''}${symbol}`;
+            } else {
+                prefix = `${symbol}${space ? ' ' : ''}`;
+            }
+        }
 
         const conversionElement = showConversion && (
             <View
@@ -101,11 +131,8 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                             lineHeight
                         }}
                     >
-                        {units === 'BTC'
-                            ? formatBitcoinWithSpaces(amount)
-                            : separatorSwap
-                            ? numberWithDecimals(amount)
-                            : numberWithCommas(amount)}
+                        {prefix}
+                        {formattedNumber}
                         <Text
                             style={{
                                 color: themeColor('secondaryText')
@@ -113,6 +140,15 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                         >
                             {decimalPlaceholder.string}
                         </Text>
+                        {suffix ? (
+                            <Text
+                                style={{
+                                    fontSize: fontSize * 0.2
+                                }}
+                            >
+                                {suffix}
+                            </Text>
+                        ) : null}
                     </Animated.Text>
                 </Animated.View>
 
