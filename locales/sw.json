@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
     "views.Settings.Language.title": "Lugha",
     "views.Settings.Currency.title": "Sarafu",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Chanzo",
     "views.Settings.Currency.selectCurrency": "Chagua Sarafu",
     "views.Settings.SelectCurrency.title": "Chagua Sarafu",
