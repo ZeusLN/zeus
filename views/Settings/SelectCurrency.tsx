@@ -14,6 +14,7 @@ import SettingsStore, {
     DEFAULT_FIAT,
     DEFAULT_FIAT_RATES_SOURCE
 } from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import Storage from '../../storage';
 
@@ -25,6 +26,7 @@ import Star from '../../assets/images/SVG/Star.svg';
 interface SelectCurrencyProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    UnitsStore: UnitsStore;
     route: Route<
         'SelectCurrency',
         { currencyConverter: boolean; fromModal: boolean }
@@ -38,7 +40,7 @@ interface SelectCurrencyState {
     fiatRatesSource: string;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'UnitsStore')
 @observer
 export default class SelectCurrency extends React.Component<
     SelectCurrencyProps,
@@ -127,6 +129,7 @@ export default class SelectCurrency extends React.Component<
                             fiat: item.value
                         });
                         getSettings();
+                        await this.props.UnitsStore.setUnits('fiat');
                         navigation.goBack();
                     }
                 }}
