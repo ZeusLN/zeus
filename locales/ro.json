@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Operațiunea de verificare nu este acceptată",
     "views.Settings.Language.title": "Limbă",
     "views.Settings.Currency.title": "Monedă",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Sursa",
     "views.Settings.Currency.selectCurrency": "Selectați Moneda",
     "views.Settings.SelectCurrency.title": "Selectați Moneda",
