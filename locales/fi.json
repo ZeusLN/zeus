@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Verification operation not supported",
     "views.Settings.Language.title": "Kieli",
     "views.Settings.Currency.title": "Valuutta",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Lähde",
     "views.Settings.Currency.selectCurrency": "Valitse valuutta",
     "views.Settings.SelectCurrency.title": "Valitse valuutta",
