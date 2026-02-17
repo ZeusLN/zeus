@@ -170,34 +170,26 @@ export default class AmountInput extends React.Component<
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
-        const { getRate, getSymbol }: any = FiatStore;
+        const { getRate }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
         const displayValue = this.getDisplayValue();
 
-        // Format display value
-        const formattedDisplayValue =
-            effectiveUnits === 'BTC'
-                ? formatBitcoinWithSpaces(displayValue || '0')
-                : numberWithCommas(displayValue || '0');
-
-        // Get prefix/suffix for display
-        const displayPrefix =
-            effectiveUnits !== 'sats' &&
-            (effectiveUnits === 'BTC'
-                ? '₿ '
-                : !getSymbol().rtl
-                ? `${getSymbol().symbol} `
-                : '');
-
-        const isSingularSat =
-            effectiveUnits === 'sats' && parseFloat(displayValue) === 1;
-        const displaySuffix =
-            effectiveUnits === 'sats'
-                ? ` ${isSingularSat ? 'sat' : 'sats'}`
-                : getSymbol().rtl && effectiveUnits === 'fiat'
-                ? ` ${getSymbol().symbol}`
-                : '';
+        let formattedAmount: string;
+        if (effectiveUnits === 'BTC') {
+            formattedAmount = `₿ ${formatBitcoinWithSpaces(
+                displayValue || '0'
+            )}`;
+        } else if (effectiveUnits === 'fiat') {
+            formattedAmount = FiatStore!.formatAmountForDisplay(
+                displayValue || '0'
+            );
+        } else {
+            const isSingular = parseFloat(displayValue) === 1;
+            formattedAmount = `${numberWithCommas(displayValue || '0')} ${
+                isSingular ? 'sat' : 'sats'
+            }`;
+        }
 
         return (
             <React.Fragment>
@@ -243,9 +235,7 @@ export default class AmountInput extends React.Component<
                                 }
                             ]}
                         >
-                            {displayPrefix}
-                            {formattedDisplayValue}
-                            {displaySuffix}
+                            {formattedAmount}
                         </Text>
                     </TouchableOpacity>
                     {!hideUnitChangeButton && !locked && (
