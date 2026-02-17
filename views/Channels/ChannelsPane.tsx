@@ -374,6 +374,15 @@ export default class ChannelsPane extends React.PureComponent<
                             : undefined
                     }
                     isBelowReserve={item.isBelowReserve}
+                    statusSuffix={(() => {
+                        const { NodeInfoStore } = this.props;
+                        const confs = item.getConfirmations(
+                            NodeInfoStore?.nodeInfo?.currentBlockHeight
+                        );
+                        return confs
+                            ? `(${confs.current}/${confs.total})`
+                            : undefined;
+                    })()}
                 />
             </TouchableHighlight>
         );
@@ -420,7 +429,10 @@ export default class ChannelsPane extends React.PureComponent<
                     data={data}
                     renderItem={this.renderItem}
                     ListFooterComponent={<Spacer height={100} />}
-                    onRefresh={() => getChannels()}
+                    onRefresh={() => {
+                        this.props.NodeInfoStore?.getNodeInfo();
+                        getChannels();
+                    }}
                     refreshing={loading}
                     keyExtractor={(item, index) =>
                         `${item.remote_pubkey}-${index}`
@@ -596,7 +608,10 @@ export default class ChannelsPane extends React.PureComponent<
                                 data={filteredChannels}
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
-                                onRefresh={() => getChannels()}
+                                onRefresh={() => {
+                                    this.props.NodeInfoStore?.getNodeInfo();
+                                    getChannels();
+                                }}
                                 refreshing={loading}
                                 keyExtractor={(item, index) =>
                                     `${item.remote_pubkey}-${index}`

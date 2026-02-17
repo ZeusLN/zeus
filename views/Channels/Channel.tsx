@@ -372,9 +372,7 @@ export default class ChannelView extends React.Component<
             zero_conf,
             getCommitmentType,
             pending_htlcs,
-            blocks_til_maturity,
-            confirmations_until_active,
-            confirmation_height
+            blocks_til_maturity
         } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
@@ -495,23 +493,9 @@ export default class ChannelView extends React.Component<
                         />
                     </View>
                     {(() => {
-                        const showConfs =
-                            pendingOpen && confirmations_until_active != null;
-
-                        let currentConfs = 0;
-                        let totalConfs = 0;
-                        if (showConfs) {
-                            const currentBlockHeight =
-                                NodeInfoStore.nodeInfo.currentBlockHeight;
-                            currentConfs =
-                                confirmation_height && currentBlockHeight
-                                    ? currentBlockHeight -
-                                      confirmation_height +
-                                      1
-                                    : 0;
-                            totalConfs =
-                                currentConfs + confirmations_until_active;
-                        }
+                        const confs = channel.getConfirmations(
+                            NodeInfoStore.nodeInfo.currentBlockHeight
+                        );
 
                         return (
                             <>
@@ -519,7 +503,7 @@ export default class ChannelView extends React.Component<
                                     style={{
                                         ...styles.status,
                                         color: themeColor('text'),
-                                        marginBottom: showConfs ? 6 : 18
+                                        marginBottom: confs ? 6 : 18
                                     }}
                                 >
                                     {pendingOpen
@@ -542,7 +526,7 @@ export default class ChannelView extends React.Component<
                                               'views.Channel.inactive'
                                           )}
                                 </Text>
-                                {showConfs && (
+                                {confs && (
                                     <Text
                                         style={{
                                             ...styles.status,
@@ -552,7 +536,7 @@ export default class ChannelView extends React.Component<
                                     >
                                         {`${localeString(
                                             'views.OpenChannel.numConf'
-                                        )}: ${currentConfs} / ${totalConfs}`}
+                                        )}: ${confs.current} / ${confs.total}`}
                                     </Text>
                                 )}
                             </>
