@@ -140,6 +140,7 @@ import Attestations from './views/LightningAddress/Attestations';
 import NostrKeys from './views/LightningAddress/NostrKeys';
 import NostrRelays from './views/LightningAddress/NostrRelays';
 import ChangeAddress from './views/LightningAddress/ChangeAddress';
+import EditProfile from './views/LightningAddress/EditProfile';
 import ZeusPayPlus from './views/LightningAddress/ZeusPayPlus';
 import ZeusPayPlusPerks from './views/LightningAddress/ZeusPayPlusPerks';
 import WebPortalPOS from './views/LightningAddress/WebPortalPOS';
@@ -1036,6 +1037,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             ChangeAddress
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="EditProfile" // @ts-ignore:next-line
+                                                        component={EditProfile}
                                                     />
                                                     <Stack.Screen
                                                         name="PayCodes" // @ts-ignore:next-line

@@ -107,6 +107,30 @@ export default class ZeusPayPlusSettings extends React.Component<
                         marginTop: 20
                     }}
                     onPress={() =>
+                        zeusPayPlus ? navigation.navigate('EditProfile') : null
+                    }
+                >
+                    <ListItem.Content>
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.LightningAddress.editProfile'
+                            )}
+                        </ListItem.Title>
+                    </ListItem.Content>
+                    <NavIcon />
+                </ListItem>
+                <ListItem
+                    containerStyle={{
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        marginTop: 20
+                    }}
+                    onPress={() =>
                         legacyAccount || zeusPayPlus
                             ? navigation.navigate('ChangeAddress')
                             : null
