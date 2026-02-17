@@ -319,6 +319,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             try {
                 val url = MintUrl(mintUrl)
                 wallet.removeMint(url)
+                db!!.removeMint(url)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
