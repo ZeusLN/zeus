@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Operace ověření není podporována",
     "views.Settings.Language.title": "Jazyk",
     "views.Settings.Currency.title": "Měna",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Zdroj",
     "views.Settings.Currency.selectCurrency": "Zvolit měnu",
     "views.Settings.SelectCurrency.title": "Zvolte měnu",
