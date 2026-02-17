@@ -222,9 +222,18 @@ const Intro: React.FC<IntroProps> = (props) => {
 
                                     const lndDir = uuidv4();
 
-                                    const response = await createLndWallet({
-                                        lndDir
-                                    });
+                                    let response;
+                                    try {
+                                        response = await createLndWallet({
+                                            lndDir
+                                        });
+                                    } catch (e) {
+                                        setCreatingWallet(false);
+                                        setChoosingPeers(false);
+                                        setError(true);
+                                        return;
+                                    }
+
                                     const { wallet, seed, randomBase64 }: any =
                                         response;
                                     if (wallet && wallet.admin_macaroon) {

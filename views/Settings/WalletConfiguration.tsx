@@ -569,9 +569,6 @@ export default class WalletConfiguration extends React.Component<
                 if (newEmbeddedLndWallet) {
                     // New wallet created - trigger fresh connection
                     // LND was already stopped in createNewWallet(), just navigate
-                    console.log(
-                        'Navigating to new wallet, triggering connection...'
-                    );
                     setConnectingStatus(true);
                     navigation.popTo('Wallet');
                 } else {
@@ -655,8 +652,6 @@ export default class WalletConfiguration extends React.Component<
                     lndDir || 'lnd'
                 );
                 await stopLnd();
-                // Wait for complete shutdown
-                await new Promise((resolve) => setTimeout(resolve, 1500));
             } catch (error) {
                 console.log('Error stopping LND before deletion:', error);
                 // Continue anyway - stopLnd handles errors gracefully
@@ -679,12 +674,6 @@ export default class WalletConfiguration extends React.Component<
             justDeletedWallet: active // Set flag only if active wallet was deleted
         });
 
-        // if (
-        //     implementation === 'embedded-lnd' &&
-        //     Platform.OS === 'android' &&
-        //     embeddedLndStarted
-        // ) {
-        //     restartNeeded(true);
         if (newNodes.length === 0) {
             navigation.navigate('IntroSplash');
         } else {
@@ -749,7 +738,8 @@ export default class WalletConfiguration extends React.Component<
         const { embeddedLndStarted } = SettingsStore;
 
         this.setState({
-            creatingWallet: true
+            creatingWallet: true,
+            errorCreatingWallet: false
         });
 
         // CRITICAL: Stop old LND instance completely before creating new wallet
@@ -759,8 +749,6 @@ export default class WalletConfiguration extends React.Component<
                     'Stopping existing LND before creating new wallet...'
                 );
                 await stopLnd();
-                // Longer delay to ensure complete shutdown
-                await new Promise((resolve) => setTimeout(resolve, 2000));
                 console.log('LND stopped successfully');
             } catch (error) {
                 console.log(
@@ -775,12 +763,22 @@ export default class WalletConfiguration extends React.Component<
 
         const lndDir = uuidv4();
 
-        const response = await createLndWallet({
-            lndDir,
-            seedMnemonic: recoveryCipherSeed,
-            isTestnet: network === 'Testnet',
-            channelBackupsBase64
-        });
+        let response;
+        try {
+            response = await createLndWallet({
+                lndDir,
+                seedMnemonic: recoveryCipherSeed,
+                isTestnet: network === 'Testnet',
+                channelBackupsBase64
+            });
+        } catch (error) {
+            console.log('Error creating wallet:', error);
+            this.setState({
+                creatingWallet: false,
+                errorCreatingWallet: true
+            });
+            return;
+        }
 
         const { wallet, seed, randomBase64 }: any = response;
 

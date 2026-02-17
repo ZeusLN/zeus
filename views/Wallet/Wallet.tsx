@@ -50,7 +50,9 @@ import {
     startLnd,
     stopLnd,
     expressGraphSync,
-    LND_FOLDER_MISSING_ERROR,
+    isTransientRpcError,
+    LndErrorCode,
+    matchesLndErrorCode,
     waitForRpcReady
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
@@ -483,31 +485,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                // Helper to check if error is folder missing
-                const isFolderMissingError = (error: any): boolean => {
-                    // Skip folder missing detection during recovery - folder may not exist yet
-                    // and errors during recovery should not trigger the modal
-                    if (recovery) return false;
-
-                    const msg =
-                        error?.message ||
-                        error?.toString?.() ||
-                        String(error) ||
-                        '';
-                    console.log(
-                        'isFolderMissingError checking:',
-                        msg,
-                        typeof error
-                    );
-                    return (
-                        msg === LND_FOLDER_MISSING_ERROR ||
-                        msg.includes("doesn't exist") ||
-                        msg.includes('doesn\u2019t exist') || // curly apostrophe
-                        msg.includes('does not exist') ||
-                        msg.includes('No such file or directory')
-                    );
-                };
-
                 // Helper to show folder missing alert
                 const showFolderMissingAlert = () => {
                     console.log('showFolderMissingAlert called');
@@ -578,7 +555,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         error?.message,
                         error
                     );
-                    if (isFolderMissingError(error)) {
+                    if (
+                        !recovery &&
+                        matchesLndErrorCode(
+                            error?.message || String(error),
+                            LndErrorCode.LND_FOLDER_MISSING
+                        )
+                    ) {
                         showFolderMissingAlert();
                         return;
                     }
@@ -630,20 +613,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     console.log('startLnd error:', errorMessage);
 
                     // Handle folder missing error
-                    if (isFolderMissingError(error)) {
+                    if (
+                        matchesLndErrorCode(
+                            errorMessage,
+                            LndErrorCode.LND_FOLDER_MISSING
+                        )
+                    ) {
                         showFolderMissingAlert();
                         return;
                     }
 
                     // Handle transient errors - attempt restart
-                    if (
-                        errorMessage.includes('RPC connection closed') ||
-                        errorMessage.includes('Wallet directory not found') ||
-                        errorMessage.includes(
-                            'not yet ready to accept calls'
-                        ) ||
-                        errorMessage.includes('starting up')
-                    ) {
+                    if (isTransientRpcError(errorMessage)) {
                         console.log(
                             'Transient error during startup - attempting restart:',
                             errorMessage
@@ -754,8 +735,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }, 60000); // 60 seconds
                 }
             }
-
-            // Wrap RPC ready check and data fetching in try-catch
             try {
                 await waitForRpcReady();
                 SyncStore.checkRecoveryStatus();
@@ -809,8 +788,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                 // Handle wallet directory not found (deleted wallet)
                 if (
-                    errorMessage.includes('Wallet directory not found') ||
-                    errorMessage.includes('wallet may have been deleted')
+                    matchesLndErrorCode(
+                        errorMessage,
+                        LndErrorCode.LND_FOLDER_MISSING
+                    )
                 ) {
                     setConnectingStatus(false);
                     Alert.alert(
@@ -831,11 +812,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
 
                 // Handle transient RPC errors - attempt restart
-                if (
-                    errorMessage.includes('RPC connection closed') ||
-                    errorMessage.includes('not yet ready to accept calls') ||
-                    errorMessage.includes('starting up')
-                ) {
+                if (isTransientRpcError(errorMessage)) {
                     console.log(
                         'Transient RPC error - attempting restart:',
                         errorMessage
