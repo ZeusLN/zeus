@@ -33,33 +33,6 @@ interface SecurityState {
     isBiometryEnabled: boolean | undefined;
 }
 
-const possibleSecurityItems = [
-    {
-        translateKey: 'views.Settings.SetPassword.title',
-        screen: 'SetPassword'
-    },
-    {
-        translateKey: 'views.Settings.SetDuressPassword.title',
-        screen: 'SetDuressPassword'
-    },
-    {
-        translateKey: 'views.Settings.SetPin.title',
-        screen: 'SetPin'
-    },
-    {
-        translateKey: 'views.Settings.Security.deletePIN',
-        action: 'DeletePin'
-    },
-    {
-        translateKey: 'views.Settings.SetDuressPin.title',
-        screen: 'SetDuressPin'
-    },
-    {
-        translateKey: 'views.Settings.Security.deleteDuressPIN',
-        action: 'DeleteDuressPin'
-    }
-];
-
 @inject('SettingsStore', 'ModalStore')
 @observer
 export default class Security extends React.Component<
@@ -117,33 +90,75 @@ export default class Security extends React.Component<
 
         // Three cases:
         // 1) If no passphrase or pin is set, allow user to set passphrase or pin
-        // 2) If passphrase is set, allow user to set passphrase or duress passphrase
-        // 3) If pin is set, allow user to set pin or duress pin
+        // 2) If passphrase is set, allow user to change passphrase or set/change duress passphrase
+        // 3) If pin is set, allow user to change pin, delete pin, set/change duress pin
         if (!settings.passphrase && !settings.pin) {
             this.setState({
                 displaySecurityItems: [
-                    possibleSecurityItems[0],
-                    possibleSecurityItems[2]
+                    {
+                        translateKey: 'views.Settings.SetPassword.title',
+                        screen: 'SetPassword'
+                    },
+                    {
+                        translateKey: 'views.Settings.SetPin.title',
+                        screen: 'SetPin'
+                    }
                 ]
             });
         } else if (settings.passphrase) {
             this.setState({
                 displaySecurityItems: [
-                    possibleSecurityItems[0],
-                    possibleSecurityItems[1]
+                    {
+                        translateKey: 'views.Settings.ChangePassword.title',
+                        screen: 'SetPassword'
+                    },
+                    {
+                        translateKey:
+                            'views.Settings.SetPassword.deletePassword',
+                        action: 'DeletePassword'
+                    },
+                    {
+                        translateKey: settings.duressPassphrase
+                            ? 'views.Settings.ChangeDuressPassword.title'
+                            : 'views.Settings.SetDuressPassword.title',
+                        screen: 'SetDuressPassword'
+                    },
+                    ...(settings.duressPassphrase
+                        ? [
+                              {
+                                  translateKey:
+                                      'views.Settings.SetDuressPassword.deletePassword',
+                                  action: 'DeleteDuressPassword'
+                              }
+                          ]
+                        : [])
                 ]
             });
         } else if (settings.pin) {
-            const minPinItems = [
-                possibleSecurityItems[2],
-                possibleSecurityItems[3],
-                possibleSecurityItems[4]
+            const items: Array<any> = [
+                {
+                    translateKey: 'views.Settings.ChangePin.title',
+                    screen: 'SetPin'
+                },
+                {
+                    translateKey: 'views.Settings.Security.deletePIN',
+                    action: 'DeletePin'
+                },
+                {
+                    translateKey: settings.duressPin
+                        ? 'views.Settings.ChangeDuressPin.title'
+                        : 'views.Settings.SetDuressPin.title',
+                    screen: 'SetDuressPin'
+                }
             ];
             if (settings.duressPin) {
-                minPinItems.push(possibleSecurityItems[5]);
+                items.push({
+                    translateKey: 'views.Settings.Security.deleteDuressPIN',
+                    action: 'DeleteDuressPin'
+                });
             }
             this.setState({
-                displaySecurityItems: minPinItems
+                displaySecurityItems: items
             });
         }
 
@@ -234,6 +249,32 @@ export default class Security extends React.Component<
         } else if (item.action === 'DeletePin') {
             navigation.navigate('Lockscreen', {
                 deletePin: true
+            });
+        } else if (item.action === 'DeletePassword' && isBiometryEnabled) {
+            ModalStore.toggleInfoModal({
+                text: [
+                    localeString(
+                        'views.Settings.Security.biometricsWillBeDisabled'
+                    ),
+                    localeString('general.continueQuestion')
+                ],
+                buttons: [
+                    {
+                        title: localeString('general.ok'),
+                        callback: () =>
+                            navigation.navigate('Lockscreen', {
+                                deletePassword: true
+                            })
+                    }
+                ]
+            });
+        } else if (item.action === 'DeletePassword') {
+            navigation.navigate('Lockscreen', {
+                deletePassword: true
+            });
+        } else if (item.action === 'DeleteDuressPassword') {
+            navigation.navigate('Lockscreen', {
+                deleteDuressPassword: true
             });
         } else if (item.action === 'DeleteDuressPin') {
             navigation.navigate('Lockscreen', {

@@ -128,7 +128,9 @@ export default class SetDuressPassphrase extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Settings.SetDuressPassword.title'
+                            savedDuressPassphrase
+                                ? 'views.Settings.ChangeDuressPassword.title'
+                                : 'views.Settings.SetDuressPassword.title'
                         ),
                         style: {
                             color: themeColor('text'),

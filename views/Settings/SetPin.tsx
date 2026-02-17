@@ -143,7 +143,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.SetPin.createPin'
+                                    settings.pin
+                                        ? 'views.Settings.SetPin.newPin'
+                                        : 'views.Settings.SetPin.createPin'
                                 )}
                             </Text>
                             {(settings.scramblePin ||

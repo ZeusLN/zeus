@@ -36,6 +36,8 @@ interface LockscreenProps {
             modifySecurityScreen: string;
             deletePin: boolean;
             deleteDuressPin: boolean;
+            deletePassword: boolean;
+            deleteDuressPassword: boolean;
             pendingNavigation?: { screen: string; params?: any };
             shareIntentData?: { qrData?: string; base64Image?: string };
         }
@@ -54,6 +56,8 @@ interface LockscreenState {
     modifySecurityScreen: string;
     deletePin: boolean;
     deleteDuressPin: boolean;
+    deletePassword: boolean;
+    deleteDuressPassword: boolean;
     authenticationAttempts: number;
 }
 
@@ -81,6 +85,8 @@ export default class Lockscreen extends React.Component<
             modifySecurityScreen: '',
             deletePin: false,
             deleteDuressPin: false,
+            deletePassword: false,
+            deleteDuressPassword: false,
             authenticationAttempts: 0
         };
     }
@@ -126,6 +132,8 @@ export default class Lockscreen extends React.Component<
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
+            deletePassword,
+            deleteDuressPassword,
             pendingNavigation
         } = route.params ?? {};
 
@@ -138,7 +146,9 @@ export default class Lockscreen extends React.Component<
             SettingsStore.posStatus === 'active' &&
             !pendingNavigation &&
             !deletePin &&
-            !deleteDuressPin
+            !deleteDuressPin &&
+            !deletePassword &&
+            !deleteDuressPassword
         ) {
             // If POS is enabled and active, proceed without authentication
             SettingsStore.setLoginStatus(true);
@@ -152,6 +162,8 @@ export default class Lockscreen extends React.Component<
             isBiometryConfigured &&
             !deletePin &&
             !deleteDuressPin &&
+            !deletePassword &&
+            !deleteDuressPassword &&
             !modifySecurityScreen
         ) {
             const isVerified = await verifyBiometry(
@@ -190,6 +202,14 @@ export default class Lockscreen extends React.Component<
         } else if (deleteDuressPin) {
             this.setState({
                 deleteDuressPin
+            });
+        } else if (deletePassword) {
+            this.setState({
+                deletePassword
+            });
+        } else if (deleteDuressPassword) {
+            this.setState({
+                deleteDuressPassword
             });
         }
 
@@ -244,7 +264,9 @@ export default class Lockscreen extends React.Component<
             duressPin,
             modifySecurityScreen,
             deletePin,
-            deleteDuressPin
+            deleteDuressPin,
+            deletePassword,
+            deleteDuressPassword
         } = this.state;
         const { updateSettings, getSettings, setPosStatus } = SettingsStore;
 
@@ -263,8 +285,14 @@ export default class Lockscreen extends React.Component<
                 this.resetAuthenticationAttempts();
                 navigation.popTo(modifySecurityScreen);
                 return;
+            } else if (deletePassword) {
+                this.deletePassword();
+                return;
             } else if (deletePin) {
                 this.deletePin();
+                return;
+            } else if (deleteDuressPassword) {
+                this.deleteDuressPassword();
                 return;
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
@@ -358,6 +386,34 @@ export default class Lockscreen extends React.Component<
     onSubmitPin = (value: string) => {
         this.setState({ pinAttempt: value }, () => {
             this.onAttemptLogIn();
+        });
+    };
+
+    deletePassword = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { updateSettings } = SettingsStore;
+
+        // duress passphrase is also deleted when passphrase is deleted
+        // biometry is also disabled when passphrase is deleted
+        updateSettings({
+            passphrase: '',
+            duressPassphrase: '',
+            authenticationAttempts: 0,
+            isBiometryEnabled: false
+        }).then(() => {
+            navigation.popTo('Security');
+        });
+    };
+
+    deleteDuressPassword = () => {
+        const { SettingsStore, navigation } = this.props;
+        const { updateSettings } = SettingsStore;
+
+        updateSettings({
+            duressPassphrase: '',
+            authenticationAttempts: 0
+        }).then(() => {
+            navigation.popTo('Security');
         });
     };
 
@@ -457,7 +513,9 @@ export default class Lockscreen extends React.Component<
             error,
             modifySecurityScreen,
             deletePin,
-            deleteDuressPin
+            deleteDuressPin,
+            deletePassword,
+            deleteDuressPassword
         } = this.state;
 
         return (
@@ -465,6 +523,8 @@ export default class Lockscreen extends React.Component<
                 {(!!modifySecurityScreen ||
                     deletePin ||
                     deleteDuressPin ||
+                    deletePassword ||
+                    deleteDuressPassword ||
                     pendingNavigation) && (
                     <Header leftComponent="Back" navigation={navigation} />
                 )}
@@ -525,10 +585,17 @@ export default class Lockscreen extends React.Component<
                         </View>
                         <View style={styles.button}>
                             <Button
-                                title={localeString('views.Lockscreen.login')}
+                                title={localeString(
+                                    deletePassword
+                                        ? 'views.Settings.SetPassword.deletePassword'
+                                        : deleteDuressPassword
+                                        ? 'views.Settings.SetDuressPassword.deletePassword'
+                                        : 'views.Lockscreen.login'
+                                )}
                                 onPress={() => this.onAttemptLogIn()}
                                 containerStyle={{ width: 300 }}
                                 adaptiveWidth
+                                warning={deletePassword || deleteDuressPassword}
                             />
                         </View>
                     </View>
