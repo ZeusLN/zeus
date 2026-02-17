@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "不支持验证操作",
     "views.Settings.Language.title": "语言",
     "views.Settings.Currency.title": "币种",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "源",
     "views.Settings.Currency.selectCurrency": "选择币种",
     "views.Settings.SelectCurrency.title": "选择币种",
