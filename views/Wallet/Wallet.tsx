@@ -228,7 +228,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.handleBackButton.bind(this)
         );
 
-        const { SettingsStore, route } = this.props;
+        const { SettingsStore, CashuStore, route } = this.props;
 
         const shareIntentData = route?.params?.shareIntentData;
         if (shareIntentData) {
@@ -250,6 +250,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.getSettingsAndNavigate();
             SettingsStore.posWasEnabled = false;
             SettingsStore.triggerSettingsRefresh = false;
+        }
+
+        if (
+            BackendUtils.supportsCashuWallet() &&
+            SettingsStore.settings?.ecash?.enableCashu &&
+            CashuStore?.cdkInitialized
+        ) {
+            CashuStore.checkPendingItems();
+            CashuStore.syncCDKBalances().catch((e) =>
+                console.error('Wallet: Failed to sync CDK balances:', e)
+            );
         }
     };
 
