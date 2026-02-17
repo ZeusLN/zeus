@@ -188,7 +188,7 @@ export default class AmountInput extends React.Component<
 
         let formattedAmount: string;
         if (effectiveUnits === 'BTC') {
-            formattedAmount = `₿ ${formatBitcoinWithSpaces(
+            formattedAmount = `₿${formatBitcoinWithSpaces(
                 displayValue || '0'
             )}`;
         } else if (effectiveUnits === 'fiat') {
