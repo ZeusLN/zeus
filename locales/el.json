@@ -977,6 +977,8 @@
     "views.Settings.SignMessage.verificationOperationFailed": "Η λειτουργία επιβεβαίωσης δεν υποστηρίζεται",
     "views.Settings.Language.title": "Γλώσσα",
     "views.Settings.Currency.title": "Νόμισμα",
+    "views.Settings.Currency.currencies": "Currencies",
+    "views.Settings.Currency.otherCurrencies": "Other currencies",
     "views.Settings.Currency.source": "Πηγή",
     "views.Settings.Currency.selectCurrency": "Επιλογή νομίσματος",
     "views.Settings.SelectCurrency.title": "Επιλογή νομίσματος",
