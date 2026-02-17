@@ -8,6 +8,7 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import FeeUtils from '../utils/FeeUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
 export default class FeeStore {
@@ -137,7 +138,8 @@ export default class FeeStore {
         channelPoint?: string,
         channelId?: string,
         minHtlc?: string,
-        maxHtlc?: string
+        maxHtlc?: string,
+        feeRateMode: 'percent' | 'ppm' = 'percent'
     ) => {
         this.loading = true;
         this.setFeesError = false;
@@ -146,7 +148,12 @@ export default class FeeStore {
 
         // handle commas in place of decimals
         const baseFee = newBaseFee.replace(/,/g, '.');
-        const feeRate = newFeeRate.replace(/,/g, '.');
+        let feeRate = newFeeRate.replace(/,/g, '.');
+
+        // convert PPM to decimal rate for LND
+        if (feeRateMode === 'ppm' && BackendUtils.isLNDBased() && feeRate) {
+            feeRate = FeeUtils.ppmToPercent(feeRate);
+        }
 
         const data: any = {
             base_fee_msat: `${Number(baseFee) * 1000}`,
