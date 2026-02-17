@@ -4,13 +4,15 @@ import { inject, observer } from 'mobx-react';
 
 import Conversion from './Conversion';
 
+import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
 import {
     getDecimalPlaceholder,
     formatBitcoinWithSpaces,
-    numberWithCommas
+    numberWithCommas,
+    numberWithDecimals
 } from '../utils/UnitsUtils';
 
 interface KeypadAmountDisplayProps {
@@ -23,11 +25,12 @@ interface KeypadAmountDisplayProps {
     lineHeight?: number;
     containerStyle?: ViewStyle;
     childrenBeforeConversion?: boolean;
+    FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     children?: React.ReactNode;
 }
 
-@inject('UnitsStore')
+@inject('FiatStore', 'UnitsStore')
 @observer
 export default class KeypadAmountDisplay extends React.Component<KeypadAmountDisplayProps> {
     render() {
@@ -41,10 +44,13 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             lineHeight = 80,
             containerStyle,
             childrenBeforeConversion = false,
+            FiatStore,
             UnitsStore,
             children
         } = this.props;
         const { units } = UnitsStore!;
+        const separatorSwap =
+            units === 'fiat' && FiatStore!.getSymbol().separatorSwap;
 
         const color = textAnimation.interpolate({
             inputRange: [0, 1],
@@ -97,6 +103,8 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                     >
                         {units === 'BTC'
                             ? formatBitcoinWithSpaces(amount)
+                            : separatorSwap
+                            ? numberWithDecimals(amount)
                             : numberWithCommas(amount)}
                         <Text
                             style={{
