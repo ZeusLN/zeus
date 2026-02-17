@@ -5,8 +5,9 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
-import Conversion from '../components/Conversion';
+import CurrencySelectorModal from '../components/CurrencySelectorModal';
 import Header from '../components/Header';
+import KeypadAmountDisplay from '../components/KeypadAmountDisplay';
 import PinPad from '../components/PinPad';
 import Screen from '../components/Screen';
 import UnitToggle from '../components/UnitToggle';
@@ -22,11 +23,7 @@ import {
     getAmountFontSize,
     deleteLastCharacter
 } from '../utils/KeypadUtils';
-import {
-    getDecimalPlaceholder,
-    formatBitcoinWithSpaces,
-    numberWithCommas
-} from '../utils/UnitsUtils';
+import { getDecimalPlaceholder } from '../utils/UnitsUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 interface AmountKeypadProps {
@@ -56,6 +53,7 @@ export default class AmountKeypad extends React.Component<
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
+    private currencySelectorModalRef = React.createRef<CurrencySelectorModal>();
 
     constructor(props: AmountKeypadProps) {
         super(props);
@@ -117,8 +115,15 @@ export default class AmountKeypad extends React.Component<
     };
 
     handleUnitToggle = () => {
-        // Reset to 0 when units change to avoid confusion
-        this.setState({ amount: '0' });
+        this.clearValue();
+    };
+
+    handleOpenCurrencyModal = () => {
+        this.currencySelectorModalRef.current?.open();
+    };
+
+    handleCurrencyModalClose = () => {
+        this.clearValue();
     };
 
     getAmountFontSize = () => {
@@ -129,18 +134,11 @@ export default class AmountKeypad extends React.Component<
     };
 
     render() {
-        const { navigation, route, UnitsStore } = this.props;
+        const { navigation, route } = this.props;
         const { amount } = this.state;
-        const { units } = UnitsStore!;
         const hideUnitChangeButton = route.params?.hideUnitChangeButton;
 
-        const decimalPlaceholder = getDecimalPlaceholder(amount, units);
         const fontSize = this.getAmountFontSize();
-
-        const color = this.textAnimation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [themeColor('text'), 'red']
-        });
 
         return (
             <Screen>
@@ -157,50 +155,25 @@ export default class AmountKeypad extends React.Component<
                 />
 
                 <View style={styles.container}>
-                    {/* Amount Display */}
-                    <Animated.View
-                        style={[
-                            styles.amountContainer,
-                            {
-                                transform: [{ translateX: this.shakeAnimation }]
-                            }
-                        ]}
-                    >
-                        <Animated.Text
-                            style={[
-                                styles.amountText,
-                                {
-                                    color:
-                                        amount === '0'
-                                            ? themeColor('secondaryText')
-                                            : color,
-                                    fontSize
-                                }
-                            ]}
+                    <View style={styles.amountDisplayContainer}>
+                        <KeypadAmountDisplay
+                            amount={amount}
+                            shakeAnimation={this.shakeAnimation}
+                            textAnimation={this.textAnimation}
+                            fontSize={fontSize}
+                            showConversion
                         >
-                            {units === 'BTC'
-                                ? formatBitcoinWithSpaces(amount)
-                                : numberWithCommas(amount)}
-                            <Animated.Text
-                                style={{
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {decimalPlaceholder.string}
-                            </Animated.Text>
-                        </Animated.Text>
-                    </Animated.View>
-
-                    {/* Unit Toggle */}
-                    {!hideUnitChangeButton && (
-                        <View style={styles.unitToggleContainer}>
-                            <UnitToggle onToggle={this.handleUnitToggle} />
-                        </View>
-                    )}
-
-                    {/* Conversion Display - always reserve space */}
-                    <View style={styles.conversionContainer}>
-                        {amount !== '0' && <Conversion amount={amount} />}
+                            {!hideUnitChangeButton && (
+                                <View style={styles.unitToggleContainer}>
+                                    <UnitToggle
+                                        onToggle={this.handleUnitToggle}
+                                        onOpenModal={
+                                            this.handleOpenCurrencyModal
+                                        }
+                                    />
+                                </View>
+                            )}
+                        </KeypadAmountDisplay>
                     </View>
 
                     {/* PinPad */}
@@ -223,6 +196,11 @@ export default class AmountKeypad extends React.Component<
                         />
                     </View>
                 </View>
+                <CurrencySelectorModal
+                    ref={this.currencySelectorModalRef}
+                    navigation={navigation}
+                    onClose={this.handleCurrencyModalClose}
+                />
             </Screen>
         );
     }
@@ -233,24 +211,14 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20
     },
-    amountContainer: {
+    amountDisplayContainer: {
+        flex: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 100,
         marginTop: 60
-    },
-    amountText: {
-        textAlign: 'center',
-        fontFamily: 'PPNeueMontreal-Medium'
     },
     unitToggleContainer: {
         alignItems: 'center',
         marginVertical: 15
-    },
-    conversionContainer: {
-        alignItems: 'center',
-        marginBottom: 15,
-        minHeight: 40
     },
     pinPadContainer: {
         flex: 1,
