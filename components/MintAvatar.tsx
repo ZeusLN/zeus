@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Image, Text, View } from 'react-native';
 
 import { themeColor } from '../utils/ThemeUtils';
-import { getMintAvatarInitials } from '../utils/CashuUtils';
+import { getAvatarInitials } from '../utils/DisplayUtils';
 
 import Ecash from '../assets/images/SVG/Ecash.svg';
 
@@ -30,7 +30,7 @@ const MintAvatar: React.FC<MintAvatarProps> = ({
     const dims = SIZES[size];
 
     if (showPlaceholder) {
-        const initials = getMintAvatarInitials(name || undefined);
+        const initials = getAvatarInitials(name || undefined);
         return (
             <View
                 style={[
