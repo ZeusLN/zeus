@@ -37,7 +37,10 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
-import { exportChannelDb } from '../../utils/ChannelMigrationUtils';
+import {
+    exportChannelDb,
+    uploadChannelBackupToOlympus
+} from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -195,6 +198,13 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     handleExportChannels = () => {
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { isSqlite }: any = SettingsStore;
+        const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
+        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
+        const lndDir = () => this.props.SettingsStore.lndDir || 'lnd';
+        const seedPhrase = SettingsStore.seedPhrase.join(' ');
+
         Alert.alert(
             localeString('views.Tools.migration.export.title'),
 
@@ -206,15 +216,24 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     style: 'cancel'
                 },
                 {
-                    text: localeString('views.Tools.migration.export.confirm'),
+                    text: localeString('views.Tools.migration.export.olympus'),
                     style: 'default',
                     onPress: async () => {
-                        const { SettingsStore, NodeInfoStore } = this.props;
-                        const { isSqlite }: any = SettingsStore;
-                        const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
-                        const lndDir = () =>
-                            this.props.SettingsStore.lndDir || 'lnd';
-
+                        await uploadChannelBackupToOlympus(
+                            lndDir(),
+                            isTestnet,
+                            isSqlite,
+                            pubkey,
+                            seedPhrase,
+                            (loading) =>
+                                this.setState({ isChannelExporting: loading })
+                        );
+                    }
+                },
+                {
+                    text: localeString('views.Tools.migration.export.local'),
+                    style: 'default',
+                    onPress: async () => {
                         await exportChannelDb(
                             lndDir(),
                             isTestnet,
