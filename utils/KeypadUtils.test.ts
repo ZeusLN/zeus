@@ -222,6 +222,50 @@ describe('KeypadUtils', () => {
             });
         });
 
+        describe('sats integer limit', () => {
+            it('rejects more than 12 integer digits for sats', () => {
+                const result = validateKeypadInput(
+                    '123456789012',
+                    '3',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: false,
+                    newAmount: '123456789012'
+                });
+            });
+
+            it('allows decimal point after 12 integer digits for sats', () => {
+                const result = validateKeypadInput(
+                    '123456789012',
+                    '.',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: true,
+                    newAmount: '123456789012.'
+                });
+            });
+
+            it('accepts 12th integer digit for sats', () => {
+                const result = validateKeypadInput(
+                    '12345678901',
+                    '2',
+                    'sats',
+                    fiatStore as any,
+                    settingsStore as any
+                );
+                expect(result).toEqual({
+                    valid: true,
+                    newAmount: '123456789012'
+                });
+            });
+        });
+
         describe('BTC integer limit', () => {
             it('rejects more than 8 integer digits for BTC', () => {
                 const result = validateKeypadInput(
