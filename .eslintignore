@@ -1,9 +1,0 @@
-node_modules
-zeus_modules
-.eslintrc.js
-babel.config.js
-index.js
-metro.config.js
-shim.js
-proto
-react-native.config.js
