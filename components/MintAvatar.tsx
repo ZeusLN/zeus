@@ -26,6 +26,11 @@ const MintAvatar: React.FC<MintAvatarProps> = ({
     style
 }) => {
     const [imageError, setImageError] = React.useState(false);
+
+    React.useEffect(() => {
+        setImageError(false);
+    }, [iconUrl]);
+
     const showPlaceholder = !iconUrl || imageError;
     const dims = SIZES[size];
 
