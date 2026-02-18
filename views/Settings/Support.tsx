@@ -32,7 +32,7 @@ function Support(props: SupportProps) {
         {
             label: localeString('views.PaymentRequest.donateToZEUS'),
             path: 'DonateToZEUS',
-            condition: nodeInfoStore.nodeInfo.isMainNet
+            condition: nodeInfoStore.nodeInfo.isMainNet && Platform.OS !== 'ios'
         },
         {
             label: localeString('views.PaymentRequest.addATip'),
