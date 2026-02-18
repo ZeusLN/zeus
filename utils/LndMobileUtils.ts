@@ -124,7 +124,10 @@ const writeLndConfig = async ({
     [bolt]
     db.bolt.auto-compact=${compactDb ? 'true' : 'false'}
     ${compactDb ? 'db.bolt.auto-compact-min-age=0' : ''}`
-            : ''
+            : `
+
+    [sqlite]
+    db.sqlite.pragmaoptions=temp_store=memory`
     }`;
 
     const config = `[Application Options]
