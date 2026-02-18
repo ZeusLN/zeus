@@ -130,7 +130,7 @@ describe('KeypadUtils', () => {
                     fiatStore as any,
                     settingsStore as any
                 );
-                expect(result).toEqual({ valid: true, newAmount: '.' });
+                expect(result).toEqual({ valid: true, newAmount: '0.' });
             });
         });
 

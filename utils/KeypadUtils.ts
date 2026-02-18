@@ -104,7 +104,7 @@ export const validateKeypadInput = (
     // Determine new amount
     let newAmount: string;
     if (currentAmount === '0') {
-        newAmount = inputValue;
+        newAmount = inputValue === '.' ? '0.' : inputValue;
     } else {
         newAmount = proposedNewAmountStr;
     }
