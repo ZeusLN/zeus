@@ -1833,6 +1833,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 <View
                                                     style={{
                                                         flex: 1,
+                                                        gap: 10,
                                                         flexDirection: 'row',
                                                         justifyContent:
                                                             'space-between',
