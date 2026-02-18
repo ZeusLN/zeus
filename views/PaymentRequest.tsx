@@ -2,6 +2,7 @@ import * as React from 'react';
 import {
     NativeModules,
     NativeEventEmitter,
+    Platform,
     ScrollView,
     StyleSheet,
     View,
@@ -374,7 +375,8 @@ export default class PaymentRequest extends React.Component<
 
         const { settings } = SettingsStore;
 
-        const enableDonations = settings?.payments?.enableDonations;
+        const enableDonations =
+            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
         const { donationAmount } = this.state;
         let feeLimitSat = fee_limit_sat;
 
@@ -606,7 +608,8 @@ export default class PaymentRequest extends React.Component<
 
         const { enableTor, implementation, settings } = SettingsStore;
 
-        const enableDonations = settings?.payments?.enableDonations;
+        const enableDonations =
+            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
