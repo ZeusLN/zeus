@@ -23,10 +23,14 @@ interface SecurityProps {
     route: { params?: { enableBiometrics?: boolean } };
 }
 
+type SecurityItem =
+    | { translateKey: string; screen: string }
+    | { translateKey: string; action: string };
+
 interface SecurityState {
     scramblePin: boolean;
     loginBackground: boolean;
-    displaySecurityItems: Array<any>;
+    displaySecurityItems: SecurityItem[];
     pinExists: boolean;
     passphraseExists: boolean;
     supportedBiometryType: BiometryType | undefined;
@@ -135,7 +139,7 @@ export default class Security extends React.Component<
                 ]
             });
         } else if (settings.pin) {
-            const items: Array<any> = [
+            const items: SecurityItem[] = [
                 {
                     translateKey: 'views.Settings.ChangePin.title',
                     screen: 'SetPin'
@@ -221,14 +225,24 @@ export default class Security extends React.Component<
         />
     );
 
-    navigateSecurity = (item: any) => {
+    navigateSecurity = (item: SecurityItem) => {
         const { navigation, SettingsStore, ModalStore } = this.props;
-        const { settings }: any = SettingsStore;
+        const { settings } = SettingsStore;
         const { isBiometryEnabled } = this.state;
 
-        if (!(settings.passphrase || settings.pin)) {
-            navigation.navigate(item.screen);
-        } else if (item.action === 'DeletePin' && isBiometryEnabled) {
+        if (!('action' in item)) {
+            if (!(settings.passphrase || settings.pin)) {
+                navigation.navigate(item.screen);
+            } else {
+                // if we already have a pin/password set, make user authenticate in order to change
+                navigation.navigate('Lockscreen', {
+                    modifySecurityScreen: item.screen
+                });
+            }
+            return;
+        }
+
+        if (item.action === 'DeletePin' && isBiometryEnabled) {
             ModalStore.toggleInfoModal({
                 text: [
                     localeString(
@@ -247,9 +261,7 @@ export default class Security extends React.Component<
                 ]
             });
         } else if (item.action === 'DeletePin') {
-            navigation.navigate('Lockscreen', {
-                deletePin: true
-            });
+            navigation.navigate('Lockscreen', { deletePin: true });
         } else if (item.action === 'DeletePassword' && isBiometryEnabled) {
             ModalStore.toggleInfoModal({
                 text: [
@@ -269,26 +281,15 @@ export default class Security extends React.Component<
                 ]
             });
         } else if (item.action === 'DeletePassword') {
-            navigation.navigate('Lockscreen', {
-                deletePassword: true
-            });
+            navigation.navigate('Lockscreen', { deletePassword: true });
         } else if (item.action === 'DeleteDuressPassword') {
-            navigation.navigate('Lockscreen', {
-                deleteDuressPassword: true
-            });
+            navigation.navigate('Lockscreen', { deleteDuressPassword: true });
         } else if (item.action === 'DeleteDuressPin') {
-            navigation.navigate('Lockscreen', {
-                deleteDuressPin: true
-            });
-        } else {
-            // if we already have a pin/password set, make user authenticate in order to change
-            navigation.navigate('Lockscreen', {
-                modifySecurityScreen: item.screen
-            });
+            navigation.navigate('Lockscreen', { deleteDuressPin: true });
         }
     };
 
-    renderItem = ({ item }: { item: any }) => {
+    renderItem = ({ item }: { item: SecurityItem }) => {
         return (
             <ListItem
                 containerStyle={{
@@ -344,7 +345,7 @@ export default class Security extends React.Component<
                     <FlatList
                         data={displaySecurityItems}
                         renderItem={this.renderItem}
-                        keyExtractor={(item: any, index) =>
+                        keyExtractor={(item: SecurityItem, index) =>
                             `${item.translateKey}-${index}`
                         }
                         ItemSeparatorComponent={this.renderSeparator}
