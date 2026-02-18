@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import {
     FlatList,
-    Image,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -36,6 +35,7 @@ import { blendHexColors, themeColor } from '../../utils/ThemeUtils';
 
 import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
 import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
+import MintAvatar from '../MintAvatar';
 import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
@@ -150,18 +150,11 @@ const MintIcons = ({ mints }: { mints?: MintInfo[] }) => {
                         { marginLeft: index > 0 ? -8 : 0, zIndex: 3 - index }
                     ]}
                 >
-                    {mint.iconUrl ? (
-                        <Image
-                            source={{ uri: mint.iconUrl }}
-                            style={styles.mintIcon}
-                        />
-                    ) : (
-                        <View style={styles.mintIconPlaceholder}>
-                            <Text style={styles.mintIconPlaceholderText}>
-                                {mint.name?.[0]?.toUpperCase() || 'M'}
-                            </Text>
-                        </View>
-                    )}
+                    <MintAvatar
+                        iconUrl={mint.iconUrl}
+                        name={mint.name}
+                        size="small"
+                    />
                 </View>
             ))}
             {remainingCount > 0 && (

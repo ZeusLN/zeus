@@ -2,6 +2,7 @@ import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 import RNFS from 'react-native-fs';
 
+import { getAvatarInitials } from '../utils/DisplayUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 
 export default class Contact extends BaseModel {
@@ -184,12 +185,6 @@ export default class Contact extends BaseModel {
     }
 
     @computed public get getAvatarInitials(): string {
-        const name = (this.name || '').trim();
-        if (!name) return '';
-        const words = name.split(/\s+/).filter(Boolean);
-        const firstInitial = words[0][0] || '';
-        const lastInitial =
-            words.length > 1 ? words[words.length - 1][0] || '' : '';
-        return (firstInitial + lastInitial).toUpperCase();
+        return getAvatarInitials(this.name);
     }
 }

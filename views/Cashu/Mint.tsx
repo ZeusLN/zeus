@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { observer, inject } from 'mobx-react';
 import {
-    Image,
     Linking,
     StyleSheet,
     ScrollView,
@@ -37,6 +36,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import CashuStore from '../../stores/CashuStore';
+
+import MintAvatar from '../../components/MintAvatar';
 
 interface MintProps {
     navigation: StackNavigationProp<any, any>;
@@ -727,17 +728,12 @@ export default class Mint extends React.Component<MintProps, MintState> {
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.center}>
-                        {mintInfo?.icon_url && (
-                            <Image
-                                source={{ uri: mintInfo?.icon_url }}
-                                style={{
-                                    width: 100,
-                                    height: 100,
-                                    borderRadius: 50,
-                                    marginBottom: 15
-                                }}
-                            />
-                        )}
+                        <MintAvatar
+                            iconUrl={mintInfo?.icon_url}
+                            name={mintInfo?.name}
+                            size="large"
+                            style={{ marginBottom: 15 }}
+                        />
                         {mintInfo?.name && (
                             <Text
                                 style={{

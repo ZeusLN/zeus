@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Image, View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
 
 import Amount from './Amount';
+import MintAvatar from './MintAvatar';
 import { Row } from './layout/Row';
 
 import CashuStore from '../stores/CashuStore';
@@ -56,20 +57,15 @@ export default class EcashMintPicker extends React.Component<
                     }}
                 >
                     <Row style={{ flex: 1 }}>
-                        {mints[selectedMintUrl]?.icon_url && (
-                            <Image
-                                source={{
-                                    uri: mints[selectedMintUrl]?.icon_url
-                                }}
-                                style={{
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: 12,
-                                    marginRight: 10,
-                                    flexShrink: 0
-                                }}
-                            />
-                        )}
+                        <MintAvatar
+                            iconUrl={mints[selectedMintUrl]?.icon_url}
+                            name={mints[selectedMintUrl]?.name}
+                            size="small"
+                            style={{
+                                marginRight: 10,
+                                flexShrink: 0
+                            }}
+                        />
                         <Text
                             style={{
                                 ...styles.text,
