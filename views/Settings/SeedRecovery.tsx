@@ -23,7 +23,10 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    SuccessMessage
+} from '../../components/SuccessErrorMessage';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -37,7 +40,12 @@ import DropdownSetting from '../../components/DropdownSetting';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { validateChannelBackupFile } from '../../utils/ChannelMigrationUtils';
+import {
+    restoreChannelBackupFromOlympus,
+    validateChannelBackupFile
+} from '../../utils/ChannelMigrationUtils';
+
+import lndMobile from '../../lndmobile/LndMobileInjection';
 
 import ModalStore from '../../stores/ModalStore';
 
@@ -97,6 +105,7 @@ interface SeedRecoveryState {
     channelBackupsBase64: string;
     errorCreatingWallet: boolean;
     errorMsg: string;
+    successMsg: string;
     restoreSwaps?: boolean;
     restoreRescueKey?: boolean;
     rescueHost: string;
@@ -107,6 +116,7 @@ interface SeedRecoveryState {
     showValidation: boolean;
     channelDbUri?: string;
     channelDbFileName?: string;
+    olympusRestorePending: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore', 'ModalStore')
@@ -141,6 +151,7 @@ export default class SeedRecovery extends React.PureComponent<
             channelBackupsBase64: '',
             errorCreatingWallet: false,
             errorMsg: '',
+            successMsg: '',
             rescueHost: isTestnet
                 ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
                 : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
@@ -148,7 +159,8 @@ export default class SeedRecovery extends React.PureComponent<
             invalidInput: false,
             showClipboardPrompt: false,
             clipboardSeedArray: [],
-            showValidation: false
+            showValidation: false,
+            olympusRestorePending: false
         };
     }
 
@@ -204,7 +216,7 @@ export default class SeedRecovery extends React.PureComponent<
         this.props.ModalStore.toggleRestoreChannelModal({
             show: true,
             onCheckOlympus: async () => {
-                //TODO
+                this.handleImportChannelsFromOlympus(onProceed);
             },
             onImportFile: async () => {
                 this.handleImportFile(onProceed);
@@ -252,6 +264,12 @@ export default class SeedRecovery extends React.PureComponent<
                 Alert.alert(localeString('general.error'));
             }
         }
+    };
+
+    handleImportChannelsFromOlympus = async (onProceed: () => void) => {
+        this.setState({ olympusRestorePending: true }, () => {
+            onProceed();
+        });
     };
 
     saveWalletConfiguration = (recoveryCipherSeed?: string) => {
@@ -311,6 +329,7 @@ export default class SeedRecovery extends React.PureComponent<
             showSuggestions,
             filteredData,
             errorMsg,
+            successMsg,
             restoreSwaps,
             restoreRescueKey,
             rescueHost,
@@ -524,21 +543,97 @@ export default class SeedRecovery extends React.PureComponent<
                 const { wallet, seed, randomBase64 }: any = response;
 
                 if (wallet && wallet.admin_macaroon) {
-                    this.setState(
-                        {
-                            adminMacaroon: wallet.admin_macaroon,
-                            seedPhrase: seed.cipher_seed_mnemonic,
-                            walletPassword: randomBase64,
-                            embeddedLndNetwork:
-                                network.charAt(0).toUpperCase() +
-                                network.slice(1),
-                            lndDir
-                        },
-                        () => {
-                            // Use callback to ensure state is updated before saving
-                            this.saveWalletConfiguration(recoveryCipherSeed);
+                    let olympusRestoreSuccess = true;
+
+                    if (this.state.olympusRestorePending) {
+                        try {
+                            this.setState({
+                                successMsg: 'Waiting for LND to start...'
+                            });
+
+                            const { getInfo } = lndMobile.index;
+                            let nodeInfo;
+                            let retries = 10;
+
+                            while (retries > 0) {
+                                try {
+                                    nodeInfo = await getInfo();
+                                    break;
+                                } catch (rpcError: any) {
+                                    const errorStr =
+                                        rpcError?.message || String(rpcError);
+                                    if (
+                                        errorStr.includes('starting up') ||
+                                        errorStr.includes('not yet ready')
+                                    ) {
+                                        await new Promise((resolve) =>
+                                            setTimeout(resolve, 2000)
+                                        );
+                                        retries--;
+                                    } else {
+                                        throw rpcError;
+                                    }
+                                }
+                            }
+
+                            if (!nodeInfo) {
+                                throw new Error(
+                                    'Timed out waiting for LND to become ready.'
+                                );
+                            }
+
+                            this.setState({
+                                successMsg:
+                                    'Downloading channel backup from Olympus...'
+                            });
+
+                            const pubkey = nodeInfo.identity_pubkey;
+                            const isTestnet = nodeInfo.testnet;
+
+                            const restored =
+                                await restoreChannelBackupFromOlympus(
+                                    lndDir,
+                                    isTestnet,
+                                    true,
+                                    pubkey,
+                                    recoveryCipherSeed,
+                                    undefined,
+                                    true
+                                );
+                            if (!restored) {
+                                olympusRestoreSuccess = true;
+                            }
+                        } catch (e: any) {
+                            olympusRestoreSuccess = false;
+                            this.setState({
+                                errorCreatingWallet: true,
+                                errorMsg:
+                                    'Failed to restore from Olympus: ' +
+                                    (e.message || e.toString()),
+                                loading: false
+                            });
                         }
-                    );
+                    }
+
+                    if (olympusRestoreSuccess) {
+                        this.setState(
+                            {
+                                adminMacaroon: wallet.admin_macaroon,
+                                seedPhrase: seed.cipher_seed_mnemonic,
+                                walletPassword: randomBase64,
+                                embeddedLndNetwork:
+                                    network.charAt(0).toUpperCase() +
+                                    network.slice(1),
+                                lndDir
+                            },
+                            () => {
+                                // Use callback to ensure state is updated before saving
+                                this.saveWalletConfiguration(
+                                    recoveryCipherSeed
+                                );
+                            }
+                        );
+                    }
                 } else {
                     this.setState({
                         loading: false,
@@ -573,7 +668,7 @@ export default class SeedRecovery extends React.PureComponent<
                     }}
                     navigation={navigation}
                 />
-                {errorMsg && <ErrorMessage message={errorMsg} />}
+                {errorMsg && <ErrorMessage message={errorMsg} dismissable />}
                 {invalidWordIndices.length > 0 && (
                     <ErrorMessage
                         message={`${localeString(
@@ -582,6 +677,9 @@ export default class SeedRecovery extends React.PureComponent<
                             .map((i) => i + 1)
                             .join(', #')}`}
                     />
+                )}
+                {successMsg && (
+                    <SuccessMessage message={successMsg} dismissable />
                 )}
                 {loading && <LoadingIndicator />}
                 {!loading && (

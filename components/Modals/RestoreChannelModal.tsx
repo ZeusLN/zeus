@@ -37,7 +37,8 @@ export default class ChannelBackupModal extends React.Component<ChannelBackupMod
                     backgroundColor: themeColor('background'),
                     borderRadius: 24,
                     height: 480,
-                    width: '90%'
+                    width: '90%',
+                    alignSelf: 'center'
                 }}
                 onClosed={() => toggleRestoreChannelModal({ show: false })}
                 swipeToClose={false}
