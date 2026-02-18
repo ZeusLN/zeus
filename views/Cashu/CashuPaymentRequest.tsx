@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -170,7 +171,8 @@ export default class CashuPaymentRequest extends React.Component<
         const { CashuStore, SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
 
-        const enableDonations = settings?.payments?.enableDonations;
+        const enableDonations =
+            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
         const { donationAmount } = this.state;
 
         CashuStore.payLnInvoiceFromEcash({
@@ -253,7 +255,8 @@ export default class CashuPaymentRequest extends React.Component<
 
         const noBalance = totalBalanceSats === 0;
 
-        const enableDonations = settings?.payments?.enableDonations;
+        const enableDonations =
+            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
 
         const showZaplockerWarning =
             isZaplocker ||
