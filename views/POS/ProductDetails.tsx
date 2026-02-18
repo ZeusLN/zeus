@@ -100,21 +100,28 @@ export default class ProductDetails extends React.Component<
             const productId = this.props.route.params?.productId;
 
             if (!productId) {
-                this.setState({
-                    categories: categoryOptions,
-                    product: new Product({
-                        id: uuidv4(),
-                        name: '',
-                        sku: '',
-                        pricedIn: PricedIn.Fiat,
-                        price: '',
-                        category: '',
-                        status: ProductStatus.Active,
-                        taxPercentage: ''
-                    }),
-                    isLoading: false,
-                    isExisting: false
-                });
+                if (!this.state.product) {
+                    this.setState({
+                        categories: categoryOptions,
+                        product: new Product({
+                            id: uuidv4(),
+                            name: '',
+                            sku: '',
+                            pricedIn: PricedIn.Fiat,
+                            price: '',
+                            category: '',
+                            status: ProductStatus.Active,
+                            taxPercentage: ''
+                        }),
+                        isLoading: false,
+                        isExisting: false
+                    });
+                } else {
+                    this.setState({
+                        categories: categoryOptions,
+                        isLoading: false
+                    });
+                }
                 return;
             }
 
