@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Slider from '@react-native-community/slider';
@@ -412,7 +412,7 @@ export default class PaymentsSettings extends React.Component<
                             disabled={!enableMempoolRates}
                         />
                     </View>
-                    {isMainNet && (
+                    {isMainNet && Platform.OS !== 'ios' && (
                         <View
                             style={{
                                 flexDirection: 'row',
@@ -455,7 +455,7 @@ export default class PaymentsSettings extends React.Component<
                         </View>
                     )}
 
-                    {enableDonations && isMainNet && (
+                    {enableDonations && isMainNet && Platform.OS !== 'ios' && (
                         <>
                             <View
                                 style={{
