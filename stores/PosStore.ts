@@ -12,6 +12,7 @@ import Order from '../models/Order';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { calculateTaxSats } from '../utils/PosUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
 
@@ -130,24 +131,29 @@ export default class PosStore {
         const lineItems = currentOrder.line_items;
 
         const memo = merchantName
-            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
-            : `ZEUS POS - Order ${currentOrder?.id}`;
+            ? `${merchantName} ${localeString(
+                  'views.Settings.POS.poweredByZEUS'
+              )} - ${localeString('general.order')} ${currentOrder?.id}`
+            : `${localeString('views.Settings.POS')} - ${localeString(
+                  'general.order'
+              )} ${currentOrder?.id}`;
 
         const fiatEntry =
             fiat && fiatRates
                 ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
                 : null;
-        const rate =
-            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed() : 0;
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
         const subTotalSats =
             (currentOrder?.total_money?.sats ?? 0) > 0
                 ? currentOrder.total_money.sats
-                : new BigNumber(currentOrder?.total_money?.amount)
+                : rate > 0
+                ? new BigNumber(currentOrder?.total_money?.amount)
                       .div(100)
                       .div(rate)
                       .multipliedBy(SATS_PER_BTC)
-                      .toFixed(0);
+                      .toFixed(0)
+                : '0';
 
         const taxSats = Number(
             calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)

@@ -167,7 +167,7 @@ export default class SquarePosPane extends React.PureComponent<
                         loading={loading}
                         onRefresh={() => getOrders()}
                         navigation={navigation}
-                        fiatStore={FiatStore}
+                        fiatStore={FiatStore!}
                         emptyText={
                             selectedIndex === 0
                                 ? localeString(

@@ -27,8 +27,6 @@ import { SATS_PER_BTC, getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 import { PricedIn } from '../../models/Product';
 
-import BigNumber from 'bignumber.js';
-
 interface PosKeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
     FiatStore?: FiatStore;

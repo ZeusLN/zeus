@@ -594,8 +594,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         const lineItems = order?.line_items;
 
         const memo = merchantName
-            ? `${merchantName} POS powered by ZEUS - Order ${order?.id}`
-            : `ZEUS POS - Order ${order?.id}`;
+            ? `${merchantName} ${localeString(
+                  'views.Settings.POS.poweredByZEUS'
+              )} - ${localeString('general.order')} ${order?.id}`
+            : `${localeString('views.Settings.POS')} - ${localeString(
+                  'general.order'
+              )} ${order?.id}`;
 
         let subTotalSats: string;
         if (settings.pos.posEnabled === PosEnabled.Square) {

@@ -596,7 +596,7 @@ export default class StandalonePosPane extends React.PureComponent<
                         loading={loading}
                         onRefresh={() => getOrders()}
                         navigation={navigation}
-                        fiatStore={FiatStore}
+                        fiatStore={FiatStore!}
                         emptyText={
                             selectedIndex === 1
                                 ? localeString(
