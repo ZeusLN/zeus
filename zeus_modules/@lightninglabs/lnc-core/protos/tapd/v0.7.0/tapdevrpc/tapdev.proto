@@ -1,0 +1,120 @@
+syntax = "proto3";
+
+import "taprootassets.proto";
+
+package tapdevrpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/tapdevrpc";
+
+service TapDev {
+    /* tapcli: `dev importproof`
+    Deprecated, use the new taprpc.RegisterTransfer RPC instead! ImportProof
+    attempts to import a proof file into the daemon. If successful,
+    a new asset will be inserted on disk, spendable using the specified target
+    script key, and internal key.
+    NOTE: This RPC will be removed with the next major release.
+    */
+    rpc ImportProof (ImportProofRequest) returns (ImportProofResponse) {
+        option deprecated = true;
+    };
+
+    /*
+    SubscribeSendAssetEventNtfns registers a subscription to the event
+    notification stream which relates to the asset sending process.
+    */
+    rpc SubscribeSendAssetEventNtfns (SubscribeSendAssetEventNtfnsRequest)
+        returns (stream SendAssetEvent);
+
+    /*
+    SubscribeReceiveAssetEventNtfns registers a subscription to the event
+    notification stream which relates to the asset receive process.
+    */
+    rpc SubscribeReceiveAssetEventNtfns (SubscribeReceiveAssetEventNtfnsRequest)
+        returns (stream ReceiveAssetEvent);
+}
+
+message ImportProofRequest {
+    bytes proof_file = 1;
+
+    string genesis_point = 2;
+}
+
+message ImportProofResponse {
+}
+
+message SubscribeSendAssetEventNtfnsRequest {
+}
+
+message SendAssetEvent {
+    oneof event {
+        // An event which indicates that a send state is about to be executed.
+        ExecuteSendStateEvent execute_send_state_event = 1;
+
+        // An event which indicates that the proof transfer backoff wait period
+        // will start imminently.
+        ProofTransferBackoffWaitEvent proof_transfer_backoff_wait_event = 2;
+    }
+}
+
+message ExecuteSendStateEvent {
+    // Execute timestamp (microseconds).
+    int64 timestamp = 1;
+
+    // The send state that is about to be executed.
+    string send_state = 2;
+}
+
+// ProofTransferType is the type of proof transfer attempt. The transfer is
+// either a proof delivery to the transfer counterparty or receiving a proof
+// from the transfer counterparty. Note that the transfer counterparty is
+// usually the proof courier service.
+enum ProofTransferType {
+    // This value indicates that the proof transfer attempt is a delivery to the
+    // transfer counterparty.
+    PROOF_TRANSFER_TYPE_SEND = 0;
+
+    // This value indicates that the proof transfer attempt is a receive from
+    // the transfer counterparty.
+    PROOF_TRANSFER_TYPE_RECEIVE = 1;
+}
+
+message ProofTransferBackoffWaitEvent {
+    // Transfer attempt timestamp (microseconds).
+    int64 timestamp = 1;
+
+    // Backoff is the active backoff wait duration.
+    int64 backoff = 2;
+
+    // Tries counter is the number of tries we've made so far during the
+    // course of the current backoff procedure to deliver the proof to the
+    // receiver.
+    int64 tries_counter = 3;
+
+    // The type of proof transfer attempt.
+    ProofTransferType transfer_type = 4;
+}
+
+message SubscribeReceiveAssetEventNtfnsRequest {
+}
+
+message AssetReceiveCompleteEvent {
+    // Event creation timestamp.
+    int64 timestamp = 1;
+
+    // The address that received the asset.
+    taprpc.Addr address = 2;
+
+    // The outpoint of the transaction that was used to receive the asset.
+    string outpoint = 3;
+}
+
+message ReceiveAssetEvent {
+    oneof event {
+        // An event which indicates that the proof transfer backoff wait period
+        // will start imminently.
+        ProofTransferBackoffWaitEvent proof_transfer_backoff_wait_event = 1;
+
+        // An event which indicates that an asset receive process has finished.
+        AssetReceiveCompleteEvent asset_receive_complete_event = 2;
+    }
+}

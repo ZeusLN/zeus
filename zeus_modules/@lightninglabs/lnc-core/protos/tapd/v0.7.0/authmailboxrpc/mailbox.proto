@@ -1,0 +1,249 @@
+syntax = "proto3";
+
+import "tapcommon.proto";
+
+package authmailboxrpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/authmailboxrpc";
+
+/*
+Service definition for the authenticated mailbox. This service allows sending
+messages (authenticated by UTXO proof) and receiving messages (authenticated
+via a challenge-response handshake).
+*/
+service Mailbox {
+    /*
+    Sends a single message to a receiver's mailbox. Requires a valid, unused
+    Bitcoin P2TR transaction outpoint as proof of uniqueness, included in a
+    block as proof of work.
+    */
+    rpc SendMessage (SendMessageRequest) returns (SendMessageResponse);
+
+    /*
+    Initiates a bidirectional stream to receive messages for a specific
+    receiver. This stream implements the challenge-response handshake required
+    for receiver authentication before messages are delivered.
+
+    Expected flow:
+    1. Client -> Server: ReceiveMessagesRequest(init = InitReceive{...})
+    2. Server -> Client: ReceiveMessagesResponse(challenge = Challenge{...})
+    3. Client -> Server: ReceiveMessagesRequest(auth_sig = AuthSignature{...})
+    4. Server -> Client: [Stream of ReceiveMessagesResponse(
+                           message = MailboxMessage{...}
+                         )]
+    5. Server -> Client: ReceiveMessagesResponse(eos = EndOfStream{})
+    */
+    rpc ReceiveMessages (stream ReceiveMessagesRequest)
+        returns (stream ReceiveMessagesResponse);
+
+    /*
+    Returns basic server information.
+    */
+    rpc MailboxInfo (MailboxInfoRequest) returns (MailboxInfoResponse);
+}
+
+// Represents the Merkle proof hashes needed to link a transaction to the Merkle
+// root within a Bitcoin block header.
+message MerkleProof {
+    // List of sibling hashes in the Merkle path, ordered from the transaction's
+    // sibling up towards the root. Each hash is typically 32 bytes.
+    repeated bytes sibling_hashes = 1;
+
+    // The bitmask indicating the direction (left/right) of each sibling hash
+    // in the Merkle tree. Each bit corresponds to a sibling hash in the
+    // sibling_hashes list. 0 indicates left, 1 indicates right.
+    repeated bool bits = 2;
+}
+
+// Encapsulates the full proof required for sender authentication, demonstrating
+// that a specific P2TR transaction output was included in a Bitcoin block. To
+// prove knowledge of the claimed output, the proof must include the output's
+// internal key and, optionally, the Taproot Merkle root.
+message BitcoinMerkleInclusionProof {
+    // The raw Bitcoin transaction bytes, in standard Bitcoin serialization
+    // format, containing the outpoint being claimed. The server will hash this
+    // to get the TXID.
+    bytes raw_tx_data = 1;
+
+    // The raw block header bytes (typically 80 bytes) of the block in which the
+    // transaction was mined. Contains the Merkle root against which the proof
+    // is verified.
+    bytes raw_block_header_data = 2;
+
+    // The height at which the block was mined. This is used to determine the
+    // block's validity and to ensure the transaction is not too old.
+    uint32 block_height = 3;
+
+    // The Merkle path proving the transaction's inclusion in the block header's
+    // Merkle root.
+    MerkleProof merkle_proof = 4;
+
+    // The specific output within the provided transaction being claimed as the
+    // proof "token". The output at the given index must be a P2TR output.
+    // The server must verify that the txid_hex matches the hash of the provided
+    // transaction data, and that this specific outpoint index exists in the
+    // transaction.
+    taprpc.OutPoint claimed_outpoint = 5;
+
+    // The Taproot internal key used to construct the P2TR output that is
+    // claimed by the outpoint above. Must be provided alongside the Taproot
+    // Merkle root to prove knowledge of the output's construction.
+    bytes internal_key = 6;
+
+    // The Taproot Merkle root, if applicable. This, alongside the internal key,
+    // is used to prove knowledge of the output's construction. If this is not
+    // provided (empty or nil), a BIP-0086 construction is assumed.
+    bytes merkle_root = 7;
+}
+
+// Represents a single message as stored and retrieved from the mailbox.
+message MailboxMessage {
+    // The unique ID assigned to the message by the server upon storage.
+    uint64 message_id = 1;
+
+    // The ECIES encrypted message payload, intended for the receiver.
+    bytes encrypted_payload = 2;
+
+    // Timestamp (Unix epoch seconds) when the message arrived at the server.
+    int64 arrival_timestamp = 3;
+}
+
+// Represents a list of messages.
+message MailboxMessages {
+    // The list of mailbox messages.
+    repeated MailboxMessage messages = 1;
+}
+
+// Request message for the SendMessage RPC.
+message SendMessageRequest {
+    // The public key identifier of the intended receiver (ReceiverID), encoded
+    // as the raw bytes of the compressed public key.
+    bytes receiver_id = 1;
+
+    // The ECIES encrypted message payload.
+    bytes encrypted_payload = 2;
+
+    // A proof of the sender's identity, typically a Bitcoin transaction or
+    // another proof that work was done to create the message.
+    oneof proof {
+        // The Bitcoin Merkle Inclusion Proof used as the sender's
+        // authentication. The server MUST perform full validation of this
+        // proof:
+        // 1. Verify claimed_outpoint.txid_hex matches hash(raw_tx_data).
+        // 2. Verify claimed_outpoint.index is valid for the transaction.
+        // 3. Verify merkle_proof connects the transaction hash to the
+        //    raw_block_header_data's Merkle root.
+        // 4. Verify block_header validity (e.g., PoW, potentially chain
+        //    context).
+        // 5. Ensure the claimed_outpoint has not been used previously (check
+        //    used_proofs table).
+        BitcoinMerkleInclusionProof tx_proof = 4;
+    }
+}
+
+// Response message for the SendMessage RPC.
+message SendMessageResponse {
+    // The unique ID assigned to the stored message by the server.
+    uint64 message_id = 1;
+}
+
+// Wrapper message for requests sent FROM the client TO the server during the
+// ReceiveMessages stream.
+message ReceiveMessagesRequest {
+    oneof request_type {
+        // The initial parameters sent by the client to start receiving
+        // messages.
+        InitReceive init = 1;
+
+        // The client's signature in response to the server's challenge.
+        AuthSignature auth_sig = 2;
+    }
+}
+
+// Carries the initial parameters from the client to start receiving messages.
+message InitReceive {
+    // The public key identifier of the receiver of the messages that should be
+    // received through a message receive stream, encoded as the raw bytes of
+    // the compressed public key.
+    bytes receiver_id = 1;
+
+    // The exclusive start message ID, meaning messages with this ID or higher
+    // will be included in the response. This allows the client to resume
+    // receiving messages from a specific point without missing any. One of
+    // start_message_id_exclusive, start_block_height_inclusive or
+    // start_timestamp_exclusive must be at their non-default values for any
+    // existing messages to be returned!
+    uint64 start_message_id_exclusive = 2;
+
+    // The inclusive start block height, meaning messages from this block height
+    // or higher will be included in the response. This allows the client to
+    // filter messages based on the block height at which they were produced.
+    // One of start_message_id_exclusive, start_block_height_inclusive or
+    // start_timestamp_exclusive must be at their non-default values for any
+    // existing messages to be returned!
+    uint32 start_block_height_inclusive = 3;
+
+    // The exclusive start timestamp in Unix epoch seconds, meaning messages
+    // with a timestamp strictly greater than this value will be included in the
+    // response. This allows the client to filter messages based on their
+    // arrival time at the server. One of start_message_id_exclusive,
+    // start_block_height_inclusive or start_timestamp_exclusive must be at
+    // their non-default values for any existing messages to be returned!
+    int64 start_timestamp_exclusive = 4;
+}
+
+// Carries the client's signature in response to the server's challenge.
+message AuthSignature {
+    // The client's Schnorr signature over the challenge hash provided by
+    // the server.
+    bytes signature = 1;
+}
+
+// Wrapper message for responses sent FROM the server TO the client
+// during the ReceiveMessages stream.
+message ReceiveMessagesResponse {
+    oneof response_type {
+        // The challenge sent by the server to the client, which the client
+        // must sign to prove ownership of the receiver's public key.
+        Challenge challenge = 1;
+
+        // A successful authentication response, indicating the client has
+        // successfully signed the challenge and is now authenticated to receive
+        // messages.
+        bool auth_success = 2;
+
+        // A list of mailbox messages sent to the client. This will be
+        // sent after the client has successfully authenticated by signing the
+        // challenge. The client should expect a stream of these messages
+        // until the server sends an EndOfStream message.
+        MailboxMessages messages = 3;
+
+        // An EndOfStream message indicating that the server is shutting down.
+        EndOfStream eos = 4;
+    }
+}
+
+// Carries the challenge hash sent by the server to the client.
+message Challenge {
+    // The challenge hash that the client must sign to prove ownership of the
+    // receiver's public key.
+    bytes challenge_hash = 1;
+}
+
+// An empty message used to explicitly signal the normal end of the message
+// stream.
+message EndOfStream {
+}
+
+// Request message for the MailboxInfo RPC.
+message MailboxInfoRequest {
+}
+
+// Response message for the MailboxInfo RPC.
+message MailboxInfoResponse {
+    // The current server time in Unix epoch seconds.
+    int64 server_time = 1;
+
+    // The number of messages currently stored on the server.
+    uint64 message_count = 2;
+}

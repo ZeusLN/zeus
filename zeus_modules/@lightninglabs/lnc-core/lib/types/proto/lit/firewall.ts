@@ -144,6 +144,11 @@ export interface Action {
     errorReason: string;
     /** The ID of the session under which the action was performed. */
     sessionId: Uint8Array | string;
+    /**
+     * The 4 byte identifier of the macaroon that was used to perform the action.
+     * This is derived from the last 4 bytes of the macaroon's root key ID.
+     */
+    macaroonIdentifier: Uint8Array | string;
 }
 
 export interface Firewall {

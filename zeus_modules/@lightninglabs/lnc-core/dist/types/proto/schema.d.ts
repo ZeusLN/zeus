@@ -19,7 +19,11 @@ export declare const serviceNames: {
     };
     lnrpc: {
         Lightning: string;
+        State: string;
         WalletUnlocker: string;
+    };
+    peersrpc: {
+        Peers: string;
     };
     routerrpc: {
         Router: string;
@@ -48,8 +52,23 @@ export declare const serviceNames: {
     assetwalletrpc: {
         AssetWallet: string;
     };
+    authmailboxrpc: {
+        Mailbox: string;
+    };
     mintrpc: {
         Mint: string;
+    };
+    priceoraclerpc: {
+        PriceOracle: string;
+    };
+    rfqrpc: {
+        Rfq: string;
+    };
+    tapchannelrpc: {
+        TaprootAssetChannels: string;
+    };
+    tapdevrpc: {
+        TapDev: string;
     };
     taprpc: {
         TaprootAssets: string;

@@ -124,7 +124,11 @@ export default class LightningNodeConnect {
             .closedChannels({})
             .then((data: lnrpc.ClosedChannelsResponse) => snakeize(data));
     getChannelInfo = async (chanId: string) => {
-        const request: lnrpc.ChanInfoRequest = { chanId, chanPoint: '' };
+        const request: lnrpc.ChanInfoRequest = {
+            chanId,
+            chanPoint: '',
+            includeAuthProof: false
+        };
         return await this.lnc.lnd.lightning
             .getChanInfo(request)
             .then((data: lnrpc.ChannelEdge) => snakeize(data));
