@@ -142,7 +142,7 @@
     "react-native-svg-transformer": "1.5.3",
     "react-native-system-navigation-bar": "2.8.0",
     "react-native-tcp-socket": "6.2.0",
-    "react-native-tor": "0.1.8",
+    "react-native-tor": "https://github.com/ZeusLN/react-native-tor.git#v0.1.9-zeus",
     "react-native-udp": "4.1.7",
     "react-native-v8": "0.61.5-patch.4",
     "react-native-view-shot": "4.0.3",

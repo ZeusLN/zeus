@@ -2177,7 +2177,7 @@ PODS:
   - react-native-tcp-socket (6.2.0):
     - CocoaAsyncSocket
     - React-Core
-  - react-native-tor (0.1.8):
+  - react-native-tor (0.1.9-zeus):
     - React
   - react-native-udp (4.1.7):
     - CocoaAsyncSocket
@@ -3745,7 +3745,7 @@ SPEC CHECKSUMS:
   react-native-safe-area-context: c00143b4823773bba23f2f19f85663ae89ceb460
   react-native-slider: 3492743c54a83913920aa81bb949de57a915125c
   react-native-tcp-socket: 61379457d7e702e83e28c213b6e085ac079e480f
-  react-native-tor: dc46832ab810a21fb8954afa20b5aeb740ef93f5
+  react-native-tor: 0e1c26e65ca91c0b64c745a3c1e3bd69f80edebf
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
   react-native-vector-icons-feather: b0c81b5240bc89ba1546220b694fc5f7b660258d
   react-native-vector-icons-fontawesome: 9b1827fc73ef619ce268bd6f0871f5a82233121f
