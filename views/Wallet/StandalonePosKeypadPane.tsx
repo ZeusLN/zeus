@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Animated, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import BigNumber from 'bignumber.js';
 
 import Button from '../../components/Button';
 import KeypadAmountDisplay from '../../components/KeypadAmountDisplay';
@@ -10,13 +9,11 @@ import PinPad from '../../components/PinPad';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 
-import ChannelsStore from '../../stores/ChannelsStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
-import BackendUtils from '../../utils/BackendUtils';
 import {
     validateKeypadInput,
     startShakeAnimation,
@@ -25,14 +22,13 @@ import {
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
 import { SATS_PER_BTC, getDecimalPlaceholder } from '../../utils/UnitsUtils';
-import { calculateTaxSats } from '../../utils/PosUtils';
 
 import { PricedIn } from '../../models/Product';
 
 interface PosKeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
-    ChannelsStore?: ChannelsStore;
     FiatStore?: FiatStore;
     PosStore?: PosStore;
     SettingsStore?: SettingsStore;
@@ -43,7 +39,7 @@ interface PosKeypadPaneState {
     amount: string;
 }
 
-@inject('ChannelsStore', 'FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
+@inject('FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class PosKeypadPane extends React.PureComponent<
     PosKeypadPaneProps,
@@ -108,8 +104,8 @@ export default class PosKeypadPane extends React.PureComponent<
         startShakeAnimation(this.shakeAnimation, this.textAnimation);
     };
 
-    addItemAndCheckout = async () => {
-        const { PosStore, UnitsStore, SettingsStore, navigation } = this.props;
+    private createCustomOrder = () => {
+        const { PosStore, UnitsStore, SettingsStore } = this.props;
         const { settings } = SettingsStore!;
         const { units } = UnitsStore!;
         const { fiat } = settings;
@@ -139,112 +135,22 @@ export default class PosKeypadPane extends React.PureComponent<
         });
 
         PosStore.recalculateCurrentOrder();
+    };
 
-        await PosStore.saveStandaloneOrder(order);
+    addItemAndCheckout = async () => {
+        this.createCustomOrder();
 
-        navigation.navigate('Order', { order });
+        const { PosStore, navigation } = this.props;
+
+        await PosStore?.processCheckout(navigation, false);
     };
 
     addItemAndQuickPay = async () => {
-        const { PosStore, UnitsStore, SettingsStore, FiatStore, navigation } =
-            this.props;
-        const { settings } = SettingsStore!;
-        const { units } = UnitsStore!;
-        const { fiat } = settings;
+        this.createCustomOrder();
 
-        const { amount } = this.state;
+        const { PosStore, navigation } = this.props;
 
-        if (!PosStore?.currentOrder)
-            PosStore?.createCurrentOrder(fiat || 'USD');
-        const currentOrder = PosStore?.currentOrder;
-
-        if (!currentOrder) return;
-
-        const amountCalc = amount.replace(/,/g, '.');
-
-        currentOrder.line_items.push({
-            name: localeString('pos.customItem'),
-            quantity: 1,
-            base_price_money: {
-                amount: units === PricedIn.Fiat ? Number(amountCalc) : 0,
-                sats:
-                    units === PricedIn.Sats
-                        ? Number(amountCalc)
-                        : units === PricedIn.Bitcoin
-                        ? Number(amountCalc) * SATS_PER_BTC
-                        : 0
-            }
-        });
-
-        PosStore.recalculateCurrentOrder();
-        await PosStore.saveStandaloneOrder(currentOrder);
-
-        if (!SettingsStore || !FiatStore || !UnitsStore) return;
-        const { getRate, fiatRates } = FiatStore;
-        const { pos } = settings;
-        const merchantName = pos?.merchantName;
-        const taxPercentage = pos?.taxPercentage;
-        const lineItems = currentOrder.line_items;
-
-        const memo = merchantName
-            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
-            : `ZEUS POS - Order ${currentOrder?.id}`;
-
-        const fiatEntry =
-            fiat && fiatRates
-                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
-                : null;
-        const rate =
-            fiat && fiatRates && fiatEntry ? fiatEntry.rate.toFixed() : 0;
-
-        const subTotalSats =
-            (currentOrder?.total_money?.sats ?? 0) > 0
-                ? currentOrder.total_money.sats
-                : new BigNumber(currentOrder?.total_money?.amount)
-                      .div(100)
-                      .div(rate)
-                      .multipliedBy(SATS_PER_BTC)
-                      .toFixed(0);
-
-        const taxSats = Number(
-            calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)
-        );
-
-        const totalSats = new BigNumber(subTotalSats || 0)
-            .plus(taxSats)
-            .toFixed(0);
-
-        const totalFiat = new BigNumber(totalSats ?? 0)
-            .multipliedBy(rate)
-            .dividedBy(SATS_PER_BTC)
-            .toFixed(2);
-        navigation.navigate(
-            settings?.ecash?.enableCashu && BackendUtils.supportsCashuWallet()
-                ? 'ReceiveEcash'
-                : 'Receive',
-            {
-                amount:
-                    units === 'sats'
-                        ? totalSats
-                        : units === 'BTC'
-                        ? new BigNumber(totalSats || 0)
-                              .div(SATS_PER_BTC)
-                              .toFixed(8)
-                        : totalFiat,
-                autoGenerate: true,
-                memo,
-                order: currentOrder,
-                // For displaying paid orders
-                orderId: currentOrder.id,
-                // sats
-                orderTip: 0,
-                orderTotal: totalSats,
-                // formatted string rate
-                exchangeRate: getRate(),
-                // numerical rate
-                rate
-            }
-        );
+        await PosStore?.processCheckout(navigation, true);
     };
 
     render() {

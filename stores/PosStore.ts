@@ -5,10 +5,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 import FiatStore from './FiatStore';
 import SettingsStore, { PosEnabled } from './SettingsStore';
+import UnitsStore from './UnitsStore';
 
 import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { calculateTaxSats } from '../utils/PosUtils';
+import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
 
@@ -58,11 +62,134 @@ export default class PosStore {
 
     settingsStore: SettingsStore;
     fiatStore: FiatStore;
+    unitsStore: UnitsStore;
 
-    constructor(settingsStore: SettingsStore, fiatStore: FiatStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        fiatStore: FiatStore,
+        unitsStore: UnitsStore
+    ) {
         this.settingsStore = settingsStore;
         this.fiatStore = fiatStore;
+        this.unitsStore = unitsStore;
     }
+
+    private _enrichAndFilterOrders = async (orders: Order[]) => {
+        // fetch hidden orders - orders customers couldn't pay
+        const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
+        const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
+
+        const enrichedOrders = await Promise.all(
+            orders.map(async (order: any) => {
+                const payment = await Storage.getItem(`pos-${order.id}`);
+                if (hiddenOrders.includes(order.id)) {
+                    order.hidden = true;
+                }
+                if (payment) {
+                    order.payment = JSON.parse(payment);
+                }
+                return order;
+            })
+        );
+
+        const openOrders = enrichedOrders.filter(
+            (order: any) => !order.payment && !order.hidden
+        );
+        const paidOrders = enrichedOrders.filter((order: any) => order.payment);
+
+        runInAction(() => {
+            this.openOrders = openOrders;
+            this.filteredOpenOrders = openOrders;
+            this.paidOrders = paidOrders;
+            this.filteredPaidOrders = paidOrders;
+            this.loading = false;
+        });
+    };
+
+    @action
+    public processCheckout = async (
+        navigation: any,
+        isQuickPay: boolean = false
+    ) => {
+        const currentOrder = this.currentOrder;
+        if (!currentOrder) return;
+
+        await this.saveStandaloneOrder(currentOrder);
+
+        if (!isQuickPay) {
+            navigation.navigate('Order', { order: currentOrder });
+            return;
+        }
+
+        const { settings } = this.settingsStore;
+        const { fiatRates, getRate } = this.fiatStore;
+        const { units } = this.unitsStore;
+
+        const { pos, fiat } = settings;
+        const merchantName = pos?.merchantName;
+        const taxPercentage = pos?.taxPercentage;
+        const lineItems = currentOrder.line_items;
+
+        const memo = merchantName
+            ? `${merchantName} ${localeString(
+                  'views.Settings.POS.poweredByZEUS'
+              )} - ${localeString('general.order')} ${currentOrder?.id}`
+            : `${localeString('views.Settings.POS')} - ${localeString(
+                  'general.order'
+              )} ${currentOrder?.id}`;
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+        const subTotalSats =
+            (currentOrder?.total_money?.sats ?? 0) > 0
+                ? currentOrder.total_money.sats
+                : rate > 0
+                ? new BigNumber(currentOrder?.total_money?.amount)
+                      .div(100)
+                      .div(rate)
+                      .multipliedBy(SATS_PER_BTC)
+                      .toFixed(0)
+                : '0';
+
+        const taxSats = Number(
+            calculateTaxSats(lineItems, subTotalSats, rate, taxPercentage)
+        );
+
+        const totalSats = new BigNumber(subTotalSats || 0)
+            .plus(taxSats)
+            .toFixed(0);
+
+        const totalFiat = new BigNumber(totalSats ?? 0)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+
+        const destination =
+            settings?.ecash?.enableCashu && BackendUtils.supportsCashuWallet()
+                ? 'ReceiveEcash'
+                : 'Receive';
+
+        navigation.navigate(destination, {
+            amount:
+                units === 'sats'
+                    ? totalSats
+                    : units === 'BTC'
+                    ? new BigNumber(totalSats || 0).div(SATS_PER_BTC).toFixed(8)
+                    : totalFiat,
+            autoGenerate: true,
+            memo,
+            order: currentOrder,
+            orderId: currentOrder.id,
+            orderTip: 0,
+            orderTotal: totalSats,
+            exchangeRate: getRate(),
+            rate
+        });
+    };
 
     @action
     public hideOrder = async (orderId: string) => {
@@ -329,42 +456,11 @@ export default class PosStore {
 
         const soOrders = await Storage.getItem(POS_STANDALONE_KEY);
 
-        // fetch hidden orders - orders customers couldn't pay
-        const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
-        const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
-
         const orders = JSON.parse(soOrders || '[]').map(
             (order: any) => new Order(order)
         );
 
-        const enrichedOrders = await Promise.all(
-            orders.map(async (order: any) => {
-                const payment = await Storage.getItem(`pos-${order.id}`);
-                // mark order if hidden
-                if (hiddenOrders.includes(order.id)) {
-                    order.hidden = true;
-                }
-                if (payment) order.payment = JSON.parse(payment);
-
-                return order;
-            })
-        );
-
-        const openOrders = enrichedOrders.filter((order: any) => {
-            return !order.payment && !order.hidden;
-        });
-        const paidOrders = enrichedOrders.filter((order: any) => {
-            return order.payment;
-        });
-
-        runInAction(() => {
-            this.openOrders = openOrders;
-            this.filteredOpenOrders = openOrders;
-            this.paidOrders = paidOrders;
-            this.filteredPaidOrders = paidOrders;
-
-            this.loading = false;
-        });
+        await this._enrichAndFilterOrders(orders);
     };
 
     @action
@@ -417,39 +513,7 @@ export default class PosStore {
                             );
                         });
 
-                    // fetch hidden orders - orders customers couldn't pay
-                    const hiddenOrdersItem = await Storage.getItem(
-                        POS_HIDDEN_KEY
-                    );
-                    const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
-
-                    const enrichedOrders = await Promise.all(
-                        orders.map(async (order: any) => {
-                            const payment = await Storage.getItem(
-                                `pos-${order.id}`
-                            );
-                            // mark order if hidden
-                            if (hiddenOrders.includes(order.id)) {
-                                order.hidden = true;
-                            }
-                            if (payment) order.payment = JSON.parse(payment);
-                            return order;
-                        })
-                    );
-
-                    const openOrders = enrichedOrders.filter((order: any) => {
-                        return !order.payment && !order.hidden;
-                    });
-                    const paidOrders = enrichedOrders.filter((order: any) => {
-                        return order.payment;
-                    });
-
-                    runInAction(() => {
-                        this.openOrders = openOrders;
-                        this.filteredOpenOrders = openOrders;
-                        this.paidOrders = paidOrders;
-                        this.filteredPaidOrders = paidOrders;
-                    });
+                    await this._enrichAndFilterOrders(orders);
                 } else {
                     runInAction(() => {
                         this.openOrders = [];

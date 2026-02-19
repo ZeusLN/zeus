@@ -1,25 +1,14 @@
 import * as React from 'react';
-import {
-    Animated,
-    FlatList,
-    View,
-    Text,
-    TouchableHighlight,
-    TouchableOpacity
-} from 'react-native';
-import BigNumber from 'bignumber.js';
-import { ButtonGroup, SearchBar } from '@rneui/themed';
+
+import { Animated, Text } from 'react-native';
+import { SearchBar } from '@rneui/themed';
+
 import { inject, observer } from 'mobx-react';
-import { Swipeable } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../components/Button';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import WalletHeader from '../../components/WalletHeader';
-import { Row } from '../../components/layout/Row';
+import Layout from '../../views/POS/Layout';
 
-import { Spacer } from '../../components/layout/Spacer';
-import OrderItem from './OrderItem';
+import OrderList from '../POS/OrderList';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -29,12 +18,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../../utils/UnitsUtils';
-
-import { version } from './../../package.json';
-
 interface SquarePosPaneProps {
     navigation: StackNavigationProp<any, any>;
     ActivityStore?: ActivityStore;
@@ -89,126 +73,9 @@ export default class SquarePosPane extends React.PureComponent<
         ).start();
     }
 
-    renderItem = (
-        { item, index }: { item: { [key: string]: any }; index: number },
-        onClickPaid: any,
-        onClickHide: any
-    ) => {
-        const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore!;
-        const isPaid: boolean = item && item.payment;
-
-        let row: Array<any> = [];
-        let prevOpenedRow: any;
-
-        const closeRow = (index: any) => {
-            if (prevOpenedRow && prevOpenedRow !== row[index]) {
-                prevOpenedRow.close();
-            }
-            prevOpenedRow = row[index];
-        };
-
-        const renderRightActions = (
-            _progress: any,
-            _dragX: any,
-            onClickPaid: any,
-            onClickHide: any
-        ) => {
-            return (
-                <View
-                    style={{
-                        margin: 0,
-                        alignContent: 'center',
-                        justifyContent: 'center',
-                        width: 280
-                    }}
-                >
-                    <Row>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickPaid}
-                                icon={{
-                                    name: 'payments',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'green' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickHide}
-                                icon={{
-                                    name: 'delete',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'red' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                    </Row>
-                </View>
-            );
-        };
-
-        let tip = '';
-        if (isPaid) {
-            const { orderTip, rate } = item.payment;
-            tip = new BigNumber(orderTip)
-                .multipliedBy(rate)
-                .dividedBy(SATS_PER_BTC)
-                .toFixed(2);
-        }
-
-        return (
-            <Swipeable
-                renderRightActions={(progress, dragX) =>
-                    renderRightActions(
-                        progress,
-                        dragX,
-                        onClickPaid,
-                        onClickHide
-                    )
-                }
-                onSwipeableOpen={() => closeRow(index)}
-                ref={(ref) => {
-                    row[index] = ref;
-                }}
-            >
-                <TouchableHighlight
-                    onPress={() => {
-                        if (getRate() === '$N/A') return;
-                        navigation.navigate('Order', {
-                            order: item
-                        });
-                    }}
-                >
-                    <OrderItem
-                        title={item.getItemsList}
-                        money={
-                            isPaid
-                                ? `${item.getTotalMoneyDisplay} + ${
-                                      getSymbol().symbol
-                                  }${tip}`
-                                : item.getTotalMoneyDisplay
-                        }
-                        date={item.getDisplayTime}
-                    />
-                </TouchableHighlight>
-            </Swipeable>
-        );
-    };
-
     render() {
-        const {
-            ActivityStore,
-            SettingsStore,
-            PosStore,
-            FiatStore,
-            NodeInfoStore,
-            navigation
-        } = this.props;
-        const { search, selectedIndex } = this.state;
+        const { ActivityStore, PosStore, FiatStore, navigation } = this.props;
+        const { search, selectedIndex, fadeAnimation } = this.state;
         const { setFiltersPos } = ActivityStore!;
         const {
             loading,
@@ -218,15 +85,11 @@ export default class SquarePosPane extends React.PureComponent<
             updateSearch,
             hideOrder
         } = PosStore!;
-        const { getRate, getFiatRates } = FiatStore!;
         const orders =
             selectedIndex === 0 ? filteredOpenOrders : filteredPaidOrders;
-
         const headerString = `${localeString('general.orders')} (${
             orders.length || 0
         })`;
-
-        const error = NodeInfoStore!.error || SettingsStore!.error;
 
         const openOrdersButton = () => (
             <Text
@@ -263,149 +126,28 @@ export default class SquarePosPane extends React.PureComponent<
 
         const buttonElements = buttons.map((btn) => btn.element());
 
-        if (error) {
-            return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('error'),
-                        paddingTop: 20,
-                        paddingLeft: 10,
-                        flex: 1
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 20,
-                            marginTop: 20,
-                            marginBottom: 25
-                        }}
-                    >
-                        {SettingsStore!.errorMsg
-                            ? SettingsStore!.errorMsg
-                            : NodeInfoStore!.errorMsg
-                            ? NodeInfoStore!.errorMsg
-                            : localeString('views.Wallet.MainPane.error')}
-                    </Text>
-                    <Button
-                        icon={{
-                            name: 'settings',
-                            size: 25,
-                            color: '#fff'
-                        }}
-                        title={localeString(
-                            'views.Wallet.MainPane.goToSettings'
-                        )}
-                        buttonStyle={{
-                            backgroundColor: 'gray'
-                        }}
-                        containerStyle={{
-                            alignItems: 'center'
-                        }}
-                        onPress={() => {
-                            protectedNavigation(navigation, 'Menu');
-                        }}
-                        adaptiveWidth
-                    />
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 12,
-                            marginTop: 20,
-                            marginBottom: -40
-                        }}
-                    >
-                        {`v${version}`}
-                    </Text>
-                </View>
-            );
-        }
-
         return (
-            <View style={{ flex: 1 }}>
-                <WalletHeader title={headerString} navigation={navigation} />
-
-                {getRate() === '$N/A' ? (
-                    <Animated.View
-                        style={{
-                            alignSelf: 'center',
-                            opacity: this.state.fadeAnimation
-                        }}
-                    >
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                marginBottom: 10
-                            }}
-                        >
-                            {localeString(
-                                'pos.views.Wallet.PosPane.fetchingRates'
-                            )}
-                        </Text>
-                    </Animated.View>
-                ) : (
-                    <TouchableOpacity onPress={() => getFiatRates()}>
-                        <Text
-                            style={{
-                                color:
-                                    getRate() === '$N/A'
-                                        ? themeColor('error')
-                                        : themeColor('text'),
-                                alignSelf: 'center',
-                                marginBottom: 10
-                            }}
-                        >
-                            {getRate() === '$N/A'
-                                ? localeString('general.fiatFetchError')
-                                : getRate()}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
-                {!loading && (
-                    <ButtonGroup
-                        onPress={(selectedIndex: number) => {
-                            this.setState({ selectedIndex });
-                        }}
-                        selectedIndex={selectedIndex}
-                        buttons={buttonElements}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
-                )}
-
-                {loading && (
-                    <View style={{ marginTop: 40 }}>
-                        <LoadingIndicator />
-                    </View>
-                )}
-
+            <Layout
+                title={headerString}
+                navigation={navigation}
+                loading={loading}
+                selectedIndex={selectedIndex}
+                buttons={buttonElements}
+                onIndexChange={(selectedIndex: number) =>
+                    this.setState({ selectedIndex })
+                }
+                fadeAnimation={fadeAnimation}
+            >
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
                         // @ts-ignore:next-line
                         onChangeText={(value: string) => {
                             updateSearch(value);
-                            this.setState({
-                                search: value
-                            });
+                            this.setState({ search: value });
                         }}
                         value={search}
-                        inputStyle={{
-                            color: themeColor('text')
-                        }}
+                        inputStyle={{ color: themeColor('text') }}
                         placeholderTextColor={themeColor('secondaryText')}
                         containerStyle={{
                             backgroundColor: 'transparent',
@@ -419,53 +161,35 @@ export default class SquarePosPane extends React.PureComponent<
                     />
                 )}
 
-                {!loading && orders && orders.length > 0 && (
-                    <FlatList
-                        data={orders}
-                        renderItem={(v: any) =>
-                            this.renderItem(
-                                v,
-                                () => {
-                                    setFiltersPos().then(() => {
-                                        navigation.navigate('Activity', {
-                                            order: v
-                                        });
-                                    });
-                                },
-                                () => {
-                                    hideOrder(v.item.id).then(() =>
-                                        getOrders()
-                                    );
-                                }
-                            )
-                        }
-                        ListFooterComponent={<Spacer height={100} />}
+                {!loading && (
+                    <OrderList
+                        orders={orders}
+                        loading={loading}
                         onRefresh={() => getOrders()}
-                        refreshing={loading}
-                        keyExtractor={(_, index) => `${index}`}
-                    />
-                )}
-
-                {!loading && orders && orders.length === 0 && (
-                    <TouchableOpacity onPress={() => getOrders()}>
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                margin: 10,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {selectedIndex === 0
+                        navigation={navigation}
+                        fiatStore={FiatStore!}
+                        emptyText={
+                            selectedIndex === 0
                                 ? localeString(
                                       'pos.views.Wallet.PosPane.noOrders'
                                   )
                                 : localeString(
                                       'pos.views.Wallet.PosPane.noOrdersPaid'
-                                  )}
-                        </Text>
-                    </TouchableOpacity>
+                                  )
+                        }
+                        onHideOrder={(id) =>
+                            hideOrder(id).then(() => getOrders())
+                        }
+                        onOrderClick={(item) => {
+                            setFiltersPos().then(() => {
+                                navigation.navigate('Activity', {
+                                    order: item
+                                });
+                            });
+                        }}
+                    />
                 )}
-            </View>
+            </Layout>
         );
     }
 }

@@ -4,24 +4,20 @@ import {
     FlatList,
     View,
     Text,
-    TouchableHighlight,
     TouchableOpacity,
     SectionList
 } from 'react-native';
-import BigNumber from 'bignumber.js';
-import { ButtonGroup, SearchBar } from '@rneui/themed';
+
+import { SearchBar } from '@rneui/themed';
+
 import { inject, observer } from 'mobx-react';
-import { Swipeable } from 'react-native-gesture-handler';
 import moment from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import WalletHeader from '../../components/WalletHeader';
-import { Row } from '../../components/layout/Row';
-import { Spacer } from '../../components/layout/Spacer';
+import OrderList from '../POS/OrderList';
+import Layout from '../../views/POS/Layout';
 
-import OrderItem from './OrderItem';
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 
 import ActivityStore from '../../stores/ActivityStore';
@@ -33,14 +29,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
-import BackendUtils from '../../utils/BackendUtils';
-import { calculateTaxSats } from '../../utils/PosUtils';
-
-import { version } from './../../package.json';
 
 interface StandalonePosPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -185,116 +176,6 @@ export default class StandalonePosPane extends React.PureComponent<
         } catch (e) {
             console.log('error fetching products', e);
         }
-    };
-
-    renderItem = (
-        { item, index }: { item: { [key: string]: any }; index: number },
-        onClickPaid: any,
-        onClickHide: any
-    ) => {
-        const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore!;
-        const isPaid: boolean = item && item.payment;
-
-        let row: Array<any> = [];
-        let prevOpenedRow: any;
-
-        const closeRow = (index: any) => {
-            if (prevOpenedRow && prevOpenedRow !== row[index]) {
-                prevOpenedRow.close();
-            }
-            prevOpenedRow = row[index];
-        };
-
-        const renderRightActions = (
-            _progress: any,
-            _dragX: any,
-            onClickPaid: any,
-            onClickHide: any
-        ) => {
-            return (
-                <View
-                    style={{
-                        margin: 0,
-                        alignContent: 'center',
-                        justifyContent: 'center',
-                        width: 280
-                    }}
-                >
-                    <Row>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickPaid}
-                                icon={{
-                                    name: 'payments',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'green' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                        <View style={{ width: 140 }}>
-                            <Button
-                                onPress={onClickHide}
-                                icon={{
-                                    name: 'delete',
-                                    size: 25
-                                }}
-                                containerStyle={{ backgroundColor: 'red' }}
-                                iconOnly
-                            ></Button>
-                        </View>
-                    </Row>
-                </View>
-            );
-        };
-
-        let tip = '';
-        if (isPaid) {
-            const { orderTip, rate } = item.payment;
-            tip = new BigNumber(orderTip)
-                .multipliedBy(rate)
-                .dividedBy(SATS_PER_BTC)
-                .toFixed(2);
-        }
-
-        return (
-            <Swipeable
-                renderRightActions={(progress, dragX) =>
-                    renderRightActions(
-                        progress,
-                        dragX,
-                        onClickPaid,
-                        onClickHide
-                    )
-                }
-                onSwipeableOpen={() => closeRow(index)}
-                ref={(ref) => {
-                    row[index] = ref;
-                }}
-            >
-                <TouchableHighlight
-                    onPress={() => {
-                        if (getRate() === '$N/A') return;
-                        navigation.navigate('Order', {
-                            order: item
-                        });
-                    }}
-                >
-                    <OrderItem
-                        title={item.getItemsList}
-                        money={
-                            isPaid
-                                ? `${item.getTotalMoneyDisplay} + ${
-                                      getSymbol().symbol
-                                  }${tip}`
-                                : item.getTotalMoneyDisplay
-                        }
-                        date={item.getDisplayTime}
-                    />
-                </TouchableHighlight>
-            </Swipeable>
-        );
     };
 
     addProductToOrder = (product: Product) => {
@@ -462,11 +343,11 @@ export default class StandalonePosPane extends React.PureComponent<
             SettingsStore,
             PosStore,
             FiatStore,
-            NodeInfoStore,
             InventoryStore,
             navigation
         } = this.props;
-        const { search, selectedIndex, productsList, itemQty } = this.state;
+        const { search, selectedIndex, productsList, itemQty, fadeAnimation } =
+            this.state;
         const { setFiltersPos } = ActivityStore!;
         const {
             getOrders,
@@ -475,13 +356,12 @@ export default class StandalonePosPane extends React.PureComponent<
             updateSearch,
             hideOrder
         } = PosStore!;
-        const { getRate, getFiatRates }: any = FiatStore;
         const orders =
-            selectedIndex === 0
-                ? []
-                : selectedIndex === 1
+            selectedIndex === 1
                 ? filteredOpenOrders
-                : filteredPaidOrders;
+                : selectedIndex === 2
+                ? filteredPaidOrders
+                : [];
 
         const currentOrder = PosStore?.currentOrder;
         const disableButtons =
@@ -493,10 +373,7 @@ export default class StandalonePosPane extends React.PureComponent<
             selectedIndex === 0
                 ? localeString('general.pos')
                 : `${localeString('general.pos')} (${orders.length || 0})`;
-
-        const error = NodeInfoStore?.error || SettingsStore?.error;
-
-        const loading = PosStore?.loading || InventoryStore?.loading;
+        const loading = PosStore?.loading || InventoryStore?.loading || false;
 
         const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
 
@@ -548,140 +425,19 @@ export default class StandalonePosPane extends React.PureComponent<
             { element: paidOrdersButton }
         ];
         const buttonElements = buttons.map((btn) => btn.element());
-        if (error) {
-            return (
-                <View
-                    style={{
-                        backgroundColor: themeColor('error'),
-                        paddingTop: 20,
-                        paddingLeft: 10,
-                        flex: 1
-                    }}
-                >
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 20,
-                            marginTop: 20,
-                            marginBottom: 25
-                        }}
-                    >
-                        {SettingsStore?.errorMsg
-                            ? SettingsStore.errorMsg
-                            : NodeInfoStore?.errorMsg
-                            ? NodeInfoStore.errorMsg
-                            : localeString('views.Wallet.MainPane.error')}
-                    </Text>
-                    <Button
-                        icon={{
-                            name: 'settings',
-                            size: 25,
-                            color: '#fff'
-                        }}
-                        title={localeString(
-                            'views.Wallet.MainPane.goToSettings'
-                        )}
-                        buttonStyle={{
-                            backgroundColor: 'gray'
-                        }}
-                        containerStyle={{
-                            alignItems: 'center'
-                        }}
-                        onPress={() => {
-                            protectedNavigation(navigation, 'Menu');
-                        }}
-                        adaptiveWidth
-                    />
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 12,
-                            marginTop: 20,
-                            marginBottom: -40
-                        }}
-                    >
-                        {`v${version}`}
-                    </Text>
-                </View>
-            );
-        }
 
         return (
-            <View style={{ flex: 1 }}>
-                <WalletHeader
-                    title={headerString}
-                    navigation={navigation}
-                    SettingsStore={SettingsStore}
-                />
-
-                {fiatEnabled && getRate() === '$N/A' && (
-                    <Animated.View
-                        style={{
-                            alignSelf: 'center',
-                            opacity: this.state.fadeAnimation
-                        }}
-                    >
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                marginBottom: 10
-                            }}
-                        >
-                            {localeString(
-                                'pos.views.Wallet.PosPane.fetchingRates'
-                            )}
-                        </Text>
-                    </Animated.View>
-                )}
-                {fiatEnabled && getRate() !== '$N/A' && (
-                    <TouchableOpacity onPress={() => getFiatRates()}>
-                        <Text
-                            style={{
-                                color:
-                                    getRate() === '$N/A'
-                                        ? themeColor('error')
-                                        : themeColor('text'),
-                                alignSelf: 'center',
-                                marginBottom: 10
-                            }}
-                        >
-                            {getRate() === '$N/A'
-                                ? localeString('general.fiatFetchError')
-                                : getRate()}
-                        </Text>
-                    </TouchableOpacity>
-                )}
-
-                {!loading && (
-                    <ButtonGroup
-                        onPress={(selectedIndex: number) => {
-                            this.setState({ selectedIndex });
-                        }}
-                        selectedIndex={selectedIndex}
-                        buttons={buttonElements}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
-                )}
-
-                {loading && (
-                    <View style={{ marginTop: 40 }}>
-                        <LoadingIndicator />
-                    </View>
-                )}
-
+            <Layout
+                title={headerString}
+                navigation={navigation}
+                loading={loading}
+                selectedIndex={selectedIndex}
+                buttons={buttonElements}
+                onIndexChange={(selectedIndex: number) =>
+                    this.setState({ selectedIndex })
+                }
+                fadeAnimation={fadeAnimation}
+            >
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
@@ -714,25 +470,22 @@ export default class StandalonePosPane extends React.PureComponent<
                     />
                 )}
 
-                {!loading &&
-                    selectedIndex === 0 &&
-                    productsList &&
-                    productsList.length === 0 && (
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                marginTop: 20,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.POS.Product.noProductsDefined'
-                            )}
-                        </Text>
-                    )}
-
                 {!loading && selectedIndex === 0 && (
                     <>
+                        {productsList && productsList.length === 0 && (
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    marginTop: 20,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.POS.Product.noProductsDefined'
+                                )}
+                            </Text>
+                        )}
+
                         <SectionList
                             sections={productsList}
                             renderSectionHeader={this.renderSectionHeader}
@@ -744,12 +497,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                 marginRight: 10
                             }}
                         />
-                        <View
-                            style={{
-                                paddingTop: 5,
-                                marginBottom: 10
-                            }}
-                        >
+                        <View style={{ paddingTop: 5, marginBottom: 10 }}>
                             <View
                                 style={{
                                     flexDirection: 'row',
@@ -786,18 +534,11 @@ export default class StandalonePosPane extends React.PureComponent<
                                     }}
                                     disabled={disableButtons}
                                     onPress={async () => {
-                                        // there is no order so we can't charge
-                                        if (!currentOrder) return;
-
-                                        // save the current order. This will move it to the open orders screen
-                                        await PosStore.saveStandaloneOrder(
-                                            currentOrder
+                                        const { PosStore } = this.props;
+                                        await PosStore?.processCheckout(
+                                            navigation,
+                                            false
                                         );
-
-                                        // now let's create the charge
-                                        navigation.navigate('Order', {
-                                            order: currentOrder
-                                        });
                                     }}
                                 />
                                 <Button
@@ -816,115 +557,10 @@ export default class StandalonePosPane extends React.PureComponent<
                                     }}
                                     disabled={disableButtons}
                                     onPress={async () => {
-                                        if (!currentOrder) return;
-
-                                        await PosStore.saveStandaloneOrder(
-                                            currentOrder
-                                        );
-
-                                        const {
-                                            SettingsStore,
-                                            FiatStore,
-                                            UnitsStore
-                                        } = this.props;
-                                        if (
-                                            !SettingsStore ||
-                                            !FiatStore ||
-                                            !UnitsStore
-                                        )
-                                            return;
-                                        const { settings } = SettingsStore;
-                                        const { getRate, fiatRates } =
-                                            FiatStore;
-                                        const { pos, fiat } = settings;
-                                        const merchantName = pos?.merchantName;
-                                        const taxPercentage =
-                                            pos?.taxPercentage;
-                                        const lineItems =
-                                            currentOrder.line_items;
-
-                                        const memo = merchantName
-                                            ? `${merchantName} POS powered by ZEUS - Order ${currentOrder?.id}`
-                                            : `ZEUS POS - Order ${currentOrder?.id}`;
-
-                                        const fiatEntry =
-                                            fiat && fiatRates
-                                                ? fiatRates.filter(
-                                                      (entry: any) =>
-                                                          entry.code === fiat
-                                                  )[0]
-                                                : null;
-                                        const rate =
-                                            fiat && fiatRates && fiatEntry
-                                                ? fiatEntry.rate.toFixed()
-                                                : 0;
-
-                                        const subTotalSats =
-                                            (currentOrder?.total_money?.sats ??
-                                                0) > 0
-                                                ? currentOrder.total_money.sats
-                                                : new BigNumber(
-                                                      currentOrder?.total_money?.amount
-                                                  )
-                                                      .div(100)
-                                                      .div(rate)
-                                                      .multipliedBy(
-                                                          SATS_PER_BTC
-                                                      )
-                                                      .toFixed(0);
-
-                                        const taxSats = Number(
-                                            calculateTaxSats(
-                                                lineItems,
-                                                subTotalSats,
-                                                rate,
-                                                taxPercentage
-                                            )
-                                        );
-
-                                        const totalSats = new BigNumber(
-                                            subTotalSats || 0
-                                        )
-                                            .plus(taxSats)
-                                            .toFixed(0);
-
-                                        const { units } = UnitsStore;
-
-                                        const totalFiat = new BigNumber(
-                                            totalSats ?? 0
-                                        )
-                                            .multipliedBy(rate)
-                                            .dividedBy(SATS_PER_BTC)
-                                            .toFixed(2);
-                                        navigation.navigate(
-                                            settings?.ecash?.enableCashu &&
-                                                BackendUtils.supportsCashuWallet()
-                                                ? 'ReceiveEcash'
-                                                : 'Receive',
-                                            {
-                                                amount:
-                                                    units === 'sats'
-                                                        ? totalSats
-                                                        : units === 'BTC'
-                                                        ? new BigNumber(
-                                                              totalSats || 0
-                                                          )
-                                                              .div(SATS_PER_BTC)
-                                                              .toFixed(8)
-                                                        : totalFiat,
-                                                autoGenerate: true,
-                                                memo,
-                                                order: currentOrder,
-                                                // For displaying paid orders
-                                                orderId: currentOrder.id,
-                                                // sats
-                                                orderTip: 0,
-                                                orderTotal: totalSats,
-                                                // formatted string rate
-                                                exchangeRate: getRate(),
-                                                // numerical rate
-                                                rate
-                                            }
+                                        const { PosStore } = this.props;
+                                        await PosStore?.processCheckout(
+                                            navigation,
+                                            true
                                         );
                                     }}
                                 />
@@ -947,66 +583,42 @@ export default class StandalonePosPane extends React.PureComponent<
                     </>
                 )}
 
-                {!loading &&
-                    orders &&
-                    orders.length > 0 &&
-                    selectedIndex !== 0 && (
-                        <FlatList
-                            data={orders
-                                .slice()
-                                .sort((a, b) =>
-                                    moment(a.updated_at).unix() >
-                                    moment(b.updated_at).unix()
-                                        ? -1
-                                        : 1
-                                )}
-                            renderItem={(v: any) =>
-                                this.renderItem(
-                                    v,
-                                    () => {
-                                        setFiltersPos().then(() => {
-                                            navigation.navigate('Activity', {
-                                                order: v
-                                            });
-                                        });
-                                    },
-                                    () => {
-                                        hideOrder(v.item.id).then(() =>
-                                            getOrders()
-                                        );
-                                    }
-                                )
-                            }
-                            ListFooterComponent={<Spacer height={100} />}
-                            onRefresh={() => getOrders()}
-                            refreshing={loading}
-                            keyExtractor={(_, index) => `${index}`}
-                        />
-                    )}
-
-                {!loading &&
-                    orders &&
-                    orders.length === 0 &&
-                    selectedIndex !== 0 && (
-                        <TouchableOpacity onPress={() => getOrders()}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    margin: 10,
-                                    textAlign: 'center'
-                                }}
-                            >
-                                {selectedIndex === 1
-                                    ? localeString(
-                                          'pos.views.Wallet.PosPane.noOrdersStandalone'
-                                      )
-                                    : localeString(
-                                          'pos.views.Wallet.PosPane.noOrdersPaid'
-                                      )}
-                            </Text>
-                        </TouchableOpacity>
-                    )}
-            </View>
+                {!loading && selectedIndex !== 0 && (
+                    <OrderList
+                        orders={orders
+                            .slice()
+                            .sort((a, b) =>
+                                moment(a.updated_at).unix() >
+                                moment(b.updated_at).unix()
+                                    ? -1
+                                    : 1
+                            )}
+                        loading={loading}
+                        onRefresh={() => getOrders()}
+                        navigation={navigation}
+                        fiatStore={FiatStore!}
+                        emptyText={
+                            selectedIndex === 1
+                                ? localeString(
+                                      'pos.views.Wallet.PosPane.noOrdersStandalone'
+                                  )
+                                : localeString(
+                                      'pos.views.Wallet.PosPane.noOrdersPaid'
+                                  )
+                        }
+                        onHideOrder={(id) =>
+                            hideOrder(id).then(() => getOrders())
+                        }
+                        onOrderClick={(item) => {
+                            setFiltersPos().then(() => {
+                                navigation.navigate('Activity', {
+                                    order: item
+                                });
+                            });
+                        }}
+                    />
+                )}
+            </Layout>
         );
     }
 }
