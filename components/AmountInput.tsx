@@ -301,10 +301,6 @@ export default class AmountInput extends React.Component<
 export { getSatAmount };
 
 const styles = StyleSheet.create({
-    row: {
-        flexDirection: 'row',
-        alignItems: 'center'
-    },
     amountDisplay: {
         flex: 1,
         flexDirection: 'row',
