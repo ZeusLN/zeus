@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import {
+    BackHandler,
+    Dimensions,
+    NativeEventSubscription,
+    StyleSheet,
+    Text,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { getRouteStack } from '../NavigationService';
@@ -35,12 +42,22 @@ export default class SendingOnChain extends React.Component<
     SendingOnChainProps,
     {}
 > {
+    private backPressSubscription: NativeEventSubscription;
+
+    private focusListener: (() => void) | undefined;
+
     state = {
         storedNotes: ''
     };
     async componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
-        navigation.addListener('focus', () => {
+
+        this.backPressSubscription = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackPress
+        );
+
+        this.focusListener = navigation.addListener('focus', () => {
             if (!TransactionsStore.txid) return;
             Storage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
@@ -53,6 +70,23 @@ export default class SendingOnChain extends React.Component<
                 });
         });
     }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
+        this.backPressSubscription?.remove();
+    }
+
+    private handleBackPress = (): boolean => {
+        const { TransactionsStore, navigation } = this.props;
+        if (TransactionsStore.publishSuccess) {
+            navigation.popTo('Wallet');
+            return true;
+        }
+        return false;
+    };
+
     render() {
         const { NodeInfoStore, TransactionsStore, navigation } = this.props;
         const {

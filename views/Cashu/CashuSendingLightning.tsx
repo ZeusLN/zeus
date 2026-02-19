@@ -86,6 +86,8 @@ export default class CashuSendingLightning extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
 
+    private focusListener: (() => void) | undefined;
+
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
@@ -106,7 +108,7 @@ export default class CashuSendingLightning extends React.Component<
     componentDidMount() {
         const { CashuStore, navigation } = this.props;
 
-        navigation.addListener('focus', () => {
+        this.focusListener = navigation.addListener('focus', () => {
             const noteKey: string = CashuStore.noteKey!!;
             if (!noteKey) return;
             Storage.getItem(noteKey)
@@ -420,6 +422,9 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
+        }
         this.backPressSubscription?.remove();
     }
 
