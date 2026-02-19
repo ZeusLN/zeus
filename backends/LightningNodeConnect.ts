@@ -102,9 +102,11 @@ export default class LightningNodeConnect {
     isConnected = async () => await this.lnc.isConnected();
     disconnect = () => this.lnc && this.lnc.disconnect();
 
-    getTransactions = async () =>
+    getTransactions = async (data: lnrpc.GetTransactionsRequest) =>
         await this.lnc.lnd.lightning
-            .getTransactions({})
+            .getTransactions({
+                maxTransactions: data?.maxTransactions || 500
+            })
             .then((data: lnrpc.TransactionDetails) => {
                 const formatted = snakeize(data);
                 return {
@@ -124,7 +126,11 @@ export default class LightningNodeConnect {
             .closedChannels({})
             .then((data: lnrpc.ClosedChannelsResponse) => snakeize(data));
     getChannelInfo = async (chanId: string) => {
-        const request: lnrpc.ChanInfoRequest = { chanId, chanPoint: '' };
+        const request: lnrpc.ChanInfoRequest = {
+            chanId,
+            chanPoint: '',
+            includeAuthProof: false
+        };
         return await this.lnc.lnd.lightning
             .getChanInfo(request)
             .then((data: lnrpc.ChannelEdge) => snakeize(data));

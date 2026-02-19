@@ -1,0 +1,243 @@
+syntax = "proto3";
+
+package priceoraclerpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/priceoraclerpc";
+
+service PriceOracle {
+    /*
+    QueryAssetRates retrieves the exchange rate between a tap asset and BTC for
+    a specified transaction type, subject asset, and payment asset. The asset
+    rate represents the number of tap asset units per BTC.
+    */
+    rpc QueryAssetRates (QueryAssetRatesRequest)
+        returns (QueryAssetRatesResponse);
+}
+
+// TransactionType is an enum representing the type of transaction.
+enum TransactionType {
+    // PURCHASE indicates a purchase transaction.
+    PURCHASE = 0;
+
+    // SALE indicates a sale transaction.
+    SALE = 1;
+}
+
+// Intent is an enum informing the price oracle about the intent of the price
+// rate query. This is used to provide context for the asset rates being
+// requested, allowing the price oracle to tailor the response based on the
+// specific use case, such as paying an invoice or receiving a payment and the
+// different stages involved in those.
+enum Intent {
+    // INTENT_UNSPECIFIED is used to indicate that the intent of the price rate
+    // query is not specified. This is the fallback default value and should not
+    // be used in production code. It is primarily used for backward
+    // compatibility with older versions of the protocol that did not include
+    // intent information.
+    INTENT_UNSPECIFIED = 0;
+
+    // INTENT_PAY_INVOICE_HINT is used to indicate that the user is requesting
+    // a price rate hint for paying an invoice. This is typically used by the
+    // payer of an invoice to provide a suggestion of the expected asset rate to
+    // the RFQ peer (edge node) that will determine the actual rate for the
+    // payment.
+    INTENT_PAY_INVOICE_HINT = 1;
+
+    // INTENT_PAY_INVOICE is used to indicate that a peer wants to pay an
+    // invoice with assets. This is typically used by the edge node that
+    // facilitates the swap from assets to BTC for the payer of an invoice. This
+    // intent is used to provide the actual asset rate for the payment, which
+    // may differ from the hint provided by the payer.
+    INTENT_PAY_INVOICE = 2;
+
+    // INTENT_PAY_INVOICE_QUALIFY is used to indicate that the payer of an
+    // invoice has received an asset rate from their RFQ peer (edge node) and is
+    // qualifying the rate for the payment. This is typically used by the payer
+    // of an invoice to ensure that the asset rate provided by their peer (edge
+    // node) is acceptable before proceeding with the payment.
+    INTENT_PAY_INVOICE_QUALIFY = 3;
+
+    // INTENT_RECV_PAYMENT_HINT is used to indicate that the user is requesting
+    // a price rate hint for receiving a payment through an invoice. This is
+    // typically used by the creator of an invoice to provide a suggestion of
+    // the expected asset rate to the RFQ peer (edge node) that will determine
+    // the actual rate used for creating an invoice.
+    INTENT_RECV_PAYMENT_HINT = 4;
+
+    // INTENT_RECV_PAYMENT is used to indicate that a peer wants to create an
+    // invoice to receive a payment with assets. This is typically used by the
+    // edge node that facilitates the swap from BTC to assets for the receiver
+    // of a payment. This intent is used to provide the actual asset rate for
+    // the invoice creation, which may differ from the hint provided by the
+    // receiver.
+    INTENT_RECV_PAYMENT = 5;
+
+    // INTENT_RECV_PAYMENT_QUALIFY is used to indicate that the creator of an
+    // invoice received an asset rate from their RFQ peer (edge node) and is
+    // qualifying the rate for the creation of the invoice. This is typically
+    // used by the creator of an invoice to ensure that the asset rate provided
+    // by their peer (edge node) is acceptable before proceeding with creating
+    // the invoice.
+    INTENT_RECV_PAYMENT_QUALIFY = 6;
+}
+
+// FixedPoint is a scaled integer representation of a fractional number.
+//
+// This type consists of two integer fields: a coefficient and a scale.
+// Using this format enables precise and consistent representation of fractional
+// numbers while avoiding floating-point data types, which are prone to
+// precision errors.
+//
+// The relationship between the fractional representation and its fixed-point
+// representation is expressed as:
+// ```
+// V = F_c / (10^F_s)
+// ```
+// where:
+//
+// * `V` is the fractional value.
+//
+// * `F_c` is the coefficient component of the fixed-point representation. It is
+//    the scaled-up fractional value represented as an integer.
+//
+// * `F_s` is the scale component. It is an integer specifying how
+//   many decimal places `F_c` should be divided by to obtain the fractional
+//   representation.
+message FixedPoint {
+    // The coefficient is the fractional value scaled-up as an integer. This
+    // integer is represented as a string as it may be too large to fit in a
+    // uint64.
+    string coefficient = 1;
+
+    // The scale is the component that determines how many decimal places
+    // the coefficient should be divided by to obtain the fractional value.
+    uint32 scale = 2;
+}
+
+// AssetRates represents the exchange rates for subject and payment assets
+// relative to BTC, expressed as fixed-point numbers. It includes the rates
+// for both assets and an expiration timestamp indicating when the rates
+// are no longer valid.
+message AssetRates {
+    // subjectAssetRate is the number of subject asset units per BTC represented
+    // as a fixed-point number. This field is also commonly referred to as the
+    // subject asset to BTC (conversion) rate. When the subject asset is BTC,
+    // this field should be set to 100 billion, as one BTC is equivalent to 100
+    // billion msats.
+    FixedPoint subjectAssetRate = 1;
+
+    // paymentAssetRate is the number of payment asset units per BTC represented
+    // as a fixed-point number. This field is also commonly referred to as the
+    // payment asset to BTC (conversion) rate. When the payment asset is BTC,
+    // this field should be set to 100 billion, as one BTC is equivalent to 100
+    // billion msats.
+    FixedPoint paymentAssetRate = 2;
+
+    // expiry_timestamp is the Unix timestamp in seconds after which the asset
+    // rates are no longer valid.
+    uint64 expiry_timestamp = 3;
+}
+
+// AssetSpecifier is a union type for specifying an asset by either its asset ID
+// or group key.
+message AssetSpecifier {
+    oneof id {
+        // The 32-byte asset ID specified as raw bytes (gRPC only).
+        bytes asset_id = 1;
+
+        // The 32-byte asset ID encoded as a hex string (use this for REST).
+        string asset_id_str = 2;
+
+        // The 32-byte asset group key specified as raw bytes (gRPC only).
+        bytes group_key = 3;
+
+        // The 32-byte asset group key encoded as hex string (use this for
+        // REST).
+        string group_key_str = 4;
+    }
+}
+
+// QueryAssetRatesRequest specifies the parameters for querying asset exchange
+// rates in a transaction. It includes the transaction type, details about the
+// subject and payment assets, and an optional hint for expected asset rates.
+message QueryAssetRatesRequest {
+    // transaction_type indicates whether the transaction is a purchase or a
+    // sale.
+    TransactionType transaction_type = 1;
+
+    // subject_asset is the asset to be priced for purchase or sale.
+    AssetSpecifier subject_asset = 2;
+
+    // subject_asset_max_amount is the maximum amount of the subject asset that
+    // could be involved in the transaction.
+    uint64 subject_asset_max_amount = 3;
+
+    // payment_asset is the asset used for purchasing or receiving from a sale.
+    //
+    // NOTE: An asset ID of all zeros indicates that the payment asset is BTC.
+    // In this case, the asset rate will be given as milli-satoshi per asset
+    // unit
+    AssetSpecifier payment_asset = 4;
+
+    // payment_asset_max_amount is the maximum amount of the payment asset that
+    // could be involved in the transaction. This field is optional. If set to
+    // zero, it is considered unset.
+    uint64 payment_asset_max_amount = 5;
+
+    // asset_rates_hint is an optional suggestion of asset rates for the
+    // transaction, intended to provide guidance on expected pricing.
+    AssetRates asset_rates_hint = 6;
+
+    // intent informs the price oracle about the stage of the payment flow that
+    // lead to the price rate query. This is used to provide context for the
+    // asset rates being requested, allowing the price oracle to tailor the
+    // response based on the specific use case, such as paying an invoice or
+    // receiving a payment and the different stages involved in those. This
+    // field will only be set by tapd v0.7.0 and later.
+    Intent intent = 7;
+
+    // counterparty_id is the 33-byte public key of the peer that is on the
+    // opposite side of the transaction. This field will only be set by tapd
+    // v0.7.0 and later and only if the user initiating the transaction (sending
+    // a payment or creating an invoice) opted in to sharing their peer ID with
+    // the price oracle.
+    bytes counterparty_id = 8;
+
+    // metadata is an optional text field that can be used to provide
+    // additional metadata about the transaction to the price oracle. This can
+    // include information about the wallet end user that initiated the
+    // transaction, or any authentication information that the price oracle
+    // can use to give out a more accurate (or discount) asset rate. Though not
+    // verified or enforced by tapd, the suggested format for this field is a
+    // JSON string. This field is optional and can be left empty if no metadata
+    // is available. The maximum length of this field is 32'768 bytes. This
+    // field will only be set by tapd v0.7.0 and later.
+    string metadata = 9;
+}
+
+// QueryAssetRatesOkResponse is the successful response to a
+// QueryAssetRates call.
+message QueryAssetRatesOkResponse {
+    // asset_rates is the asset exchange rates for the transaction.
+    AssetRates asset_rates = 1;
+}
+
+// QueryAssetRatesErrResponse is the error response to a QueryAssetRates call.
+message QueryAssetRatesErrResponse {
+    // error is the error message.
+    string message = 1;
+
+    // code is the error code.
+    uint32 code = 2;
+}
+
+// QueryAssetRatesResponse is the response from a QueryAssetRates RPC call.
+message QueryAssetRatesResponse {
+    oneof result {
+        // ok is the successful response to the query.
+        QueryAssetRatesOkResponse ok = 1;
+
+        // error is the error response to the query.
+        QueryAssetRatesErrResponse error = 2;
+    }
+}

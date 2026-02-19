@@ -298,7 +298,10 @@ export interface ReleaseOutputRequest {
     outpoint: OutPoint | undefined;
 }
 
-export interface ReleaseOutputResponse {}
+export interface ReleaseOutputResponse {
+    /** The status of the release operation. */
+    status: string;
+}
 
 export interface KeyReq {
     /**
@@ -530,7 +533,6 @@ export interface ImportAccountRequest {
      * import the account as is.
      */
     dryRun: boolean;
-    birthdayHeight: number;
 }
 
 export interface ImportAccountResponse {
@@ -550,24 +552,17 @@ export interface ImportAccountResponse {
     dryRunInternalAddrs: string[];
 }
 
-export interface RescanRequest {
-    startHeight: number;
-}
-
-export interface RescanResponse {
-    status: string;
-}
-
 export interface ImportPublicKeyRequest {
     /** A compressed public key represented as raw bytes. */
     publicKey: Uint8Array | string;
     /** The type of address that will be generated from the public key. */
     addressType: AddressType;
-    rescan: boolean;
-    birthdayHeight: number;
 }
 
-export interface ImportPublicKeyResponse {}
+export interface ImportPublicKeyResponse {
+    /** The status of the import operation. */
+    status: string;
+}
 
 export interface ImportTapscriptRequest {
     /** The internal public key, serialized as 32-byte x-only public key. */
@@ -767,6 +762,11 @@ export interface PendingSweep {
     budget: string;
     /** The deadline height used for this output when perform fee bumping. */
     deadlineHeight: number;
+    /**
+     * The block height which the input's locktime will expire at. Zero if the
+     * input has no locktime.
+     */
+    maturityHeight: number;
 }
 
 export interface PendingSweepsRequest {}
@@ -780,9 +780,8 @@ export interface BumpFeeRequest {
     /** The input we're attempting to bump the fee of. */
     outpoint: OutPoint | undefined;
     /**
-     * Optional. The deadline in number of blocks that the input should be spent
-     * within. When not set, for new inputs, the default value (1008) is used;
-     * for existing inputs, their current values will be retained.
+     * Optional. The conf target the underlying fee estimator will use to
+     * estimate the starting fee rate for the fee function.
      */
     targetConf: number;
     /**
@@ -810,7 +809,7 @@ export interface BumpFeeRequest {
     satPerVbyte: string;
     /**
      * Optional. Whether this input will be swept immediately. When set to true,
-     * the sweeper will sweep this input without waiting for the next batch.
+     * the sweeper will sweep this input without waiting for the next block.
      */
     immediate: boolean;
     /**
@@ -822,6 +821,13 @@ export interface BumpFeeRequest {
      * retained.
      */
     budget: string;
+    /**
+     * Optional. The deadline delta in number of blocks that the output
+     * should be spent within. This translates internally to the width of the
+     * fee function that the sweeper will use to bump the fee rate. When the
+     * deadline is reached, ALL the budget will be spent as fees.
+     */
+    deadlineDelta: number;
 }
 
 export interface BumpFeeResponse {
@@ -837,7 +843,8 @@ export interface BumpForceCloseFeeRequest {
     chanPoint: ChannelPoint | undefined;
     /**
      * Optional. The deadline delta in number of blocks that the anchor output
-     * should be spent within to bump the closing transaction.
+     * should be spent within to bump the closing transaction. When the
+     * deadline is reached, ALL the budget will be spent as fees
      */
     deadlineDelta: number;
     /**
@@ -862,6 +869,11 @@ export interface BumpForceCloseFeeRequest {
      * transaction of the force closed channel otherwise the fee bumping will fail.
      */
     budget: string;
+    /**
+     * Optional. The conf target the underlying fee estimator will use to
+     * estimate the starting fee rate for the fee function.
+     */
+    targetConf: number;
 }
 
 export interface BumpForceCloseFeeResponse {
@@ -910,7 +922,10 @@ export interface LabelTransactionRequest {
     overwrite: boolean;
 }
 
-export interface LabelTransactionResponse {}
+export interface LabelTransactionResponse {
+    /** The status of the label operation. */
+    status: string;
+}
 
 export interface FundPsbtRequest {
     /**
@@ -953,6 +968,11 @@ export interface FundPsbtRequest {
      */
     satPerVbyte: string | undefined;
     /**
+     * The fee rate, expressed in sat/kWU, that should be used to spend the
+     * input with.
+     */
+    satPerKw: string | undefined;
+    /**
      * The name of the account to fund the PSBT with. If empty, the default wallet
      * account is used.
      */
@@ -973,6 +993,20 @@ export interface FundPsbtRequest {
     changeType: ChangeAddressType;
     /** The strategy to use for selecting coins during funding the PSBT. */
     coinSelectionStrategy: CoinSelectionStrategy;
+    /** The max fee to total output amount ratio that this psbt should adhere to. */
+    maxFeeRatio: number;
+    /**
+     * The custom lock ID to use for the inputs in the funded PSBT. The value
+     * if set must be exactly 32 bytes long. If empty, the default lock ID will
+     * be used.
+     */
+    customLockId: Uint8Array | string;
+    /**
+     * If set, then the inputs in the funded PSBT will be locked for the
+     * specified duration. The lock duration is specified in seconds. If not
+     * set, the default lock duration will be used.
+     */
+    lockExpirationSeconds: string;
 }
 
 export interface FundPsbtResponse {
@@ -1310,6 +1344,7 @@ export interface WalletKit {
         request?: DeepPartial<SendOutputsRequest>
     ): Promise<SendOutputsResponse>;
     /**
+     * lncli: `wallet estimatefeerate`
      * EstimateFee attempts to query the internal fee estimator of the wallet to
      * determine the fee (in sat/kw) to attach to a transaction in order to
      * achieve the confirmation target.
@@ -1318,7 +1353,7 @@ export interface WalletKit {
         request?: DeepPartial<EstimateFeeRequest>
     ): Promise<EstimateFeeResponse>;
     /**
-     * lncli: `pendingsweeps`
+     * lncli: `wallet pendingsweeps`
      * PendingSweeps returns lists of on-chain outputs that lnd is currently
      * attempting to sweep within its central batching engine. Outputs with similar
      * fee rates are batched together in order to sweep them within a single
@@ -1453,7 +1488,6 @@ export interface WalletKit {
     finalizePsbt(
         request?: DeepPartial<FinalizePsbtRequest>
     ): Promise<FinalizePsbtResponse>;
-    rescan(request?: DeepPartial<RescanRequest>): Promise<RescanResponse>;
 }
 
 type Builtin =

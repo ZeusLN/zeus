@@ -1,0 +1,68 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.universerpc = exports.taprpc = exports.tapdevrpc = exports.tapchannelrpc = exports.rfqrpc = exports.priceoraclerpc = exports.mintrpc = exports.authmailboxrpc = exports.assetwalletrpc = exports.poolrpc = exports.looprpc = exports.wtclientrpc = exports.watchtowerrpc = exports.walletrpc = exports.signrpc = exports.routerrpc = exports.peersrpc = exports.lnrpc = exports.invoicesrpc = exports.chainrpc = exports.autopilotrpc = exports.litrpc = exports.frdrpc = void 0;
+var frdrpc = __importStar(require("./frdrpc"));
+exports.frdrpc = frdrpc;
+var litrpc = __importStar(require("./litrpc"));
+exports.litrpc = litrpc;
+var autopilotrpc = __importStar(require("./autopilotrpc"));
+exports.autopilotrpc = autopilotrpc;
+var chainrpc = __importStar(require("./chainrpc"));
+exports.chainrpc = chainrpc;
+var invoicesrpc = __importStar(require("./invoicesrpc"));
+exports.invoicesrpc = invoicesrpc;
+var lnrpc = __importStar(require("./lnrpc"));
+exports.lnrpc = lnrpc;
+var peersrpc = __importStar(require("./peersrpc"));
+exports.peersrpc = peersrpc;
+var routerrpc = __importStar(require("./routerrpc"));
+exports.routerrpc = routerrpc;
+var signrpc = __importStar(require("./signrpc"));
+exports.signrpc = signrpc;
+var walletrpc = __importStar(require("./walletrpc"));
+exports.walletrpc = walletrpc;
+var watchtowerrpc = __importStar(require("./watchtowerrpc"));
+exports.watchtowerrpc = watchtowerrpc;
+var wtclientrpc = __importStar(require("./wtclientrpc"));
+exports.wtclientrpc = wtclientrpc;
+var looprpc = __importStar(require("./looprpc"));
+exports.looprpc = looprpc;
+var poolrpc = __importStar(require("./poolrpc"));
+exports.poolrpc = poolrpc;
+var assetwalletrpc = __importStar(require("./assetwalletrpc"));
+exports.assetwalletrpc = assetwalletrpc;
+var authmailboxrpc = __importStar(require("./authmailboxrpc"));
+exports.authmailboxrpc = authmailboxrpc;
+var mintrpc = __importStar(require("./mintrpc"));
+exports.mintrpc = mintrpc;
+var priceoraclerpc = __importStar(require("./priceoraclerpc"));
+exports.priceoraclerpc = priceoraclerpc;
+var rfqrpc = __importStar(require("./rfqrpc"));
+exports.rfqrpc = rfqrpc;
+var tapchannelrpc = __importStar(require("./tapchannelrpc"));
+exports.tapchannelrpc = tapchannelrpc;
+var tapdevrpc = __importStar(require("./tapdevrpc"));
+exports.tapdevrpc = tapdevrpc;
+var taprpc = __importStar(require("./taprpc"));
+exports.taprpc = taprpc;
+var universerpc = __importStar(require("./universerpc"));
+exports.universerpc = universerpc;

@@ -1,0 +1,1594 @@
+syntax = "proto3";
+
+package walletrpc;
+
+import "lightning.proto";
+import "signrpc/signer.proto";
+
+option go_package = "github.com/lightningnetwork/lnd/lnrpc/walletrpc";
+
+/*
+ * Comments in this file will be directly parsed into the API
+ * Documentation as descriptions of the associated method, message, or field.
+ * These descriptions should go right above the definition of the object, and
+ * can be in either block or // comment format.
+ *
+ * An RPC method can be matched to an lncli command by placing a line in the
+ * beginning of the description in exactly the following format:
+ * lncli: `methodname`
+ *
+ * Failure to specify the exact name of the command will cause documentation
+ * generation to fail.
+ *
+ * More information on how exactly the gRPC documentation is generated from
+ * this proto file can be found here:
+ * https://github.com/lightninglabs/lightning-api
+ */
+
+// WalletKit is a service that gives access to the core functionalities of the
+// daemon's wallet.
+service WalletKit {
+    /*
+    ListUnspent returns a list of all utxos spendable by the wallet with a
+    number of confirmations between the specified minimum and maximum. By
+    default, all utxos are listed. To list only the unconfirmed utxos, set
+    the unconfirmed_only to true.
+    */
+    rpc ListUnspent (ListUnspentRequest) returns (ListUnspentResponse);
+
+    /* lncli: `wallet leaseoutput`
+    LeaseOutput locks an output to the given ID, preventing it from being
+    available for any future coin selection attempts. The absolute time of the
+    lock's expiration is returned. The expiration of the lock can be extended by
+    successive invocations of this RPC. Outputs can be unlocked before their
+    expiration through `ReleaseOutput`.
+    */
+    rpc LeaseOutput (LeaseOutputRequest) returns (LeaseOutputResponse);
+
+    /* lncli: `wallet releaseoutput`
+    ReleaseOutput unlocks an output, allowing it to be available for coin
+    selection if it remains unspent. The ID should match the one used to
+    originally lock the output.
+    */
+    rpc ReleaseOutput (ReleaseOutputRequest) returns (ReleaseOutputResponse);
+
+    /* lncli: `wallet listleases`
+    ListLeases lists all currently locked utxos.
+    */
+    rpc ListLeases (ListLeasesRequest) returns (ListLeasesResponse);
+
+    /*
+    DeriveNextKey attempts to derive the *next* key within the key family
+    (account in BIP43) specified. This method should return the next external
+    child within this branch.
+    */
+    rpc DeriveNextKey (KeyReq) returns (signrpc.KeyDescriptor);
+
+    /*
+    DeriveKey attempts to derive an arbitrary key specified by the passed
+    KeyLocator.
+    */
+    rpc DeriveKey (signrpc.KeyLocator) returns (signrpc.KeyDescriptor);
+
+    /*
+    NextAddr returns the next unused address within the wallet.
+    */
+    rpc NextAddr (AddrRequest) returns (AddrResponse);
+
+    /* lncli: `wallet gettx`
+    GetTransaction returns details for a transaction found in the wallet.
+    */
+    rpc GetTransaction (GetTransactionRequest) returns (lnrpc.Transaction);
+
+    /* lncli: `wallet accounts list`
+    ListAccounts retrieves all accounts belonging to the wallet by default. A
+    name and key scope filter can be provided to filter through all of the
+    wallet accounts and return only those matching.
+    */
+    rpc ListAccounts (ListAccountsRequest) returns (ListAccountsResponse);
+
+    /* lncli: `wallet requiredreserve`
+    RequiredReserve returns the minimum amount of satoshis that should be kept
+    in the wallet in order to fee bump anchor channels if necessary. The value
+    scales with the number of public anchor channels but is capped at a maximum.
+    */
+    rpc RequiredReserve (RequiredReserveRequest)
+        returns (RequiredReserveResponse);
+
+    /* lncli: `wallet addresses list`
+    ListAddresses retrieves all the addresses along with their balance. An
+    account name filter can be provided to filter through all of the
+    wallet accounts and return the addresses of only those matching.
+    */
+    rpc ListAddresses (ListAddressesRequest) returns (ListAddressesResponse);
+
+    /* lncli: `wallet addresses signmessage`
+    SignMessageWithAddr returns the compact signature (base64 encoded) created
+    with the private key of the provided address. This requires the address
+    to be solely based on a public key lock (no scripts). Obviously the internal
+    lnd wallet has to possess the private key of the address otherwise
+    an error is returned.
+
+    This method aims to provide full compatibility with the bitcoin-core and
+    btcd implementation. Bitcoin-core's algorithm is not specified in a
+    BIP and only applicable for legacy addresses. This method enhances the
+    signing for additional address types: P2WKH, NP2WKH, P2TR.
+    For P2TR addresses this represents a special case. ECDSA is used to create
+    a compact signature which makes the public key of the signature recoverable.
+    */
+    rpc SignMessageWithAddr (SignMessageWithAddrRequest)
+        returns (SignMessageWithAddrResponse);
+
+    /* lncli: `wallet addresses verifymessage`
+    VerifyMessageWithAddr returns the validity and the recovered public key of
+    the provided compact signature (base64 encoded). The verification is
+    twofold. First the validity of the signature itself is checked and then
+    it is verified that the recovered public key of the signature equals
+    the public key of the provided address. There is no dependence on the
+    private key of the address therefore also external addresses are allowed
+    to verify signatures.
+    Supported address types are P2PKH, P2WKH, NP2WKH, P2TR.
+
+    This method is the counterpart of the related signing method
+    (SignMessageWithAddr) and aims to provide full compatibility to
+    bitcoin-core's implementation. Although bitcoin-core/btcd only provide
+    this functionality for legacy addresses this function enhances it to
+    the address types: P2PKH, P2WKH, NP2WKH, P2TR.
+
+    The verification for P2TR addresses is a special case and requires the
+    ECDSA compact signature to compare the reovered public key to the internal
+    taproot key. The compact ECDSA signature format was used because there
+    are still no known compact signature schemes for schnorr signatures.
+    */
+    rpc VerifyMessageWithAddr (VerifyMessageWithAddrRequest)
+        returns (VerifyMessageWithAddrResponse);
+
+    /* lncli: `wallet accounts import`
+    ImportAccount imports an account backed by an account extended public key.
+    The master key fingerprint denotes the fingerprint of the root key
+    corresponding to the account public key (also known as the key with
+    derivation path m/). This may be required by some hardware wallets for
+    proper identification and signing.
+
+    The address type can usually be inferred from the key's version, but may be
+    required for certain keys to map them into the proper scope.
+
+    For BIP-0044 keys, an address type must be specified as we intend to not
+    support importing BIP-0044 keys into the wallet using the legacy
+    pay-to-pubkey-hash (P2PKH) scheme. A nested witness address type will force
+    the standard BIP-0049 derivation scheme, while a witness address type will
+    force the standard BIP-0084 derivation scheme.
+
+    For BIP-0049 keys, an address type must also be specified to make a
+    distinction between the standard BIP-0049 address schema (nested witness
+    pubkeys everywhere) and our own BIP-0049Plus address schema (nested pubkeys
+    externally, witness pubkeys internally).
+
+    NOTE: Events (deposits/spends) for keys derived from an account will only be
+    detected by lnd if they happen after the import. Rescans to detect past
+    events will be supported later on.
+    */
+    rpc ImportAccount (ImportAccountRequest) returns (ImportAccountResponse);
+
+    /* lncli: `wallet accounts import-pubkey`
+    ImportPublicKey imports a public key as watch-only into the wallet. The
+    public key is converted into a simple address of the given type and that
+    address script is watched on chain. For Taproot keys, this will only watch
+    the BIP-0086 style output script. Use ImportTapscript for more advanced key
+    spend or script spend outputs.
+
+    NOTE: Events (deposits/spends) for a key will only be detected by lnd if
+    they happen after the import. Rescans to detect past events will be
+    supported later on.
+    */
+    rpc ImportPublicKey (ImportPublicKeyRequest)
+        returns (ImportPublicKeyResponse);
+
+    /*
+    ImportTapscript imports a Taproot script and internal key and adds the
+    resulting Taproot output key as a watch-only output script into the wallet.
+    For BIP-0086 style Taproot keys (no root hash commitment and no script spend
+    path) use ImportPublicKey.
+
+    NOTE: Events (deposits/spends) for a key will only be detected by lnd if
+    they happen after the import. Rescans to detect past events will be
+    supported later on.
+
+    NOTE: Taproot keys imported through this RPC currently _cannot_ be used for
+    funding PSBTs. Only tracking the balance and UTXOs is currently supported.
+    */
+    rpc ImportTapscript (ImportTapscriptRequest)
+        returns (ImportTapscriptResponse);
+
+    /* lncli: `wallet publishtx`
+    PublishTransaction attempts to publish the passed transaction to the
+    network. Once this returns without an error, the wallet will continually
+    attempt to re-broadcast the transaction on start up, until it enters the
+    chain.
+    */
+    rpc PublishTransaction (Transaction) returns (PublishResponse);
+
+    /* lncli: `wallet removetx`
+    RemoveTransaction attempts to remove the provided transaction from the
+    internal transaction store of the wallet.
+    */
+    rpc RemoveTransaction (GetTransactionRequest)
+        returns (RemoveTransactionResponse);
+
+    /*
+    SendOutputs is similar to the existing sendmany call in Bitcoind, and
+    allows the caller to create a transaction that sends to several outputs at
+    once. This is ideal when wanting to batch create a set of transactions.
+    */
+    rpc SendOutputs (SendOutputsRequest) returns (SendOutputsResponse);
+
+    /* lncli: `wallet estimatefeerate`
+    EstimateFee attempts to query the internal fee estimator of the wallet to
+    determine the fee (in sat/kw) to attach to a transaction in order to
+    achieve the confirmation target.
+    */
+    rpc EstimateFee (EstimateFeeRequest) returns (EstimateFeeResponse);
+
+    /* lncli: `wallet pendingsweeps`
+    PendingSweeps returns lists of on-chain outputs that lnd is currently
+    attempting to sweep within its central batching engine. Outputs with similar
+    fee rates are batched together in order to sweep them within a single
+    transaction.
+
+    NOTE: Some of the fields within PendingSweepsRequest are not guaranteed to
+    remain supported. This is an advanced API that depends on the internals of
+    the UtxoSweeper, so things may change.
+    */
+    rpc PendingSweeps (PendingSweepsRequest) returns (PendingSweepsResponse);
+
+    /* lncli: `wallet bumpfee`
+    BumpFee is an endpoint that allows users to interact with lnd's sweeper
+    directly. It takes an outpoint from an unconfirmed transaction and sends it
+    to the sweeper for potential fee bumping. Depending on whether the outpoint
+    has been registered in the sweeper (an existing input, e.g., an anchor
+    output) or not (a new input, e.g., an unconfirmed wallet utxo), this will
+    either be an RBF or CPFP attempt.
+
+    When receiving an input, lnd’s sweeper needs to understand its time
+    sensitivity to make economical fee bumps - internally a fee function is
+    created using the deadline and budget to guide the process. When the
+    deadline is approaching, the fee function will increase the fee rate and
+    perform an RBF.
+
+    When a force close happens, all the outputs from the force closing
+    transaction will be registered in the sweeper. The sweeper will then handle
+    the creation, publish, and fee bumping of the sweeping transactions.
+    Everytime a new block comes in, unless the sweeping transaction is
+    confirmed, an RBF is attempted. To interfere with this automatic process,
+    users can use BumpFee to specify customized fee rate, budget, deadline, and
+    whether the sweep should happen immediately. It's recommended to call
+    `ListSweeps` to understand the shape of the existing sweeping transaction
+    first - depending on the number of inputs in this transaction, the RBF
+    requirements can be quite different.
+
+    This RPC also serves useful when wanting to perform a Child-Pays-For-Parent
+    (CPFP), where the child transaction pays for its parent's fee. This can be
+    done by specifying an outpoint within the low fee transaction that is under
+    the control of the wallet.
+    */
+    rpc BumpFee (BumpFeeRequest) returns (BumpFeeResponse);
+
+    /* lncli: `wallet bumpforceclosefee`
+   BumpForceCloseFee is an endpoint that allows users to bump the fee of a
+   channel force close. This only works for channels with option_anchors.
+   */
+    rpc BumpForceCloseFee (BumpForceCloseFeeRequest)
+        returns (BumpForceCloseFeeResponse);
+
+    /* lncli: `wallet listsweeps`
+    ListSweeps returns a list of the sweep transactions our node has produced.
+    Note that these sweeps may not be confirmed yet, as we record sweeps on
+    broadcast, not confirmation.
+    */
+    rpc ListSweeps (ListSweepsRequest) returns (ListSweepsResponse);
+
+    /* lncli: `wallet labeltx`
+    LabelTransaction adds a label to a transaction. If the transaction already
+    has a label the call will fail unless the overwrite bool is set. This will
+    overwrite the existing transaction label. Labels must not be empty, and
+    cannot exceed 500 characters.
+    */
+    rpc LabelTransaction (LabelTransactionRequest)
+        returns (LabelTransactionResponse);
+
+    /* lncli: `wallet psbt fund`
+    FundPsbt creates a fully populated PSBT that contains enough inputs to fund
+    the outputs specified in the template. There are three ways a user can
+    specify what we call the template (a list of inputs and outputs to use in
+    the PSBT): Either as a PSBT packet directly with no coin selection (using
+    the legacy "psbt" field), a PSBT with advanced coin selection support (using
+    the new "coin_select" field) or as a raw RPC message (using the "raw"
+    field).
+    The legacy "psbt" and "raw" modes, the following restrictions apply:
+          1. If there are no inputs specified in the template, coin selection is
+          performed automatically.
+          2. If the template does contain any inputs, it is assumed that full
+    coin selection happened externally and no additional inputs are added. If
+    the specified inputs aren't enough to fund the outputs with the given fee
+          rate, an error is returned.
+
+    The new "coin_select" mode does not have these restrictions and allows the
+    user to specify a PSBT with inputs and outputs and still perform coin
+    selection on top of that.
+    For all modes this RPC requires any inputs that are specified to be locked
+    by the user (if they belong to this node in the first place).
+
+    After either selecting or verifying the inputs, all input UTXOs are locked
+    with an internal app ID.
+
+    NOTE: If this method returns without an error, it is the caller's
+    responsibility to either spend the locked UTXOs (by finalizing and then
+    publishing the transaction) or to unlock/release the locked UTXOs in case of
+    an error on the caller's side.
+    */
+    rpc FundPsbt (FundPsbtRequest) returns (FundPsbtResponse);
+
+    /*
+    SignPsbt expects a partial transaction with all inputs and outputs fully
+    declared and tries to sign all unsigned inputs that have all required fields
+    (UTXO information, BIP32 derivation information, witness or sig scripts)
+    set.
+    If no error is returned, the PSBT is ready to be given to the next signer or
+    to be finalized if lnd was the last signer.
+
+    NOTE: This RPC only signs inputs (and only those it can sign), it does not
+    perform any other tasks (such as coin selection, UTXO locking or
+    input/output/fee value validation, PSBT finalization). Any input that is
+    incomplete will be skipped.
+    */
+    rpc SignPsbt (SignPsbtRequest) returns (SignPsbtResponse);
+
+    /* lncli: `wallet psbt finalize`
+    FinalizePsbt expects a partial transaction with all inputs and outputs fully
+    declared and tries to sign all inputs that belong to the wallet. Lnd must be
+    the last signer of the transaction. That means, if there are any unsigned
+    non-witness inputs or inputs without UTXO information attached or inputs
+    without witness data that do not belong to lnd's wallet, this method will
+    fail. If no error is returned, the PSBT is ready to be extracted and the
+    final TX within to be broadcast.
+
+    NOTE: This method does NOT publish the transaction once finalized. It is the
+    caller's responsibility to either publish the transaction on success or
+    unlock/release any locked UTXOs in case of an error in this method.
+    */
+    rpc FinalizePsbt (FinalizePsbtRequest) returns (FinalizePsbtResponse);
+}
+
+message ListUnspentRequest {
+    // The minimum number of confirmations to be included.
+    int32 min_confs = 1;
+
+    // The maximum number of confirmations to be included.
+    int32 max_confs = 2;
+
+    // An optional filter to only include outputs belonging to an account.
+    string account = 3;
+
+    /*
+    When min_confs and max_confs are zero, setting false implicitly
+    overrides max_confs to be MaxInt32, otherwise max_confs remains
+    zero. An error is returned if the value is true and both min_confs
+    and max_confs are non-zero. (default: false)
+    */
+    bool unconfirmed_only = 4;
+}
+
+message ListUnspentResponse {
+    // A list of utxos satisfying the specified number of confirmations.
+    repeated lnrpc.Utxo utxos = 1;
+}
+
+message LeaseOutputRequest {
+    /*
+    An ID of 32 random bytes that must be unique for each distinct application
+    using this RPC which will be used to bound the output lease to.
+    */
+    bytes id = 1;
+
+    // The identifying outpoint of the output being leased.
+    lnrpc.OutPoint outpoint = 2;
+
+    // The time in seconds before the lock expires. If set to zero, the default
+    // lock duration is used.
+    uint64 expiration_seconds = 3;
+}
+
+message LeaseOutputResponse {
+    /*
+    The absolute expiration of the output lease represented as a unix timestamp.
+    */
+    uint64 expiration = 1;
+}
+
+message ReleaseOutputRequest {
+    // The unique ID that was used to lock the output.
+    bytes id = 1;
+
+    // The identifying outpoint of the output being released.
+    lnrpc.OutPoint outpoint = 2;
+}
+
+message ReleaseOutputResponse {
+    // The status of the release operation.
+    string status = 1;
+}
+
+message KeyReq {
+    /*
+    Is the key finger print of the root pubkey that this request is targeting.
+    This allows the WalletKit to possibly serve out keys for multiple HD chains
+    via public derivation.
+    */
+    int32 key_finger_print = 1;
+
+    /*
+    The target key family to derive a key from. In other contexts, this is
+    known as the "account".
+    */
+    int32 key_family = 2;
+}
+
+message AddrRequest {
+    /*
+    The name of the account to retrieve the next address of. If empty, the
+    default wallet account is used.
+    */
+    string account = 1;
+
+    /*
+    The type of address to derive.
+    */
+    AddressType type = 2;
+
+    /*
+    Whether a change address should be derived.
+    */
+    bool change = 3;
+}
+message AddrResponse {
+    /*
+    The address encoded using a bech32 format.
+    */
+    string addr = 1;
+}
+
+enum AddressType {
+    UNKNOWN = 0;
+    WITNESS_PUBKEY_HASH = 1;
+    NESTED_WITNESS_PUBKEY_HASH = 2;
+    HYBRID_NESTED_WITNESS_PUBKEY_HASH = 3;
+    TAPROOT_PUBKEY = 4;
+}
+message Account {
+    // The name used to identify the account.
+    string name = 1;
+
+    // The type of addresses the account supports.
+    AddressType address_type = 2;
+
+    /*
+    The public key backing the account that all keys are derived from
+    represented as an extended key. This will always be empty for the default
+    imported account in which single public keys are imported into.
+    */
+    string extended_public_key = 3;
+
+    /*
+    The fingerprint of the root key from which the account public key was
+    derived from. This will always be zero for the default imported account in
+    which single public keys are imported into. The bytes are in big-endian
+    order.
+    */
+    bytes master_key_fingerprint = 4;
+
+    /*
+    The derivation path corresponding to the account public key. This will
+    always be empty for the default imported account in which single public keys
+    are imported into.
+    */
+    string derivation_path = 5;
+
+    /*
+    The number of keys derived from the external branch of the account public
+    key. This will always be zero for the default imported account in which
+    single public keys are imported into.
+    */
+    uint32 external_key_count = 6;
+
+    /*
+    The number of keys derived from the internal branch of the account public
+    key. This will always be zero for the default imported account in which
+    single public keys are imported into.
+    */
+    uint32 internal_key_count = 7;
+
+    // Whether the wallet stores private keys for the account.
+    bool watch_only = 8;
+}
+
+message AddressProperty {
+    /*
+    The address encoded using the appropriate format depending on the
+    address type (base58, bech32, bech32m).
+
+    Note that lnd's internal/custom keys for channels and other
+    functionality are derived from the same scope. Since they
+    aren't really used as addresses and will never have an
+    on-chain balance, we'll show the public key instead (only if
+    the show_custom_accounts flag is provided).
+    */
+    string address = 1;
+
+    // Denotes if the address is a change address.
+    bool is_internal = 2;
+
+    // The balance of the address.
+    int64 balance = 3;
+
+    // The full derivation path of the address. This will be empty for imported
+    // addresses.
+    string derivation_path = 4;
+
+    // The public key of the address. This will be empty for imported addresses.
+    bytes public_key = 5;
+}
+
+message AccountWithAddresses {
+    // The name used to identify the account.
+    string name = 1;
+
+    // The type of addresses the account supports.
+    AddressType address_type = 2;
+
+    /*
+    The derivation path corresponding to the account public key. This will
+    always be empty for the default imported account in which single public keys
+    are imported into.
+    */
+    string derivation_path = 3;
+
+    /*
+    List of address, its type internal/external & balance.
+    Note that the order of addresses will be random and not according to the
+    derivation index, since that information is not stored by the underlying
+    wallet.
+    */
+    repeated AddressProperty addresses = 4;
+}
+
+message ListAccountsRequest {
+    // An optional filter to only return accounts matching this name.
+    string name = 1;
+
+    // An optional filter to only return accounts matching this address type.
+    AddressType address_type = 2;
+}
+
+message ListAccountsResponse {
+    repeated Account accounts = 1;
+}
+
+message RequiredReserveRequest {
+    // The number of additional channels the user would like to open.
+    uint32 additional_public_channels = 1;
+}
+
+message RequiredReserveResponse {
+    // The amount of reserve required.
+    int64 required_reserve = 1;
+}
+
+message ListAddressesRequest {
+    // An optional filter to only return addresses matching this account.
+    string account_name = 1;
+
+    // An optional flag to return LND's custom accounts (Purpose=1017)
+    // public key along with other addresses.
+    bool show_custom_accounts = 2;
+}
+
+message ListAddressesResponse {
+    // A list of all the accounts and their addresses.
+    repeated AccountWithAddresses account_with_addresses = 1;
+}
+
+message GetTransactionRequest {
+    // The txid of the transaction.
+    string txid = 1;
+}
+
+message SignMessageWithAddrRequest {
+    // The message to be signed. When using REST, this field must be encoded as
+    // base64.
+    bytes msg = 1;
+
+    // The address which will be used to look up the private key and sign the
+    // corresponding message.
+    string addr = 2;
+}
+
+message SignMessageWithAddrResponse {
+    // The compact ECDSA signature for the given message encoded in base64.
+    string signature = 1;
+}
+
+message VerifyMessageWithAddrRequest {
+    // The message to be signed. When using REST, this field must be encoded as
+    // base64.
+    bytes msg = 1;
+
+    // The compact ECDSA signature to be verified over the given message
+    // ecoded in base64.
+    string signature = 2;
+
+    // The address which will be used to look up the public key and verify the
+    // the signature.
+    string addr = 3;
+}
+
+message VerifyMessageWithAddrResponse {
+    // Whether the signature was valid over the given message.
+    bool valid = 1;
+
+    // The pubkey recovered from the signature.
+    bytes pubkey = 2;
+}
+
+message ImportAccountRequest {
+    // A name to identify the account with.
+    string name = 1;
+
+    /*
+    A public key that corresponds to a wallet account represented as an extended
+    key. It must conform to a derivation path of the form
+    m/purpose'/coin_type'/account'.
+    */
+    string extended_public_key = 2;
+
+    /*
+    The fingerprint of the root key (also known as the key with derivation path
+    m/) from which the account public key was derived from. This may be required
+    by some hardware wallets for proper identification and signing. The bytes
+    must be in big-endian order.
+    */
+    bytes master_key_fingerprint = 3;
+
+    /*
+    An address type is only required when the extended account public key has a
+    legacy version (xpub, tpub, etc.), such that the wallet cannot detect what
+    address scheme it belongs to.
+    */
+    AddressType address_type = 4;
+
+    /*
+    Whether a dry run should be attempted when importing the account. This
+    serves as a way to confirm whether the account is being imported correctly
+    by returning the first N addresses for the external and internal branches of
+    the account. If these addresses match as expected, then it should be safe to
+    import the account as is.
+    */
+    bool dry_run = 5;
+}
+message ImportAccountResponse {
+    // The details of the imported account.
+    Account account = 1;
+
+    /*
+    The first N addresses that belong to the external branch of the account.
+    The external branch is typically used for external non-change addresses.
+    These are only returned if a dry run was specified within the request.
+    */
+    repeated string dry_run_external_addrs = 2;
+
+    /*
+    The first N addresses that belong to the internal branch of the account.
+    The internal branch is typically used for change addresses. These are only
+    returned if a dry run was specified within the request.
+    */
+    repeated string dry_run_internal_addrs = 3;
+}
+
+message ImportPublicKeyRequest {
+    // A compressed public key represented as raw bytes.
+    bytes public_key = 1;
+
+    // The type of address that will be generated from the public key.
+    AddressType address_type = 2;
+}
+message ImportPublicKeyResponse {
+    // The status of the import operation.
+    string status = 1;
+}
+
+message ImportTapscriptRequest {
+    /*
+    The internal public key, serialized as 32-byte x-only public key.
+    */
+    bytes internal_public_key = 1;
+
+    oneof script {
+        /*
+        The full script tree with all individual leaves is known and the root
+        hash can be constructed from the full tree directly.
+        */
+        TapscriptFullTree full_tree = 2;
+
+        /*
+        Only a single script leaf is known. To construct the root hash, the full
+        inclusion proof must also be provided.
+        */
+        TapscriptPartialReveal partial_reveal = 3;
+
+        /*
+        Only the root hash of the Taproot script tree (or other form of Taproot
+        commitment) is known.
+        */
+        bytes root_hash_only = 4;
+
+        /*
+        Only the final, tweaked Taproot key is known and no additional
+        information about the internal key or type of tweak that was used to
+        derive it. When this is set, the wallet treats the key in
+        internal_public_key as the Taproot key directly. This can be useful for
+        tracking arbitrary Taproot outputs without the goal of ever being able
+        to spend from them through the internal wallet.
+        */
+        bool full_key_only = 5;
+    }
+}
+
+message TapscriptFullTree {
+    /*
+    The complete, ordered list of all tap leaves of the tree.
+    */
+    repeated TapLeaf all_leaves = 1;
+}
+
+message TapLeaf {
+    // The leaf version. Should be 0xc0 (192) in case of a SegWit v1 script.
+    uint32 leaf_version = 1;
+
+    // The script of the tap leaf.
+    bytes script = 2;
+}
+
+message TapscriptPartialReveal {
+    // The tap leaf that is known and will be revealed.
+    TapLeaf revealed_leaf = 1;
+
+    // The BIP-0341 serialized inclusion proof that is required to prove that
+    // the revealed leaf is part of the tree. This contains 0..n blocks of 32
+    // bytes. If the tree only contained a single leaf (which is the revealed
+    // leaf), this can be empty.
+    bytes full_inclusion_proof = 2;
+}
+
+message ImportTapscriptResponse {
+    /*
+    The resulting pay-to-Taproot address that represents the imported internal
+    key with the script committed to it.
+    */
+    string p2tr_address = 1;
+}
+
+message Transaction {
+    /*
+    The raw serialized transaction. Despite the field name, this does need to be
+    specified in raw bytes (or base64 encoded when using REST) and not in hex.
+    To not break existing software, the field can't simply be renamed.
+    */
+    bytes tx_hex = 1;
+
+    /*
+    An optional label to save with the transaction. Limited to 500 characters.
+    */
+    string label = 2;
+}
+
+message PublishResponse {
+    /*
+    If blank, then no error occurred and the transaction was successfully
+    published. If not the empty string, then a string representation of the
+    broadcast error.
+
+    TODO(roasbeef): map to a proper enum type
+    */
+    string publish_error = 1;
+}
+
+message RemoveTransactionResponse {
+    // The status of the remove transaction operation.
+    string status = 1;
+}
+
+message SendOutputsRequest {
+    /*
+    The number of satoshis per kilo weight that should be used when crafting
+    this transaction.
+    */
+    int64 sat_per_kw = 1;
+
+    /*
+    A slice of the outputs that should be created in the transaction produced.
+    */
+    repeated signrpc.TxOut outputs = 2;
+
+    // An optional label for the transaction, limited to 500 characters.
+    string label = 3;
+
+    // The minimum number of confirmations each one of your outputs used for
+    // the transaction must satisfy.
+    int32 min_confs = 4;
+
+    // Whether unconfirmed outputs should be used as inputs for the transaction.
+    bool spend_unconfirmed = 5;
+
+    // The strategy to use for selecting coins during sending the outputs.
+    lnrpc.CoinSelectionStrategy coin_selection_strategy = 6;
+}
+message SendOutputsResponse {
+    /*
+    The serialized transaction sent out on the network.
+    */
+    bytes raw_tx = 1;
+}
+
+message EstimateFeeRequest {
+    /*
+    The number of confirmations to shoot for when estimating the fee.
+    */
+    int32 conf_target = 1;
+}
+message EstimateFeeResponse {
+    /*
+    The amount of satoshis per kw that should be used in order to reach the
+    confirmation target in the request.
+    */
+    int64 sat_per_kw = 1;
+
+    // The current minimum relay fee based on our chain backend in sat/kw.
+    int64 min_relay_fee_sat_per_kw = 2;
+}
+
+enum WitnessType {
+    UNKNOWN_WITNESS = 0;
+
+    /*
+    A witness that allows us to spend the output of a commitment transaction
+    after a relative lock-time lockout.
+    */
+    COMMITMENT_TIME_LOCK = 1;
+
+    /*
+    A witness that allows us to spend a settled no-delay output immediately on a
+    counterparty's commitment transaction.
+    */
+    COMMITMENT_NO_DELAY = 2;
+
+    /*
+    A witness that allows us to sweep the settled output of a malicious
+    counterparty's who broadcasts a revoked commitment transaction.
+    */
+    COMMITMENT_REVOKE = 3;
+
+    /*
+    A witness that allows us to sweep an HTLC which we offered to the remote
+    party in the case that they broadcast a revoked commitment state.
+    */
+    HTLC_OFFERED_REVOKE = 4;
+
+    /*
+    A witness that allows us to sweep an HTLC output sent to us in the case that
+    the remote party broadcasts a revoked commitment state.
+    */
+    HTLC_ACCEPTED_REVOKE = 5;
+
+    /*
+    A witness that allows us to sweep an HTLC output that we extended to a
+    party, but was never fulfilled.  This HTLC output isn't directly on the
+    commitment transaction, but is the result of a confirmed second-level HTLC
+    transaction. As a result, we can only spend this after a CSV delay.
+    */
+    HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 6;
+
+    /*
+    A witness that allows us to sweep an HTLC output that was offered to us, and
+    for which we have a payment preimage. This HTLC output isn't directly on our
+    commitment transaction, but is the result of confirmed second-level HTLC
+    transaction. As a result, we can only spend this after a CSV delay.
+    */
+    HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 7;
+
+    /*
+    A witness that allows us to sweep an HTLC that we offered to the remote
+    party which lies in the commitment transaction of the remote party. We can
+    spend this output after the absolute CLTV timeout of the HTLC as passed.
+    */
+    HTLC_OFFERED_REMOTE_TIMEOUT = 8;
+
+    /*
+    A witness that allows us to sweep an HTLC that was offered to us by the
+    remote party. We use this witness in the case that the remote party goes to
+    chain, and we know the pre-image to the HTLC. We can sweep this without any
+    additional timeout.
+    */
+    HTLC_ACCEPTED_REMOTE_SUCCESS = 9;
+
+    /*
+    A witness that allows us to sweep an HTLC from the remote party's commitment
+    transaction in the case that the broadcast a revoked commitment, but then
+    also immediately attempt to go to the second level to claim the HTLC.
+    */
+    HTLC_SECOND_LEVEL_REVOKE = 10;
+
+    /*
+    A witness type that allows us to spend a regular p2wkh output that's sent to
+    an output which is under complete control of the backing wallet.
+    */
+    WITNESS_KEY_HASH = 11;
+
+    /*
+    A witness type that allows us to sweep an output that sends to a nested P2SH
+    script that pays to a key solely under our control.
+    */
+    NESTED_WITNESS_KEY_HASH = 12;
+
+    /*
+    A witness type that allows us to spend our anchor on the commitment
+    transaction.
+    */
+    COMMITMENT_ANCHOR = 13;
+
+    /*
+    A witness type that is similar to the COMMITMENT_NO_DELAY type,
+    but it omits the tweak that randomizes the key we need to
+    spend with a channel peer supplied set of randomness.
+    */
+    COMMITMENT_NO_DELAY_TWEAKLESS = 14;
+
+    /*
+    A witness type that allows us to spend our output on the counterparty's
+    commitment transaction after a confirmation.
+    */
+    COMMITMENT_TO_REMOTE_CONFIRMED = 15;
+
+    /*
+    A witness type that allows us to sweep an HTLC output that we extended
+    to a party, but was never fulfilled. This _is_ the HTLC output directly
+    on our commitment transaction, and the input to the second-level HTLC
+    timeout transaction. It can only be spent after CLTV expiry, and
+    commitment confirmation.
+    */
+    HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_INPUT_CONFIRMED = 16;
+
+    /*
+    A witness type that allows us to sweep an HTLC output that was offered
+    to us, and for which we have a payment preimage. This _is_ the HTLC
+    output directly on our commitment transaction, and the input to the
+    second-level HTLC success transaction. It can only be spent after the
+    commitment has confirmed.
+    */
+    HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_INPUT_CONFIRMED = 17;
+
+    /*
+    A witness type that allows us to spend our output on our local
+    commitment transaction after a relative and absolute lock-time lockout as
+    part of the script enforced lease commitment type.
+    */
+    LEASE_COMMITMENT_TIME_LOCK = 18;
+
+    /*
+    A witness type that allows us to spend our output on the counterparty's
+    commitment transaction after a confirmation and absolute locktime as part
+    of the script enforced lease commitment type.
+    */
+    LEASE_COMMITMENT_TO_REMOTE_CONFIRMED = 19;
+
+    /*
+    A witness type that allows us to sweep an HTLC output that we extended
+    to a party, but was never fulfilled. This HTLC output isn't directly on
+    the commitment transaction, but is the result of a confirmed second-level
+    HTLC transaction. As a result, we can only spend this after a CSV delay
+    and CLTV locktime as part of the script enforced lease commitment type.
+    */
+    LEASE_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 20;
+
+    /*
+    A witness type that allows us to sweep an HTLC output that was offered
+    to us, and for which we have a payment preimage. This HTLC output isn't
+    directly on our commitment transaction, but is the result of confirmed
+    second-level HTLC transaction. As a result, we can only spend this after
+    a CSV delay and CLTV locktime as part of the script enforced lease
+    commitment type.
+    */
+    LEASE_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 21;
+
+    /*
+    A witness type that allows us to spend a regular p2tr output that's sent
+    to an output which is under complete control of the backing wallet.
+    */
+    TAPROOT_PUB_KEY_SPEND = 22;
+
+    /*
+    A witness type that allows us to spend our settled local commitment after a
+    CSV delay when we force close the channel.
+    */
+    TAPROOT_LOCAL_COMMIT_SPEND = 23;
+
+    /*
+    A witness type that allows us to spend our settled local commitment after
+    a CSV delay when the remote party has force closed the channel.
+    */
+    TAPROOT_REMOTE_COMMIT_SPEND = 24;
+
+    /*
+    A witness type that we'll use for spending our own anchor output.
+    */
+    TAPROOT_ANCHOR_SWEEP_SPEND = 25;
+
+    /*
+    A witness that allows us to timeout an HTLC we offered to the remote party
+    on our commitment transaction. We use this when we need to go on chain to
+    time out an HTLC.
+    */
+    TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 26;
+
+    /*
+    A witness type that allows us to sweep an HTLC we accepted on our commitment
+    transaction after we go to the second level on chain.
+    */
+    TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 27;
+
+    /*
+    A witness that allows us to sweep an HTLC on the revoked transaction of the
+    remote party that goes to the second level.
+    */
+    TAPROOT_HTLC_SECOND_LEVEL_REVOKE = 28;
+
+    /*
+    A witness that allows us to sweep an HTLC sent to us by the remote party
+    in the event that they broadcast a revoked state.
+    */
+    TAPROOT_HTLC_ACCEPTED_REVOKE = 29;
+
+    /*
+    A witness that allows us to sweep an HTLC we offered to the remote party if
+    they broadcast a revoked commitment.
+    */
+    TAPROOT_HTLC_OFFERED_REVOKE = 30;
+
+    /*
+    A witness that allows us to sweep an HTLC we offered to the remote party
+    that lies on the commitment transaction for the remote party. We can spend
+    this output after the absolute CLTV timeout of the HTLC as passed.
+    */
+    TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT = 31;
+
+    /*
+    A witness type that allows us to sign the second level HTLC timeout
+    transaction when spending from an HTLC residing on our local commitment
+    transaction.
+    This is used by the sweeper to re-sign inputs if it needs to aggregate
+    several second level HTLCs.
+    */
+    TAPROOT_HTLC_LOCAL_OFFERED_TIMEOUT = 32;
+
+    /*
+    A witness that allows us to sweep an HTLC that was offered to us by the
+    remote party for a taproot channels. We use this witness in the case that
+    the remote party goes to chain, and we know the pre-image to the HTLC. We
+    can sweep this without any additional timeout.
+    */
+    TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS = 33;
+
+    /*
+    A witness type that allows us to sweep the HTLC offered to us on our local
+    commitment transaction. We'll use this when we need to go on chain to sweep
+    the HTLC. In this case, this is the second level HTLC success transaction.
+    */
+    TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS = 34;
+
+    /*
+    A witness that allows us to sweep the settled output of a malicious
+    counterparty's who broadcasts a revoked taproot commitment transaction.
+    */
+    TAPROOT_COMMITMENT_REVOKE = 35;
+}
+
+message PendingSweep {
+    // The outpoint of the output we're attempting to sweep.
+    lnrpc.OutPoint outpoint = 1;
+
+    // The witness type of the output we're attempting to sweep.
+    WitnessType witness_type = 2;
+
+    // The value of the output we're attempting to sweep.
+    uint32 amount_sat = 3;
+
+    /*
+    Deprecated, use sat_per_vbyte.
+    The fee rate we'll use to sweep the output, expressed in sat/vbyte. The fee
+    rate is only determined once a sweeping transaction for the output is
+    created, so it's possible for this to be 0 before this.
+    */
+    uint32 sat_per_byte = 4 [deprecated = true];
+
+    // The number of broadcast attempts we've made to sweep the output.
+    uint32 broadcast_attempts = 5;
+
+    /*
+    Deprecated.
+    The next height of the chain at which we'll attempt to broadcast the
+    sweep transaction of the output.
+    */
+    uint32 next_broadcast_height = 6 [deprecated = true];
+
+    /*
+    Deprecated, use immediate.
+    Whether this input must be force-swept. This means that it is swept
+    immediately.
+    */
+    bool force = 7 [deprecated = true];
+
+    /*
+    Deprecated, use deadline.
+    The requested confirmation target for this output, which is the deadline
+    used by the sweeper.
+    */
+    uint32 requested_conf_target = 8 [deprecated = true];
+
+    // Deprecated, use requested_sat_per_vbyte.
+    // The requested fee rate, expressed in sat/vbyte, for this output.
+    uint32 requested_sat_per_byte = 9 [deprecated = true];
+
+    /*
+    The current fee rate we'll use to sweep the output, expressed in sat/vbyte.
+    The fee rate is only determined once a sweeping transaction for the output
+    is created, so it's possible for this to be 0 before this.
+    */
+    uint64 sat_per_vbyte = 10;
+
+    // The requested starting fee rate, expressed in sat/vbyte, for this
+    // output. When not requested, this field will be 0.
+    uint64 requested_sat_per_vbyte = 11;
+
+    /*
+    Whether this input will be swept immediately.
+    */
+    bool immediate = 12;
+
+    /*
+    The budget for this sweep, expressed in satoshis. This is the maximum amount
+    that can be spent as fees to sweep this output.
+    */
+    uint64 budget = 13;
+
+    /*
+    The deadline height used for this output when perform fee bumping.
+    */
+    uint32 deadline_height = 14;
+
+    /*
+    The block height which the input's locktime will expire at. Zero if the
+    input has no locktime.
+    */
+    uint32 maturity_height = 15;
+}
+
+message PendingSweepsRequest {
+}
+
+message PendingSweepsResponse {
+    /*
+    The set of outputs currently being swept by lnd's central batching engine.
+    */
+    repeated PendingSweep pending_sweeps = 1;
+}
+
+message BumpFeeRequest {
+    // The input we're attempting to bump the fee of.
+    lnrpc.OutPoint outpoint = 1;
+
+    // Optional. The conf target the underlying fee estimator will use to
+    // estimate the starting fee rate for the fee function.
+    uint32 target_conf = 2;
+
+    /*
+    Deprecated, use sat_per_vbyte.
+    The fee rate, expressed in sat/vbyte, that should be used to spend the input
+    with.
+    */
+    uint32 sat_per_byte = 3 [deprecated = true];
+
+    /*
+    Deprecated, use immediate.
+    Whether this input must be force-swept. This means that it is swept
+    immediately.
+    */
+    bool force = 4 [deprecated = true];
+
+    /*
+    Optional. The starting fee rate, expressed in sat/vbyte, that will be used
+    to spend the input with initially. This value will be used by the sweeper's
+    fee function as its starting fee rate. When not set, the sweeper will use
+    the estimated fee rate using the `target_conf` as the starting fee rate.
+    */
+    uint64 sat_per_vbyte = 5;
+
+    /*
+    Optional. Whether this input will be swept immediately. When set to true,
+    the sweeper will sweep this input without waiting for the next block.
+    */
+    bool immediate = 6;
+
+    /*
+    Optional. The max amount in sats that can be used as the fees. Setting this
+    value greater than the input's value may result in CPFP - one or more wallet
+    utxos will be used to pay the fees specified by the budget. If not set, for
+    new inputs, by default 50% of the input's value will be treated as the
+    budget for fee bumping; for existing inputs, their current budgets will be
+    retained.
+    */
+    uint64 budget = 7;
+
+    // Optional. The deadline delta in number of blocks that the output
+    // should be spent within. This translates internally to the width of the
+    // fee function that the sweeper will use to bump the fee rate. When the
+    // deadline is reached, ALL the budget will be spent as fees.
+    uint32 deadline_delta = 8;
+}
+
+message BumpFeeResponse {
+    // The status of the bump fee operation.
+    string status = 1;
+}
+
+message BumpForceCloseFeeRequest {
+    // The channel point which force close transaction we are attempting to
+    // bump the fee rate for.
+    lnrpc.ChannelPoint chan_point = 1;
+
+    // Optional. The deadline delta in number of blocks that the anchor output
+    // should be spent within to bump the closing transaction. When the
+    // deadline is reached, ALL the budget will be spent as fees
+    uint32 deadline_delta = 2;
+
+    /*
+    Optional. The starting fee rate, expressed in sat/vbyte. This value will be
+    used by the sweeper's fee function as its starting fee rate. When not set,
+    the sweeper will use the estimated fee rate using the target_conf as the
+    starting fee rate.
+    */
+    uint64 starting_feerate = 3;
+
+    /*
+    Optional. Whether this cpfp transaction will be triggered immediately. When
+    set to true, the sweeper will consider all currently registered sweeps and
+    trigger new batch transactions including the sweeping of the anchor output
+    related to the selected force close transaction.
+    */
+    bool immediate = 4;
+
+    /*
+    Optional. The max amount in sats that can be used as the fees. For already
+    registered anchor outputs if not set explicitly the old value will be used.
+    For channel force closes which have no HTLCs in their commitment transaction
+    this value has to be set to an appropriate amount to pay for the cpfp
+    transaction of the force closed channel otherwise the fee bumping will fail.
+    */
+    uint64 budget = 5;
+
+    // Optional. The conf target the underlying fee estimator will use to
+    // estimate the starting fee rate for the fee function.
+    uint32 target_conf = 6;
+}
+
+message BumpForceCloseFeeResponse {
+    // The status of the force close fee bump operation.
+    string status = 1;
+}
+
+message ListSweepsRequest {
+    /*
+    Retrieve the full sweep transaction details. If false, only the sweep txids
+    will be returned. Note that some sweeps that LND publishes will have been
+    replaced-by-fee, so will not be included in this output.
+    */
+    bool verbose = 1;
+
+    /*
+    The start height to use when fetching sweeps. If not specified (0), the
+    result will start from the earliest sweep. If set to -1 the result will
+    only include unconfirmed sweeps (at the time of the call).
+    */
+    int32 start_height = 2;
+}
+
+message ListSweepsResponse {
+    message TransactionIDs {
+        /*
+        Reversed, hex-encoded string representing the transaction ids of the
+        sweeps that our node has broadcast. Note that these transactions may
+        not have confirmed yet, we record sweeps on broadcast, not confirmation.
+        */
+        repeated string transaction_ids = 1;
+    }
+
+    oneof sweeps {
+        lnrpc.TransactionDetails transaction_details = 1;
+        TransactionIDs transaction_ids = 2;
+    }
+}
+
+message LabelTransactionRequest {
+    // The txid of the transaction to label. Note: When using gRPC, the bytes
+    // must be in little-endian (reverse) order.
+    bytes txid = 1;
+
+    // The label to add to the transaction, limited to 500 characters.
+    string label = 2;
+
+    // Whether to overwrite the existing label, if it is present.
+    bool overwrite = 3;
+}
+
+message LabelTransactionResponse {
+    // The status of the label operation.
+    string status = 1;
+}
+
+// The possible change address types for default accounts and single imported
+// public keys. By default, P2WPKH will be used. We don't provide the
+// possibility to choose P2PKH as it is a legacy key scope, nor NP2WPKH as
+// no key scope permits to do so. For custom accounts, no change type should
+// be provided as the coin selection key scope will always be used to generate
+// the change address.
+enum ChangeAddressType {
+    // CHANGE_ADDRESS_TYPE_UNSPECIFIED indicates that no change address type is
+    // provided. We will then use P2WPKH address type for change (BIP0084 key
+    // scope).
+    CHANGE_ADDRESS_TYPE_UNSPECIFIED = 0;
+
+    // CHANGE_ADDRESS_TYPE_P2TR indicates to use P2TR address for change output
+    // (BIP0086 key scope).
+    CHANGE_ADDRESS_TYPE_P2TR = 1;
+}
+
+message FundPsbtRequest {
+    oneof template {
+        /*
+        Use an existing PSBT packet as the template for the funded PSBT.
+
+        The packet must contain at least one non-dust output. If one or more
+        inputs are specified, no coin selection is performed. In that case every
+        input must be an UTXO known to the wallet that has not been locked
+        before. The sum of all inputs must be sufficiently greater than the sum
+        of all outputs to pay a miner fee with the specified fee rate. A change
+        output is added to the PSBT if necessary.
+        */
+        bytes psbt = 1;
+
+        /*
+        Use the outputs and optional inputs from this raw template.
+        */
+        TxTemplate raw = 2;
+
+        /*
+        Use an existing PSBT packet as the template for the funded PSBT.
+
+        The difference to the pure PSBT template above is that coin selection is
+        performed even if inputs are specified. The output amounts are summed up
+        and used as the target amount for coin selection. A change output must
+        either already exist in the PSBT and be marked as such, otherwise a new
+        change output of the specified output type will be added. Any inputs
+        already specified in the PSBT must already be locked (if they belong to
+        this node), only newly added inputs will be locked by this RPC.
+
+        In case the sum of the already provided inputs exceeds the required
+        output amount, no new coins are selected. Instead only the fee and
+        change amount calculation is performed (e.g. a change output is added if
+        requested or the change is added to the specified existing change
+        output, given there is any non-dust change). This can be identified by
+        the returned locked UTXOs being empty.
+        */
+        PsbtCoinSelect coin_select = 9;
+    }
+
+    oneof fees {
+        /*
+        The target number of blocks that the transaction should be confirmed in.
+        */
+        uint32 target_conf = 3;
+
+        /*
+        The fee rate, expressed in sat/vbyte, that should be used to spend the
+        input with.
+        */
+        uint64 sat_per_vbyte = 4;
+
+        /*
+        The fee rate, expressed in sat/kWU, that should be used to spend the
+        input with.
+        */
+        uint64 sat_per_kw = 11;
+    }
+
+    /*
+    The name of the account to fund the PSBT with. If empty, the default wallet
+    account is used.
+    */
+    string account = 5;
+
+    // The minimum number of confirmations each one of your outputs used for
+    // the transaction must satisfy.
+    int32 min_confs = 6;
+
+    // Whether unconfirmed outputs should be used as inputs for the transaction.
+    bool spend_unconfirmed = 7;
+
+    // The address type for the change. If empty, P2WPKH addresses will be used
+    // for default accounts and single imported public keys. For custom
+    // accounts, no change type should be provided as the coin selection key
+    // scope will always be used to generate the change address.
+    ChangeAddressType change_type = 8;
+
+    // The strategy to use for selecting coins during funding the PSBT.
+    lnrpc.CoinSelectionStrategy coin_selection_strategy = 10;
+
+    // The max fee to total output amount ratio that this psbt should adhere to.
+    double max_fee_ratio = 12;
+
+    // The custom lock ID to use for the inputs in the funded PSBT. The value
+    // if set must be exactly 32 bytes long. If empty, the default lock ID will
+    // be used.
+    bytes custom_lock_id = 13;
+
+    // If set, then the inputs in the funded PSBT will be locked for the
+    // specified duration. The lock duration is specified in seconds. If not
+    // set, the default lock duration will be used.
+    uint64 lock_expiration_seconds = 14;
+}
+message FundPsbtResponse {
+    /*
+    The funded but not yet signed PSBT packet.
+    */
+    bytes funded_psbt = 1;
+
+    /*
+    The index of the added change output or -1 if no change was left over.
+    */
+    int32 change_output_index = 2;
+
+    /*
+    The list of lock leases that were acquired for the inputs in the funded PSBT
+    packet. Only inputs added to the PSBT by this RPC are locked, inputs that
+    were already present in the PSBT are not locked.
+    */
+    repeated UtxoLease locked_utxos = 3;
+}
+
+message TxTemplate {
+    /*
+    An optional list of inputs to use. Every input must be an UTXO known to the
+    wallet that has not been locked before. The sum of all inputs must be
+    sufficiently greater than the sum of all outputs to pay a miner fee with the
+    fee rate specified in the parent message.
+
+    If no inputs are specified, coin selection will be performed instead and
+    inputs of sufficient value will be added to the resulting PSBT.
+    */
+    repeated lnrpc.OutPoint inputs = 1;
+
+    /*
+    A map of all addresses and the amounts to send to in the funded PSBT.
+    */
+    map<string, uint64> outputs = 2;
+}
+
+message PsbtCoinSelect {
+    /*
+    The template to use for the funded PSBT. The template must contain at least
+    one non-dust output. The amount to be funded is calculated by summing up the
+    amounts of all outputs in the template, subtracting all the input values of
+    the already specified inputs. The change value is added to the output that
+    is marked as such (or a new change output is added if none is marked). For
+    the input amount calculation to be correct, the template must have the
+    WitnessUtxo field set for all inputs. Any inputs already specified in the
+    PSBT must already be locked (if they belong to this node), only newly added
+    inputs will be locked by this RPC.
+    */
+    bytes psbt = 1;
+
+    oneof change_output {
+        /*
+        Use the existing output within the template PSBT with the specified
+        index as the change output. Any leftover change will be added to the
+        already specified amount of that output. To add a new change output to
+        the PSBT, set the "add" field below instead. The type of change output
+        added is defined by change_type in the parent message.
+        */
+        int32 existing_output_index = 2;
+
+        /*
+        Add a new change output to the PSBT using the change_type specified in
+        the parent message.
+        */
+        bool add = 3;
+    }
+}
+
+message UtxoLease {
+    /*
+    A 32 byte random ID that identifies the lease.
+    */
+    bytes id = 1;
+
+    // The identifying outpoint of the output being leased.
+    lnrpc.OutPoint outpoint = 2;
+
+    /*
+    The absolute expiration of the output lease represented as a unix timestamp.
+    */
+    uint64 expiration = 3;
+
+    /*
+    The public key script of the leased output.
+    */
+    bytes pk_script = 4;
+
+    /*
+    The value of the leased output in satoshis.
+    */
+    uint64 value = 5;
+}
+
+message SignPsbtRequest {
+    /*
+    The PSBT that should be signed. The PSBT must contain all required inputs,
+    outputs, UTXO data and custom fields required to identify the signing key.
+    */
+    bytes funded_psbt = 1;
+}
+
+message SignPsbtResponse {
+    // The signed transaction in PSBT format.
+    bytes signed_psbt = 1;
+
+    // The indices of signed inputs.
+    repeated uint32 signed_inputs = 2;
+}
+
+message FinalizePsbtRequest {
+    /*
+    A PSBT that should be signed and finalized. The PSBT must contain all
+    required inputs, outputs, UTXO data and partial signatures of all other
+    signers.
+    */
+    bytes funded_psbt = 1;
+
+    /*
+    The name of the account to finalize the PSBT with. If empty, the default
+    wallet account is used.
+    */
+    string account = 5;
+}
+message FinalizePsbtResponse {
+    // The fully signed and finalized transaction in PSBT format.
+    bytes signed_psbt = 1;
+
+    // The fully signed and finalized transaction in the raw wire format.
+    bytes raw_final_tx = 2;
+}
+
+message ListLeasesRequest {
+}
+
+message ListLeasesResponse {
+    // The list of currently leased utxos.
+    repeated UtxoLease locked_utxos = 1;
+}
