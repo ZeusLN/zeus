@@ -383,12 +383,12 @@ export default class ReceiveEcash extends React.Component<
                             });
                         this.clearIntervals();
                     } else {
-                        console.log(
-                            'invoice not paid last time checked, checking...',
-                            {
-                                quoteId
-                            }
-                        );
+                        if (__DEV__) {
+                            console.log(
+                                'invoice not paid last time checked, checking...',
+                                { quoteId }
+                            );
+                        }
                     }
                 }
             );

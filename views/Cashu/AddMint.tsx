@@ -137,9 +137,13 @@ export default class AddMint extends React.Component<
         });
         try {
             // Use CDK to fetch mint info
-            console.log('AddMint: Fetching mint info for', mintUrl);
+            if (__DEV__) {
+                console.log('AddMint: Fetching mint info for', mintUrl);
+            }
             const mintInfo = await CashuDevKit.fetchMintInfo(mintUrl);
-            console.log('AddMint: Got mint info', mintInfo);
+            if (__DEV__) {
+                console.log('AddMint: Got mint info', mintInfo);
+            }
             this.props.navigation.navigate('Mint', {
                 mint: { ...mintInfo, mintUrl },
                 lookup: true

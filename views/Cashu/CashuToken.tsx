@@ -82,9 +82,11 @@ export default class CashuTokenView extends React.Component<
         }
 
         if (!spent) {
-            console.log('token not spent last time checked, checking...', {
-                decoded
-            });
+            if (__DEV__) {
+                console.log('token not spent last time checked, checking...', {
+                    decoded
+                });
+            }
 
             if (!cashuWallets[mint]) {
                 await initializeWallet(mint);

@@ -150,9 +150,11 @@ export default class LegacySeedRecovery extends React.Component<
                             );
                             proofs = result.proofs || [];
                         } catch (error: any) {
-                            console.log(
-                                `Error restoring batch: ${error.message}`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `Error restoring batch: ${error.message}`
+                                );
+                            }
                             proofs = [];
                         }
 
@@ -188,7 +190,9 @@ export default class LegacySeedRecovery extends React.Component<
                         allProofs.push(...unspentProofs);
                     }
                 } catch (err: any) {
-                    console.log(`Error checking keyset: ${err.message}`);
+                    if (__DEV__) {
+                        console.log(`Error checking keyset: ${err.message}`);
+                    }
                 }
             }
 

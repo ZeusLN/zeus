@@ -52,10 +52,12 @@ export default class CashuInvoiceView extends React.Component<
         const { mintUrl, quote, isPaid } = invoice;
 
         if (!isPaid) {
-            console.log('invoice not paid last time checked, checking...', {
-                quote,
-                mint: mintUrl
-            });
+            if (__DEV__) {
+                console.log('invoice not paid last time checked, checking...', {
+                    quote,
+                    mint: mintUrl
+                });
+            }
 
             if (!cashuWallets[mintUrl]) {
                 await initializeWallet(mintUrl);

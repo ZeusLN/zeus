@@ -492,20 +492,24 @@ export default class CashuStore {
 
         await this.ensureMintAdded(mintUrl);
 
-        console.log('CDK checkAndMintCDK: Checking quote', {
-            mintUrl,
-            quoteId,
-            quoteIdLength: quoteId?.length,
-            quoteIdType: typeof quoteId
-        });
+        if (__DEV__) {
+            console.log('CDK checkAndMintCDK: Checking quote', {
+                mintUrl,
+                quoteId,
+                quoteIdLength: quoteId?.length,
+                quoteIdType: typeof quoteId
+            });
+        }
 
         try {
             const quote = await CashuDevKit.checkMintQuote(mintUrl, quoteId);
-            console.log('CDK checkAndMintCDK: Quote state', {
-                quoteId,
-                state: quote.state,
-                amount: quote.amount
-            });
+            if (__DEV__) {
+                console.log('CDK checkAndMintCDK: Quote state', {
+                    quoteId,
+                    state: quote.state,
+                    amount: quote.amount
+                });
+            }
 
             if (quote.state === 'Paid') {
                 // Mint the proofs - CDK handles storage internally
@@ -552,16 +556,20 @@ export default class CashuStore {
         } catch (e: any) {
             // Handle "Unknown quote" error - this is likely an external quote
             const errorMsg = e?.message || '';
-            console.log('CDK checkAndMintCDK: checkMintQuote error:', {
-                message: errorMsg,
-                type: e?.type,
-                fullError: JSON.stringify(e)
-            });
+            if (__DEV__) {
+                console.log('CDK checkAndMintCDK: checkMintQuote error:', {
+                    message: errorMsg,
+                    type: e?.type,
+                    fullError: JSON.stringify(e)
+                });
+            }
 
             if (errorMsg.includes('Unknown quote')) {
-                console.log(
-                    `CDK checkAndMintCDK: Quote ${quoteId} not in local DB, checking external...`
-                );
+                if (__DEV__) {
+                    console.log(
+                        `CDK checkAndMintCDK: Quote ${quoteId} not in local DB, checking external...`
+                    );
+                }
 
                 // Check external quote status directly from mint's HTTP API
                 try {
@@ -570,24 +578,28 @@ export default class CashuStore {
                             mintUrl,
                             quoteId
                         );
-                    console.log(
-                        'CDK checkAndMintCDK: External quote status:',
-                        externalQuote
-                    );
+                    if (__DEV__) {
+                        console.log(
+                            'CDK checkAndMintCDK: External quote status:',
+                            externalQuote
+                        );
+                    }
 
                     // NUT-04 states are uppercase: "UNPAID", "PAID", "PENDING", "ISSUED"
                     const state = externalQuote.state?.toUpperCase();
 
                     if (state === 'PAID') {
-                        console.log(
-                            `CDK checkAndMintCDK: External quote ${quoteId} is PAID, adding to database and minting...`
-                        );
+                        if (__DEV__) {
+                            console.log(
+                                `CDK checkAndMintCDK: External quote ${quoteId} is PAID, adding to database and minting...`
+                            );
+                        }
 
                         try {
                             // Derive the secret key for P2PK-locked quotes
                             // This is needed because ZeusPay locks quotes to our cashu pubkey
                             const secretKey = this.deriveCashuSecretKey();
-                            if (secretKey) {
+                            if (secretKey && __DEV__) {
                                 console.log(
                                     'CDK checkAndMintCDK: Using P2PK secret key for minting'
                                 );
@@ -603,9 +615,11 @@ export default class CashuStore {
                                 externalQuote.expiry || 0,
                                 secretKey || undefined
                             );
-                            console.log(
-                                `CDK checkAndMintCDK: Added quote ${quoteId} to database`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `CDK checkAndMintCDK: Added quote ${quoteId} to database`
+                                );
+                            }
 
                             // Now mint - the quote is in the database
                             await CashuDevKit.mintExternal(
@@ -614,18 +628,22 @@ export default class CashuStore {
                                 externalQuote.amount || 0
                             );
                             await this.syncCDKBalances();
-                            console.log(
-                                `CDK checkAndMintCDK: External mint succeeded for ${quoteId}`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `CDK checkAndMintCDK: External mint succeeded for ${quoteId}`
+                                );
+                            }
                             return {
                                 isPaid: true,
                                 amount: externalQuote.amount,
                                 externalQuote
                             };
                         } catch (mintError: any) {
-                            console.log(
-                                `CDK checkAndMintCDK: External mint failed: ${mintError?.message}`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `CDK checkAndMintCDK: External mint failed: ${mintError?.message}`
+                                );
+                            }
 
                             // Return info for the UI
                             return {
@@ -636,15 +654,19 @@ export default class CashuStore {
                             };
                         }
                     } else if (state === 'ISSUED') {
-                        console.log(
-                            `CDK checkAndMintCDK: External quote ${quoteId} already ISSUED`
-                        );
+                        if (__DEV__) {
+                            console.log(
+                                `CDK checkAndMintCDK: External quote ${quoteId} already ISSUED`
+                            );
+                        }
                         // Proofs were already minted, try restore to claim them
                         try {
                             const restored = await CashuDevKit.restore(mintUrl);
-                            console.log(
-                                `CDK checkAndMintCDK: Restored ${restored} sats`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `CDK checkAndMintCDK: Restored ${restored} sats`
+                                );
+                            }
                             await this.syncCDKBalances();
                             if (restored > 0) {
                                 return {
@@ -654,9 +676,11 @@ export default class CashuStore {
                                 };
                             }
                         } catch (restoreError: any) {
-                            console.log(
-                                `CDK checkAndMintCDK: Restore failed: ${restoreError?.message}`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `CDK checkAndMintCDK: Restore failed: ${restoreError?.message}`
+                                );
+                            }
                         }
                         return {
                             isPaid: true,
@@ -664,15 +688,19 @@ export default class CashuStore {
                             externalQuote
                         };
                     } else {
-                        console.log(
-                            `CDK checkAndMintCDK: External quote state is ${state}, not redeemable yet`
-                        );
+                        if (__DEV__) {
+                            console.log(
+                                `CDK checkAndMintCDK: External quote state is ${state}, not redeemable yet`
+                            );
+                        }
                         return { isPaid: false, externalQuote };
                     }
                 } catch (externalError: any) {
-                    console.log(
-                        `CDK checkAndMintCDK: External quote check failed: ${externalError?.message}`
-                    );
+                    if (__DEV__) {
+                        console.log(
+                            `CDK checkAndMintCDK: External quote check failed: ${externalError?.message}`
+                        );
+                    }
                     // Quote truly doesn't exist
                     return { isPaid: false, isLegacy: true };
                 }
@@ -1446,7 +1474,9 @@ export default class CashuStore {
             try {
                 await CashuDevKit.addMint(mintUrl);
                 this.addedMintsCache.add(this.normalizeMintUrl(mintUrl));
-                console.log(`CDK: Added mint ${mintUrl}`);
+                if (__DEV__) {
+                    console.log(`CDK: Added mint ${mintUrl}`);
+                }
             } catch (e: any) {
                 console.error(`CDK: Failed to add mint ${mintUrl}:`, e);
                 runInAction(() => {
@@ -1509,7 +1539,9 @@ export default class CashuStore {
         this.loading = true;
         try {
             await CashuDevKit.removeMint(mintUrl);
-            console.log(`CDK: Removed mint ${mintUrl}`);
+            if (__DEV__) {
+                console.log(`CDK: Removed mint ${mintUrl}`);
+            }
         } catch (e) {
             runInAction(() => {
                 this.loading = false;
@@ -1813,9 +1845,11 @@ export default class CashuStore {
                             this.addedMintsCache.add(
                                 this.normalizeMintUrl(mintUrl)
                             );
-                            console.log(
-                                `CDK: Migrated mint from local storage: ${mintUrl}`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `CDK: Migrated mint from local storage: ${mintUrl}`
+                                );
+                            }
 
                             // Restore any existing funds for this mint
                             runInAction(() => {
@@ -1824,7 +1858,7 @@ export default class CashuStore {
                                 );
                             });
                             const restored = await CashuDevKit.restore(mintUrl);
-                            if (restored > 0) {
+                            if (restored > 0 && __DEV__) {
                                 console.log(
                                     `CDK: Restored ${restored} sats from ${mintUrl}`
                                 );
@@ -1963,7 +1997,9 @@ export default class CashuStore {
 
     @action
     public initializeWallet = async (mintUrl: string): Promise<Wallet> => {
-        console.log('initializing wallet for URL', mintUrl);
+        if (__DEV__) {
+            console.log('initializing wallet for URL', mintUrl);
+        }
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;
 
@@ -1977,7 +2013,9 @@ export default class CashuStore {
                 pubkey = derivedPubkey;
                 // Store for future use
                 await Storage.setItem(`${walletId}-pubkey`, pubkey);
-                console.log('Derived and stored Cashu pubkey for', mintUrl);
+                if (__DEV__) {
+                    console.log('Derived and stored Cashu pubkey for', mintUrl);
+                }
             } else {
                 pubkey = '';
                 console.warn('Could not derive pubkey for', mintUrl);
@@ -2039,10 +2077,12 @@ export default class CashuStore {
                 try {
                     decoded = bolt11.decode(mintQuote.request);
                 } catch (e) {
-                    console.log(
-                        'error decoding Cashu bolt11',
-                        mintQuote.request
-                    );
+                    if (__DEV__) {
+                        console.log(
+                            'error decoding Cashu bolt11',
+                            mintQuote.request
+                        );
+                    }
                 }
 
                 invoice = new CashuInvoice({
@@ -2112,7 +2152,9 @@ export default class CashuStore {
                     : invoice.getPaymentRequest
             };
         } catch (e: any) {
-            console.log('Cashu createInvoice err', e);
+            if (__DEV__) {
+                console.log('Cashu createInvoice err', e);
+            }
             const error_msg = e?.message || e?.toString() || 'Unknown error';
             runInAction(() => {
                 this.creatingInvoiceError = true;
@@ -2139,13 +2181,15 @@ export default class CashuStore {
     ) => {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
 
-        console.log('checkInvoicePaid called with:', {
-            quoteId,
-            quoteMintUrl,
-            mintUrl,
-            _lockedQuote,
-            skipMintCheck
-        });
+        if (__DEV__) {
+            console.log('checkInvoicePaid called with:', {
+                quoteId,
+                quoteMintUrl,
+                mintUrl,
+                _lockedQuote,
+                skipMintCheck
+            });
+        }
 
         if (!this.isProperlyConfigured()) {
             throw new Error(
@@ -2155,12 +2199,16 @@ export default class CashuStore {
 
         const invoiceQuoteId: string = quoteId || this.quoteId || '';
 
-        console.log('checkInvoicePaid invoiceQuoteId:', invoiceQuoteId);
+        if (__DEV__) {
+            console.log('checkInvoicePaid invoiceQuoteId:', invoiceQuoteId);
+        }
 
         // Check and mint via CDK
         const result = await this.checkAndMintCDK(mintUrl, invoiceQuoteId);
 
-        console.log('checkAndMintCDK result:', result);
+        if (__DEV__) {
+            console.log('checkAndMintCDK result:', result);
+        }
 
         if (result.isPaid) {
             // CDK handles storage internally, just update local state
@@ -2175,10 +2223,12 @@ export default class CashuStore {
                 try {
                     decoded = bolt11.decode(cdkQuote.request);
                 } catch (e) {
-                    console.log(
-                        'error decoding Cashu bolt11',
-                        cdkQuote.request
-                    );
+                    if (__DEV__) {
+                        console.log(
+                            'error decoding Cashu bolt11',
+                            cdkQuote.request
+                        );
+                    }
                 }
 
                 updatedInvoice = new CashuInvoice({
@@ -2240,28 +2290,34 @@ export default class CashuStore {
 
         try {
             this.restorationProgress = 0;
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `CDK: Starting restore for mint: "${mintUrl}"`
-            );
+            if (__DEV__) {
+                console.log(
+                    RESTORE_PROOFS_EVENT_NAME,
+                    `CDK: Starting restore for mint: "${mintUrl}"`
+                );
+            }
 
             const restoredAmount = await this.restoreCDK(mintUrl);
 
             this.restorationProgress = 100;
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `CDK: Restored ${restoredAmount} sats`
-            );
+            if (__DEV__) {
+                console.log(
+                    RESTORE_PROOFS_EVENT_NAME,
+                    `CDK: Restored ${restoredAmount} sats`
+                );
+            }
 
             this.restorationProgress = undefined;
             this.restorationKeyset = undefined;
             return true;
         } catch (error: any) {
             console.error('CDK restore error:', error);
-            console.log(
-                RESTORE_PROOFS_EVENT_NAME,
-                `CDK Error: ${error.message}`
-            );
+            if (__DEV__) {
+                console.log(
+                    RESTORE_PROOFS_EVENT_NAME,
+                    `CDK Error: ${error.message}`
+                );
+            }
             this.restorationProgress = undefined;
             this.restorationKeyset = undefined;
             return null;
@@ -2273,10 +2329,12 @@ export default class CashuStore {
         bolt11Invoice: string,
         isDonationPayment: boolean = false
     ) => {
-        console.log('getPayReq: Starting', {
-            bolt11Invoice: bolt11Invoice?.substring(0, 20),
-            isDonationPayment
-        });
+        if (__DEV__) {
+            console.log('getPayReq: Starting', {
+                bolt11Invoice: bolt11Invoice?.substring(0, 20),
+                isDonationPayment
+            });
+        }
 
         if (!isDonationPayment) {
             this.loading = true;
@@ -2286,15 +2344,21 @@ export default class CashuStore {
         this.feeEstimate = undefined;
 
         try {
-            console.log('getPayReq: Checking isProperlyConfigured');
+            if (__DEV__) {
+                console.log('getPayReq: Checking isProperlyConfigured');
+            }
             if (!this.isProperlyConfigured()) {
                 throw new Error(
                     localeString('stores.CashuStore.notProperlyConfigured')
                 );
             }
-            console.log('getPayReq: isProperlyConfigured passed');
+            if (__DEV__) {
+                console.log('getPayReq: isProperlyConfigured passed');
+            }
 
-            console.log('getPayReq: Decoding bolt11');
+            if (__DEV__) {
+                console.log('getPayReq: Decoding bolt11');
+            }
             const data = await new Promise((resolve, reject) => {
                 try {
                     const decoded: any = bolt11.decode(bolt11Invoice || '');
@@ -2320,15 +2384,24 @@ export default class CashuStore {
                     reject(err);
                 }
             });
-            console.log('getPayReq: bolt11 decoded');
+            if (__DEV__) {
+                console.log('getPayReq: bolt11 decoded');
+            }
 
             // Create melt quote via CDK
-            console.log('getPayReq: About to call createMeltQuoteCDK');
+            if (__DEV__) {
+                console.log('getPayReq: About to call createMeltQuoteCDK');
+            }
             const cdkQuote = await this.createMeltQuoteCDK(
                 this.selectedMintUrl,
                 bolt11Invoice
             );
-            console.log('getPayReq: createMeltQuoteCDK completed', cdkQuote);
+            if (__DEV__) {
+                console.log(
+                    'getPayReq: createMeltQuoteCDK completed',
+                    cdkQuote
+                );
+            }
             const meltQuote = {
                 quote: cdkQuote.id,
                 amount: cdkQuote.amount,
@@ -2344,9 +2417,13 @@ export default class CashuStore {
                 this.meltQuote = meltQuote;
                 this.feeEstimate = meltQuote.fee_reserve || 0;
             });
-            console.log('getPayReq: Success, setting loading = false');
+            if (__DEV__) {
+                console.log('getPayReq: Success, setting loading = false');
+            }
         } catch (e: any) {
-            console.log('getPayReq: Error caught', e?.message || e);
+            if (__DEV__) {
+                console.log('getPayReq: Error caught', e?.message || e);
+            }
             const errorMsg = errorToUserFriendly(e);
             runInAction(() => {
                 this.payReq = undefined;
@@ -2354,7 +2431,11 @@ export default class CashuStore {
             });
         } finally {
             // ALWAYS set loading = false when done
-            console.log('getPayReq: Finally block, setting loading = false');
+            if (__DEV__) {
+                console.log(
+                    'getPayReq: Finally block, setting loading = false'
+                );
+            }
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.loading = false;
@@ -2746,9 +2827,11 @@ export default class CashuStore {
             const balance = this.mintBalances[mintUrl] || 0;
 
             if (balance > sweepThresholdSats) {
-                console.log(
-                    `Cashu sweep triggered for ${mintUrl}: Balance ${balance} > Threshold ${sweepThresholdSats}`
-                );
+                if (__DEV__) {
+                    console.log(
+                        `Cashu sweep triggered for ${mintUrl}: Balance ${balance} > Threshold ${sweepThresholdSats}`
+                    );
+                }
                 try {
                     await this.sweepMint(mintUrl);
                 } catch (error) {
@@ -2763,23 +2846,29 @@ export default class CashuStore {
                     });
                 }
             } else {
-                console.log(
-                    `Cashu sweep check for ${mintUrl}: Balance ${balance} <= Threshold ${sweepThresholdSats}`
-                );
+                if (__DEV__) {
+                    console.log(
+                        `Cashu sweep check for ${mintUrl}: Balance ${balance} <= Threshold ${sweepThresholdSats}`
+                    );
+                }
             }
         }
     };
 
     @action
     public sweepMint = async (mintUrl: string): Promise<boolean> => {
-        console.log(`Attempting to sweep funds from mint: ${mintUrl}`);
+        if (__DEV__) {
+            console.log(`Attempting to sweep funds from mint: ${mintUrl}`);
+        }
         this.loading = true;
 
         try {
             // Get balance from CDK
             const amountToSweep = await CashuDevKit.getMintBalance(mintUrl);
             if (amountToSweep <= 0) {
-                console.log(`Sweep skipped for ${mintUrl}: Zero balance.`);
+                if (__DEV__) {
+                    console.log(`Sweep skipped for ${mintUrl}: Zero balance.`);
+                }
                 this.loading = false;
                 return true;
             }
@@ -2794,9 +2883,11 @@ export default class CashuStore {
             };
 
             // 1. Create initial invoice for full amount to estimate fee
-            console.log(
-                `Sweep ${mintUrl}: Creating initial invoice for ${amountToSweep} sats`
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Creating initial invoice for ${amountToSweep} sats`
+                );
+            }
             const initialInvoice = await this.invoicesStore.createInvoice({
                 ...invoiceParams,
                 memo,
@@ -2808,17 +2899,21 @@ export default class CashuStore {
                 );
 
             // 2. Get melt quote from CDK for fee estimation
-            console.log(
-                `Sweep ${mintUrl}: Getting melt quote for fee estimation`
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Getting melt quote for fee estimation`
+                );
+            }
             const initialMeltQuote = await CashuDevKit.createMeltQuote(
                 mintUrl,
                 initialInvoice.paymentRequest
             );
             const feeReserve = initialMeltQuote.fee_reserve;
-            console.log(
-                `Sweep ${mintUrl}: Estimated fee reserve: ${feeReserve} sats`
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Estimated fee reserve: ${feeReserve} sats`
+                );
+            }
 
             // 3. Calculate actual receive amount and create final invoice
             const receiveAmtSat = amountToSweep - feeReserve;
@@ -2830,9 +2925,11 @@ export default class CashuStore {
                 return false;
             }
 
-            console.log(
-                `Sweep ${mintUrl}: Creating final invoice for ${receiveAmtSat} sats`
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Creating final invoice for ${receiveAmtSat} sats`
+                );
+            }
             const finalInvoice = await this.invoicesStore.createInvoice({
                 ...invoiceParams,
                 memo: `${memo} [${localeString(
@@ -2844,29 +2941,37 @@ export default class CashuStore {
                 throw new Error('Failed to create final invoice for sweep.');
 
             // 4. Create melt quote for final invoice and execute melt
-            console.log(
-                `Sweep ${mintUrl}: Creating melt quote for final invoice`
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Creating melt quote for final invoice`
+                );
+            }
             const finalMeltQuote = await CashuDevKit.createMeltQuote(
                 mintUrl,
                 finalInvoice.paymentRequest
             );
-            console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
+            if (__DEV__) {
+                console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
+            }
             const meltResponse = await CashuDevKit.melt(
                 mintUrl,
                 finalMeltQuote.id
             );
-            console.log(
-                `Sweep ${mintUrl}: Melt response received`,
-                meltResponse
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Melt response received`,
+                    meltResponse
+                );
+            }
 
             // 6. Update balances from CDK
             await this.syncCDKBalances(true);
 
-            console.log(
-                `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats.`
-            );
+            if (__DEV__) {
+                console.log(
+                    `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats.`
+                );
+            }
             this.loading = false;
             return true;
         } catch (e: any) {
@@ -2978,7 +3083,9 @@ export default class CashuStore {
             for (const mintUrl of this.mintUrls) {
                 try {
                     await CashuDevKit.removeMint(mintUrl);
-                    console.log(`CDK: Removed mint ${mintUrl}`);
+                    if (__DEV__) {
+                        console.log(`CDK: Removed mint ${mintUrl}`);
+                    }
                 } catch (e) {
                     console.warn(`CDK: Failed to remove mint ${mintUrl}:`, e);
                 }

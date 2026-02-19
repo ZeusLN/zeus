@@ -175,10 +175,12 @@ export default class CashuSendingLightning extends React.Component<
                 return;
             }
 
-            console.log(
-                'Initiating donation payment with amount:',
-                donationAmount
-            );
+            if (__DEV__) {
+                console.log(
+                    'Initiating donation payment with amount:',
+                    donationAmount
+                );
+            }
             const isDonationPayment = true;
             await CashuStore.getPayReq(paymentRequest, isDonationPayment);
 

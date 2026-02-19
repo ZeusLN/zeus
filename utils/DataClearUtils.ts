@@ -180,9 +180,13 @@ async function clearCDKDatabase(): Promise<void> {
         const exists = await ReactNativeBlobUtil.fs.exists(dbPath);
         if (exists) {
             await ReactNativeBlobUtil.fs.unlink(dbPath);
-            console.log('[ClearData] CDK database deleted:', dbPath);
+            if (__DEV__) {
+                console.log('[ClearData] CDK database deleted:', dbPath);
+            }
         } else {
-            console.log('[ClearData] CDK database not found at:', dbPath);
+            if (__DEV__) {
+                console.log('[ClearData] CDK database not found at:', dbPath);
+            }
         }
     } catch (e) {
         console.warn('[ClearData] Error deleting CDK database:', e);
@@ -272,9 +276,11 @@ export async function clearAllData(): Promise<void> {
     if (settings?.nodes && Array.isArray(settings.nodes)) {
         for (const node of settings.nodes) {
             if (node.lndDir) {
-                console.log(
-                    `[ClearData] Clearing Cashu data for node: ${node.lndDir}`
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[ClearData] Clearing Cashu data for node: ${node.lndDir}`
+                    );
+                }
                 await clearCashuDataForNode(node.lndDir);
             }
         }
