@@ -1,6 +1,7 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { lnrpc } from './../proto/lightning';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 
@@ -83,7 +84,8 @@ import {
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
 
-    getTransactions = async () => await getTransactions();
+    getTransactions = async (data: lnrpc.IGetTransactionsRequest) =>
+        await getTransactions(data?.max_transactions || 500);
     getChannels = async () => await listChannels();
     getPendingChannels = async () => await pendingChannels();
     getClosedChannels = async () => await closedChannels();
