@@ -8,11 +8,9 @@ import PrivacyUtils from './../utils/PrivacyUtils';
 
 const hash = require('object-hash');
 
-export const NodeTitle = (
-    selectedNode: any,
-    maxLength = 24,
-    overrideSensitivity = false
-) => {
+const IDENTICON_TITLE_MAX_LENGTH = 24;
+
+export const NodeTitle = (selectedNode: any, overrideSensitivity = false) => {
     const displayName =
         selectedNode && selectedNode.nickname
             ? selectedNode.nickname
@@ -26,12 +24,9 @@ export const NodeTitle = (
             ? `${selectedNode.host}:${selectedNode.port}`
             : (selectedNode && selectedNode.host) || 'Unknown';
 
-    const title = overrideSensitivity
+    return overrideSensitivity
         ? displayName
         : PrivacyUtils.sensitiveValue({ input: displayName, fixedLength: 8 });
-    return title.length > maxLength
-        ? title.substring(0, maxLength - 3) + '...'
-        : title;
 };
 
 export default function NodeIdenticon({
@@ -43,7 +38,11 @@ export default function NodeIdenticon({
     width?: number;
     rounded?: boolean;
 }) {
-    const title = NodeTitle(selectedNode, 24, true);
+    const fullTitle = NodeTitle(selectedNode, true);
+    const title =
+        fullTitle.length > IDENTICON_TITLE_MAX_LENGTH
+            ? fullTitle.substring(0, IDENTICON_TITLE_MAX_LENGTH - 3) + '...'
+            : fullTitle;
 
     const data = new Identicon(
         hash.sha1(
