@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { ButtonGroup } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -14,7 +15,6 @@ import TextInput from '../../components/TextInput';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import {
-    SuccessMessage,
     ErrorMessage,
     WarningMessage
 } from '../../components/SuccessErrorMessage';
@@ -47,11 +47,11 @@ interface SpliceOutProps {
 interface SpliceOutState {
     selectedChannel: Channel | null;
     amount: string;
-    destination: string;
     feeRate: string;
     forceFeerate: boolean;
-    step: 'input' | 'confirm' | 'executing' | 'complete';
+    step: 'input' | 'confirm';
     error: string;
+    selectedIndex: number;
 }
 
 @inject(
@@ -67,31 +67,14 @@ export default class SpliceOut extends React.Component<
     SpliceOutProps,
     SpliceOutState
 > {
-    componentDidUpdate(_prevProps: SpliceOutProps, prevState: SpliceOutState) {
-        if (this.state.step === 'complete' && prevState.step !== 'complete') {
-            try {
-                const { TransactionsStore, ActivityStore, SettingsStore } =
-                    this.props;
-                TransactionsStore.getTransactions();
-                ActivityStore.getActivityAndFilter(
-                    SettingsStore.settings.locale
-                );
-            } catch (e) {
-                console.log(
-                    '[SpliceOut] Error refreshing activity after splice:',
-                    e
-                );
-            }
-        }
-    }
     state = {
         selectedChannel: null as Channel | null,
         amount: '',
-        destination: 'wallet',
         feeRate: '2',
         forceFeerate: false,
-        step: 'input' as 'input' | 'confirm' | 'executing' | 'complete',
-        error: ''
+        step: 'input' as 'input' | 'confirm',
+        error: '',
+        selectedIndex: 0
     };
 
     componentDidMount() {
@@ -104,15 +87,23 @@ export default class SpliceOut extends React.Component<
         }
     }
 
-    getAvailableChannels = (): Channel[] => {
-        const { ChannelsStore } = this.props;
-        return ChannelsStore.channels.filter(
-            (channel: Channel) =>
-                channel.isActive &&
-                !channel.pendingOpen &&
-                !channel.pendingClose &&
-                !channel.closing
-        );
+    updateIndex = (selectedIndex: number) => {
+        const { SpliceStore } = this.props;
+        SpliceStore.currentDryrunResult = null;
+        SpliceStore.error = null;
+        this.setState({
+            selectedIndex,
+            selectedChannel: null,
+            amount: '',
+            feeRate: '2',
+            forceFeerate: false,
+            step: 'input',
+            error: ''
+        });
+    };
+
+    getDestinationAddress = (): string => {
+        return 'wallet';
     };
 
     onChannelSelect = (channels: Channel[]) => {
@@ -159,9 +150,14 @@ export default class SpliceOut extends React.Component<
 
         return (
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{`${localeString(
-                    'components.ChannelPicker.modal.title'
-                )}:`}</Text>
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {localeString('components.ChannelPicker.modal.title')}
+                </Text>
                 {!selectedChannel && (
                     <HopPicker
                         onValueChange={this.onChannelSelect}
@@ -192,52 +188,91 @@ export default class SpliceOut extends React.Component<
 
     handleInitiate = async () => {
         const { SpliceStore } = this.props;
-        const { selectedChannel, amount, destination, feeRate, forceFeerate } =
-            this.state;
+        const {
+            selectedChannel,
+            amount,
+            feeRate,
+            forceFeerate,
+            selectedIndex
+        } = this.state;
 
-        if (!selectedChannel || !amount || !destination) {
+        if (!selectedChannel || !amount) {
             this.setState({
                 error: localeString('views.Tools.SpliceOut.error.fillAllFields')
             });
             return;
         }
 
-        try {
-            this.setState({ error: '', step: 'confirm' });
-
-            // Step 1: Dryrun to get fee estimate
-            const result = await SpliceStore.initiateSpliceOut({
-                channelId: selectedChannel.chan_id,
-                amount,
-                destination,
-                feeRate: parseFloat(feeRate),
-                forceFeerate
+        const amountNum = parseInt(amount);
+        if (isNaN(amountNum) || amountNum <= 0) {
+            this.setState({
+                error: localeString('views.Tools.SpliceOut.error.invalidAmount')
             });
+            return;
+        }
 
-            if (!result) {
+        const feeRateNum = parseFloat(feeRate);
+        if (feeRate && (isNaN(feeRateNum) || feeRateNum <= 0)) {
+            this.setState({
+                error: localeString(
+                    'views.Tools.SpliceOut.error.invalidFeeRate'
+                )
+            });
+            return;
+        }
+
+        if (selectedIndex === 0) {
+            const availableBalance = parseInt(selectedChannel.sendingCapacity);
+            if (amountNum > availableBalance) {
                 this.setState({
-                    error:
-                        SpliceStore.error ||
-                        localeString(
-                            'views.Tools.SpliceOut.error.failedToInitiate'
-                        ),
-                    step: 'input'
+                    error: localeString(
+                        'views.Tools.SpliceOut.error.insufficientBalance'
+                    )
                 });
                 return;
             }
+        }
 
-            this.setState({ step: 'confirm' });
-        } catch (err: any) {
+        this.setState({ error: '' });
+
+        let result: any = null;
+
+        // Dryrun to get fee estimate
+        if (selectedIndex === 0) {
+            // Splice Out
+            const destination = this.getDestinationAddress();
+
+            result = await SpliceStore.initiateSpliceOut({
+                channelId: selectedChannel.chan_id,
+                amount,
+                destination,
+                feeRate: feeRateNum,
+                forceFeerate
+            });
+        } else {
+            // Splice In
+            result = await SpliceStore.initiateSpliceIn({
+                channelId: selectedChannel.chan_id,
+                amount,
+                feeRate: feeRateNum,
+                forceFeerate
+            });
+        }
+
+        if (!result) {
             this.setState({
                 error:
                     SpliceStore.error ||
-                    err.message ||
                     localeString(
                         'views.Tools.SpliceOut.error.failedToInitiate'
                     ),
                 step: 'input'
             });
+            return;
         }
+
+        console.log('[Splice] Dryrun result:', result);
+        this.setState({ step: 'confirm' });
     };
 
     handleExecute = async () => {
@@ -259,7 +294,7 @@ export default class SpliceOut extends React.Component<
 
     performExecute = async () => {
         const { SpliceStore } = this.props;
-        const { selectedChannel, amount, destination, forceFeerate } =
+        const { selectedChannel, amount, forceFeerate, selectedIndex } =
             this.state;
 
         const dryrunResult = SpliceStore.currentDryrunResult;
@@ -283,21 +318,10 @@ export default class SpliceOut extends React.Component<
             return;
         }
 
-        this.setState({ error: '', step: 'executing' });
+        const destination =
+            selectedIndex === 0 ? this.getDestinationAddress() : '';
 
-        // Step 2: Execute the splice with simple timeout check
-        let timeoutId: ReturnType<typeof setTimeout> | null = null;
-        let isTimedOut = false;
-
-        timeoutId = setTimeout(() => {
-            isTimedOut = true;
-            this.setState({
-                error: localeString('views.Tools.SpliceOut.error.timeout'),
-                step: 'confirm'
-            });
-        }, 30000);
-
-        const result = await SpliceStore.executeSplice(
+        SpliceStore.executeSplice(
             selectedChannel.chan_id,
             dryrunResult.script,
             selectedChannel.localBalance,
@@ -307,46 +331,13 @@ export default class SpliceOut extends React.Component<
             forceFeerate
         );
 
-        if (timeoutId) {
-            clearTimeout(timeoutId);
-        }
-
-        if (isTimedOut) {
-            return;
-        }
-
-        if (!result) {
-            console.log(
-                '[SpliceOut] Splice operation failed, setting error:',
-                SpliceStore.error
-            );
-            this.setState({
-                error:
-                    SpliceStore.error ||
-                    localeString('views.Tools.SpliceOut.error.failedToExecute'),
-                step: 'confirm'
-            });
-            return;
-        }
-
-        if (!result.txid) {
-            console.error('[SpliceOut] Invalid splice result:', result);
-            this.setState({
-                error: localeString(
-                    'views.Tools.SpliceOut.error.invalidResult'
-                ),
-                step: 'confirm'
-            });
-            return;
-        }
-
-        this.setState({ step: 'complete' });
+        this.props.navigation.navigate('SendingOnChain');
     };
 
     handleCancel = () => {
         const { SpliceStore } = this.props;
         SpliceStore.currentDryrunResult = null;
-        SpliceStore.error = null; // Clear any existing errors when canceling
+        SpliceStore.error = null;
         this.setState({ step: 'input', error: '' });
     };
 
@@ -354,23 +345,98 @@ export default class SpliceOut extends React.Component<
         const {
             selectedChannel,
             amount,
-            destination,
             feeRate,
             forceFeerate,
-            error
+            error,
+            selectedIndex
         } = this.state;
+
+        const isSpliceOut = selectedIndex === 0;
+        const amountLabel = isSpliceOut
+            ? localeString('views.Tools.spliceOut')
+            : localeString('views.Tools.spliceIn') +
+              ' ' +
+              localeString('general.amount');
+
+        const spliceOutButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            selectedIndex === 0
+                                ? themeColor('background')
+                                : themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book',
+                        fontSize: 16,
+                        fontWeight: '600'
+                    }}
+                >
+                    {localeString('views.Tools.SpliceOut.spliceOut')}
+                </Text>
+            </React.Fragment>
+        );
+
+        const spliceInButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            selectedIndex === 1
+                                ? themeColor('background')
+                                : themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book',
+                        fontSize: 16,
+                        fontWeight: '600'
+                    }}
+                >
+                    {localeString('views.Tools.SpliceOut.spliceIn')}
+                </Text>
+            </React.Fragment>
+        );
+
+        const buttons = [
+            { element: spliceOutButton },
+            { element: spliceInButton }
+        ];
+        const buttonElements = buttons.map((btn) => btn.element());
 
         return (
             <View>
+                <ButtonGroup
+                    onPress={this.updateIndex}
+                    selectedIndex={selectedIndex}
+                    buttons={buttonElements}
+                    selectedButtonStyle={{
+                        backgroundColor: themeColor('highlight'),
+                        borderRadius: 12
+                    }}
+                    containerStyle={{
+                        backgroundColor: themeColor('secondary'),
+                        borderRadius: 12,
+                        borderColor: themeColor('secondary'),
+                        width: '100%',
+                        alignSelf: 'center',
+                        marginBottom: 16
+                    }}
+                    innerBorderStyle={{
+                        color: themeColor('secondary')
+                    }}
+                />
+
                 {error && <ErrorMessage message={error} />}
 
                 {/* Channel Selection  */}
                 {this.renderChannelSelectionSection()}
 
                 {/* Amount */}
-                <Text style={styles.label}>{`${localeString(
-                    'views.Receive.amount'
-                )}:`}</Text>
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {amountLabel}
+                </Text>
                 <TextInput
                     placeholder="5000"
                     value={amount}
@@ -380,29 +446,15 @@ export default class SpliceOut extends React.Component<
                     keyboardType="numeric"
                 />
 
-                {/* Destination */}
-                <Text style={styles.label}>{`${localeString(
-                    'general.destination'
-                )}:`}</Text>
-                <TextInput
-                    placeholder={
-                        localeString('general.wallet') +
-                        ' ' +
-                        localeString('general.default')
-                    }
-                    value={destination}
-                    onChangeText={(text: string) =>
-                        this.setState({ destination: text })
-                    }
-                />
-                <Text style={styles.helperText}>
-                    {localeString('views.Tools.SpliceOut.destinationNote')}
-                </Text>
-
                 {/* Fee Rate */}
-                <Text style={styles.label}>{`${localeString(
-                    'views.Channel.feeRate'
-                )} (sats/vbyte):`}</Text>
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {`${localeString('views.Channel.feeRate')} (sats/vbyte)`}
+                </Text>
                 <TextInput
                     placeholder="2"
                     value={feeRate}
@@ -444,51 +496,78 @@ export default class SpliceOut extends React.Component<
                         'views.Tools.SpliceOut.forceFeerateDescription'
                     )}
                 </Text>
-                <Button
-                    title={localeString('views.Tools.SpliceOut.previewSplice')}
-                    onPress={this.handleInitiate}
-                    containerStyle={styles.button}
-                    disabled={!selectedChannel}
-                />
+                <View style={styles.button}>
+                    <Button
+                        title={localeString(
+                            'views.Tools.SpliceOut.previewSplice'
+                        )}
+                        onPress={this.handleInitiate}
+                        disabled={!selectedChannel}
+                    />
+                </View>
             </View>
         );
     };
 
     renderConfirm = () => {
         const { SpliceStore } = this.props;
-        const { amount, destination, error } = this.state;
+        const { amount, error, selectedIndex } = this.state;
+        const isSpliceOut = selectedIndex === 0;
+
+        const confirmTitle = isSpliceOut
+            ? localeString('views.Tools.SpliceOut.confirmTitle')
+            : localeString('views.Tools.SpliceIn.confirmTitle');
+
+        const amountLabel =
+            localeString('general.confirm') + ' ' + isSpliceOut
+                ? localeString('views.Tools.SpliceOut.spliceOut')
+                : localeString('views.Tools.SpliceOut.spliceIn');
+
+        const totalLabel = isSpliceOut
+            ? localeString('views.Tools.SpliceOut.totalDeducted')
+            : localeString('views.Tools.SpliceIn.totalAdded');
+
         const dryrunResult = SpliceStore.currentDryrunResult;
 
         if (!dryrunResult) return <LoadingIndicator />;
 
         return (
             <View>
-                <Text style={styles.title}>
-                    {localeString('views.Tools.SpliceOut.confirmTitle')}
+                <Text
+                    style={{
+                        ...styles.title,
+                        color: themeColor('text')
+                    }}
+                >
+                    {confirmTitle}
                 </Text>
 
                 {error && <ErrorMessage message={error} />}
 
                 <KeyValue
-                    keyValue={localeString('views.Tools.SpliceOut.amount')}
+                    keyValue={amountLabel}
                     value={<Amount sats={amount} toggleable />}
                 />
-                <KeyValue
-                    keyValue={localeString('general.destination')}
-                    value={destination}
-                />
+                {isSpliceOut && (
+                    <KeyValue
+                        keyValue={localeString('general.destination')}
+                        value={localeString('views.Tools.SpliceOut.nodeWallet')}
+                    />
+                )}
                 <KeyValue
                     keyValue={localeString('views.Tools.SpliceOut.onchainFee')}
                     value={<Amount sats={dryrunResult.fee} toggleable />}
                     color={themeColor('warning')}
                 />
                 <KeyValue
-                    keyValue={localeString(
-                        'views.Tools.SpliceOut.totalDeducted'
-                    )}
+                    keyValue={totalLabel}
                     value={
                         <Amount
-                            sats={parseInt(amount) + dryrunResult.fee}
+                            sats={
+                                isSpliceOut
+                                    ? parseInt(amount) + dryrunResult.fee
+                                    : parseInt(amount) - dryrunResult.fee
+                            }
                             toggleable
                         />
                     }
@@ -501,11 +580,22 @@ export default class SpliceOut extends React.Component<
                             { backgroundColor: themeColor('secondary') }
                         ]}
                     >
-                        <Text style={styles.transcriptTitle}>{`${localeString(
-                            'general.details'
-                        )}:`}</Text>
+                        <Text
+                            style={{
+                                ...styles.transcriptTitle,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {`${localeString('general.details')}:`}
+                        </Text>
                         {dryrunResult.transcript.map((line, i) => (
-                            <Text key={i} style={styles.transcriptLine}>
+                            <Text
+                                key={i}
+                                style={{
+                                    ...styles.transcriptLine,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
                                 {line}
                             </Text>
                         ))}
@@ -537,121 +627,28 @@ export default class SpliceOut extends React.Component<
         );
     };
 
-    renderExecuting = () => {
-        const { SpliceStore } = this.props;
-
-        return (
-            <View style={styles.centered}>
-                <LoadingIndicator />
-                <Text style={styles.statusText}>
-                    {localeString('views.Tools.SpliceOut.executing') + '...'}
-                </Text>
-                <Text style={styles.subtitle}>
-                    {localeString('views.SendingOnChain.broadcasting')}
-                </Text>
-
-                {SpliceStore.loading && (
-                    <Text
-                        style={StyleSheet.flatten([
-                            styles.subtitle,
-                            { marginTop: 16 }
-                        ])}
-                    >
-                        {`${localeString(
-                            'views.Tools.SpliceOut.storeLoading'
-                        )}: ${SpliceStore.loading.toString()}`}
-                    </Text>
-                )}
-                {SpliceStore.error && (
-                    <Text
-                        style={StyleSheet.flatten([
-                            styles.subtitle,
-                            { color: 'red', marginTop: 8 }
-                        ])}
-                    >
-                        {`${localeString(
-                            'views.Tools.SpliceOut.storeError'
-                        )}: ${SpliceStore.error}`}
-                    </Text>
-                )}
-            </View>
-        );
-    };
-
-    renderComplete = () => {
-        const { SpliceStore } = this.props;
-        const { selectedChannel } = this.state;
-        const spliceOp = selectedChannel
-            ? SpliceStore.getSpliceOperation(selectedChannel.chan_id)
-            : null;
-
-        return (
-            <View>
-                <SuccessMessage
-                    message={localeString(
-                        'views.Tools.SpliceOut.successMessage'
-                    )}
-                />
-
-                {spliceOp && (
-                    <>
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Tools.SpliceOut.transactionId'
-                            )}
-                            value={
-                                spliceOp.txid ||
-                                localeString('general.notAvailable')
-                            }
-                        />
-                        <KeyValue
-                            keyValue={localeString('views.OpenChannel.numConf')}
-                            value={`${spliceOp.confirmations} / 1+`}
-                        />
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.status')}
-                            value={spliceOp.status}
-                        />
-                    </>
-                )}
-
-                <Text style={styles.subtitle}>
-                    {localeString('views.Tools.SpliceOut.channelUpdateMessage')}
-                </Text>
-
-                <Button
-                    title={localeString('views.Tools.SpliceOut.done')}
-                    onPress={() => this.props.navigation.goBack()}
-                    containerStyle={styles.button}
-                />
-            </View>
-        );
-    };
-
     render() {
         const { navigation } = this.props;
         const { step } = this.state;
 
+        const showBackButton = step === 'input';
+
         return (
             <Screen>
                 <Header
-                    leftComponent={step === 'input' ? 'Back' : undefined}
+                    leftComponent={showBackButton ? 'Back' : undefined}
                     centerComponent={{
-                        text: localeString('views.Tools.SpliceOut.title'),
+                        text: localeString('views.Tools.splicing'),
                         style: { color: themeColor('text') }
                     }}
                     navigation={navigation}
                 />
                 <ScrollView
-                    style={styles.container}
-                    contentContainerStyle={styles.scrollContent}
+                    contentContainerStyle={styles.content}
                     keyboardShouldPersistTaps="handled"
-                    keyboardDismissMode="on-drag"
                 >
                     {step === 'input' && this.renderInput()}
                     {step === 'confirm' && this.renderConfirm()}
-                    {step === 'executing' && this.renderExecuting()}
-                    {step === 'complete' && this.renderComplete()}
                 </ScrollView>
             </Screen>
         );
@@ -659,12 +656,12 @@ export default class SpliceOut extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    container: {
-        padding: 16
+    content: {
+        padding: 20,
+        paddingTop: 10
     },
-    scrollContent: {
-        flexGrow: 1,
-        paddingBottom: 50
+    text: {
+        fontFamily: 'PPNeueMontreal-Book'
     },
     title: {
         fontSize: 24,
@@ -672,33 +669,19 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         fontFamily: 'PPNeueMontreal-Book'
     },
-    subtitle: {
-        fontSize: 14,
-        opacity: 0.7,
-        marginBottom: 16,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     section: {
-        marginBottom: 8
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    label: {
-        fontSize: 16,
-        fontWeight: '600',
-        marginTop: 16,
-        fontFamily: 'PPNeueMontreal-Book'
+        marginBottom: 20
     },
     helperText: {
         fontSize: 12,
         opacity: 0.6,
         marginTop: 4,
-        marginBottom: 8,
-        fontStyle: 'italic',
+        marginBottom: 16,
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    button: {
+        alignItems: 'center',
+        paddingTop: 30
     },
     channelInfo: {
         padding: 6,
@@ -714,23 +697,6 @@ const styles = StyleSheet.create({
         right: 8,
         padding: 8,
         zIndex: 1
-    },
-    channelPickerField: {
-        borderWidth: 1,
-        borderRadius: 8,
-        padding: 8,
-        marginBottom: 8
-    },
-    channelPickerPlaceholder: {
-        fontSize: 16,
-        padding: 8,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    selectedChannelItem: {
-        padding: 4
-    },
-    button: {
-        marginTop: 24
     },
     buttonRow: {
         flexDirection: 'row',
@@ -755,16 +721,5 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontFamily: 'monospace',
         marginBottom: 4
-    },
-    centered: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 32
-    },
-    statusText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginTop: 16,
-        fontFamily: 'PPNeueMontreal-Book'
     }
 });
