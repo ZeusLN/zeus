@@ -9,7 +9,7 @@ import {
     Image
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from '@react-native-vector-icons/material-design-icons';
 
 import ModalBox from '../ModalBox';
 
@@ -62,7 +62,9 @@ export default class RatingModal extends React.Component<
         const { ModalStore } = this.props;
         ModalStore?.toggleRatingModal(false);
 
-        this.setState({ rating: 0, viewState: 'initial' });
+        setTimeout(() => {
+            this.setState({ rating: 0, viewState: 'initial' });
+        }, 400);
     };
 
     renderStars = () => {
@@ -73,9 +75,9 @@ export default class RatingModal extends React.Component<
 
             stars.push(
                 <TouchableOpacity key={i} onPress={() => this.handleRating(i)}>
-                    <Ionicons
+                    <MaterialCommunityIcons
                         name={name}
-                        size={26}
+                        size={32}
                         color={color}
                         style={{ marginHorizontal: 10 }}
                     />
@@ -143,10 +145,12 @@ export default class RatingModal extends React.Component<
             <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => {
-                    Linking.openURL(
-                        `mailto:support@zeusln.com?subject=Feedback (Rating: ${this.state.rating} stars)`
-                    );
                     this.handleClose();
+                    setTimeout(() => {
+                        Linking.openURL(
+                            `mailto:support@zeusln.com?subject=Feedback (Rating: ${this.state.rating} stars)`
+                        );
+                    }, 400);
                 }}
             >
                 <Text style={[styles.actionText, styles.bold]}>
@@ -234,6 +238,7 @@ export default class RatingModal extends React.Component<
                 style={styles.modalBox}
                 onClosed={this.handleClose}
                 position="center"
+                entry="center"
                 swipeToClose={false}
                 backButtonClose={false}
                 backdropPressToClose={false}
@@ -253,17 +258,16 @@ export default class RatingModal extends React.Component<
 const styles = StyleSheet.create({
     modalBox: {
         backgroundColor: 'transparent',
-        width: 300,
-        height: undefined,
-        borderRadius: 14,
-        overflow: 'hidden'
+        height: undefined
     },
     container: {
         backgroundColor: 'rgba(255,255,255,0.95)',
         alignItems: 'center',
         paddingTop: 20,
-        width: '100%',
-        borderRadius: 14
+        width: 300,
+        borderRadius: 14,
+        overflow: 'hidden',
+        alignSelf: 'center'
     },
     appIcon: {
         width: 60,
