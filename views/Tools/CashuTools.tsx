@@ -3,7 +3,6 @@ import { Alert, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import cloneDeep from 'lodash/cloneDeep';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -46,7 +45,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
 
     render() {
         const { navigation, CashuStore } = this.props;
-        const { setMintCounter, seedVersion } = CashuStore; // Keep if needed elsewhere, otherwise remove if only used for bump
+        const { seedVersion } = CashuStore;
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -139,76 +138,6 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-
-                        <>
-                            <View style={{ marginTop: 25 }}>
-                                <Button
-                                    title={localeString(
-                                        'views.Tools.cashu.bumpWalletCounters'
-                                    )}
-                                    onPress={async () => {
-                                        let message = '';
-
-                                        // Wait for all async operations to complete
-                                        await Promise.all(
-                                            Object.keys(
-                                                CashuStore.cashuWallets
-                                            ).map(async (key: string) => {
-                                                const wallet =
-                                                    CashuStore.cashuWallets[
-                                                        key
-                                                    ];
-
-                                                const oldCount = cloneDeep(
-                                                    wallet.counter
-                                                );
-                                                const newCount = oldCount + 10;
-
-                                                await setMintCounter(
-                                                    key,
-                                                    newCount
-                                                );
-
-                                                message += `\n${wallet.mintInfo.name}
-${oldCount} -> ${newCount}
-`;
-                                            })
-                                        );
-
-                                        // Show the alert after all messages are populated
-                                        Alert.alert(
-                                            'Wallet counters incremented!',
-                                            message,
-                                            [
-                                                {
-                                                    text: localeString(
-                                                        'general.ok'
-                                                    ),
-                                                    onPress: () => void 0
-                                                }
-                                            ],
-                                            { cancelable: false }
-                                        );
-                                    }}
-                                />
-                            </View>
-                            <View
-                                style={{
-                                    margin: 10,
-                                    marginTop: 15
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Tools.cashu.bumpWalletCounters.subtitle'
-                                    )}
-                                </Text>
-                            </View>
-                        </>
 
                         <View style={{ marginTop: 25 }}>
                             <Button

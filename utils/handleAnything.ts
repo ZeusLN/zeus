@@ -955,9 +955,16 @@ const handleAnything = async (
                 extended_public_key: value
             }
         ];
-    } else if (CashuUtils.isValidCashuToken(value)) {
-        const tokenObj = CashuUtils.decodeCashuToken(value);
-        const decoded = new CashuToken(tokenObj);
+    } else if (await CashuUtils.isValidCashuTokenAsync(value)) {
+        const cdkToken = await CashuUtils.decodeCashuTokenAsync(value);
+        const decoded = new CashuToken({
+            memo: cdkToken.memo || '',
+            mint: cdkToken.mint_url,
+            unit: cdkToken.unit || 'sat',
+            value: cdkToken.value,
+            encodedToken: cdkToken.encoded,
+            proofs: cdkToken.proofs || []
+        });
         return [
             'CashuToken',
             {

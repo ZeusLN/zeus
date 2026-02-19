@@ -52,16 +52,16 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
 
     handleFocus = () => {
         const { CashuStore } = this.props;
-        const { cashuWallets, mintUrls } = CashuStore;
+        const { cashuWallets, mintUrls, mintInfos, mintBalances } = CashuStore;
         let mints: any = [];
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
-            const mintInfo = wallet.mintInfo;
+            const mintInfo = mintInfos[mintUrl];
             mints.push({
                 ...mintInfo,
                 mintUrl,
-                mintBalance: wallet.balanceSats,
-                errorConnecting: wallet.errorConnecting
+                mintBalance: mintBalances[mintUrl] || 0,
+                errorConnecting: wallet?.errorConnecting
             });
         });
 

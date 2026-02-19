@@ -221,6 +221,14 @@ export default class ReceiveEcash extends React.Component<
         this.setState({ nfcSupported });
     }
 
+    componentWillUnmount() {
+        const { CashuStore } = this.props;
+        CashuStore.clearInvoice();
+        CashuStore.creatingInvoiceError = false;
+        CashuStore.error_msg = undefined;
+        this.clearIntervals();
+    }
+
     clearIntervals = () => {
         if (this.lnInterval) clearInterval(this.lnInterval);
     };
@@ -375,12 +383,12 @@ export default class ReceiveEcash extends React.Component<
                             });
                         this.clearIntervals();
                     } else {
-                        console.log(
-                            'invoice not paid last time checked, checking...',
-                            {
-                                quoteId
-                            }
-                        );
+                        if (__DEV__) {
+                            console.log(
+                                'invoice not paid last time checked, checking...',
+                                { quoteId }
+                            );
+                        }
                     }
                 }
             );

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Dimensions,
     Platform,
     ScrollView,
     StyleSheet,
@@ -21,6 +22,7 @@ import SwipeButton from '../../components/SwipeButton';
 import Conversion from '../../components/Conversion';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
+import LightningLoadingPattern from '../../components/LightningLoadingPattern';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
@@ -77,6 +79,7 @@ interface CashuPaymentRequestState {
     donationAmount: any;
     selectedIndex: number | null;
     swipeButtonKey: number;
+    sendingPayment: boolean;
 }
 
 @inject(
@@ -105,7 +108,8 @@ export default class CashuPaymentRequest extends React.Component<
         donationPercentage: 0,
         donationAmount: 0,
         selectedIndex: null,
-        swipeButtonKey: 0
+        swipeButtonKey: 0,
+        sendingPayment: false
     };
 
     async componentDidMount() {
@@ -144,11 +148,12 @@ export default class CashuPaymentRequest extends React.Component<
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
 
-        // Reset slide to pay slider position when screen comes into focus
+        // Reset state when screen comes into focus (e.g., after navigating back)
         this.focusListener = this.props.navigation.addListener('focus', () => {
             getPayReq(paymentRequest!!);
             this.setState({
-                swipeButtonKey: this.state.swipeButtonKey + 1
+                swipeButtonKey: this.state.swipeButtonKey + 1,
+                sendingPayment: false
             });
         });
     }
@@ -168,23 +173,23 @@ export default class CashuPaymentRequest extends React.Component<
     sendPayment = ({
         amount // used only for no-amount invoices
     }: SendPaymentReq) => {
-        const { CashuStore, SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
 
         const enableDonations =
             Platform.OS !== 'ios' && settings?.payments?.enableDonations;
         const { donationAmount } = this.state;
 
-        CashuStore.payLnInvoiceFromEcash({
-            amount: amount ? amount : undefined
-        });
-
-        navigation.navigate('CashuSendingLightning', {
-            enableDonations,
-            ...(enableDonations &&
-                donationAmount > 0 && {
-                    donationAmount: donationAmount.toString()
-                })
+        // Show loading overlay immediately, then navigate
+        this.setState({ sendingPayment: true }, () => {
+            navigation.navigate('CashuSendingLightning', {
+                enableDonations,
+                ...(enableDonations &&
+                    donationAmount > 0 && {
+                        donationAmount: donationAmount.toString()
+                    }),
+                paymentAmount: amount ? amount : undefined
+            });
         });
     };
 
@@ -213,8 +218,38 @@ export default class CashuPaymentRequest extends React.Component<
             slideToPayThreshold,
             donationsToggle,
             donationAmount,
-            donationPercentage
+            donationPercentage,
+            sendingPayment
         } = this.state;
+
+        // Show full-screen loading animation when sending payment
+        if (sendingPayment) {
+            const windowSize = Dimensions.get('window');
+            return (
+                <Screen>
+                    <View
+                        style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <LightningLoadingPattern />
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                paddingBottom: windowSize.height / 10,
+                                fontSize:
+                                    windowSize.width * windowSize.scale * 0.014
+                            }}
+                        >
+                            {localeString('views.SendingLightning.sending')}
+                        </Text>
+                    </View>
+                </Screen>
+            );
+        }
         const {
             payReq,
             paymentRequest,

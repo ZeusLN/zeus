@@ -1,6 +1,8 @@
 import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Platform } from 'react-native';
 import Storage from '../storage';
 
 import {
@@ -159,9 +161,43 @@ async function clearKey(key: string) {
 }
 
 /**
+ * Deletes the CDK SQLite database file
+ * CDK stores all wallet state (mints, proofs, transactions) in this file
+ */
+async function clearCDKDatabase(): Promise<void> {
+    try {
+        const dirs = ReactNativeBlobUtil.fs.dirs;
+        let dbPath: string;
+
+        if (Platform.OS === 'ios') {
+            // iOS: Application Support directory
+            dbPath = `${dirs.LibraryDir}/Application Support/cashu_wallet.db`;
+        } else {
+            // Android: files directory
+            dbPath = `${dirs.DocumentDir}/../files/cashu_wallet.db`;
+        }
+
+        const exists = await ReactNativeBlobUtil.fs.exists(dbPath);
+        if (exists) {
+            await ReactNativeBlobUtil.fs.unlink(dbPath);
+            if (__DEV__) {
+                console.log('[ClearData] CDK database deleted:', dbPath);
+            }
+        } else {
+            if (__DEV__) {
+                console.log('[ClearData] CDK database not found at:', dbPath);
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error deleting CDK database:', e);
+    }
+}
+
+/**
  * Clears Cashu data for a specific node directory
  */
 async function clearCashuDataForNode(lndDir: string) {
+    // Clear app-level Cashu storage keys
     const cashuKeys = [
         `${lndDir}-cashu-mintUrls`,
         `${lndDir}-cashu-selectedMintUrl`,
@@ -179,7 +215,9 @@ async function clearCashuDataForNode(lndDir: string) {
         await clearKey(key);
     }
 
-    // Try to clear per-mint wallet keys
+    // Try to clear per-mint wallet keys (legacy storage)
+    // Note: After CDK migration, mintUrls are stored in CDK database, not local storage
+    // These keys may still exist from before migration
     try {
         const mintUrlsJson = await Storage.getItem(`${lndDir}-cashu-mintUrls`);
         if (mintUrlsJson) {
@@ -216,6 +254,7 @@ async function clearCashuDataForNode(lndDir: string) {
  * - AsyncStorage
  * - EncryptedStorage
  * - Dynamic keys (notes, Cashu, LNC)
+ * - CDK SQLite database (Cashu wallet state)
  *
  * After clearing, the app should be restarted.
  */
@@ -237,9 +276,11 @@ export async function clearAllData(): Promise<void> {
     if (settings?.nodes && Array.isArray(settings.nodes)) {
         for (const node of settings.nodes) {
             if (node.lndDir) {
-                console.log(
-                    `[ClearData] Clearing Cashu data for node: ${node.lndDir}`
-                );
+                if (__DEV__) {
+                    console.log(
+                        `[ClearData] Clearing Cashu data for node: ${node.lndDir}`
+                    );
+                }
                 await clearCashuDataForNode(node.lndDir);
             }
         }
@@ -247,6 +288,9 @@ export async function clearAllData(): Promise<void> {
     // Also try common lndDir values
     await clearCashuDataForNode('lnd');
     await clearCashuDataForNode('');
+
+    // 2b. Clear CDK SQLite database (contains mints, proofs, transactions)
+    await clearCDKDatabase();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');

@@ -55,8 +55,8 @@ export default function CashuPayment(props: any) {
                                 : themeColor('secondaryText')
                         }}
                     >
-                        {cashuStore.cashuWallets[item.mint_url]?.mintInfo
-                            ?.name || item.mint_url}
+                        {cashuStore.mintInfos[item.mint_url]?.name ||
+                            item.mint_url}
                     </Text>
                 </ListItem.Subtitle>
                 <ListItem.Subtitle>

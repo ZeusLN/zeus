@@ -2,6 +2,10 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+// NOTE: cashu-ts is intentionally used here for legacy seed recovery
+// Legacy recovery uses a different seed derivation (bytes 32-64 from LND seed)
+// and requires cashu-ts's batch restore with start/count parameters.
+// CDK's restore method uses a different approach and won't recover legacy proofs.
 import {
     CashuMint,
     CashuWallet,
@@ -146,9 +150,11 @@ export default class LegacySeedRecovery extends React.Component<
                             );
                             proofs = result.proofs || [];
                         } catch (error: any) {
-                            console.log(
-                                `Error restoring batch: ${error.message}`
-                            );
+                            if (__DEV__) {
+                                console.log(
+                                    `Error restoring batch: ${error.message}`
+                                );
+                            }
                             proofs = [];
                         }
 
@@ -184,7 +190,9 @@ export default class LegacySeedRecovery extends React.Component<
                         allProofs.push(...unspentProofs);
                     }
                 } catch (err: any) {
-                    console.log(`Error checking keyset: ${err.message}`);
+                    if (__DEV__) {
+                        console.log(`Error checking keyset: ${err.message}`);
+                    }
                 }
             }
 
