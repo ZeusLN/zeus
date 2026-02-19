@@ -144,7 +144,11 @@ export default class SetPassphrase extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Settings.SetPassword.title'),
+                        text: localeString(
+                            savedPassphrase
+                                ? 'views.Settings.ChangePassword.title'
+                                : 'views.Settings.SetPassword.title'
+                        ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
