@@ -88,6 +88,10 @@ export default class PosKeypadPane extends React.PureComponent<
 
     deleteValue = () => {
         const { amount } = this.state;
+        if (amount === '0') {
+            this.startShake();
+            return;
+        }
         this.setState({
             amount: deleteLastCharacter(amount)
         });

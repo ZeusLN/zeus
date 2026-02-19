@@ -20,6 +20,7 @@ interface ConversionProps {
     sats?: string | number;
     satsPending?: string | number;
     colorOverride?: string;
+    forceUnit?: string;
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
@@ -55,10 +56,11 @@ export default class Conversion extends React.Component<
             UnitsStore,
             SettingsStore,
             colorOverride,
+            forceUnit,
             sensitive
         } = this.props;
         const { showRate } = this.state;
-        const { units } = UnitsStore!;
+        const units = forceUnit || UnitsStore!.units;
         const { settings } = SettingsStore!;
         const { fiatEnabled } = settings;
 
@@ -70,7 +72,7 @@ export default class Conversion extends React.Component<
         } else {
             satAmount = Number.isNaN(Number(amount))
                 ? 0
-                : getSatAmount(amount ?? 0);
+                : getSatAmount(amount ?? 0, forceUnit);
         }
 
         if (!fiatEnabled || (!amount && !sats)) return;
@@ -98,9 +100,7 @@ export default class Conversion extends React.Component<
                                     colorOverride || themeColor('secondaryText')
                             }}
                         >
-                            {` | ${getRate(
-                                this.props.UnitsStore?.units === 'sats'
-                            )}`}
+                            {` | ${getRate(units === 'sats')}`}
                         </Text>
                     </>
                 )}
@@ -145,9 +145,7 @@ export default class Conversion extends React.Component<
                                     colorOverride || themeColor('secondaryText')
                             }}
                         >
-                            {` | ${getRate(
-                                this.props.UnitsStore?.units === 'sats'
-                            )}`}
+                            {` | ${getRate(units === 'sats')}`}
                         </Text>
                     </>
                 )}

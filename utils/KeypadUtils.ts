@@ -69,6 +69,19 @@ export const validateKeypadInput = (
         }
     }
 
+    // For sats: deny if trying to add more than 12 figures before decimal
+    if (units === 'sats') {
+        if (
+            !decimalPart &&
+            integerPart &&
+            integerPart.length >= 12 &&
+            !currentAmount.includes('.') &&
+            inputValue !== '.'
+        ) {
+            return { valid: false, newAmount: currentAmount };
+        }
+    }
+
     // For fiat: deny if trying to add more than 10 figures before decimal
     if (units === 'fiat') {
         if (
@@ -104,7 +117,7 @@ export const validateKeypadInput = (
     // Determine new amount
     let newAmount: string;
     if (currentAmount === '0') {
-        newAmount = inputValue;
+        newAmount = inputValue === '.' ? '0.' : inputValue;
     } else {
         newAmount = proposedNewAmountStr;
     }

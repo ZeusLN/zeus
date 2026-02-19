@@ -246,6 +246,7 @@ import Chantools from './views/Settings/EmbeddedNode/Chantools';
 import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
 
 import RawTxHex from './views/RawTxHex';
+import AmountKeypad from './views/AmountKeypad';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 
@@ -871,6 +872,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="QR" // @ts-ignore:next-line
                                                         component={QR}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AmountKeypad" // @ts-ignore:next-line
+                                                        component={AmountKeypad}
                                                     />
                                                     <Stack.Screen
                                                         name="AddNotes" // @ts-ignore:next-line

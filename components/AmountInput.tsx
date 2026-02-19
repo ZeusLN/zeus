@@ -4,21 +4,23 @@ import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 
 import Amount from './Amount';
-import TextInput from './TextInput';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { getSatAmount } from '../utils/AmountUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import {
+    SATS_PER_BTC,
+    formatBitcoinWithSpaces,
+    numberWithCommas
+} from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
-import Feather from '@react-native-vector-icons/feather';
 
 import NavigationService from '../NavigationService';
 
@@ -42,14 +44,14 @@ interface AmountInputState {
     satAmount: string | number;
 }
 
-const getAmount = (sats: string | number) => {
+const getAmount = (sats: string | number, forceUnit?: string) => {
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
     const { fiat } = settings;
-    const { units } = unitsStore;
+    const units = forceUnit || unitsStore.units;
 
     // replace , with . for unit separator
-    const value = sats ? sats.toString().replace(/,/g, ',') : '';
+    const value = sats ? sats.toString().replace(/,/g, '.') : '';
 
     const fiatEntry =
         fiat && fiatRates
@@ -67,12 +69,14 @@ const getAmount = (sats: string | number) => {
             amount = new BigNumber(value || 0).div(SATS_PER_BTC).toString();
             break;
         case 'fiat':
+            const { decimalPlaces } = fiatStore.getSymbol();
+            const decimals = decimalPlaces !== undefined ? decimalPlaces : 2;
             amount = rate
                 ? new BigNumber(value.toString().replace(/,/g, '.'))
                       .times(rate)
                       .div(SATS_PER_BTC)
                       .toNumber()
-                      .toFixed(0)
+                      .toFixed(decimals)
                 : '0';
             break;
     }
@@ -128,12 +132,47 @@ export default class AmountInput extends React.Component<
         this.setState({ satAmount });
     };
 
+    getDisplayValue = (): string => {
+        const { amount, sats, forceUnit } = this.props;
+        return amount !== undefined
+            ? amount
+            : sats
+            ? getAmount(sats, forceUnit)
+            : '0';
+    };
+
+    openKeypad = () => {
+        if (!this.props.locked) {
+            const { hideUnitChangeButton } = this.props;
+            let displayValue = this.getDisplayValue();
+
+            // Strip trailing zeros after decimal point so the keypad
+            // doesn't think decimal places are already filled
+            // e.g. "0.00" → "0", "50.20" → "50.2", "50.25" → "50.25"
+            if (displayValue.includes('.')) {
+                displayValue = displayValue
+                    .replace(/0+$/, '')
+                    .replace(/\.$/, '');
+            }
+
+            // Navigate to keypad view with callback
+            NavigationService.navigate('AmountKeypad', {
+                initialAmount: displayValue || '0',
+                hideUnitChangeButton,
+                forceUnit: this.props.forceUnit,
+                onConfirm: (newAmount: string) => {
+                    const { onAmountChange, forceUnit } = this.props;
+                    const satAmount = getSatAmount(newAmount, forceUnit);
+                    onAmountChange(newAmount, satAmount);
+                    this.setState({ satAmount });
+                }
+            });
+        }
+    };
+
     render() {
         const { satAmount } = this.state;
         const {
-            amount,
-            sats,
-            onAmountChange,
             title,
             locked,
             hideConversion,
@@ -147,119 +186,74 @@ export default class AmountInput extends React.Component<
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
-        const { getRate, getSymbol }: any = FiatStore;
+        const { getRate }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
-        const fiat = settings.fiat;
-        const flag: string | undefined = CURRENCY_KEYS.find(
-            (c) => c.value === fiat
-        )?.flag;
+        const displayValue = this.getDisplayValue();
+
+        let formattedAmount: string;
+        if (effectiveUnits === 'BTC') {
+            formattedAmount = `₿${formatBitcoinWithSpaces(
+                displayValue || '0'
+            )}`;
+        } else if (effectiveUnits === 'fiat') {
+            formattedAmount = FiatStore!.formatAmountForDisplay(
+                displayValue || '0'
+            );
+        } else {
+            const isSingular = parseFloat(displayValue) === 1;
+            formattedAmount = `${numberWithCommas(displayValue || '0')} ${
+                isSingular ? 'sat' : 'sats'
+            }`;
+        }
 
         return (
             <React.Fragment>
                 {title && (
-                    <View
+                    <Text
                         style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            marginBottom: 5,
-                            height: 24
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: themeColor('secondaryText'),
+                            fontSize: 14,
+                            marginBottom: 5
                         }}
                     >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('secondaryText'),
-                                fontSize: 14
-                            }}
-                        >
-                            {title}
-                        </Text>
-                        {fiatEnabled && effectiveUnits === 'fiat' && (
-                            <TouchableOpacity
-                                onPress={() => {
-                                    NavigationService.navigate(
-                                        'SelectCurrency'
-                                    );
-                                }}
-                                activeOpacity={0.5}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    height: 28,
-                                    paddingHorizontal: 10,
-                                    borderRadius: 16,
-                                    backgroundColor: themeColor('secondary'),
-                                    borderWidth: 1,
-                                    borderColor: themeColor('highlight')
-                                }}
-                            >
-                                <Row style={styles.row}>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            marginRight: 4
-                                        }}
-                                    >
-                                        {`${flag ? `${flag} ` : ''}${fiat}`}
-                                    </Text>
-                                    <Feather
-                                        name="chevron-right"
-                                        size={12}
-                                        color={themeColor('text')}
-                                    />
-                                </Row>
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                        {title}
+                    </Text>
                 )}
                 <Row>
                     {prefix ? prefix : undefined}
-                    <TextInput
-                        keyboardType="numeric"
-                        placeholder={'0'}
-                        value={
-                            amount !== undefined
-                                ? amount
-                                : sats
-                                ? getAmount(sats)
-                                : undefined
-                        }
-                        onChangeText={(text: string) => {
-                            // remove spaces and non-numeric chars
-                            const formatted = text.replace(/[^\d.,-]/g, '');
-                            const satAmount = getSatAmount(
-                                formatted,
-                                forceUnit
-                            );
-                            onAmountChange(formatted, satAmount);
-                            this.setState({ satAmount });
-                        }}
-                        locked={locked}
-                        prefix={
-                            effectiveUnits !== 'sats' &&
-                            (effectiveUnits === 'BTC'
-                                ? '₿'
-                                : !getSymbol().rtl
-                                ? getSymbol().symbol
-                                : null)
-                        }
-                        suffix={
-                            effectiveUnits === 'sats'
-                                ? effectiveUnits
-                                : getSymbol().rtl &&
-                                  effectiveUnits === 'fiat' &&
-                                  getSymbol().symbol
-                        }
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row'
-                        }}
-                        error={error}
-                    />
+                    <TouchableOpacity
+                        onPress={this.openKeypad}
+                        disabled={locked}
+                        activeOpacity={0.7}
+                        style={[
+                            styles.amountDisplay,
+                            {
+                                backgroundColor: themeColor('secondary'),
+                                borderWidth: error ? 1 : 0,
+                                borderColor: error
+                                    ? themeColor('error')
+                                    : undefined,
+                                opacity: locked ? 0.8 : 1
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles.amountText,
+                                {
+                                    color:
+                                        displayValue === '0' ||
+                                        displayValue === ''
+                                            ? themeColor('secondaryText')
+                                            : themeColor('text')
+                                }
+                            ]}
+                        >
+                            {formattedAmount}
+                        </Text>
+                    </TouchableOpacity>
                     {!hideUnitChangeButton && !locked && (
                         <TouchableOpacity
                             onPress={() => this.onChangeUnits()}
@@ -312,8 +306,20 @@ export default class AmountInput extends React.Component<
 export { getSatAmount };
 
 const styles = StyleSheet.create({
-    row: {
+    amountDisplay: {
+        flex: 1,
         flexDirection: 'row',
-        alignItems: 'center'
+        alignItems: 'center',
+        height: 60,
+        top: 10,
+        borderRadius: 6,
+        marginBottom: 20,
+        paddingLeft: 10,
+        paddingRight: 10,
+        overflow: 'hidden'
+    },
+    amountText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 20
     }
 });

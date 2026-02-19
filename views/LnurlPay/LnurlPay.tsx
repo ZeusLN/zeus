@@ -101,11 +101,24 @@ export default class LnurlPay extends React.Component<
     }
 
     // ensure the state is reset to show correct units
-    // for when users navs back
+    // for when users navs back, while preserving user-entered amounts
     resetState = () => {
-        this.setState({
-            ...this.stateFromProps(this.props)
-        });
+        const { satAmount } = this.state;
+        const fresh = this.stateFromProps(this.props);
+        // If the user has entered an amount, recalculate display from
+        // their satAmount rather than resetting to route params
+        if (satAmount && satAmount != 0) {
+            const { amount: displayAmount } = getUnformattedAmount({
+                sats: satAmount
+            });
+            this.setState({
+                ...fresh,
+                amount: displayAmount,
+                satAmount
+            });
+        } else {
+            this.setState(fresh);
+        }
     };
 
     componentDidMount() {

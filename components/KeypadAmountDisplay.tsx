@@ -4,13 +4,15 @@ import { inject, observer } from 'mobx-react';
 
 import Conversion from './Conversion';
 
+import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
 import {
     getDecimalPlaceholder,
     formatBitcoinWithSpaces,
-    numberWithCommas
+    numberWithCommas,
+    numberWithDecimals
 } from '../utils/UnitsUtils';
 
 interface KeypadAmountDisplayProps {
@@ -23,11 +25,13 @@ interface KeypadAmountDisplayProps {
     lineHeight?: number;
     containerStyle?: ViewStyle;
     childrenBeforeConversion?: boolean;
+    forceUnit?: string;
+    FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     children?: React.ReactNode;
 }
 
-@inject('UnitsStore')
+@inject('FiatStore', 'UnitsStore')
 @observer
 export default class KeypadAmountDisplay extends React.Component<KeypadAmountDisplayProps> {
     render() {
@@ -41,10 +45,21 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             lineHeight = 80,
             containerStyle,
             childrenBeforeConversion = false,
+            forceUnit,
+            FiatStore,
             UnitsStore,
             children
         } = this.props;
-        const { units } = UnitsStore!;
+        const units = forceUnit || UnitsStore!.units;
+        const { symbol, space, rtl, separatorSwap } =
+            units === 'fiat'
+                ? FiatStore!.getSymbol()
+                : {
+                      symbol: '',
+                      space: false,
+                      rtl: false,
+                      separatorSwap: false
+                  };
 
         const color = textAnimation.interpolate({
             inputRange: [0, 1],
@@ -52,6 +67,29 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
         });
 
         const decimalPlaceholder = getDecimalPlaceholder(amount, units);
+
+        const formattedNumber =
+            units === 'BTC'
+                ? formatBitcoinWithSpaces(amount)
+                : separatorSwap
+                ? numberWithDecimals(amount)
+                : numberWithCommas(amount);
+
+        const isSingularSat = units === 'sats' && parseFloat(amount) === 1;
+
+        let prefix = '';
+        let suffix = '';
+        if (units === 'BTC') {
+            prefix = '₿';
+        } else if (units === 'sats') {
+            suffix = ` ${isSingularSat ? 'sat' : 'sats'}`;
+        } else if (units === 'fiat') {
+            if (rtl) {
+                suffix = `${space ? ' ' : ''}${symbol}`;
+            } else {
+                prefix = `${symbol}${space ? ' ' : ''}`;
+            }
+        }
 
         const conversionElement = showConversion && (
             <View
@@ -61,52 +99,65 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                     ...(conversionTop !== undefined && { top: conversionTop })
                 }}
             >
-                <Conversion amount={amount} />
+                <Conversion amount={amount} forceUnit={forceUnit} />
             </View>
         );
 
         return (
-            <Animated.View
+            <View
                 style={[
                     {
                         flex: 1,
                         flexDirection: 'column',
                         justifyContent: 'center',
                         zIndex: 10,
-                        transform: [{ translateX: shakeAnimation }],
                         height: 50
                     },
                     containerStyle
                 ]}
             >
-                <Animated.Text
+                <Animated.View
                     style={{
-                        color:
-                            amount === '0'
-                                ? themeColor('secondaryText')
-                                : color,
-                        fontSize,
-                        textAlign: 'center',
-                        fontFamily: 'PPNeueMontreal-Medium',
-                        lineHeight
+                        transform: [{ translateX: shakeAnimation }]
                     }}
                 >
-                    {units === 'BTC'
-                        ? formatBitcoinWithSpaces(amount)
-                        : numberWithCommas(amount)}
-                    <Text
+                    <Animated.Text
                         style={{
-                            color: themeColor('secondaryText')
+                            color:
+                                amount === '0'
+                                    ? themeColor('secondaryText')
+                                    : color,
+                            fontSize,
+                            textAlign: 'center',
+                            fontFamily: 'PPNeueMontreal-Medium',
+                            lineHeight
                         }}
                     >
-                        {decimalPlaceholder.string}
-                    </Text>
-                </Animated.Text>
+                        {prefix}
+                        {formattedNumber}
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {decimalPlaceholder.string}
+                        </Text>
+                        {suffix ? (
+                            <Text
+                                style={{
+                                    fontSize: fontSize * 0.2
+                                }}
+                            >
+                                {suffix}
+                            </Text>
+                        ) : null}
+                    </Animated.Text>
+                </Animated.View>
 
                 {childrenBeforeConversion && children}
                 {conversionElement}
                 {!childrenBeforeConversion && children}
-            </Animated.View>
+            </View>
         );
     }
 }
