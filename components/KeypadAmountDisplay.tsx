@@ -25,6 +25,7 @@ interface KeypadAmountDisplayProps {
     lineHeight?: number;
     containerStyle?: ViewStyle;
     childrenBeforeConversion?: boolean;
+    forceUnit?: string;
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     children?: React.ReactNode;
@@ -44,11 +45,12 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
             lineHeight = 80,
             containerStyle,
             childrenBeforeConversion = false,
+            forceUnit,
             FiatStore,
             UnitsStore,
             children
         } = this.props;
-        const { units } = UnitsStore!;
+        const units = forceUnit || UnitsStore!.units;
         const { symbol, space, rtl, separatorSwap } =
             units === 'fiat'
                 ? FiatStore!.getSymbol()
@@ -97,7 +99,7 @@ export default class KeypadAmountDisplay extends React.Component<KeypadAmountDis
                     ...(conversionTop !== undefined && { top: conversionTop })
                 }}
             >
-                <Conversion amount={amount} />
+                <Conversion amount={amount} forceUnit={forceUnit} />
             </View>
         );
 

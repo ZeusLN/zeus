@@ -33,6 +33,7 @@ interface AmountKeypadProps {
         {
             initialAmount?: string;
             hideUnitChangeButton?: boolean;
+            forceUnit?: 'sats' | 'BTC' | 'fiat';
             onConfirm?: (amount: string) => void;
         }
     >;
@@ -63,10 +64,15 @@ export default class AmountKeypad extends React.Component<
         };
     }
 
+    getEffectiveUnits = (): string => {
+        const forceUnit = this.props.route.params?.forceUnit;
+        return forceUnit || this.props.UnitsStore!.units;
+    };
+
     appendValue = (value: string): boolean => {
         const { amount } = this.state;
-        const { FiatStore, SettingsStore, UnitsStore } = this.props;
-        const { units } = UnitsStore!;
+        const { FiatStore, SettingsStore } = this.props;
+        const units = this.getEffectiveUnits();
 
         const { valid, newAmount } = validateKeypadInput(
             amount,
@@ -128,7 +134,7 @@ export default class AmountKeypad extends React.Component<
 
     getAmountFontSize = () => {
         const { amount } = this.state;
-        const { units } = this.props.UnitsStore!;
+        const units = this.getEffectiveUnits();
         const { count } = getDecimalPlaceholder(amount, units);
         return getAmountFontSize(amount.length, count);
     };
@@ -137,6 +143,7 @@ export default class AmountKeypad extends React.Component<
         const { navigation, route } = this.props;
         const { amount } = this.state;
         const hideUnitChangeButton = route.params?.hideUnitChangeButton;
+        const forceUnit = route.params?.forceUnit;
 
         const fontSize = this.getAmountFontSize();
 
@@ -161,9 +168,10 @@ export default class AmountKeypad extends React.Component<
                             shakeAnimation={this.shakeAnimation}
                             textAnimation={this.textAnimation}
                             fontSize={fontSize}
+                            forceUnit={forceUnit}
                             showConversion
                         >
-                            {!hideUnitChangeButton && (
+                            {!hideUnitChangeButton && !forceUnit && (
                                 <View style={styles.unitToggleContainer}>
                                     <UnitToggle
                                         onToggle={this.handleUnitToggle}

@@ -44,11 +44,11 @@ interface AmountInputState {
     satAmount: string | number;
 }
 
-const getAmount = (sats: string | number) => {
+const getAmount = (sats: string | number, forceUnit?: string) => {
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
     const { fiat } = settings;
-    const { units } = unitsStore;
+    const units = forceUnit || unitsStore.units;
 
     // replace , with . for unit separator
     const value = sats ? sats.toString().replace(/,/g, '.') : '';
@@ -133,8 +133,12 @@ export default class AmountInput extends React.Component<
     };
 
     getDisplayValue = (): string => {
-        const { amount, sats } = this.props;
-        return amount !== undefined ? amount : sats ? getAmount(sats) : '0';
+        const { amount, sats, forceUnit } = this.props;
+        return amount !== undefined
+            ? amount
+            : sats
+            ? getAmount(sats, forceUnit)
+            : '0';
     };
 
     openKeypad = () => {
@@ -155,6 +159,7 @@ export default class AmountInput extends React.Component<
             NavigationService.navigate('AmountKeypad', {
                 initialAmount: displayValue || '0',
                 hideUnitChangeButton,
+                forceUnit: this.props.forceUnit,
                 onConfirm: (newAmount: string) => {
                     const { onAmountChange, forceUnit } = this.props;
                     const satAmount = getSatAmount(newAmount, forceUnit);
