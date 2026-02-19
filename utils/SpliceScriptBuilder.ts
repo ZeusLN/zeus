@@ -1,8 +1,4 @@
-import {
-    SpliceOutRequest,
-    SpliceInRequest,
-    SpliceRebalanceRequest
-} from '../models/SpliceRequest';
+import { SpliceOutRequest, SpliceInRequest } from '../models/SpliceRequest';
 
 export default class SpliceScriptBuilder {
     static convertFeeRate(satsPerVbyte: number): number {
@@ -10,34 +6,16 @@ export default class SpliceScriptBuilder {
     }
 
     static buildSpliceOut(request: SpliceOutRequest): string {
-        const { channelId, amount, destination, feeRate } = request;
+        const { channelId, amount, feeRate } = request;
         const feeRateOp = feeRate ? `@${this.convertFeeRate(feeRate)}` : '';
-
-        if (destination === 'wallet' || !destination) {
-            return `${channelId} -> ${amount}sat+fee${feeRateOp}`;
-        }
-
-        return `${channelId} -> ${amount}sat+fee${feeRateOp}; ${amount}sat -> ${destination}`;
+        return `${channelId} -> ${amount}sat+fee${feeRateOp}`;
     }
 
     static buildSpliceIn(request: SpliceInRequest): string {
         const { channelId, amount, feeRate } = request;
-        const feeRateOp = feeRate ? `@${this.convertFeeRate(feeRate)}` : '';
-        return `wallet -> ${amount}sat+fee${feeRateOp}; ${amount}sat -> ${channelId}`;
-    }
-
-    static buildRebalance(request: SpliceRebalanceRequest): string {
-        const { fromChannelId, toChannelId, amount, feeRate } = request;
-        const feeRateOp = feeRate ? `@${this.convertFeeRate(feeRate)}` : '';
-        return `${fromChannelId} -> ${amount}sat; 100%${feeRateOp} -> ${toChannelId}`;
-    }
-
-    static buildSpliceOutToWallet(
-        channelId: string,
-        amount: string,
-        feeRate?: number
-    ): string {
-        const feeRateOp = feeRate ? `+fee@${this.convertFeeRate(feeRate)}` : '';
-        return `${channelId} -> ${amount}sat${feeRateOp}`;
+        const feeRateOp = feeRate
+            ? `-fee@${this.convertFeeRate(feeRate)}`
+            : '-fee';
+        return `wallet -> ${amount}sat; ${amount}sat${feeRateOp} -> ${channelId}`;
     }
 }

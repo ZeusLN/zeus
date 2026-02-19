@@ -17,6 +17,7 @@ import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
 import CashuStore from './CashuStore';
 import SwapStore from './SwapStore';
+import SpliceStore from './SpliceStore';
 import NodeInfoStore from './NodeInfoStore';
 
 import BackendUtils from './../utils/BackendUtils';
@@ -131,6 +132,7 @@ export default class ActivityStore {
     transactionsStore: TransactionsStore;
     cashuStore: CashuStore;
     swapStore: SwapStore;
+    spliceStore: SpliceStore;
     nodeInfoStore: NodeInfoStore;
 
     constructor(
@@ -140,6 +142,7 @@ export default class ActivityStore {
         transactionsStore: TransactionsStore,
         cashuStore: CashuStore,
         swapStore: SwapStore,
+        spliceStore: SpliceStore,
         nodeInfoStore: NodeInfoStore
     ) {
         this.settingsStore = settingsStore;
@@ -148,6 +151,7 @@ export default class ActivityStore {
         this.invoicesStore = invoicesStore;
         this.cashuStore = cashuStore;
         this.swapStore = swapStore;
+        this.spliceStore = spliceStore;
         this.nodeInfoStore = nodeInfoStore;
     }
 
@@ -346,11 +350,22 @@ export default class ActivityStore {
         return sortedActivity;
     };
 
+    private updateTransactionsAndSplices = async () => {
+        if (BackendUtils.supportsOnchainSends()) {
+            await this.transactionsStore.getTransactions();
+
+            if (BackendUtils.supportsSplicing()) {
+                this.spliceStore.checkTransactionConfirmations(
+                    this.transactionsStore.transactions
+                );
+            }
+        }
+    };
+
     private getActivity = async () => {
         this.activity = [];
         await this.paymentsStore.getPayments();
-        if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
+        await this.updateTransactionsAndSplices();
         await this.invoicesStore.getInvoices();
 
         await this.swapStore.fetchAndUpdateSwaps();
@@ -371,8 +386,7 @@ export default class ActivityStore {
     };
 
     public updateTransactions = async (locale: string | undefined) => {
-        if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
+        await this.updateTransactionsAndSplices();
         await runInAction(async () => {
             this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);
