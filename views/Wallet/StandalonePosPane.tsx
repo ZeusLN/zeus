@@ -381,54 +381,59 @@ export default class StandalonePosPane extends React.PureComponent<
 
         const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
 
-        const newOrderButton = () => (
+        const newOrderButton = ({ isSelected }: { isSelected: boolean }) => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 0
-                            ? themeColor('background')
-                            : themeColor('text')
+                    fontSize: 16,
+                    fontFamily: isSelected
+                        ? 'PPNeueMontreal-Medium'
+                        : 'PPNeueMontreal-Book',
+                    color: isSelected
+                        ? themeColor('background')
+                        : themeColor('text')
                 }}
             >
                 {localeString('general.new')}
             </Text>
         );
 
-        const openOrdersButton = () => (
+        const openOrdersButton = ({ isSelected }: { isSelected: boolean }) => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 1
-                            ? themeColor('background')
-                            : themeColor('text')
+                    fontSize: 16,
+                    fontFamily: isSelected
+                        ? 'PPNeueMontreal-Medium'
+                        : 'PPNeueMontreal-Book',
+                    color: isSelected
+                        ? themeColor('background')
+                        : themeColor('text')
                 }}
             >
                 {localeString('general.open')}
             </Text>
         );
 
-        const paidOrdersButton = () => (
+        const paidOrdersButton = ({ isSelected }: { isSelected: boolean }) => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 2
-                            ? themeColor('background')
-                            : themeColor('text')
+                    fontSize: 16,
+                    fontFamily: isSelected
+                        ? 'PPNeueMontreal-Medium'
+                        : 'PPNeueMontreal-Book',
+                    color: isSelected
+                        ? themeColor('background')
+                        : themeColor('text')
                 }}
             >
                 {localeString('views.Wallet.Invoices.paid')}
             </Text>
         );
 
-        const buttons = [
+        const buttonElements = [
             { element: newOrderButton },
             { element: openOrdersButton },
             { element: paidOrdersButton }
         ];
-        const buttonElements = buttons.map((btn) => btn.element());
 
         return (
             <Layout

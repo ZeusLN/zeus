@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Animated, View, Text, TouchableOpacity } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import { ButtonGroup, ButtonGroupProps } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -26,7 +26,7 @@ interface LayoutProps {
     title: string;
     loading: boolean;
     selectedIndex: number;
-    buttons: React.JSX.Element[];
+    buttons: ButtonGroupProps['buttons'];
     onIndexChange: (index: number) => void;
     children: React.ReactNode;
     fadeAnimation: any;

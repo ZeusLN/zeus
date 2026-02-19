@@ -91,40 +91,42 @@ export default class SquarePosPane extends React.PureComponent<
             orders.length || 0
         })`;
 
-        const openOrdersButton = () => (
+        const openOrdersButton = ({ isSelected }: { isSelected: boolean }) => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 0
-                            ? themeColor('background')
-                            : themeColor('text')
+                    fontSize: 16,
+                    fontFamily: isSelected
+                        ? 'PPNeueMontreal-Medium'
+                        : 'PPNeueMontreal-Book',
+                    color: isSelected
+                        ? themeColor('background')
+                        : themeColor('text')
                 }}
             >
                 {localeString('general.open')}
             </Text>
         );
 
-        const paidOrdersButton = () => (
+        const paidOrdersButton = ({ isSelected }: { isSelected: boolean }) => (
             <Text
                 style={{
-                    fontFamily: 'PPNeueMontreal-Book',
-                    color:
-                        selectedIndex === 1
-                            ? themeColor('background')
-                            : themeColor('text')
+                    fontSize: 16,
+                    fontFamily: isSelected
+                        ? 'PPNeueMontreal-Medium'
+                        : 'PPNeueMontreal-Book',
+                    color: isSelected
+                        ? themeColor('background')
+                        : themeColor('text')
                 }}
             >
                 {localeString('views.Wallet.Invoices.paid')}
             </Text>
         );
 
-        const buttons = [
+        const buttonElements = [
             { element: openOrdersButton },
             { element: paidOrdersButton }
         ];
-
-        const buttonElements = buttons.map((btn) => btn.element());
 
         return (
             <Layout
