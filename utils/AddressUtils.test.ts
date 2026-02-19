@@ -658,6 +658,80 @@ describe('AddressUtils', () => {
                     )
                 ).toBeTruthy();
             });
+
+            it('validates lightning addresses with Unicode characters and emojis', () => {
+                expect(
+                    AddressUtils.isValidLightningAddress('⚡️@dplus.plus')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('⚡️🚀💎@bitcoin.com')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('José@ejemplo.com')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('müller@bitcoin.de')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('測試@bitcoin.tw')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('тест@bitcoin.ru')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('テスト@bitcoin.jp')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('한글@bitcoin.kr')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'user⚡️test@lightning.network'
+                    )
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'satoshi🚀nakamoto@bitcoin.org'
+                    )
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('user１２３@test.com')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'café⚡️bitcoin@example.com'
+                    )
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('⚡️@example.com')
+                ).toBeTruthy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('⚡️@')
+                ).toBeFalsy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('@dplus.plus')
+                ).toBeFalsy();
+
+                expect(AddressUtils.isValidLightningAddress('⚡️')).toBeFalsy();
+
+                expect(
+                    AddressUtils.isValidLightningAddress('⚡️@test@example.com')
+                ).toBeFalsy();
+            });
         });
 
         describe('processLNDHubAddress', () => {
