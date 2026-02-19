@@ -3684,7 +3684,7 @@ SPEC CHECKSUMS:
   FBLazyVector: 309703e71d3f2f1ed7dc7889d58309c9d77a95a4
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
-  hermes-engine: 14e40426f39aadfaeeec89d8ab620b226bcd8dfa
+  hermes-engine: aa740660080ce1286b515b8a16416de0aa21591a
   lottie-ios: a881093fab623c467d3bce374367755c272bdd59
   lottie-react-native: 86fa7488b1476563f41071244aa73d5b738faf19
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
@@ -3741,7 +3741,7 @@ SPEC CHECKSUMS:
   react-native-slider: 3492743c54a83913920aa81bb949de57a915125c
   react-native-tcp-socket: 61379457d7e702e83e28c213b6e085ac079e480f
   react-native-tor: dc46832ab810a21fb8954afa20b5aeb740ef93f5
-  react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
+  react-native-udp: 7e484efc89db2214f7501ac946781d3205b2c6a0
   react-native-vector-icons-feather: b0c81b5240bc89ba1546220b694fc5f7b660258d
   react-native-vector-icons-fontawesome: 9b1827fc73ef619ce268bd6f0871f5a82233121f
   react-native-vector-icons-material-design-icons: 76cd460b3540b80527b4a80fb7f867f7deedb498
