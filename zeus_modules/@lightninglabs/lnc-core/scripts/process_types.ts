@@ -129,9 +129,16 @@ schemaFiles.forEach((file) => {
     if (!services[pkgName]) services[pkgName] = {};
     services[pkgName][serviceDef.name] = serviceDef.fullName;
 
-    // add the package file to the pkgFiles object
+    // add the package file to the pkgFiles object if it doesn't exist already.
+    // ex: lightning.proto is imported by both lnd and tapd. We only want to include
+    // it once in the lightning.ts file
     if (!pkgFiles[pkgName]) pkgFiles[pkgName] = [];
-    pkgFiles[pkgName].push(file.replace(schemaDir, ''));
+    const existing = pkgFiles[pkgName].find(
+        (f) => path.basename(f) === path.basename(file)
+    );
+    if (!existing) {
+        pkgFiles[pkgName].push(file.replace(schemaDir, ''));
+    }
 
     // extract subscription methods into the array
     Object.values(serviceDef.methods).forEach((m: any) => {

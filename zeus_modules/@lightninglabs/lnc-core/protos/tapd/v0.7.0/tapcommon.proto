@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package taprpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc";
+
+// Represents a Bitcoin transaction outpoint.
+message OutPoint {
+    /*
+    Raw bytes representing the transaction id.
+    */
+    bytes txid = 1;
+
+    /*
+    The index of the output on the transaction.
+    */
+    uint32 output_index = 2;
+}
+
+// A transaction outpoint annotated with TAP-level asset metadata. It uniquely
+// identifies an asset anchored at a specific outpoint.
+message AssetOutPoint {
+    // The outpoint of the asset anchor, represented as a string in the
+    // format "<txid>:<vout>". The <txid> is the transaction ID of the UTXO,
+    // hex-encoded and byte-reversed (i.e., the internal little-endian
+    // 32-byte value is reversed to big-endian hex format) to match standard
+    // Bitcoin RPC and UI conventions.
+    string anchor_out_point = 1;
+
+    // The asset ID of the asset anchored at the outpoint.
+    bytes asset_id = 2;
+
+    // The script key of the asset. This is the taproot output key that the
+    // asset is locked to.
+    bytes script_key = 3;
+}

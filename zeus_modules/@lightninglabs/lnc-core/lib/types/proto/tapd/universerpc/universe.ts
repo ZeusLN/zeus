@@ -1,5 +1,12 @@
 /* eslint-disable */
-import type { AssetType, Asset } from '../taprootassets';
+import type {
+    AssetType,
+    Asset,
+    AssetMeta,
+    GenesisReveal,
+    GroupKeyReveal
+} from '../taprootassets';
+import type { AssetOutPoint, OutPoint } from '../tapcommon';
 
 export enum ProofType {
     PROOF_TYPE_UNSPECIFIED = 'PROOF_TYPE_UNSPECIFIED',
@@ -105,6 +112,7 @@ export interface ID {
 }
 
 export interface UniverseRoot {
+    /** The ID of the asset universe root. */
     id: ID | undefined;
     /**
      * The merkle sum sparse merkle tree root associated with the above
@@ -237,6 +245,26 @@ export interface AssetProofResponse {
      * multiverse.
      */
     multiverseInclusionProof: Uint8Array | string;
+    /**
+     * The issuance related data for an issuance asset leaf. This is empty for
+     * any other type of asset leaf.
+     */
+    issuanceData: IssuanceData | undefined;
+}
+
+export interface IssuanceData {
+    /** The reveal meta data associated with the proof, if available. */
+    metaReveal: AssetMeta | undefined;
+    /**
+     * GenesisReveal is an optional field that is the Genesis information for
+     * the asset. This is required for minting proofs.
+     */
+    genesisReveal: GenesisReveal | undefined;
+    /**
+     * GroupKeyReveal is an optional field that includes the information needed
+     * to derive the tweaked group key.
+     */
+    groupKeyReveal: GroupKeyReveal | undefined;
 }
 
 export interface AssetProof {
@@ -270,6 +298,7 @@ export interface InfoResponse {
 }
 
 export interface SyncTarget {
+    /** The ID of the asset to sync. */
     id: ID | undefined;
 }
 
@@ -305,23 +334,37 @@ export interface SyncResponse {
 }
 
 export interface UniverseFederationServer {
+    /**
+     * The host of the federation server, which is used to connect to the
+     * server to push proofs and sync new proofs.
+     */
     host: string;
+    /**
+     * The numeric ID of the federation server. This is used to identify
+     * existing servers when adding or deleting them from the federation.
+     */
     id: number;
 }
 
 export interface ListFederationServersRequest {}
 
 export interface ListFederationServersResponse {
+    /**
+     * The list of federation servers that make up the local Universe
+     * federation.
+     */
     servers: UniverseFederationServer[];
 }
 
 export interface AddFederationServerRequest {
+    /** The federation server to add to the local Universe federation. */
     servers: UniverseFederationServer[];
 }
 
 export interface AddFederationServerResponse {}
 
 export interface DeleteFederationServerRequest {
+    /** The federation server to delete from the local Universe federation. */
     servers: UniverseFederationServer[];
 }
 
@@ -335,12 +378,31 @@ export interface StatsResponse {
 }
 
 export interface AssetStatsQuery {
+    /** The asset name filter. If this is empty, then all assets are returned. */
     assetNameFilter: string;
+    /** The asset ID filter. If this is empty, then all assets are returned. */
     assetIdFilter: Uint8Array | string;
+    /**
+     * The asset type filter. If this is set to FILTER_ASSET_NONE, then all
+     * assets are returned. If set to FILTER_ASSET_NORMAL, then only normal
+     * assets are returned. If set to FILTER_ASSET_COLLECTIBLE, then only
+     * collectible assets are returned.
+     */
     assetTypeFilter: AssetTypeFilter;
+    /**
+     * The sort order for the query. If this is set to SORT_BY_NONE, then the
+     * results are not sorted.
+     */
     sortBy: AssetQuerySort;
+    /** The offset for the page. This is used for pagination. */
     offset: number;
+    /** The length limit for the page. This is used for pagination. */
     limit: number;
+    /**
+     * The direction of the sort. If this is set to SORT_DIRECTION_ASC, then
+     * the results are sorted in ascending order. If set to
+     * SORT_DIRECTION_DESC, then the results are sorted in descending order.
+     */
     direction: SortDirection;
 }
 
@@ -378,38 +440,78 @@ export interface AssetStatsSnapshot {
 }
 
 export interface AssetStatsAsset {
+    /** The ID of the asset. */
     assetId: Uint8Array | string;
+    /**
+     * The asset's genesis point, which is the outpoint of the genesis
+     * transaction that created the asset. This is a hex encoded string.
+     */
     genesisPoint: string;
+    /**
+     * The total supply of the asset. This is the total number of units of the
+     * asset that have been issued.
+     */
     totalSupply: string;
+    /** The human-readable name of the asset. */
     assetName: string;
+    /**
+     * The type of the asset. This can be either a normal asset or a collectible
+     * asset.
+     */
     assetType: AssetType;
+    /** The height of the block at which the asset was created. */
     genesisHeight: number;
+    /**
+     * The timestamp of the block at which the asset was created, in Unix epoch
+     * time (seconds).
+     */
     genesisTimestamp: string;
+    /**
+     * The anchor point of the asset, which is a human-readable string that
+     * represents the asset's anchor point in the blockchain.
+     */
     anchorPoint: string;
+    /**
+     * The decimal display value for the asset. This is the number of decimal
+     * places that the asset can be divided into.
+     */
+    decimalDisplay: number;
 }
 
 export interface UniverseAssetStats {
+    /** The asset statistics snapshot for the queried assets. */
     assetStats: AssetStatsSnapshot[];
 }
 
 export interface QueryEventsRequest {
+    /** The start timestamp for the query, in Unix epoch time (seconds). */
     startTimestamp: string;
+    /** The end timestamp for the query, in Unix epoch time (seconds). */
     endTimestamp: string;
 }
 
 export interface QueryEventsResponse {
+    /**
+     * The list of grouped universe events that occurred within the specified
+     * time range. Each entry in the list represents a day, with the number of
+     * sync and new proof events that occurred on that day.
+     */
     events: GroupedUniverseEvents[];
 }
 
 export interface GroupedUniverseEvents {
     /** The date the events occurred on, formatted as YYYY-MM-DD. */
     date: string;
+    /** The number of sync events that occurred on this date. */
     syncEvents: string;
+    /** The number of new proof events that occurred on this date. */
     newProofEvents: string;
 }
 
 export interface SetFederationSyncConfigRequest {
+    /** The global federation sync configs for the given proof types. */
     globalSyncConfigs: GlobalFederationSyncConfig[];
+    /** The asset federation sync configs for the given universe IDs. */
     assetSyncConfigs: AssetFederationSyncConfig[];
 }
 
@@ -463,9 +565,325 @@ export interface QueryFederationSyncConfigRequest {
 }
 
 export interface QueryFederationSyncConfigResponse {
+    /** The global federation sync configs for the given proof types. */
     globalSyncConfigs: GlobalFederationSyncConfig[];
+    /** The asset federation sync configs for the given universe IDs. */
     assetSyncConfigs: AssetFederationSyncConfig[];
 }
+
+export interface IgnoreAssetOutPointRequest {
+    /** The outpoint of the asset to ignore. */
+    assetOutPoint: AssetOutPoint | undefined;
+    /** The amount of asset units at the associated asset outpoint. */
+    amount: string;
+}
+
+export interface IgnoreAssetOutPointResponse {
+    /**
+     * The key identifying the signed ignore outpoint leaf in the ignore supply
+     * commitment subtree.
+     */
+    leafKey: Uint8Array | string;
+    /** The signed ignore outpoint leaf in the ignore supply commitment tree. */
+    leaf: MerkleSumNode | undefined;
+}
+
+export interface UpdateSupplyCommitRequest {
+    /** The 32-byte asset group key specified as raw bytes (gRPC only). */
+    groupKeyBytes: Uint8Array | string | undefined;
+    /**
+     * The 32-byte asset group key encoded as hex string (use this for
+     * REST).
+     */
+    groupKeyStr: string | undefined;
+}
+
+export interface UpdateSupplyCommitResponse {}
+
+export interface FetchSupplyCommitRequest {
+    /** The 32-byte asset group key specified as raw bytes (gRPC only). */
+    groupKeyBytes: Uint8Array | string | undefined;
+    /**
+     * The 32-byte asset group key encoded as hex string (use this for
+     * REST).
+     */
+    groupKeyStr: string | undefined;
+    /**
+     * Fetch the the supply commitment that created this new commitment
+     * output on chain.
+     */
+    commitOutpoint: OutPoint | undefined;
+    /**
+     * Fetch the supply commitment that spent the specified commitment
+     * output on chain to create a new supply commitment. This can be used
+     * to traverse the chain of supply commitments by watching the spend of
+     * the commitment output.
+     */
+    spentCommitOutpoint: OutPoint | undefined;
+    /**
+     * Fetch the very first supply commitment for the asset group. This
+     * returns the initial supply commitment that spent the pre-commitment
+     * output of the very first asset mint of a grouped asset (also known
+     * as the group anchor). This is useful as the starting point to fetch
+     * all supply commitments for a grouped asset one by one.
+     */
+    veryFirst: boolean | undefined;
+    /**
+     * Fetch the latest supply commitment for the asset group. This returns
+     * the most recent supply commitment that is anchored on chain for the
+     * asset group. This is useful to always get the current supply state
+     * of the asset group.
+     */
+    latest: boolean | undefined;
+}
+
+export interface SupplyCommitSubtreeRoot {
+    /** The type of the supply commit subtree. */
+    type: string;
+    /** The root node of the supply commit subtree. */
+    rootNode: MerkleSumNode | undefined;
+    /**
+     * The leaf key which locates the subtree leaf node in the supply commit
+     * tree.
+     */
+    supplyTreeLeafKey: Uint8Array | string;
+    /** The inclusion proof for the supply commit subtree root node. */
+    supplyTreeInclusionProof: Uint8Array | string;
+}
+
+export interface FetchSupplyCommitResponse {
+    /**
+     * The supply commitment chain data that contains both the commitment and
+     * chain proof information.
+     */
+    chainData: SupplyCommitChainData | undefined;
+    /**
+     * The total number of satoshis in on-chain fees paid by the supply
+     * commitment transaction.
+     */
+    txChainFeesSats: string;
+    /** The root of the issuance tree for the specified asset. */
+    issuanceSubtreeRoot: SupplyCommitSubtreeRoot | undefined;
+    /** The root of the burn tree for the specified asset. */
+    burnSubtreeRoot: SupplyCommitSubtreeRoot | undefined;
+    /** The root of the ignore tree for the specified asset. */
+    ignoreSubtreeRoot: SupplyCommitSubtreeRoot | undefined;
+    /**
+     * The issuance leaves that were added by this supply commitment. Does not
+     * include leaves that were already present in the issuance subtree before
+     * the block height at which this supply commitment was anchored.
+     */
+    issuanceLeaves: SupplyLeafEntry[];
+    /**
+     * The burn leaves that were added by this supply commitment. Does not
+     * include leaves that were already present in the burn subtree before
+     * the block height at which this supply commitment was anchored.
+     */
+    burnLeaves: SupplyLeafEntry[];
+    /**
+     * The ignore leaves that were added by this supply commitment. Does not
+     * include leaves that were already present in the ignore subtree before
+     * the block height at which this supply commitment was anchored.
+     */
+    ignoreLeaves: SupplyLeafEntry[];
+    /**
+     * The total outstanding supply of the asset after applying all the supply
+     * changes (issuance, burn, ignore) included in this supply commitment.
+     */
+    totalOutstandingSupply: string;
+    /**
+     * The outpoint of the previous commitment that this new commitment is
+     * spending. This must be set unless this is the very first supply
+     * commitment of a grouped asset.
+     */
+    spentCommitmentOutpoint: OutPoint | undefined;
+    /**
+     * A map of block height to supply leaf block header for all block heights
+     * referenced in supply leaves.
+     */
+    blockHeaders: { [key: number]: SupplyLeafBlockHeader };
+}
+
+export interface FetchSupplyCommitResponse_BlockHeadersEntry {
+    key: number;
+    value: SupplyLeafBlockHeader | undefined;
+}
+
+export interface FetchSupplyLeavesRequest {
+    /** The 32-byte asset group key specified as raw bytes (gRPC only). */
+    groupKeyBytes: Uint8Array | string | undefined;
+    /**
+     * The 32-byte asset group key encoded as hex string (use this for
+     * REST).
+     */
+    groupKeyStr: string | undefined;
+    /** The start block height for the range of supply leaves to fetch. */
+    blockHeightStart: number;
+    /** The end block height for the range of supply leaves to fetch. */
+    blockHeightEnd: number;
+    /**
+     * Optional: A list of issuance leaf keys. For each key in this list,
+     * the endpoint will generate and return an inclusion proof.
+     */
+    issuanceLeafKeys: Uint8Array | string[];
+    /**
+     * Optional: A list of burn leaf keys. For each key in this list,
+     * the endpoint will generate and return an inclusion proof.
+     */
+    burnLeafKeys: Uint8Array | string[];
+    /**
+     * Optional: A list of ignore leaf keys. For each key in this list, the
+     * endpoint will generate and return an inclusion proof.
+     */
+    ignoreLeafKeys: Uint8Array | string[];
+}
+
+/**
+ * SupplyLeafKey identifies a supply leaf entry. It contains the components
+ * used to derive the key, which is computed as a hash of these fields.
+ */
+export interface SupplyLeafKey {
+    /** The outpoint associated with the supply leaf. */
+    outpoint: Outpoint | undefined;
+    /**
+     * The script key of the supply leaf. This is the script key of the asset
+     * point.
+     */
+    scriptKey: Uint8Array | string;
+    /**
+     * The asset ID associated with the supply leaf. This is only set for
+     * ignore type supply leaves.
+     */
+    assetId: Uint8Array | string;
+}
+
+export interface SupplyLeafEntry {
+    /** The key that identifies the supply leaf in the supply commitment subtree. */
+    leafKey: SupplyLeafKey | undefined;
+    /**
+     * The merkle sum node representing the supply leaf in the supply commitment
+     * subtree.
+     */
+    leafNode: MerkleSumNode | undefined;
+    /** The block height at which the supply leaf was created. */
+    blockHeight: number;
+    /** The raw serialized bytes of the supply leaf. */
+    rawLeaf: Uint8Array | string;
+}
+
+export interface SupplyLeafBlockHeader {
+    /** Block header timestamp in seconds since unix epoch. */
+    timestamp: string;
+    /** 32-byte block header hash. */
+    hash: Uint8Array | string;
+}
+
+export interface FetchSupplyLeavesResponse {
+    issuanceLeaves: SupplyLeafEntry[];
+    burnLeaves: SupplyLeafEntry[];
+    ignoreLeaves: SupplyLeafEntry[];
+    /**
+     * Inclusion proofs for each issuance leaf key provided in the request.
+     * Each entry corresponds to the key at the same index in
+     * `issuance_leaf_keys`.
+     */
+    issuanceLeafInclusionProofs: Uint8Array | string[];
+    /**
+     * Inclusion proofs for each burn leaf key provided in the request.
+     * Each entry corresponds to the key at the same index in `burn_leaf_keys`.
+     */
+    burnLeafInclusionProofs: Uint8Array | string[];
+    /**
+     * Inclusion proofs for each ignored leaf key provided in the request.
+     * Each entry corresponds to the key at the same index in
+     * `ignore_leaf_keys`.
+     */
+    ignoreLeafInclusionProofs: Uint8Array | string[];
+    /**
+     * A map of block height to supply leaf block header for all block heights
+     * referenced in supply leaves.
+     */
+    blockHeaders: { [key: number]: SupplyLeafBlockHeader };
+}
+
+export interface FetchSupplyLeavesResponse_BlockHeadersEntry {
+    key: number;
+    value: SupplyLeafBlockHeader | undefined;
+}
+
+/**
+ * SupplyCommitChainData represents the on-chain artifacts for a supply
+ * commitment update.
+ */
+export interface SupplyCommitChainData {
+    /** The raw transaction that created the root commitment. */
+    txn: Uint8Array | string;
+    /** The index of the output in the transaction where the commitment resides. */
+    txOutIdx: number;
+    /** The internal key used to create the commitment output. */
+    internalKey: Uint8Array | string;
+    /** The taproot output key used to create the commitment output. */
+    outputKey: Uint8Array | string;
+    /**
+     * The root hash of the supply tree that contains the set of
+     * sub-commitments. The sum value of this tree is the outstanding supply
+     * value.
+     */
+    supplyRootHash: Uint8Array | string;
+    /**
+     * The sum value of the supply root tree, representing the outstanding
+     * supply amount.
+     */
+    supplyRootSum: string;
+    /**
+     * The block header of the block that contains the supply commitment
+     * transaction.
+     */
+    blockHeader: Uint8Array | string;
+    /** The hash of the block that contains the commitment. */
+    blockHash: Uint8Array | string;
+    /**
+     * The block height of the block that contains the supply commitment
+     * transaction.
+     */
+    blockHeight: number;
+    /**
+     * The merkle proof that proves that the supply commitment transaction is
+     * included in the block.
+     */
+    txBlockMerkleProof: Uint8Array | string;
+    /** The index of the supply commitment transaction in the block. */
+    txIndex: number;
+    /** The outpoint in the transaction where the commitment resides. */
+    commitOutpoint: string;
+}
+
+export interface InsertSupplyCommitRequest {
+    /** The 32-byte asset group key specified as raw bytes (gRPC only). */
+    groupKeyBytes: Uint8Array | string | undefined;
+    /**
+     * The 32-byte asset group key encoded as hex string (use this for
+     * REST).
+     */
+    groupKeyStr: string | undefined;
+    /**
+     * The supply commitment chain data that contains both the commitment and
+     * chain proof information.
+     */
+    chainData: SupplyCommitChainData | undefined;
+    /**
+     * The outpoint of the previous commitment that this new commitment is
+     * spending. This must be set unless this is the very first supply
+     * commitment of a grouped asset.
+     */
+    spentCommitmentOutpoint: OutPoint | undefined;
+    /** The supply leaves that represent the supply changes for the asset group. */
+    issuanceLeaves: SupplyLeafEntry[];
+    burnLeaves: SupplyLeafEntry[];
+    ignoreLeaves: SupplyLeafEntry[];
+}
+
+export interface InsertSupplyCommitResponse {}
 
 export interface Universe {
     /**
@@ -551,7 +969,9 @@ export interface Universe {
     ): Promise<PushProofResponse>;
     /**
      * tapcli: `universe info`
-     * Info returns a set of information about the current state of the Universe.
+     * Info returns a set of information about the current state of the Universe
+     * and allows a caller to check that a universe server is reachable and
+     * configured correctly to allow proof courier access without macaroons.
      */
     info(request?: DeepPartial<InfoRequest>): Promise<InfoResponse>;
     /**
@@ -629,6 +1049,49 @@ export interface Universe {
     queryFederationSyncConfig(
         request?: DeepPartial<QueryFederationSyncConfigRequest>
     ): Promise<QueryFederationSyncConfigResponse>;
+    /**
+     * tapcli: `universe ignoreoutpoint`
+     * IgnoreAssetOutPoint allows an asset issuer to mark a specific asset outpoint
+     * as ignored. An ignored outpoint will be included in the next universe supply
+     * commitment transaction that is published.
+     */
+    ignoreAssetOutPoint(
+        request?: DeepPartial<IgnoreAssetOutPointRequest>
+    ): Promise<IgnoreAssetOutPointResponse>;
+    /**
+     * tapcli: `universe updatesupplycommit`
+     * UpdateSupplyCommit updates the on-chain supply commitment for a specific
+     * asset group.
+     */
+    updateSupplyCommit(
+        request?: DeepPartial<UpdateSupplyCommitRequest>
+    ): Promise<UpdateSupplyCommitResponse>;
+    /**
+     * tapcli: `universe fetchsupplycommit`
+     * FetchSupplyCommit fetches the on-chain supply commitment for a specific
+     * asset group.
+     */
+    fetchSupplyCommit(
+        request?: DeepPartial<FetchSupplyCommitRequest>
+    ): Promise<FetchSupplyCommitResponse>;
+    /**
+     * tapcli: `universe supplyleaves`
+     * FetchSupplyLeaves fetches the supply leaves for a specific asset group
+     * within a specified block height range. The leaves include issuance, burn,
+     * and ignore leaves, which represent the supply changes for the asset group.
+     */
+    fetchSupplyLeaves(
+        request?: DeepPartial<FetchSupplyLeavesRequest>
+    ): Promise<FetchSupplyLeavesResponse>;
+    /**
+     * tapcli: `universe supplycommit insert`
+     * InsertSupplyCommit inserts a supply commitment for a specific asset
+     * group. This includes the commitment details, supply leaves (issuance, burn,
+     * and ignore), and chain proof that proves the commitment has been mined.
+     */
+    insertSupplyCommit(
+        request?: DeepPartial<InsertSupplyCommitRequest>
+    ): Promise<InsertSupplyCommitResponse>;
 }
 
 type Builtin =

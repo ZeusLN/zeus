@@ -45,7 +45,7 @@ else
 fi
 
 curl -L ${PROTOC_URL} -o "protoc-${PROTOC_VERSION}.zip"
-unzip "protoc-${PROTOC_VERSION}.zip" -d protoc
+unzip -o "protoc-${PROTOC_VERSION}.zip" -d protoc
 rm "protoc-${PROTOC_VERSION}.zip"
 
 TS_PROTO_OPTIONS="\
@@ -74,7 +74,9 @@ protoc/bin/protoc \
   signrpc/signer.proto \
   walletrpc/walletkit.proto \
   watchtowerrpc/watchtower.proto \
-  wtclientrpc/wtclient.proto
+  wtclientrpc/wtclient.proto \
+  peersrpc/peers.proto \
+  stateservice.proto
 
 
 echo "LOOP: running protoc..."
@@ -112,13 +114,20 @@ echo "TAPD: running protoc..."
 mkdir -p "$GENERATED_TYPES_DIR/tapd"
 protoc/bin/protoc \
   --proto_path=protos/tapd/${TAPD_RELEASE_TAG} \
+  --proto_path=protos/lnd/${LND_RELEASE_TAG} \
   --plugin=./node_modules/.bin/protoc-gen-ts_proto \
   --ts_proto_out=$GENERATED_TYPES_DIR/tapd \
   $TS_PROTO_OPTIONS \
+  tapcommon.proto \
   taprootassets.proto \
   assetwalletrpc/assetwallet.proto \
   mintrpc/mint.proto \
-  universerpc/universe.proto
+  priceoraclerpc/price_oracle.proto \
+  rfqrpc/rfq.proto \
+  tapchannelrpc/tapchannel.proto \
+  tapdevrpc/tapdev.proto \
+  universerpc/universe.proto \
+  authmailboxrpc/mailbox.proto
 
 echo "LiT: running protoc..."
 mkdir -p "$GENERATED_TYPES_DIR/lit"
@@ -164,7 +173,9 @@ protoc/bin/protoc \
   signrpc/signer.proto \
   walletrpc/walletkit.proto \
   watchtowerrpc/watchtower.proto \
-  wtclientrpc/wtclient.proto
+  wtclientrpc/wtclient.proto \
+  peersrpc/peers.proto \
+  stateservice.proto
 
 echo "LOOP: generating schema..."
 mkdir -p "$SCHEMA_DIR/loop"
@@ -201,13 +212,20 @@ echo "TAPD: generating schema..."
 mkdir -p "$SCHEMA_DIR/tapd"
 protoc/bin/protoc \
   --proto_path=protos/tapd/${TAPD_RELEASE_TAG} \
+  --proto_path=protos/lnd/${LND_RELEASE_TAG} \
   --plugin=./node_modules/.bin/protoc-gen-ts_proto \
   --ts_proto_out=$SCHEMA_DIR/tapd \
   $SCHEMA_PROTO_OPTIONS \
+  tapcommon.proto \
   taprootassets.proto \
   assetwalletrpc/assetwallet.proto \
   mintrpc/mint.proto \
-  universerpc/universe.proto
+  priceoraclerpc/price_oracle.proto \
+  rfqrpc/rfq.proto \
+  tapchannelrpc/tapchannel.proto \
+  tapdevrpc/tapdev.proto \
+  universerpc/universe.proto \
+  authmailboxrpc/mailbox.proto
 
 echo "LIT: generating schema..."
 mkdir -p "$SCHEMA_DIR/lit"
