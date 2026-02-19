@@ -376,6 +376,9 @@ export default class ChannelView extends React.Component<
         } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
+        const confs = channel.getConfirmations(
+            NodeInfoStore.nodeInfo.currentBlockHeight
+        );
 
         const editableFees: boolean = !(
             pendingOpen ||
@@ -492,56 +495,38 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     </View>
-                    {(() => {
-                        const confs = channel.getConfirmations(
-                            NodeInfoStore.nodeInfo.currentBlockHeight
-                        );
-
-                        return (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.status,
-                                        color: themeColor('text'),
-                                        marginBottom: confs ? 6 : 18
-                                    }}
-                                >
-                                    {pendingOpen
-                                        ? localeString(
-                                              'views.Channel.pendingOpen'
-                                          )
-                                        : pendingClose || closing
-                                        ? localeString(
-                                              'views.Channel.pendingClose'
-                                          )
-                                        : forceClose
-                                        ? localeString(
-                                              'views.Channel.forceClose'
-                                          )
-                                        : closeHeight || to_us_msat
-                                        ? localeString('views.Channel.closed')
-                                        : isActive
-                                        ? localeString('general.active')
-                                        : localeString(
-                                              'views.Channel.inactive'
-                                          )}
-                                </Text>
-                                {confs && (
-                                    <Text
-                                        style={{
-                                            ...styles.status,
-                                            color: themeColor('text'),
-                                            marginTop: 0
-                                        }}
-                                    >
-                                        {`${localeString(
-                                            'views.OpenChannel.numConf'
-                                        )}: ${confs.current} / ${confs.total}`}
-                                    </Text>
-                                )}
-                            </>
-                        );
-                    })()}
+                    <Text
+                        style={{
+                            ...styles.status,
+                            color: themeColor('text'),
+                            marginBottom: confs ? 6 : 18
+                        }}
+                    >
+                        {pendingOpen
+                            ? localeString('views.Channel.pendingOpen')
+                            : pendingClose || closing
+                            ? localeString('views.Channel.pendingClose')
+                            : forceClose
+                            ? localeString('views.Channel.forceClose')
+                            : closeHeight || to_us_msat
+                            ? localeString('views.Channel.closed')
+                            : isActive
+                            ? localeString('general.active')
+                            : localeString('views.Channel.inactive')}
+                    </Text>
+                    {confs && (
+                        <Text
+                            style={{
+                                ...styles.status,
+                                color: themeColor('text'),
+                                marginTop: 0
+                            }}
+                        >
+                            {`${localeString('views.OpenChannel.numConf')}: ${
+                                confs.current
+                            } / ${confs.total}`}
+                        </Text>
+                    )}
                     {!!renewalInfo.maxExtensionInBlocks && (
                         <>
                             <Row
