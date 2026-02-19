@@ -105,6 +105,10 @@ export default class StandalonePosPane extends React.PureComponent<
     }
 
     async componentDidMount(): Promise<void> {
+        this.props.navigation.addListener('focus', async () => {
+            this.fetchProducts();
+            this.loadCurrentOrder();
+        });
         this.fetchProducts();
         this.loadCurrentOrder();
     }
