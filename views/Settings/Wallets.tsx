@@ -382,6 +382,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
                                             <ListItem.Content>
                                                 <ListItem.Title
+                                                    numberOfLines={1}
+                                                    ellipsizeMode="tail"
                                                     style={{
                                                         color: nodeActive
                                                             ? themeColor(
@@ -394,7 +396,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                             'PPNeueMontreal-Book'
                                                     }}
                                                 >
-                                                    {NodeTitle(item, 32)}
+                                                    {NodeTitle(item)}
                                                 </ListItem.Title>
                                                 <ListItem.Subtitle
                                                     style={{

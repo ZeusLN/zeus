@@ -305,6 +305,8 @@ export default class NodeConfigExportImport extends React.Component<
                                                         style={styles.nodeText}
                                                     >
                                                         <Text
+                                                            numberOfLines={1}
+                                                            ellipsizeMode="tail"
                                                             style={{
                                                                 color: isEmbedded
                                                                     ? themeColor(
@@ -316,10 +318,7 @@ export default class NodeConfigExportImport extends React.Component<
                                                                 fontSize: 16
                                                             }}
                                                         >
-                                                            {NodeTitle(
-                                                                node,
-                                                                32
-                                                            )}
+                                                            {NodeTitle(node)}
                                                         </Text>
                                                         <Text
                                                             style={{
@@ -780,6 +779,8 @@ export default class NodeConfigExportImport extends React.Component<
                                                         style={styles.nodeText}
                                                     >
                                                         <Text
+                                                            numberOfLines={1}
+                                                            ellipsizeMode="tail"
                                                             style={{
                                                                 color: themeColor(
                                                                     'text'
@@ -787,10 +788,7 @@ export default class NodeConfigExportImport extends React.Component<
                                                                 fontSize: 16
                                                             }}
                                                         >
-                                                            {NodeTitle(
-                                                                node,
-                                                                32
-                                                            )}
+                                                            {NodeTitle(node)}
                                                         </Text>
                                                         <Text
                                                             style={{
@@ -1375,6 +1373,8 @@ export default class NodeConfigExportImport extends React.Component<
                                                         style={styles.nodeText}
                                                     >
                                                         <Text
+                                                            numberOfLines={1}
+                                                            ellipsizeMode="tail"
                                                             style={{
                                                                 color: themeColor(
                                                                     'text'
@@ -1382,10 +1382,7 @@ export default class NodeConfigExportImport extends React.Component<
                                                                 fontSize: 16
                                                             }}
                                                         >
-                                                            {NodeTitle(
-                                                                node,
-                                                                32
-                                                            )}
+                                                            {NodeTitle(node)}
                                                         </Text>
                                                         <Text
                                                             style={{

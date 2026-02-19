@@ -186,6 +186,8 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 )}
                                 <View style={{ flex: 1 }}>
                                     <Text
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
                                         style={{
                                             fontSize: 20,
                                             color: themeColor('text'),

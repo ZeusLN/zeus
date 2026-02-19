@@ -10,6 +10,8 @@ interface TextProps {
     ModalStore?: ModalStore;
     style?: TextStyle;
     children?: string;
+    numberOfLines?: number;
+    ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
     infoModalText?: string | Array<string>;
     infoModalLink?: string;
     infoModalAdditionalButtons?: Array<{
@@ -25,6 +27,8 @@ export default class ZeusText extends React.Component<TextProps, {}> {
         const {
             children,
             style,
+            numberOfLines,
+            ellipsizeMode,
             infoModalText,
             infoModalLink,
             infoModalAdditionalButtons,
@@ -34,6 +38,8 @@ export default class ZeusText extends React.Component<TextProps, {}> {
 
         const CoreText = () => (
             <Text
+                numberOfLines={numberOfLines}
+                ellipsizeMode={ellipsizeMode}
                 style={{
                     fontFamily: 'PPNeueMontreal-Book',
                     color: themeColor('text'),
