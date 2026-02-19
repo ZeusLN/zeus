@@ -80,18 +80,6 @@ export default class Security extends React.Component<
             passphraseExists: !!settings.passphrase
         });
 
-        if (settings.pin) {
-            this.setState({
-                pinExists: true
-            });
-        }
-
-        if (settings.passphrase) {
-            this.setState({
-                passphraseExists: true
-            });
-        }
-
         // Three cases:
         // 1) If no passphrase or pin is set, allow user to set passphrase or pin
         // 2) If passphrase is set, allow user to change passphrase or set/change duress passphrase
