@@ -94,48 +94,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         this.props.navigation.addListener('focus', this.handleFocus);
     }
 
-    async componentWillUnmount() {
+    componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
-
-        const { SettingsStore } = this.props;
-        const { settings, updateSettings, setConnectingStatus } = SettingsStore;
-        const { nodes, selectedNode } = this.state;
-
-        // Handle post-deletion navigation and restart
-        if (settings?.justDeletedWallet && selectedNode != null) {
-            const newSelectedNode = nodes[selectedNode];
-            if (newSelectedNode) {
-                try {
-                    console.log(
-                        'Wallet deleted - restarting selected node:',
-                        selectedNode
-                    );
-
-                    // Clear the flag first
-                    await updateSettings({
-                        justDeletedWallet: false
-                    });
-
-                    // Trigger connection to new selected wallet
-                    setConnectingStatus(true);
-                    this.navigateAfterWalletSelection();
-                } catch (error) {
-                    console.error(
-                        'Error restarting after wallet deletion:',
-                        error
-                    );
-                    setConnectingStatus(false);
-                    await updateSettings({
-                        justDeletedWallet: false
-                    });
-                }
-            } else {
-                await updateSettings({
-                    justDeletedWallet: false
-                });
-            }
-        }
     }
 
     handleBackButton = () => {
@@ -163,6 +124,35 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             this.isInitialFocus = false;
         } else {
             this.refreshSettings();
+        }
+        this.handleJustDeletedWallet();
+    };
+
+    handleJustDeletedWallet = async () => {
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings, setConnectingStatus } = SettingsStore;
+
+        if (!settings?.justDeletedWallet) return;
+
+        const { nodes, selectedNode } = settings;
+        const newSelectedNode = nodes?.[selectedNode ?? 0];
+
+        if (newSelectedNode) {
+            try {
+                console.log(
+                    'Wallet deleted - restarting selected node:',
+                    selectedNode
+                );
+                await updateSettings({ justDeletedWallet: false });
+                setConnectingStatus(true);
+                this.navigateAfterWalletSelection();
+            } catch (error) {
+                console.error('Error restarting after wallet deletion:', error);
+                setConnectingStatus(false);
+                await updateSettings({ justDeletedWallet: false });
+            }
+        } else {
+            await updateSettings({ justDeletedWallet: false });
         }
     };
 

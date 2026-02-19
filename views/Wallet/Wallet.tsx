@@ -50,6 +50,7 @@ import {
     startLnd,
     stopLnd,
     expressGraphSync,
+    isLndError,
     isTransientRpcError,
     LndErrorCode,
     matchesLndErrorCode,
@@ -522,7 +523,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 try {
                     AlertStore.checkNeutrinoPeers();
 
-                    if (!recovery) await stopLnd();
+                    // Skip stopLnd when wallet is already closed (e.g. after delete)
+                    if (!recovery && SettingsStore.embeddedLndStarted) {
+                        await stopLnd();
+                    }
 
                     if (settings?.ecash?.enableCashu)
                         await CashuStore.initializeWallets();
@@ -620,6 +624,24 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         )
                     ) {
                         showFolderMissingAlert();
+                        return;
+                    }
+
+                    // Handle LND start failed after max retries - show restart modal
+                    if (isLndError(error, LndErrorCode.LND_START_FAILED)) {
+                        setConnectingStatus(false);
+                        this.props.ModalStore.toggleInfoModal({
+                            title: localeString('restart.title'),
+                            text: localeString(
+                                'views.Wallet.lndStartFailed.message'
+                            ),
+                            buttons: [
+                                {
+                                    title: localeString('views.Wallet.restart'),
+                                    callback: () => restartNeeded(true)
+                                }
+                            ]
+                        });
                         return;
                     }
 

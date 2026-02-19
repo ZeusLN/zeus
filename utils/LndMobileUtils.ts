@@ -25,6 +25,17 @@ import {
     checkLndFolderExists
 } from '../lndmobile/index';
 
+import { settingsStore, syncStore } from '../stores/Stores';
+import {
+    DEFAULT_NEUTRINO_PEERS_MAINNET,
+    SECONDARY_NEUTRINO_PEERS_MAINNET,
+    DEFAULT_NEUTRINO_PEERS_TESTNET,
+    DEFAULT_FEE_ESTIMATOR,
+    DEFAULT_SPEEDLOADER
+} from '../stores/SettingsStore';
+
+import { lnrpc } from '../proto/lightning';
+
 /**
  * LND error codes - use for consistent error handling across the app
  */
@@ -39,6 +50,8 @@ export enum LndErrorCode {
     RPC_READY_TIMEOUT = 'RPC_READY_TIMEOUT',
     /** LND failed to stop after max retries */
     LND_FAILED_TO_STOP = 'LND_FAILED_TO_STOP',
+    /** LND failed to start after max retries */
+    LND_START_FAILED = 'LND_START_FAILED',
     /** Failed to generate seed */
     GEN_SEED_FAILED = 'GEN_SEED_FAILED',
     /** Timeout waiting for LND to become ready */
@@ -72,6 +85,8 @@ export const LND_ERROR_MESSAGES: Record<LndErrorCode, string> = {
         'RPC did not become ready in time. Please try again.',
     [LndErrorCode.LND_FAILED_TO_STOP]:
         'LND failed to stop. Please restart the app.',
+    [LndErrorCode.LND_START_FAILED]:
+        'LND failed to start. Please restart the app.',
     [LndErrorCode.GEN_SEED_FAILED]: 'Failed to generate wallet seed.',
     [LndErrorCode.LND_READY_TIMEOUT]:
         'LND did not become ready in time. Please try again.',
@@ -101,10 +116,11 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
     [LndErrorCode.RPC_CONNECTION_CLOSED]: ['closed', 'connection closed'],
     [LndErrorCode.RPC_READY_TIMEOUT]: [],
     [LndErrorCode.LND_FAILED_TO_STOP]: [],
+    [LndErrorCode.LND_START_FAILED]: [],
     [LndErrorCode.GEN_SEED_FAILED]: [],
     [LndErrorCode.LND_READY_TIMEOUT]: [],
     [LndErrorCode.LND_ALREADY_RUNNING]: ['already started', 'already running'],
-    [LndErrorCode.WALLET_LOCKED]: ['wallet locked', 'locked'],
+    [LndErrorCode.WALLET_LOCKED]: ['wallet locked'],
     [LndErrorCode.MACAROON_STORE_LOCKED]: [
         'macaroon store is locked',
         'cannot retrieve macaroon',
@@ -122,16 +138,7 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
         'uninitialized'
     ],
     [LndErrorCode.STOP_LND_EXPECTED]: [
-        'wallet locked',
-        'closed',
         'unable to read TLS cert',
-        'no such file or directory',
-        "doesn't exist",
-        'not yet ready to accept calls',
-        'starting up',
-        'not yet ready',
-        'unitialized',
-        'uninitialized',
         'connection refused',
         'connection reset'
     ],
@@ -163,6 +170,22 @@ export function matchesLndErrorCode(msg: string, code: LndErrorCode): boolean {
     if (!patterns.length) return false;
     const normalized = msg.toLowerCase();
     return patterns.some((p) => normalized.includes(p.toLowerCase()));
+}
+
+/** Codes that indicate expected state when stopping LND  */
+const STOP_LND_EXPECTED_CODES: LndErrorCode[] = [
+    LndErrorCode.STOP_LND_EXPECTED,
+    LndErrorCode.WALLET_LOCKED,
+    LndErrorCode.RPC_CONNECTION_CLOSED,
+    LndErrorCode.LND_FOLDER_MISSING,
+    LndErrorCode.RPC_NOT_READY
+];
+
+/** Check if error is expected when stopping LND  */
+export function isStopLndExpectedError(msg: string): boolean {
+    return STOP_LND_EXPECTED_CODES.some((code) =>
+        matchesLndErrorCode(msg, code)
+    );
 }
 
 /** Transient RPC errors that may resolve with retry (node switch, startup, etc.) */
@@ -207,18 +230,6 @@ export function isLndError(error: unknown, code?: LndErrorCode): boolean {
 }
 
 /** Android needs longer delays - process cleanup is slower */
-const GEN_SEED_STOP_DELAY_MS = Platform.OS === 'android' ? 3500 : 2000;
-
-import { settingsStore, syncStore } from '../stores/Stores';
-import {
-    DEFAULT_NEUTRINO_PEERS_MAINNET,
-    SECONDARY_NEUTRINO_PEERS_MAINNET,
-    DEFAULT_NEUTRINO_PEERS_TESTNET,
-    DEFAULT_FEE_ESTIMATOR,
-    DEFAULT_SPEEDLOADER
-} from '../stores/SettingsStore';
-
-import { lnrpc } from '../proto/lightning';
 
 export const NEUTRINO_PING_TIMEOUT_MS = 1500;
 
@@ -271,7 +282,7 @@ export function checkLndStreamErrorResponse(
             matchesLndErrorCode(errorDesc, LndErrorCode.RPC_CONNECTION_CLOSED)
         ) {
             log.d('Connection closed (expected during node switch/stop)');
-            return null;
+            return createLndError(LndErrorCode.RPC_CONNECTION_CLOSED);
         }
 
         return new Error(errorDesc);
@@ -396,10 +407,12 @@ const writeLndConfig = async ({
     await writeConfig({ lndDir, config });
 };
 
-export async function deleteLndWallet(lndDir: string) {
+export async function deleteLndWallet(lndDir: string, skipStopLnd = false) {
     log.d('Attempting to delete Embedded LND wallet');
     try {
-        await stopLnd();
+        if (!skipStopLnd) {
+            await stopLnd();
+        }
         await NativeModules.LndMobileTools.deleteLndDirectory(lndDir);
     } catch (error) {
         log.e('Embedded LND wallet deletion failed', [error]);
@@ -494,7 +507,7 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
             return await fn();
         } catch (error) {
             const msg = getErrorMessage(error);
-            if (matchesLndErrorCode(msg, LndErrorCode.STOP_LND_EXPECTED)) {
+            if (isStopLndExpectedError(msg)) {
                 log.d(`${context}: ${msg} (expected, treating as success)`);
                 return null;
             }
@@ -510,6 +523,7 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
 
         if (status === null) {
             log.d('LND status check returned expected error - already stopped');
+            settingsStore.embeddedLndStarted = false;
             return;
         }
 
@@ -521,6 +535,7 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
 
         if (!isRunning) {
             log.d('LND is not running, stop not required');
+            settingsStore.embeddedLndStarted = false;
             return;
         }
         // Initiate graceful shutdown - both can throw; continue even if one fails
@@ -535,6 +550,8 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
                 'killLnd returned expected error - LND may already be stopped'
             );
         }
+        settingsStore.embeddedLndStarted = false;
+
         // Poll until LND process has fully stopped
         await retry({
             fn: async () => {
@@ -569,7 +586,7 @@ export async function stopLnd(maxRetries = 10, delayMs = 500) {
         });
     } catch (error) {
         const errorMessage = getErrorMessage(error);
-        if (matchesLndErrorCode(errorMessage, LndErrorCode.STOP_LND_EXPECTED)) {
+        if (isStopLndExpectedError(errorMessage)) {
             log.d(`LND stop completed with expected state: ${errorMessage}`);
             return;
         }
@@ -704,6 +721,8 @@ async function startLndWithRetry({
     }
 }
 
+const MAX_START_LND_RETRIES = 10;
+
 async function retryStartLnd({
     startLnd,
     startArgs,
@@ -725,7 +744,7 @@ async function retryStartLnd({
     walletPassword: string;
     unlockWallet: (password: string) => Promise<void>;
 }) {
-    while (true) {
+    for (let attempt = 1; attempt <= MAX_START_LND_RETRIES; attempt++) {
         try {
             await sleep(3000);
             await startLnd(startArgs);
@@ -749,6 +768,16 @@ async function retryStartLnd({
                 }
                 return;
             }
+
+            log.e(`Retry attempt ${attempt}/${MAX_START_LND_RETRIES} failed`, [
+                retryError
+            ]);
+            if (attempt === MAX_START_LND_RETRIES) {
+                log.e(
+                    `LND failed to start after ${MAX_START_LND_RETRIES} attempts`
+                );
+                throw createLndError(LndErrorCode.LND_START_FAILED);
+            }
         }
     }
 }
@@ -771,19 +800,6 @@ async function waitForLndReady({
         let isResolved = false;
         let unlockAttempted = false;
 
-        const timeout = setTimeout(() => {
-            if (!isResolved) {
-                isResolved = true;
-                cleanup();
-                reject(new Error('Timeout waiting for LND to become ready'));
-            }
-        }, 60000);
-
-        const cleanup = () => {
-            if (timeout) clearTimeout(timeout);
-            LndMobileEventEmitter.removeAllListeners('SubscribeState');
-        };
-
         const stateHandler = async (event: any) => {
             if (isResolved) return;
 
@@ -800,6 +816,14 @@ async function waitForLndReady({
                     isResolved = true;
                     cleanup();
                     reject(error);
+                    return;
+                }
+
+                // Skip decode when connection closed or no data (avoids uncaught errors)
+                if (event?.error_code && !event?.data) {
+                    log.d(
+                        'SubscribeState: connection closed or no data, skipping'
+                    );
                     return;
                 }
 
@@ -827,6 +851,7 @@ async function waitForLndReady({
                                 isResolved = true;
                                 cleanup();
                                 reject(unlockError);
+                                return;
                             }
                         }
                         break;
@@ -854,6 +879,7 @@ async function waitForLndReady({
                             isResolved = true;
                             cleanup();
                             reject(rpcError);
+                            return;
                         }
                         break;
 
@@ -877,6 +903,19 @@ async function waitForLndReady({
                 }
             }
         };
+
+        const cleanup = () => {
+            if (timeout) clearTimeout(timeout);
+            LndMobileEventEmitter.removeAllListeners('SubscribeState');
+        };
+
+        const timeout = setTimeout(() => {
+            if (!isResolved) {
+                isResolved = true;
+                cleanup();
+                reject(createLndError(LndErrorCode.LND_READY_TIMEOUT));
+            }
+        }, 60000);
 
         LndMobileEventEmitter.addListener('SubscribeState', stateHandler);
 
@@ -1079,6 +1118,9 @@ export async function optimizeNeutrinoPeers(
 
     return;
 }
+
+/** Delay between stopping LND and starting it again */
+const GEN_SEED_STOP_DELAY_MS = Platform.OS === 'android' ? 3500 : 2000;
 
 /**
  * Calls genSeed with retry when LND transitions too quickly (WalletUnlocker race condition)

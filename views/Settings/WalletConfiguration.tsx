@@ -656,11 +656,13 @@ export default class WalletConfiguration extends React.Component<
                 console.log('Error stopping LND before deletion:', error);
                 // Continue anyway - stopLnd handles errors gracefully
             }
+            SettingsStore.embeddedLndStarted = false;
         }
 
         // Delete embedded LND wallet data if applicable
+        // Skip stopLnd: already stopped above if active, or inactive wallet (don't stop active)
         if (implementation === 'embedded-lnd') {
-            await deleteLndWallet(lndDir || 'lnd');
+            await deleteLndWallet(lndDir || 'lnd', true);
         }
 
         const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
