@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { FlatList, View } from 'react-native';
+import { FlatList, Platform, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 
 import { StackNavigationProp } from '@react-navigation/stack';
