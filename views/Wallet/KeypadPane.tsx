@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    Animated,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -33,14 +27,14 @@ import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import {
-    validateKeypadInput,
-    startShakeAnimation,
     getAmountFontSize,
     deleteLastCharacter
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import { appendValueToAmount } from '../../utils/AmountInputValidationUtils';
+import InvalidInputAnimationController from '../../utils/InvalidInputAnimationController';
 
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import MintToken from './../../assets/images/SVG/MintToken.svg';
@@ -64,6 +58,7 @@ interface KeypadPaneState {
     overrideBelowMinAmount: boolean;
     flowLspNotConfigured: boolean;
     ecashMode: boolean;
+    isInputInvalid: boolean;
 }
 
 @inject(
@@ -80,8 +75,13 @@ export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
     KeypadPaneState
 > {
-    shakeAnimation = new Animated.Value(0);
-    textAnimation = new Animated.Value(0);
+    invalidInputAnimation = new InvalidInputAnimationController(
+        (isInputInvalid: boolean) => {
+            this.setState({ isInputInvalid });
+        }
+    );
+    shakeAnimation = this.invalidInputAnimation.shakeAnimation;
+    textAnimation = this.invalidInputAnimation.textAnimation;
     focusListener: any = null;
 
     constructor(props: KeypadPaneProps) {
@@ -104,7 +104,8 @@ export default class KeypadPane extends React.PureComponent<
             belowMinAmount: false,
             overrideBelowMinAmount: false,
             flowLspNotConfigured: true,
-            ecashMode: initialEcashMode
+            ecashMode: initialEcashMode,
+            isInputInvalid: false
         };
     }
 
@@ -123,6 +124,7 @@ export default class KeypadPane extends React.PureComponent<
         if (this.focusListener) {
             this.focusListener();
         }
+        this.invalidInputAnimation.dispose();
     }
 
     async handleLsp() {
@@ -134,23 +136,30 @@ export default class KeypadPane extends React.PureComponent<
         });
     }
 
+    resetTextAnimation = () => {
+        this.invalidInputAnimation.clearInvalidState();
+    };
+
     appendValue = (value: string): boolean => {
         const { amount } = this.state;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        const { valid, newAmount } = validateKeypadInput(
+        const fiat = SettingsStore!.settings?.fiat || '';
+        const fiatProperties = FiatStore!.symbolLookup(fiat);
+        const { isValid, newAmount } = appendValueToAmount(
             amount,
             value,
             units,
-            FiatStore!,
-            SettingsStore!
+            fiatProperties?.decimalPlaces
         );
 
-        if (!valid) {
+        if (!isValid || !newAmount) {
             this.startShake();
             return false;
         }
+
+        this.resetTextAnimation();
 
         let needInbound = false;
         let belowMinAmount = false;
@@ -172,23 +181,29 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: newAmount,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            isInputInvalid: false
         });
 
         return true;
     };
 
     clearValue = () => {
+        this.resetTextAnimation();
         this.setState({
             amount: '0',
             needInbound: false,
             belowMinAmount: false,
-            overrideBelowMinAmount: false
+            overrideBelowMinAmount: false,
+            isInputInvalid: false
         });
     };
 
     deleteValue = () => {
         const { amount } = this.state;
+
+        this.resetTextAnimation();
+
         const newAmount = deleteLastCharacter(amount);
 
         let needInbound = false;
@@ -211,7 +226,8 @@ export default class KeypadPane extends React.PureComponent<
         this.setState({
             amount: newAmount,
             needInbound,
-            belowMinAmount
+            belowMinAmount,
+            isInputInvalid: false
         });
     };
 
@@ -223,7 +239,7 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        startShakeAnimation(this.shakeAnimation, this.textAnimation);
+        this.invalidInputAnimation.start();
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
@@ -255,7 +271,6 @@ export default class KeypadPane extends React.PureComponent<
         } = this.state;
         const { settings } = SettingsStore!;
         const { isSyncing } = SyncStore!;
-
         const noMints = CashuStore?.mintUrls.length === 0;
 
         return (

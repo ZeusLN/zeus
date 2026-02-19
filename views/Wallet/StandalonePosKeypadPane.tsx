@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Animated, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BigNumber from 'bignumber.js';
@@ -18,15 +18,15 @@ import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import {
-    validateKeypadInput,
-    startShakeAnimation,
     getAmountFontSize,
     deleteLastCharacter
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC, getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import { appendValueToAmount } from '../../utils/AmountInputValidationUtils';
 import { calculateTaxSats } from '../../utils/PosUtils';
+import InvalidInputAnimationController from '../../utils/InvalidInputAnimationController';
 
 import { PricedIn } from '../../models/Product';
 
@@ -41,6 +41,7 @@ interface PosKeypadPaneProps {
 
 interface PosKeypadPaneState {
     amount: string;
+    isInputInvalid: boolean;
 }
 
 @inject('ChannelsStore', 'FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
@@ -49,10 +50,24 @@ export default class PosKeypadPane extends React.PureComponent<
     PosKeypadPaneProps,
     PosKeypadPaneState
 > {
-    shakeAnimation = new Animated.Value(0);
-    textAnimation = new Animated.Value(0);
+    invalidInputAnimation = new InvalidInputAnimationController(
+        (isInputInvalid: boolean) => {
+            this.setState({ isInputInvalid });
+        }
+    );
+    shakeAnimation = this.invalidInputAnimation.shakeAnimation;
+    textAnimation = this.invalidInputAnimation.textAnimation;
     state = {
-        amount: '0'
+        amount: '0',
+        isInputInvalid: false
+    };
+
+    componentWillUnmount() {
+        this.invalidInputAnimation.dispose();
+    }
+
+    resetTextAnimation = () => {
+        this.invalidInputAnimation.clearInvalidState();
     };
 
     appendValue = (value: string): boolean => {
@@ -60,36 +75,46 @@ export default class PosKeypadPane extends React.PureComponent<
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
-        const { valid, newAmount } = validateKeypadInput(
+        const fiat = SettingsStore!.settings?.fiat || '';
+        const fiatProperties = FiatStore!.symbolLookup(fiat);
+        const { isValid, newAmount } = appendValueToAmount(
             amount,
             value,
             units,
-            FiatStore!,
-            SettingsStore!
+            fiatProperties?.decimalPlaces
         );
 
-        if (!valid) {
+        if (!isValid || !newAmount) {
             this.startShake();
             return false;
         }
 
+        this.resetTextAnimation();
+
         this.setState({
-            amount: newAmount
+            amount: newAmount,
+            isInputInvalid: false
         });
 
         return true;
     };
 
     clearValue = () => {
+        this.resetTextAnimation();
         this.setState({
-            amount: '0'
+            amount: '0',
+            isInputInvalid: false
         });
     };
 
     deleteValue = () => {
         const { amount } = this.state;
+
+        this.resetTextAnimation();
+
         this.setState({
-            amount: deleteLastCharacter(amount)
+            amount: deleteLastCharacter(amount),
+            isInputInvalid: false
         });
     };
 
@@ -101,7 +126,7 @@ export default class PosKeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        startShakeAnimation(this.shakeAnimation, this.textAnimation);
+        this.invalidInputAnimation.start();
     };
 
     addItemAndCheckout = async () => {
