@@ -1978,6 +1978,7 @@
     "stores.CashuStore.initializingWallet": "正在初始化 ecash 錢包",
     "stores.CashuStore.startingWallet": "正在啟動 ecash 錢包",
     "stores.CashuStore.restoringFunds": "Restoring ecash funds",
+    "stores.CashuStore.restoringV1Funds": "Migrating ecash funds from legacy seed. This is a one-time process — please be patient.",
     "stores.CashuStore.alreadyPaid": "帳單已經結清了。",
     "stores.CashuStore.alreadySpent": "代幣已經用掉了。",
     "stores.CashuStore.pending": "付款還沒結算。",
