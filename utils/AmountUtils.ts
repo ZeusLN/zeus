@@ -351,6 +351,64 @@ export function millisatsToSats(millisats: number): number {
 }
 
 /**
+ * Normalizes number strings with different regional formats to a standard format.
+ *
+ * - If both dots and commas are present, the last one is the decimal separator.
+ * - If only one separator is present, it's a decimal separator unless it's followed by exactly 3 digits (then it's a thousand separator).
+ * - If multiple separators of the same kind are present, they are all treated as thousand separators.
+ *
+ * Examples:
+ * - 1,234 -> 1234
+ * - 1,234.56 -> 1234.56
+ * - 1.234,56 -> 1234.56
+ * - 1.234.567 -> 1234567
+ *
+ * @param value - The value to normalize (string or number)
+ * @returns Normalized number string with . as decimal separator
+ */
+export function normalizeNumberString(value: string | number): string {
+    if (value === null || value === undefined || value === '') return '0';
+
+    let s = value.toString().trim();
+
+    const isNeg = s.startsWith('-');
+    if (isNeg) s = s.slice(1);
+
+    const commaCnt = (s.match(/,/g) || []).length;
+    const dotCnt = (s.match(/\./g) || []).length;
+
+    let decimalSeparator: ',' | '.' | null = null;
+
+    if (commaCnt > 0 && dotCnt > 0) {
+        decimalSeparator = s.lastIndexOf(',') > s.lastIndexOf('.') ? ',' : '.';
+    } else if (commaCnt === 1 && dotCnt === 0) {
+        const lastCommaIdx = s.lastIndexOf(',');
+        const digitsAfterComma = s.length - lastCommaIdx - 1;
+        if (digitsAfterComma !== 3) {
+            decimalSeparator = ',';
+        }
+    } else if (dotCnt === 1 && commaCnt === 0) {
+        const lastDotIdx = s.lastIndexOf('.');
+        const digitsAfterDot = s.length - lastDotIdx - 1;
+        if (digitsAfterDot !== 3) {
+            decimalSeparator = '.';
+        }
+    }
+
+    if (decimalSeparator) {
+        const [intPart, decPart] = s.split(decimalSeparator);
+        const int = intPart.replace(/[^\d]/g, '');
+        const dec = decPart.replace(/[^\d]/g, '');
+        s = dec ? `${int}.${dec}` : int;
+    } else {
+        s = s.replace(/[^\d]/g, '');
+    }
+
+    if (!s) s = '0';
+    return isNeg ? `-${s}` : s;
+}
+
+/**
  * Converts an amount in the current display unit (sats, BTC, or fiat) to satoshis
  * @param amount - The amount to convert (as string or number)
  * @param forceUnit - Optional unit override ('sats', 'BTC', or 'fiat')
@@ -366,7 +424,7 @@ export function getSatAmount(
     const { units } = unitsStore;
     const effectiveUnits = forceUnit || units;
 
-    const value = amount ? amount.toString().replace(/,/g, '.') : 0;
+    const value = Number(normalizeNumberString(amount));
 
     const fiatEntry =
         fiat && fiatRates
