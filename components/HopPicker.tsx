@@ -10,7 +10,7 @@ import {
     TouchableHighlight,
     ViewStyle
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -229,102 +229,110 @@ export default class ChannelPicker extends React.Component<
                         this.setState({ showChannelModal: false })
                     }
                 >
-                    <SafeAreaView style={styles.centeredView}>
-                        <View style={styles.modalBackground}>
-                            <View
-                                style={[
-                                    styles.modal,
-                                    {
-                                        backgroundColor:
-                                            themeColor('modalBackground')
-                                    }
-                                ]}
-                            >
+                    <SafeAreaProvider>
+                        <SafeAreaView style={styles.centeredView}>
+                            <View style={styles.modalBackground}>
                                 <View
                                     style={[
-                                        styles.handleBar,
+                                        styles.modal,
                                         {
                                             backgroundColor:
-                                                themeColor('secondaryText')
+                                                themeColor('modalBackground')
                                         }
-                                    ]}
-                                />
-
-                                <Text
-                                    style={[
-                                        styles.modalTitle,
-                                        { color: themeColor('text') }
                                     ]}
                                 >
-                                    {selectionMode === 'multiple'
-                                        ? localeString(
-                                              'components.ChannelPicker.modal.title.multiple'
-                                          )
-                                        : localeString(
-                                              'components.ChannelPicker.modal.title'
-                                          )}
-                                </Text>
+                                    <View
+                                        style={[
+                                            styles.handleBar,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondaryText')
+                                            }
+                                        ]}
+                                    />
 
-                                <View style={styles.filterContainer}>
-                                    <ChannelsFilter />
-                                </View>
+                                    <Text
+                                        style={[
+                                            styles.modalTitle,
+                                            { color: themeColor('text') }
+                                        ]}
+                                    >
+                                        {selectionMode === 'multiple'
+                                            ? localeString(
+                                                  'components.ChannelPicker.modal.title.multiple'
+                                              )
+                                            : localeString(
+                                                  'components.ChannelPicker.modal.title'
+                                              )}
+                                    </Text>
 
-                                {loading && (
-                                    <View style={styles.loadingContainer}>
-                                        <LoadingIndicator />
+                                    <View style={styles.filterContainer}>
+                                        <ChannelsFilter />
                                     </View>
-                                )}
 
-                                {!loading && (
-                                    <FlatList
-                                        data={channels}
-                                        renderItem={(item) =>
-                                            this.renderItem(item)
-                                        }
-                                        style={styles.list}
-                                        contentContainerStyle={
-                                            styles.listContent
-                                        }
-                                        onEndReachedThreshold={50}
-                                        refreshing={loading}
-                                        onRefresh={() => this.refreshChannels()}
-                                    />
-                                )}
+                                    {loading && (
+                                        <View style={styles.loadingContainer}>
+                                            <LoadingIndicator />
+                                        </View>
+                                    )}
 
-                                <View style={styles.buttonRow}>
-                                    <Button
-                                        title={localeString('general.cancel')}
-                                        onPress={() => {
-                                            this.setState({
-                                                showChannelModal: false
-                                            });
-                                            onCancel?.();
-                                        }}
-                                        containerStyle={styles.flexButton}
-                                        secondary
-                                    />
-                                    <Button
-                                        title={localeString('general.confirm')}
-                                        disabled={
-                                            selectedChannels.length === 0 ||
-                                            (selectionMode === 'multiple' &&
-                                                backendUtils.isLNDBased() &&
-                                                selectedChannels.length >
-                                                    MAX_NUMBER_ROUTE_HINTS_LND)
-                                        }
-                                        onPress={() => {
-                                            this.updateValueSet();
-                                            this.setState({
-                                                showChannelModal: false
-                                            });
-                                            onValueChange(selectedChannels);
-                                        }}
-                                        containerStyle={styles.flexButton}
-                                    />
+                                    {!loading && (
+                                        <FlatList
+                                            data={channels}
+                                            renderItem={(item) =>
+                                                this.renderItem(item)
+                                            }
+                                            style={styles.list}
+                                            contentContainerStyle={
+                                                styles.listContent
+                                            }
+                                            onEndReachedThreshold={50}
+                                            refreshing={loading}
+                                            onRefresh={() =>
+                                                this.refreshChannels()
+                                            }
+                                        />
+                                    )}
+
+                                    <View style={styles.buttonRow}>
+                                        <Button
+                                            title={localeString(
+                                                'general.cancel'
+                                            )}
+                                            onPress={() => {
+                                                this.setState({
+                                                    showChannelModal: false
+                                                });
+                                                onCancel?.();
+                                            }}
+                                            containerStyle={styles.flexButton}
+                                            secondary
+                                        />
+                                        <Button
+                                            title={localeString(
+                                                'general.confirm'
+                                            )}
+                                            disabled={
+                                                selectedChannels.length === 0 ||
+                                                (selectionMode === 'multiple' &&
+                                                    backendUtils.isLNDBased() &&
+                                                    selectedChannels.length >
+                                                        MAX_NUMBER_ROUTE_HINTS_LND)
+                                            }
+                                            onPress={() => {
+                                                this.updateValueSet();
+                                                this.setState({
+                                                    showChannelModal: false
+                                                });
+                                                onValueChange(selectedChannels);
+                                            }}
+                                            containerStyle={styles.flexButton}
+                                        />
+                                    </View>
                                 </View>
                             </View>
-                        </View>
-                    </SafeAreaView>
+                        </SafeAreaView>
+                    </SafeAreaProvider>
                 </Modal>
 
                 <View style={{ ...containerStyle, ...styles.field }}>
