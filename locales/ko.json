@@ -1978,6 +1978,7 @@
     "stores.CashuStore.initializingWallet": "ecash 지갑 초기화 중",
     "stores.CashuStore.startingWallet": "ecash 지갑 시작 중",
     "stores.CashuStore.restoringFunds": "Restoring ecash funds",
+    "stores.CashuStore.restoringV1Funds": "Migrating ecash funds from legacy seed. This is a one-time process — please be patient.",
     "stores.CashuStore.alreadyPaid": "해당 인보이스는 이미 결제되었습니다.",
     "stores.CashuStore.alreadySpent": "이 토큰은 이미 사용되었습니다.",
     "stores.CashuStore.pending": "결제 대기 중입니다.",
