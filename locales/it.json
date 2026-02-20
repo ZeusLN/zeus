@@ -1978,6 +1978,7 @@
     "stores.CashuStore.initializingWallet": "Inizializzazione del portafoglio ecash",
     "stores.CashuStore.startingWallet": "Avvio del portafoglio ecash",
     "stores.CashuStore.restoringFunds": "Restoring ecash funds",
+    "stores.CashuStore.restoringV1Funds": "Migrating ecash funds from legacy seed. This is a one-time process — please be patient.",
     "stores.CashuStore.alreadyPaid": "La fattura è già stata pagata.",
     "stores.CashuStore.alreadySpent": "Il token è già stato speso.",
     "stores.CashuStore.pending": "Il pagamento è in sospeso.",
