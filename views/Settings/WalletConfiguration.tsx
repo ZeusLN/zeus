@@ -1137,7 +1137,7 @@ export default class WalletConfiguration extends React.Component<
                         style={{ flex: 1, paddingHorizontal: 20 }}
                         keyboardShouldPersistTaps="handled"
                     >
-                        <View style={styles.form}>
+                        <View style={{ ...styles.form, marginBottom: 20 }}>
                             {!!importError && (
                                 <ErrorMessage message={importError} />
                             )}
@@ -2313,7 +2313,7 @@ export default class WalletConfiguration extends React.Component<
                         </View>
 
                         {!existingAccount && implementation === 'lndhub' && (
-                            <View style={{ ...styles.button, marginTop: 20 }}>
+                            <View style={{ ...styles.button }}>
                                 <Button
                                     title={localeString(
                                         'views.Settings.AddEditNode.createLndhub'
@@ -2377,7 +2377,7 @@ export default class WalletConfiguration extends React.Component<
                         )}
 
                         {implementation === 'embedded-lnd' && (
-                            <View style={{ ...styles.button, marginTop: 20 }}>
+                            <View style={{ ...styles.button }}>
                                 {!adminMacaroon && !creatingWallet && (
                                     <>
                                         <View style={styles.button}>
