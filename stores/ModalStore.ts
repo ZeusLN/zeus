@@ -1,6 +1,11 @@
 import { action, observable } from 'mobx';
 
 import Storage from '../storage';
+import {
+    RATING_DISMISSED_KEY,
+    PAYMENT_COUNT_KEY,
+    RATING_REPROMPT_INTERVAL
+} from '../utils/RatingUtils';
 
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
@@ -107,18 +112,29 @@ export default class ModalStore {
     @action
     public checkAndTriggerRatingModal = async () => {
         try {
-            const KEY_FIRST_PAYMENT = 'hasTriggeredRatingModalOnFirstPayment';
+            const dismissed = await Storage.getItem(RATING_DISMISSED_KEY);
+            if (dismissed === 'true') return;
 
-            const hasTriggered = await Storage.getItem(KEY_FIRST_PAYMENT);
+            const paymentCount = await Storage.getItem(PAYMENT_COUNT_KEY);
+            const count = (parseInt(paymentCount || '0', 10) || 0) + 1;
+            await Storage.setItem(PAYMENT_COUNT_KEY, count.toString());
 
-            if (hasTriggered === 'true') return;
-
-            await Storage.setItem(KEY_FIRST_PAYMENT, 'true');
-
-            this.toggleRatingModal(true);
+            if (count === 1 || count % RATING_REPROMPT_INTERVAL === 0) {
+                this.toggleRatingModal(true);
+            }
         } catch (e) {
             console.log(e);
         }
+    };
+
+    @action
+    public dismissRatingPermanently = async () => {
+        try {
+            await Storage.setItem(RATING_DISMISSED_KEY, 'true');
+        } catch (e) {
+            console.log(e);
+        }
+        this.toggleRatingModal(false);
     };
 
     @action
