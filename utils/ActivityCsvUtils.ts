@@ -69,11 +69,26 @@ export const convertActivityToCsv = async (
 //Saves CSV file to the device.
 export const saveCsvFile = async (fileName: string, csvData: string) => {
     try {
-        const filePath =
+        const directory =
             Platform.OS === 'android'
-                ? `${RNFS.DownloadDirectoryPath}/${fileName}`
-                : `${RNFS.DocumentDirectoryPath}/${fileName}`;
+                ? RNFS.DownloadDirectoryPath
+                : RNFS.DocumentDirectoryPath;
 
+        let uniqueFileName = fileName;
+
+        if (await RNFS.exists(`${directory}/${uniqueFileName}`)) {
+            const baseName = (
+                fileName.substring(0, fileName.lastIndexOf('.')) || fileName
+            ).replace(/ \(\d+\)$/, '');
+            const match = fileName.match(/ \((\d+)\)\.csv$/i);
+            let counter = match ? parseInt(match[1], 10) + 1 : 1;
+
+            do {
+                uniqueFileName = `${baseName} (${counter++}).csv`;
+            } while (await RNFS.exists(`${directory}/${uniqueFileName}`));
+        }
+
+        const filePath = `${directory}/${uniqueFileName}`;
         console.log(`Saving file to: ${filePath}`);
         await RNFS.writeFile(filePath, csvData, 'utf8');
     } catch (err) {
