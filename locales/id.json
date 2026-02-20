@@ -1978,6 +1978,7 @@
     "stores.CashuStore.initializingWallet": "Menginisialisasi dompet ecash",
     "stores.CashuStore.startingWallet": "Memulai dompet ecash",
     "stores.CashuStore.restoringFunds": "Restoring ecash funds",
+    "stores.CashuStore.restoringV1Funds": "Migrating ecash funds from legacy seed. This is a one-time process — please be patient.",
     "stores.CashuStore.alreadyPaid": "Faktur yang telah dibayar",
     "stores.CashuStore.alreadySpent": "Token yang sudah dibelanjakan",
     "stores.CashuStore.pending": "Pembayaran sedang tertunda",

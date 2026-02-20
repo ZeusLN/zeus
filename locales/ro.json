@@ -1978,6 +1978,7 @@
     "stores.CashuStore.initializingWallet": "Inițializarea portofelului eCash",
     "stores.CashuStore.startingWallet": "Pornirea portofelului eCash",
     "stores.CashuStore.restoringFunds": "Restoring ecash funds",
+    "stores.CashuStore.restoringV1Funds": "Migrating ecash funds from legacy seed. This is a one-time process — please be patient.",
     "stores.CashuStore.alreadyPaid": "Factura a fost deja plătită.",
     "stores.CashuStore.alreadySpent": "Tokenul a fost deja cheltuit.",
     "stores.CashuStore.pending": "Plata este în așteptare.",
