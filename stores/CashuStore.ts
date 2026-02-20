@@ -1,6 +1,13 @@
 import { action, observable, runInAction } from 'mobx';
 import { Alert, InteractionManager } from 'react-native';
 import bolt11 from 'bolt11';
+import {
+    CashuMint,
+    CashuWallet,
+    CheckStateEnum,
+    getEncodedToken,
+    Proof
+} from '@cashu/cashu-ts';
 import url from 'url';
 import querystring from 'querystring-es3';
 
@@ -26,7 +33,7 @@ import {
     getSignature,
     relayInit
 } from 'nostr-tools';
-import { HDKey } from '@scure/bip32';
+import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 
 import NostrUtils from '../utils/NostrUtils';
@@ -53,8 +60,6 @@ import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
 
 import NavigationService from '../NavigationService';
-
-const bip39 = require('bip39');
 
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
 
@@ -209,8 +214,8 @@ export default class CashuStore {
     @observable public cdkInitialized: boolean = false;
     // Cache of mints that have been added to CDK this session
     private addedMintsCache: Set<string> = new Set();
-    // Cache for derived Cashu HD key (NUT-10 path m/129372'/0'/0'/0'/0')
-    private cashuHDKeyCache: HDKey | null = null;
+    // Original seed version before CDK migration (preserved for v1 P2PK derivation)
+    private originalSeedVersion: string | undefined;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -316,29 +321,45 @@ export default class CashuStore {
     };
 
     /**
-     * Get or derive the Cashu HD key at NUT-10 path m/129372'/0'/0'/0'/0'
-     * Caches the result to avoid repeated derivation.
+     * Get the raw Cashu seed bytes, deriving from seedPhrase if needed.
+     * For v1 users, derives from LND seed bytes [32:64] to preserve the
+     * original P2PK key. For v2-bip39, derives from the cashu seed phrase.
      */
-    private getCashuHDKey = (): HDKey | null => {
-        if (this.cashuHDKeyCache) {
-            return this.cashuHDKeyCache;
+    private ensureSeed = (): Uint8Array | null => {
+        if (this.seed) return this.seed;
+
+        if (this.originalSeedVersion === 'v1') {
+            const lndSeedPhrase = this.settingsStore.seedPhrase;
+            if (lndSeedPhrase && lndSeedPhrase.length > 0) {
+                const lndMnemonic = lndSeedPhrase.join(' ');
+                this.seed = bip39scure
+                    .mnemonicToSeedSync(lndMnemonic)
+                    .slice(32, 64);
+                return this.seed;
+            }
         }
 
-        if (!this.seedPhrase || this.seedPhrase.length === 0) {
-            return null;
-        }
-
-        try {
+        if (this.seedPhrase && this.seedPhrase.length > 0) {
             const mnemonic = this.seedPhrase.join(' ');
-            const seed = bip39.mnemonicToSeedSync(mnemonic);
-            const hdKey = HDKey.fromMasterSeed(seed);
-            // Cashu NUT-10 derivation path: m/129372'/0'/0'/0'/0'
-            this.cashuHDKeyCache = hdKey.derive("m/129372'/0'/0'/0'/0'");
-            return this.cashuHDKeyCache;
-        } catch (error) {
-            console.error('Error deriving Cashu HD key:', error);
-            return null;
+            const seed = bip39scure.mnemonicToSeedSync(mnemonic);
+            this.seed = seed;
+            return this.seed;
         }
+
+        return null;
+    };
+
+    /**
+     * Get the seed-derived private key hex string for P2PK operations.
+     * Uses the same derivation as the original cashu-ts implementation:
+     * seed[0:32] bytes → base64 → hex
+     */
+    private getSeedString = (): string | null => {
+        const seed = this.ensureSeed();
+        if (!seed) return null;
+        return Base64Utils.base64ToHex(
+            Base64Utils.bytesToBase64(seed.slice(0, 32))
+        );
     };
 
     /**
@@ -384,6 +405,107 @@ export default class CashuStore {
 
         console.log('CDK: Derived and stored cashu seed from LND seed');
         return cashuSeedPhrase;
+    };
+
+    /**
+     * Restore v1 legacy proofs from a mint using cashu-ts and receive them
+     * into CDK. CDK's own restore uses the v2-bip39 mnemonic which can't
+     * find proofs created with the v1 seed (lndSeed[32:64]).
+     */
+    private restoreV1Proofs = async (mintUrl: string): Promise<number> => {
+        const lndSeedPhrase = this.settingsStore.seedPhrase;
+        if (!lndSeedPhrase || lndSeedPhrase.length === 0) return 0;
+
+        const lndMnemonic = lndSeedPhrase.join(' ');
+        const legacySeed = new Uint8Array(
+            bip39scure.mnemonicToSeedSync(lndMnemonic).slice(32, 64)
+        );
+
+        const mint = new CashuMint(mintUrl);
+        const { keysets } = await mint.getKeySets();
+
+        let allProofs: Proof[] = [];
+
+        for (const keyset of keysets) {
+            try {
+                const wallet = new CashuWallet(mint, {
+                    bip39seed: legacySeed,
+                    unit: keyset.unit || 'sat'
+                });
+                await wallet.loadMint();
+
+                let start = 0;
+                let emptyBatchCount = 0;
+                const BATCH_SIZE = 200;
+                const MAX_GAP = 2;
+
+                while (emptyBatchCount < MAX_GAP) {
+                    let proofs: Proof[] = [];
+                    try {
+                        const result = await wallet.restore(start, BATCH_SIZE, {
+                            keysetId: keyset.id
+                        });
+                        proofs = result.proofs || [];
+                    } catch {
+                        proofs = [];
+                    }
+
+                    if (proofs.length === 0) {
+                        emptyBatchCount++;
+                    } else {
+                        allProofs = allProofs.concat(proofs);
+                        emptyBatchCount = 0;
+                    }
+                    start += BATCH_SIZE;
+                }
+            } catch (err) {
+                if (__DEV__) {
+                    console.log(
+                        `CDK: v1 restore keyset error for ${mintUrl}:`,
+                        err
+                    );
+                }
+            }
+        }
+
+        if (allProofs.length === 0) return 0;
+
+        // Filter to unspent proofs
+        let unspentProofs: Proof[] = [];
+        const checkWallet = new CashuWallet(mint, {
+            bip39seed: legacySeed,
+            unit: 'sat'
+        });
+        await checkWallet.loadMint();
+
+        for (let i = 0; i < allProofs.length; i += 200) {
+            const batch = allProofs.slice(i, i + 200);
+            try {
+                const states = await checkWallet.checkProofsStates(batch);
+                const unspent = batch.filter(
+                    (_, idx) => states[idx].state !== CheckStateEnum.SPENT
+                );
+                unspentProofs = unspentProofs.concat(unspent);
+            } catch {
+                // If state check fails, include the batch anyway
+                unspentProofs = unspentProofs.concat(batch);
+            }
+        }
+
+        if (unspentProofs.length === 0) return 0;
+
+        const encoded = getEncodedToken({
+            mint: mintUrl,
+            proofs: unspentProofs
+        });
+        const amount = await CashuDevKit.receive(encoded);
+
+        if (__DEV__) {
+            console.log(
+                `CDK: v1 restore recovered ${amount} sats from ${mintUrl}`
+            );
+        }
+        return amount;
     };
 
     /**
@@ -605,11 +727,27 @@ export default class CashuStore {
                                 );
                             }
 
+                            // NUT-04 GET response may omit amount; fall back to bolt11
+                            let amount = externalQuote.amount || 0;
+                            if (!amount && externalQuote.request) {
+                                try {
+                                    const decoded = bolt11.decode(
+                                        externalQuote.request
+                                    );
+                                    amount = decoded.satoshis || 0;
+                                } catch (decodeErr) {
+                                    console.warn(
+                                        'Failed to decode bolt11 for amount:',
+                                        decodeErr
+                                    );
+                                }
+                            }
+
                             // First, add the external quote to CDK's database with secret key
                             await CashuDevKit.addExternalMintQuote(
                                 mintUrl,
                                 quoteId,
-                                externalQuote.amount || 0,
+                                amount,
                                 externalQuote.request || '',
                                 externalQuote.state || 'PAID',
                                 externalQuote.expiry || 0,
@@ -625,7 +763,7 @@ export default class CashuStore {
                             await CashuDevKit.mintExternal(
                                 mintUrl,
                                 quoteId,
-                                externalQuote.amount || 0
+                                amount
                             );
                             await this.syncCDKBalances();
                             if (__DEV__) {
@@ -635,7 +773,7 @@ export default class CashuStore {
                             }
                             return {
                                 isPaid: true,
-                                amount: externalQuote.amount,
+                                amount,
                                 externalQuote
                             };
                         } catch (mintError: any) {
@@ -910,7 +1048,7 @@ export default class CashuStore {
         this.clearPayReq();
         this.shownThresholdModals = [];
         this.addedMintsCache.clear();
-        this.cashuHDKeyCache = null;
+        this.originalSeedVersion = undefined;
     };
 
     @action
@@ -1803,6 +1941,21 @@ export default class CashuStore {
         // Run Cashu specific migrations before CDK init
         await MigrationsUtils.migrateCashuSeedVersion(this);
 
+        // Load or capture the original seed version so we know how to derive
+        // the P2PK key for v1 users even after CDK overwrites seedVersion.
+        const storedOriginalSeedVersion = await Storage.getItem(
+            `${lndDir}-cashu-original-seed-version`
+        );
+        if (storedOriginalSeedVersion) {
+            this.originalSeedVersion = storedOriginalSeedVersion;
+        } else if (this.seedVersion) {
+            this.originalSeedVersion = this.seedVersion;
+            await Storage.setItem(
+                `${lndDir}-cashu-original-seed-version`,
+                this.seedVersion
+            );
+        }
+
         // Initialize CDK and use it as the source of truth for mints/balances
         if (CashuDevKit.isAvailable()) {
             try {
@@ -1857,6 +2010,35 @@ export default class CashuStore {
                                     'stores.CashuStore.restoringFunds'
                                 );
                             });
+
+                            if (this.originalSeedVersion === 'v1') {
+                                // CDK's restore can't find v1 proofs (wrong
+                                // mnemonic). Use cashu-ts to scan the mint
+                                // with the original v1 seed, then receive
+                                // the recovered proofs into CDK.
+                                runInAction(() => {
+                                    this.loadingMsg = localeString(
+                                        'stores.CashuStore.restoringV1Funds'
+                                    );
+                                });
+                                try {
+                                    const v1Restored =
+                                        await this.restoreV1Proofs(mintUrl);
+                                    if (v1Restored > 0 && __DEV__) {
+                                        console.log(
+                                            `CDK: v1 restore recovered ${v1Restored} sats from ${mintUrl}`
+                                        );
+                                    }
+                                } catch (v1Err) {
+                                    console.warn(
+                                        `CDK: v1 restore failed for ${mintUrl}:`,
+                                        v1Err
+                                    );
+                                }
+                            }
+
+                            // Also run CDK restore (picks up any v2-bip39
+                            // proofs, e.g. from a partially migrated state)
                             const restored = await CashuDevKit.restore(mintUrl);
                             if (restored > 0 && __DEV__) {
                                 console.log(
@@ -1877,6 +2059,44 @@ export default class CashuStore {
                 this.mintUrls.forEach((url) =>
                     this.addedMintsCache.add(this.normalizeMintUrl(url))
                 );
+
+                // One-time v1 legacy restore for mints already in CDK
+                // (handles users who ran a previous CDK build that deleted
+                // local proofs before this fix was applied)
+                if (this.originalSeedVersion === 'v1') {
+                    const v1RestoreDone = await Storage.getItem(
+                        `${lndDir}-cashu-v1-restore-done`
+                    );
+                    if (!v1RestoreDone) {
+                        for (const mintUrl of this.mintUrls) {
+                            // Only scan mints that had proofs (counter > 0)
+                            const walletId = `${lndDir}==${mintUrl}`;
+                            const counter = await Storage.getItem(
+                                `${walletId}-counter`
+                            );
+                            if (!counter || parseInt(counter, 10) <= 0) {
+                                continue;
+                            }
+                            try {
+                                runInAction(() => {
+                                    this.loadingMsg = localeString(
+                                        'stores.CashuStore.restoringV1Funds'
+                                    );
+                                });
+                                await this.restoreV1Proofs(mintUrl);
+                            } catch (e) {
+                                console.warn(
+                                    `CDK: v1 restore failed for ${mintUrl}:`,
+                                    e
+                                );
+                            }
+                        }
+                        await Storage.setItem(
+                            `${lndDir}-cashu-v1-restore-done`,
+                            'true'
+                        );
+                    }
+                }
 
                 // Initialize wallet UI state for each mint
                 await Promise.all(
@@ -1903,6 +2123,38 @@ export default class CashuStore {
                 // Clean up legacy per-wallet storage keys (now handled by CDK)
                 for (const mintUrl of this.mintUrls) {
                     const walletId = `${lndDir}==${mintUrl}`;
+
+                    // Migrate locally stored proofs into CDK before deleting
+                    const storedProofsJson = await Storage.getItem(
+                        `${walletId}-proofs`
+                    );
+                    if (storedProofsJson) {
+                        try {
+                            const proofs = JSON.parse(storedProofsJson);
+                            if (proofs && proofs.length > 0) {
+                                const encoded = getEncodedToken({
+                                    mint: mintUrl,
+                                    proofs
+                                });
+                                await CashuDevKit.receive(encoded);
+                                if (__DEV__) {
+                                    console.log(
+                                        `CDK: Migrated ${proofs.length} stored proofs for ${mintUrl}`
+                                    );
+                                }
+                            }
+                        } catch (migrateErr) {
+                            console.warn(
+                                `CDK: Failed to migrate proofs for ${mintUrl}, keeping in storage:`,
+                                migrateErr
+                            );
+                            // Don't delete proofs if migration failed
+                            await Storage.removeItem(`${walletId}-mintInfo`);
+                            await Storage.removeItem(`${walletId}-balance`);
+                            continue;
+                        }
+                    }
+
                     // Remove keys that CDK now manages internally
                     await Storage.removeItem(`${walletId}-mintInfo`);
                     await Storage.removeItem(`${walletId}-proofs`);
@@ -1963,36 +2215,30 @@ export default class CashuStore {
     };
 
     /**
-     * Derive a P2PK pubkey from the Cashu mnemonic
-     * Uses BIP-32 derivation path m/129372'/0'/0'/0'/0' per Cashu NUT-10
+     * Derive a P2PK pubkey from the Cashu seed.
+     * Uses the original cashu-ts derivation: seed[0:32] → schnorr pubkey
      */
     private deriveCashuPubkey = (): string | null => {
-        const childKey = this.getCashuHDKey();
-        if (!childKey?.publicKey) {
-            console.warn(
-                'Cannot derive pubkey: no seed phrase or key available'
-            );
+        const privkey = this.getSeedString();
+        if (!privkey) {
+            console.warn('Cannot derive pubkey: no seed available');
             return null;
         }
-        // Return compressed public key as hex (33 bytes)
-        return bytesToHex(childKey.publicKey);
+        return '02' + bytesToHex(schnorr.getPublicKey(privkey));
     };
 
     /**
-     * Derive the P2PK secret key from the Cashu mnemonic
-     * Uses BIP-32 derivation path m/129372'/0'/0'/0'/0' per Cashu NUT-10
+     * Derive the P2PK secret key from the Cashu seed.
+     * Uses the original cashu-ts derivation: seed[0:32] bytes → base64 → hex
      * This key is used to sign when minting from P2PK-locked quotes
      */
     public deriveCashuSecretKey = (): string | null => {
-        const childKey = this.getCashuHDKey();
-        if (!childKey?.privateKey) {
-            console.warn(
-                'Cannot derive secret key: no seed phrase or key available'
-            );
+        const privkey = this.getSeedString();
+        if (!privkey) {
+            console.warn('Cannot derive secret key: no seed available');
             return null;
         }
-        // Return private key as hex (32 bytes)
-        return bytesToHex(childKey.privateKey);
+        return privkey;
     };
 
     @action
