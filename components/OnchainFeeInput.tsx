@@ -15,12 +15,13 @@ interface OnchainFeeInputProps {
     fee?: string;
     onChangeFee: (fee: string) => void;
     onFeeError?: (error: boolean) => void;
+    onNavigateAway?: () => void;
 }
 
 const DEFAULT_FEE = '10';
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
-    const { fee, onChangeFee, navigation } = props;
+    const { fee, onChangeFee, onNavigateAway, navigation } = props;
     const { settings } = settingsStore;
     const enableMempoolRates = settings?.privacy?.enableMempoolRates;
     const preferredMempoolRate =
@@ -70,11 +71,12 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
         <>
             {enableMempoolRates ? (
                 <TouchableWithoutFeedback
-                    onPress={() =>
+                    onPress={() => {
+                        if (onNavigateAway) onNavigateAway();
                         navigation.navigate('EditFee', {
                             fee: newFee
-                        })
-                    }
+                        });
+                    }}
                 >
                     <View
                         style={{
