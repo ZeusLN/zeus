@@ -7,7 +7,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { LinearProgress } from '@rneui/themed';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -15,6 +14,9 @@ import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
+import SyncingStatus from '../../components/SyncingStatus';
+import RecoveryStatus from '../../components/RecoveryStatus';
+import RescanStatus from '../../components/RescanStatus';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -90,30 +92,6 @@ export default class BalancePane extends React.PureComponent<
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const { implementation, settings, lndFolderMissing } = SettingsStore;
-        const {
-            currentBlockHeight,
-            bestBlockHeight,
-            recoveryProgress,
-            isSyncing,
-            isRecovering,
-            isRescanning,
-            rescanStartHeight,
-            rescanCurrentHeight
-        } = SyncStore;
-
-        // Calculate rescan progress (clamped to max 1 in case current exceeds best)
-        // Use explicit null checks since rescanStartHeight can be 0 for genesis rescans
-        const rescanProgress =
-            rescanCurrentHeight !== null &&
-            rescanStartHeight !== null &&
-            bestBlockHeight !== null &&
-            bestBlockHeight > rescanStartHeight
-                ? Math.min(
-                      1,
-                      (rescanCurrentHeight - rescanStartHeight) /
-                          (bestBlockHeight - rescanStartHeight)
-                  )
-                : null;
 
         const pendingUnconfirmedBalance = new BigNumber(pendingOpenBalance)
             .plus(unconfirmedBlockchainBalance)
@@ -205,236 +183,11 @@ export default class BalancePane extends React.PureComponent<
                         loading={loading}
                     />
                     <View style={styles.contentContainer}>
-                        {isRecovering && recoveryProgress !== 1 && (
-                            <TouchableOpacity
-                                onPress={() => {
-                                    if (recoveryProgress) {
-                                        navigation.navigate('SyncRecovery');
-                                    }
-                                }}
-                            >
-                                <View
-                                    style={[
-                                        styles.card,
-                                        {
-                                            backgroundColor:
-                                                themeColor('highlight')
-                                        }
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.cardTitleText,
-                                            { color: themeColor('background') }
-                                        ]}
-                                    >
-                                        {`${localeString(
-                                            'views.Wallet.BalancePane.recovery.title'
-                                        )}${
-                                            !recoveryProgress
-                                                ? ` - ${localeString(
-                                                      'views.Wallet.BalancePane.recovery.textAlt'
-                                                  ).replace('Zeus', 'ZEUS')}`
-                                                : ''
-                                        }`}
-                                    </Text>
-                                    {recoveryProgress && (
-                                        <Text
-                                            style={[
-                                                styles.cardBodyText,
-                                                {
-                                                    color: themeColor(
-                                                        'background'
-                                                    )
-                                                }
-                                            ]}
-                                        >
-                                            {localeString(
-                                                'views.Wallet.BalancePane.recovery.text'
-                                            ).replace('Zeus', 'ZEUS')}
-                                        </Text>
-                                    )}
-                                    {recoveryProgress && (
-                                        <View style={styles.progressContainer}>
-                                            <LinearProgress
-                                                value={
-                                                    Math.floor(
-                                                        recoveryProgress * 100
-                                                    ) / 100
-                                                }
-                                                variant="determinate"
-                                                color={themeColor('background')}
-                                                trackColor={themeColor(
-                                                    'secondaryBackground'
-                                                )}
-                                                style={styles.progressBar}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.progressText,
-                                                    {
-                                                        color: themeColor(
-                                                            'background'
-                                                        )
-                                                    }
-                                                ]}
-                                            >
-                                                {`${Math.floor(
-                                                    recoveryProgress * 100
-                                                ).toString()}%`}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                        {isRescanning && (
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('LNDLogs')}
-                            >
-                                <View
-                                    style={[
-                                        styles.card,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            marginBottom: 20
-                                        }
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.cardTitleText,
-                                            { color: themeColor('text') }
-                                        ]}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.rescan.title'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.cardBodyText,
-                                            { color: themeColor('text') }
-                                        ]}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.rescan.text'
-                                        )}
-                                    </Text>
-                                    {rescanProgress !== null && (
-                                        <View style={styles.progressContainer}>
-                                            <LinearProgress
-                                                value={
-                                                    Math.floor(
-                                                        rescanProgress * 100
-                                                    ) / 100
-                                                }
-                                                variant="determinate"
-                                                color={themeColor('highlight')}
-                                                trackColor={themeColor(
-                                                    'secondaryBackground'
-                                                )}
-                                                style={styles.progressBar}
-                                            />
-                                            <Text
-                                                style={[
-                                                    styles.progressText,
-                                                    {
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }
-                                                ]}
-                                            >
-                                                {`${Math.floor(
-                                                    rescanProgress * 100
-                                                ).toString()}%`}
-                                            </Text>
-                                        </View>
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
-                        {isSyncing && (
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Sync')}
-                            >
-                                <View
-                                    style={[
-                                        styles.card,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            marginBottom: 20
-                                        }
-                                    ]}
-                                >
-                                    <Text
-                                        style={[
-                                            styles.cardTitleText,
-                                            { color: themeColor('text') }
-                                        ]}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.title'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.cardBodyText,
-                                            { color: themeColor('text') }
-                                        ]}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.text'
-                                        ).replace('Zeus', 'ZEUS')}
-                                    </Text>
-                                    {currentBlockHeight !== undefined &&
-                                        bestBlockHeight && (
-                                            <View
-                                                style={styles.progressContainer}
-                                            >
-                                                <LinearProgress
-                                                    value={
-                                                        Math.floor(
-                                                            (currentBlockHeight /
-                                                                bestBlockHeight) *
-                                                                100
-                                                        ) / 100
-                                                    }
-                                                    variant="determinate"
-                                                    color={themeColor(
-                                                        'highlight'
-                                                    )}
-                                                    trackColor={themeColor(
-                                                        'secondaryBackground'
-                                                    )}
-                                                    style={styles.progressBar}
-                                                />
-                                                <Text
-                                                    style={[
-                                                        styles.progressText,
-                                                        {
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }
-                                                    ]}
-                                                >
-                                                    {`${Math.floor(
-                                                        (currentBlockHeight /
-                                                            bestBlockHeight) *
-                                                            100
-                                                    ).toString()}%`}
-                                                </Text>
-                                            </View>
-                                        )}
-                                </View>
-                            </TouchableOpacity>
-                        )}
+                        <RecoveryStatus navigation={navigation} />
+                        <RescanStatus navigation={navigation} />
+                        <SyncingStatus navigation={navigation} />
                         {implementation === 'embedded-lnd' &&
-                            !isSyncing &&
+                            !SyncStore.isSyncing &&
                             showBackupPrompt &&
                             (BalanceStore.lightningBalance !== 0 ||
                                 BalanceStore.totalBlockchainBalance !== 0) &&

@@ -24,7 +24,7 @@ import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 interface PaymentMethodListProps {
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    satAmount?: string;
+    satAmount?: number;
     lightning?: string;
     lightningAddress?: string;
     ecash?: string;
@@ -52,11 +52,15 @@ type DataRow = {
     balance?: number | string;
     account?: string;
     hidden?: boolean;
+    satAmount?: number;
 };
 
 const Row = ({ item }: { item: DataRow }) => {
+    const hasInsufficientBalance =
+        Number(item.balance) === 0 ||
+        (item.satAmount !== undefined && Number(item.balance) < item.satAmount);
     return (
-        <RectButton style={{ opacity: item.disabled ? 0.5 : 1 }}>
+        <RectButton>
             <LinearGradient
                 colors={
                     themeColor('buttonGradient')
@@ -113,12 +117,17 @@ const Row = ({ item }: { item: DataRow }) => {
                         </Text>
                         {item.subtitle && (
                             <Text
-                                style={{
-                                    ...styles.layerText,
-                                    color:
-                                        themeColor('buttonTextSecondary') ||
-                                        themeColor('secondaryText')
-                                }}
+                                numberOfLines={1}
+                                ellipsizeMode="middle"
+                                style={[
+                                    styles.layerText,
+                                    styles.subtitle,
+                                    {
+                                        color:
+                                            themeColor('buttonTextSecondary') ||
+                                            themeColor('secondaryText')
+                                    }
+                                ]}
                             >
                                 {item.subtitle}
                             </Text>
@@ -130,7 +139,11 @@ const Row = ({ item }: { item: DataRow }) => {
                         <Amount
                             sats={item.balance}
                             sensitive
-                            colorOverride={themeColor('buttonText')}
+                            colorOverride={
+                                hasInsufficientBalance
+                                    ? themeColor('error')
+                                    : themeColor('buttonText')
+                            }
                         />
                     </View>
                 )}
@@ -153,7 +166,7 @@ const SwipeableRow = ({
     index: number;
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    satAmount?: string;
+    satAmount?: number;
     lightning?: string;
     lightningAddress?: string;
     offer?: string;
@@ -248,16 +261,19 @@ export default class PaymentMethodList extends Component<
             ecashBalance,
             accounts
         } = this.props;
-
         let DATA: DataRow[] = [];
+
+        const isDisabled = (balance: number | string | undefined) =>
+            Number(balance) === 0 ||
+            (satAmount !== undefined && satAmount > Number(balance));
 
         if (lightning || lnurlParams) {
             DATA.push({
                 layer: 'Lightning',
-                subtitle: lightning
-                    ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag,
-                balance: lightningBalance
+                subtitle: lightning ?? lnurlParams?.tag,
+                balance: lightningBalance,
+                disabled: isDisabled(lightningBalance),
+                satAmount
             });
         }
 
@@ -268,10 +284,10 @@ export default class PaymentMethodList extends Component<
         ) {
             DATA.push({
                 layer: 'Lightning via ecash',
-                subtitle: lightning
-                    ? `${lightning?.slice(0, 12)}...${lightning?.slice(-12)}`
-                    : lnurlParams?.tag,
-                balance: ecashBalance
+                subtitle: lightning ?? lnurlParams?.tag,
+                balance: ecashBalance,
+                disabled: isDisabled(ecashBalance),
+                satAmount
             });
         }
 
@@ -279,16 +295,21 @@ export default class PaymentMethodList extends Component<
             DATA.push({
                 layer: 'Lightning address',
                 subtitle: lightningAddress,
-                balance: lightningBalance
+                balance: lightningBalance,
+                disabled: isDisabled(lightningBalance),
+                satAmount
             });
         }
 
         if (offer) {
             DATA.push({
                 layer: 'Offer',
-                subtitle: `${offer?.slice(0, 12)}...${offer?.slice(-12)}`,
-                disabled: !nodeInfoStore.supportsOffers,
-                balance: lightningBalance
+                subtitle: offer,
+                disabled:
+                    !nodeInfoStore.supportsOffers ||
+                    isDisabled(lightningBalance),
+                balance: lightningBalance,
+                satAmount
             });
         }
 
@@ -296,12 +317,13 @@ export default class PaymentMethodList extends Component<
         if (value && BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
                 layer: 'On-chain',
-                subtitle: value
-                    ? `${value.slice(0, 12)}...${value.slice(-12)}`
-                    : undefined,
-                disabled: !BackendUtils.supportsOnchainSends(),
+                subtitle: value,
+                disabled:
+                    !BackendUtils.supportsOnchainSends() ||
+                    isDisabled(onchainBalance),
                 balance: onchainBalance,
-                account: 'default'
+                account: 'default',
+                satAmount
             });
 
             if (accounts && accounts.length > 0) {
@@ -309,13 +331,12 @@ export default class PaymentMethodList extends Component<
                     if (!account.hidden && !account.watch_only) {
                         DATA.push({
                             layer: account.name,
-                            subtitle: value
-                                ? `${value.slice(0, 12)}...${value.slice(-12)}`
-                                : account.XFP,
-                            disabled: false,
+                            subtitle: value ?? account.XFP,
+                            disabled: isDisabled(account.balance),
                             balance: account.balance,
                             account: account.name,
-                            hidden: account.hidden
+                            hidden: account.hidden,
+                            satAmount
                         });
                     }
                 });
@@ -343,7 +364,11 @@ export default class PaymentMethodList extends Component<
                             lnurlParams={lnurlParams}
                         />
                     )}
-                    keyExtractor={(_item, index) => `message ${index}`}
+                    keyExtractor={(item) =>
+                        item.account
+                            ? `account-${item.account}`
+                            : `layer-${item.layer}`
+                    }
                     style={{ marginTop: 20 }}
                     refreshing={false}
                 />
@@ -396,6 +421,9 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
         fontSize: 15,
         fontFamily: 'PPNeueMontreal-Medium'
+    },
+    subtitle: {
+        marginTop: 2
     },
     eyeIcon: { alignSelf: 'center', margin: 15, marginLeft: 25 }
 });

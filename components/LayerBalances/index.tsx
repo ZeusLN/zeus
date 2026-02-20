@@ -359,7 +359,7 @@ const SwipeableRow = ({
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
-                satAmount={satAmount}
+                satAmount={Number(satAmount)}
                 locked={locked}
             >
                 <Row item={item} />
@@ -407,7 +407,7 @@ const SwipeableRow = ({
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
-                satAmount={satAmount}
+                satAmount={Number(satAmount)}
                 locked={locked}
                 account={item.layer}
                 hidden={item.hidden}
