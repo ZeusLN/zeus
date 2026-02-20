@@ -1,5 +1,12 @@
 import { action, observable } from 'mobx';
 
+import Storage from '../storage';
+import {
+    RATING_DISMISSED_KEY,
+    PAYMENT_COUNT_KEY,
+    RATING_REPROMPT_INTERVAL
+} from '../utils/RatingUtils';
+
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
@@ -8,6 +15,7 @@ export default class ModalStore {
     @observable public showShareModal: boolean = false;
     @observable public showNewChannelModal: boolean = false;
     @observable public showNWCPendingPaymentsModal: boolean = false;
+    @observable public showRatingModal: boolean = false;
     @observable public nwcPendingPaymentsData?: {
         pendingEvents: any[];
         totalAmount: number;
@@ -97,6 +105,39 @@ export default class ModalStore {
     };
 
     @action
+    public toggleRatingModal = (status: boolean) => {
+        this.showRatingModal = status;
+    };
+
+    @action
+    public checkAndTriggerRatingModal = async () => {
+        try {
+            const dismissed = await Storage.getItem(RATING_DISMISSED_KEY);
+            if (dismissed === 'true') return;
+
+            const paymentCount = await Storage.getItem(PAYMENT_COUNT_KEY);
+            const count = (parseInt(paymentCount || '0', 10) || 0) + 1;
+            await Storage.setItem(PAYMENT_COUNT_KEY, count.toString());
+
+            if (count === 1 || count % RATING_REPROMPT_INTERVAL === 0) {
+                this.toggleRatingModal(true);
+            }
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
+    @action
+    public dismissRatingPermanently = async () => {
+        try {
+            await Storage.setItem(RATING_DISMISSED_KEY, 'true');
+        } catch (e) {
+            console.log(e);
+        }
+        this.toggleRatingModal(false);
+    };
+
+    @action
     public shareQR = () => {
         if (this.onShareQR) this.onShareQR();
     };
@@ -159,6 +200,10 @@ export default class ModalStore {
         if (this.showNWCPendingPaymentsModal) {
             this.showNWCPendingPaymentsModal = false;
             this.nwcPendingPaymentsData = undefined;
+            return true;
+        }
+        if (this.showRatingModal) {
+            this.showRatingModal = false;
             return true;
         }
         return false;
