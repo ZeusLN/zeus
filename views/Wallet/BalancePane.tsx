@@ -721,7 +721,9 @@ export default class BalancePane extends React.PureComponent<
                                                                     {
                                                                         token: token.encodedToken,
                                                                         decoded:
-                                                                            token
+                                                                            token,
+                                                                        offlineSpent:
+                                                                            true
                                                                     }
                                                                 );
                                                             }}
