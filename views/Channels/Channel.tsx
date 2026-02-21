@@ -376,6 +376,9 @@ export default class ChannelView extends React.Component<
         } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
+        const confs = channel.getConfirmations(
+            NodeInfoStore.nodeInfo.currentBlockHeight
+        );
 
         const editableFees: boolean = !(
             pendingOpen ||
@@ -493,7 +496,11 @@ export default class ChannelView extends React.Component<
                         />
                     </View>
                     <Text
-                        style={{ ...styles.status, color: themeColor('text') }}
+                        style={{
+                            ...styles.status,
+                            color: themeColor('text'),
+                            marginBottom: confs ? 6 : 18
+                        }}
                     >
                         {pendingOpen
                             ? localeString('views.Channel.pendingOpen')
@@ -507,6 +514,19 @@ export default class ChannelView extends React.Component<
                             ? localeString('general.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
+                    {confs && (
+                        <Text
+                            style={{
+                                ...styles.status,
+                                color: themeColor('text'),
+                                marginTop: 0
+                            }}
+                        >
+                            {`${localeString('views.OpenChannel.numConf')}: ${
+                                confs.current
+                            } / ${confs.total}`}
+                        </Text>
+                    )}
                     {!!renewalInfo.maxExtensionInBlocks && (
                         <>
                             <Row

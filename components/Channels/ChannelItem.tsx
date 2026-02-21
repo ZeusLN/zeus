@@ -35,7 +35,8 @@ export function ChannelItem({
     hideLabels,
     selected,
     highlightLabels,
-    isBelowReserve
+    isBelowReserve,
+    statusSuffix
 }: {
     title?: string;
     secondTitle?: string;
@@ -55,6 +56,7 @@ export function ChannelItem({
     selected?: boolean;
     highlightLabels?: boolean;
     isBelowReserve?: boolean;
+    statusSuffix?: string;
 }) {
     const { settings } = settingsStore;
     const { privacy } = settings;
@@ -146,7 +148,7 @@ export function ChannelItem({
                     </View>
                 ) : null}
                 {expirationStatus && <Tag status={expirationStatus} />}
-                {status && <Tag status={status} />}
+                {status && <Tag status={status} suffix={statusSuffix} />}
             </Row>
             {Number(localBalance) >= 0 &&
                 Number(remoteBalance) >= 0 &&

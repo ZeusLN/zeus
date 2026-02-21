@@ -71,9 +71,27 @@ export default class Channel extends BaseModel {
     alias?: string;
     // pending
     remote_node_pub?: string;
+    confirmations_until_active?: number;
+    confirmation_height?: number;
 
     // enrichments
     displayName?: string;
+
+    public getConfirmations(currentBlockHeight?: number): {
+        current: number;
+        total: number;
+    } | null {
+        if (!this.pendingOpen || this.confirmations_until_active == null)
+            return null;
+        const current =
+            this.confirmation_height && currentBlockHeight
+                ? currentBlockHeight - this.confirmation_height + 1
+                : 0;
+        return {
+            current,
+            total: current + this.confirmations_until_active
+        };
+    }
 
     @computed
     public get closeHeight(): number {

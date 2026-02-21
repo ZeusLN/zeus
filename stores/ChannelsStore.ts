@@ -539,6 +539,10 @@ export default class ChannelsStore {
                     const pendingOpenChannels = data.pending_open_channels.map(
                         (pending: any) => {
                             pending.channel.pendingOpen = true;
+                            pending.channel.confirmations_until_active =
+                                pending.confirmations_until_active;
+                            pending.channel.confirmation_height =
+                                pending.confirmation_height;
                             return new Channel(pending.channel);
                         }
                     );

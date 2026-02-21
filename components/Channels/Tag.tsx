@@ -6,7 +6,13 @@ import { Spacer } from '../../components/layout/Spacer';
 import { themeColor } from '../../utils/ThemeUtils';
 import { ExpirationStatus, Status } from '../../models/Status';
 
-export function Tag({ status }: { status: Status | ExpirationStatus }) {
+export function Tag({
+    status,
+    suffix
+}: {
+    status: Status | ExpirationStatus;
+    suffix?: string;
+}) {
     const colors = { background: '', dot: '', text: 'white' };
 
     // TODO: should all these colors be in the theme?
@@ -72,7 +78,7 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
                 )}
                 {colors.dot && <Spacer width={6} />}
                 <Body colorOverride={colors.text} small>
-                    {status}
+                    {suffix ? `${status} ${suffix}` : status}
                 </Body>
             </Row>
         </View>
