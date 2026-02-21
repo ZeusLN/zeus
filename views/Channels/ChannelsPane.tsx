@@ -13,11 +13,11 @@ import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
-import Feather from '@react-native-vector-icons/feather';
 import BigNumber from 'bignumber.js';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
+import { PeerItem } from '../../components/Channels/PeerItem';
 import ChannelsFilter from '../../components/Channels/ChannelsFilter';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
@@ -42,7 +42,6 @@ import SettingsStore from '../../stores/SettingsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { getFormattedAmount } from '../../utils/AmountUtils';
 
 import Channel from '../../models/Channel';
 import { Status, ExpirationStatus } from '../../models/Status';
@@ -608,7 +607,10 @@ export default class ChannelsPane extends React.PureComponent<
                     </>
                 ) : (
                     <View style={{ flex: 1 }}>
-                        <SafeAreaView style={{ flex: 1 }}>
+                        <SafeAreaView
+                            style={{ flex: 1 }}
+                            edges={['left', 'right', 'bottom']}
+                        >
                             {ChannelsStore?.error && (
                                 <ErrorMessage
                                     message={
@@ -619,11 +621,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     dismissable
                                 />
                             )}
-                            {showPeersSearch && (
-                                <View style={{ paddingTop: 10 }}>
-                                    <ChannelsFilter />
-                                </View>
-                            )}
+                            {showPeersSearch && <ChannelsFilter />}
                             {loading ? (
                                 <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />
@@ -632,10 +630,10 @@ export default class ChannelsPane extends React.PureComponent<
                                 <FlatList
                                     style={{
                                         flex: 1,
-                                        paddingHorizontal: 20,
+                                        paddingHorizontal: 15,
                                         paddingTop: ChannelsStore?.error
                                             ? 0
-                                            : 20
+                                            : 16
                                     }}
                                     onRefresh={() => ChannelsStore?.getPeers()}
                                     refreshing={ChannelsStore?.loading}
@@ -645,23 +643,25 @@ export default class ChannelsPane extends React.PureComponent<
                                     }
                                     renderItem={({ item }) => {
                                         const peer = new Peer(item);
-                                        const peerAlias =
+                                        const peerDisplayName =
                                             aliasesByPubkey[peer.pubkey] ||
                                             nodes[peer.pubkey]?.alias ||
-                                            peer.alias;
-                                        const peerDisplayName =
-                                            peerAlias || peer.pubkey;
+                                            peer.alias ||
+                                            peer.pubkey;
+                                        const showDisconnect =
+                                            BackendUtils.isLNDBased() ||
+                                            peer.connected;
 
                                         return (
-                                            <TouchableOpacity
+                                            <PeerItem
+                                                peer={peer}
+                                                displayName={peerDisplayName}
                                                 onPress={() => {
-                                                    // CLN shows peers that are not connected, handle appropriately
                                                     if (
                                                         !BackendUtils.isLNDBased() &&
                                                         peer.connected === false
                                                     )
                                                         return;
-
                                                     this.openDisconnectModal(
                                                         peer
                                                     );
@@ -672,261 +672,8 @@ export default class ChannelsPane extends React.PureComponent<
                                                         }
                                                     );
                                                 }}
-                                                style={[
-                                                    styles.peerItem,
-                                                    {
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'secondary'
-                                                            )
-                                                    }
-                                                ]}
-                                            >
-                                                <View style={{ flex: 1 }}>
-                                                    <Text
-                                                        style={[
-                                                            styles.text,
-                                                            {
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                fontSize: 20
-                                                            }
-                                                        ]}
-                                                        numberOfLines={3}
-                                                    >
-                                                        {peerDisplayName}
-                                                    </Text>
-
-                                                    {peerAlias && (
-                                                        <Text
-                                                            style={[
-                                                                styles.text,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    ),
-                                                                    fontSize: 16,
-                                                                    marginTop: 4
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {peer.pubkey}
-                                                        </Text>
-                                                    )}
-
-                                                    <Text
-                                                        style={[
-                                                            styles.text,
-                                                            {
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 16,
-                                                                marginTop: 4
-                                                            }
-                                                        ]}
-                                                    >
-                                                        {peer.address}
-                                                    </Text>
-
-                                                    <View
-                                                        style={{
-                                                            marginTop: 8
-                                                        }}
-                                                    >
-                                                        {peer.ping_time && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.ChannelsPane.pingTime'
-                                                                )}: ${
-                                                                    peer.ping_time >=
-                                                                    0
-                                                                        ? (
-                                                                              peer.ping_time /
-                                                                              1000
-                                                                          ).toFixed(
-                                                                              2
-                                                                          ) +
-                                                                          ' ms'
-                                                                        : 'N/A'
-                                                                }`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.sats_sent && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.ChannelsPane.satsSent'
-                                                                )}: ${getFormattedAmount(
-                                                                    peer.sats_sent,
-                                                                    'sats'
-                                                                )}`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.sats_recv && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.ChannelsPane.satsRecv'
-                                                                )}: ${getFormattedAmount(
-                                                                    peer.sats_recv,
-                                                                    'sats'
-                                                                )}`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.bytesSent && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.ChannelsPane.bytesSent'
-                                                                )}: ${
-                                                                    peer.bytesSent
-                                                                } B`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.bytesRecv && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.ChannelsPane.bytesRecv'
-                                                                )}: ${
-                                                                    peer.bytesRecv
-                                                                } B`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.inbound && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.Channel.inbound'
-                                                                )}: ${
-                                                                    peer.inbound
-                                                                        ? localeString(
-                                                                              'general.true'
-                                                                          )
-                                                                        : localeString(
-                                                                              'general.false'
-                                                                          )
-                                                                }`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.connected !==
-                                                            undefined && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.ChannelsPane.connected'
-                                                                )}: ${
-                                                                    peer.connected
-                                                                        ? localeString(
-                                                                              'general.true'
-                                                                          )
-                                                                        : localeString(
-                                                                              'general.false'
-                                                                          )
-                                                                }`}
-                                                            </Text>
-                                                        )}
-                                                        {peer.num_channels !=
-                                                            null && (
-                                                            <Text
-                                                                style={[
-                                                                    styles.peerStatsText,
-                                                                    {
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }
-                                                                ]}
-                                                            >
-                                                                {`${localeString(
-                                                                    'views.NetworkInfo.numChannels'
-                                                                )}: ${
-                                                                    peer.num_channels
-                                                                }`}
-                                                            </Text>
-                                                        )}
-                                                    </View>
-                                                </View>
-
-                                                {/* CLN shows peers that are not connected, handle appropriately */}
-                                                {!(
-                                                    !BackendUtils.isLNDBased() &&
-                                                    !peer.connected
-                                                ) && (
-                                                    <View
-                                                        style={
-                                                            styles.peerIconContainer
-                                                        }
-                                                    >
-                                                        <Feather
-                                                            name="minus-circle"
-                                                            size={20}
-                                                            color={themeColor(
-                                                                'error'
-                                                            )}
-                                                        />
-                                                    </View>
-                                                )}
-                                            </TouchableOpacity>
+                                                showDisconnect={showDisconnect}
+                                            />
                                         );
                                     }}
                                     keyExtractor={(item, index) =>
@@ -973,7 +720,7 @@ export default class ChannelsPane extends React.PureComponent<
                             backdrop={true}
                             backdropOpacity={0.8}
                             backdropColor={themeColor('backdrop')}
-                            coverScreen={false}
+                            coverScreen={true}
                         >
                             <View style={{ padding: 20 }}>
                                 <Text
@@ -1083,18 +830,6 @@ const styles = StyleSheet.create({
     text: {
         fontFamily: 'PPNeueMontreal-Book'
     },
-    peerItem: {
-        flexDirection: 'row',
-        marginBottom: 20,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        borderRadius: 10
-    },
-    peerStatsText: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 14
-    },
     peersContainer: {
         margin: 0,
         padding: 0,
@@ -1103,11 +838,5 @@ const styles = StyleSheet.create({
     separator: {
         height: 0,
         backgroundColor: 'transparent'
-    },
-    peerIconContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginLeft: 10,
-        alignSelf: 'center'
     }
 });
