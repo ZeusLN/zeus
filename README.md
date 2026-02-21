@@ -89,7 +89,7 @@ For the most up-to-date remote connection guides, visit our [documentation site]
 **Don't trust, verify** the code with your own two eyes. Then when ready proceed to the steps below based on your platform.
 
 ### Prerequisites
-- Node.js (minimum version: `v20 (Iron)`)
+- Node.js (minimum version: `v22.11`)
 
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on

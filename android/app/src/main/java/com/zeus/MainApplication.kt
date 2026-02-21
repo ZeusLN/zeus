@@ -5,56 +5,38 @@ import com.ReactNativeBlobUtil.ReactNativeBlobUtilUtils
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
 import com.facebook.react.ReactHost
-import com.facebook.react.ReactNativeHost
-import com.facebook.react.ReactPackage
-import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
+import com.facebook.react.ReactNativeApplicationEntryPoint.loadReactNative
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
-import com.facebook.react.defaults.DefaultReactNativeHost
-import com.facebook.soloader.SoLoader
-import com.facebook.react.soloader.OpenSourceMergedSoMapping
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
 import app.zeusln.zeus.cashudevkit.CashuDevKitPackage
 
-//import com.facebook.hermes.reactexecutor.HermesExecutorFactory;
-// import com.swmansion.gesturehandler.react.RNGestureHandlerPackage;
 class MainApplication : Application(), ReactApplication {
-    override public val reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
-        override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages.apply {
-                // Packages that cannot be autolinked yet can be added manually here, for example:
-                // add(MyReactNativePackage())
 
-                // ZEUS
-                add(MobileToolsPackage())
-                add(LndMobilePackage())
-                add(LndMobileToolsPackage())
-                add(LndMobileScheduledSyncPackage())
-                add(LncPackage())
-                add(NostrConnectPackage())
-                add(CashuDevKitPackage())
-                // add(new ZeusTorPackage());
-            }
+    override val reactHost: ReactHost by lazy {
+        getDefaultReactHost(
+            context = applicationContext,
+            packageList =
+                PackageList(this).packages.apply {
+                    // Packages that cannot be autolinked yet can be added manually here, for example:
+                    // add(MyReactNativePackage())
 
-        override fun getJSMainModuleName(): String = "index"
-
-        override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
-
-        override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
-        override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
+                    // ZEUS
+                    add(MobileToolsPackage())
+                    add(LndMobilePackage())
+                    add(LndMobileToolsPackage())
+                    add(LndMobileScheduledSyncPackage())
+                    add(LncPackage())
+                    add(NostrConnectPackage())
+                    add(CashuDevKitPackage())
+                },
+        )
     }
-
-    override val reactHost: ReactHost
-        get() = getDefaultReactHost(applicationContext, reactNativeHost)
 
     override fun onCreate() {
         super.onCreate()
-        SoLoader.init(this, OpenSourceMergedSoMapping)
-        if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-            // If you opted-in for the New Architecture, we load the native entry point for this app.
-            load()
-        }
+        loadReactNative(this)
         ReactNativeBlobUtilUtils.sharedTrustManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
             override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
