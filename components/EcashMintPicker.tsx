@@ -122,6 +122,8 @@ export default class EcashMintPicker extends React.Component<
                                 ? localeString('cashu.randomMint')
                                 : mints[displayMintUrl]?.name
                                 ? mints[displayMintUrl].name
+                                : displayMintUrl
+                                ? displayMintUrl
                                 : localeString('cashu.tapToConfigure.short')}
                         </Text>
                         {!hideAmount && !showRandom && (
