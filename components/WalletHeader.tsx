@@ -481,11 +481,27 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
+        const OfflineBadge = () => {
+            return CashuStore?.isOffline ? (
+                <Badge
+                    value={localeString('general.offline')}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('error'),
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
+                    }}
+                    textStyle={styles.badgeTextStyle}
+                />
+            ) : null;
+        };
+
         const StatusBadges = () => (
             <>
                 <CustodialBadge />
                 <NetworkBadge />
                 <ReadOnlyBadge />
+                <OfflineBadge />
                 <TorBadge />
             </>
         );
