@@ -463,6 +463,8 @@ export default class ChannelsPane extends React.PureComponent<
             tabBarInactiveTintColor: 'gray',
             tabBarShowLabel: true,
             tabBarStyle: {
+                backgroundColor: 'transparent',
+                elevation: 0,
                 borderTopWidth: 0.2,
                 borderTopColor: themeColor('secondaryText'),
                 paddingTop: 10,
