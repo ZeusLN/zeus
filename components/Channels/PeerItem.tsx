@@ -24,6 +24,8 @@ export function PeerItem({
     showDisconnect
 }: PeerItemProps) {
     const title = displayName === peer.pubkey ? peer.pubkey : displayName;
+    const satsSent = peer.sats_sent;
+    const satsRecv = peer.sats_recv;
     const pingDisplay =
         peer.ping_time != null && peer.ping_time >= 0
             ? `${(peer.ping_time / 1000).toFixed(2)} ms`
@@ -88,54 +90,72 @@ export function PeerItem({
                     </View>
                 )}
 
-                <Row style={styles.stats}>
-                    <View style={styles.statText}>
+                <View style={styles.stats}>
+                    <View style={styles.statRow}>
                         <Text
                             style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
+                                ...styles.statLabel,
+                                color: themeColor('secondaryText')
                             }}
                         >
-                            {`${localeString(
-                                'views.ChannelsPane.pingTime'
-                            )}: ${pingDisplay}`}
+                            {localeString('views.ChannelsPane.pingTime')}
                         </Text>
+                        <View style={styles.statValueWrap}>
+                            <Text
+                                style={{
+                                    ...styles.statValue,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {pingDisplay}
+                            </Text>
+                        </View>
                     </View>
-                    {peer.sats_sent != null && (
-                        <View style={styles.statText}>
+                    {satsSent != null && (
+                        <View style={styles.statRow}>
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
                                 }}
                             >
-                                {`${localeString(
-                                    'views.ChannelsPane.satsSent'
-                                )}: ${getFormattedAmount(
-                                    peer.sats_sent,
-                                    'sats'
-                                )}`}
+                                {localeString('views.ChannelsPane.satsSent')}
                             </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {getFormattedAmount(satsSent, 'sats')}
+                                </Text>
+                            </View>
                         </View>
                     )}
-                    {peer.sats_recv != null && (
-                        <View style={styles.statText}>
+                    {satsRecv != null && (
+                        <View style={styles.statRow}>
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book'
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
                                 }}
                             >
-                                {`${localeString(
-                                    'views.ChannelsPane.satsRecv'
-                                )}: ${getFormattedAmount(
-                                    peer.sats_recv,
-                                    'sats'
-                                )}`}
+                                {localeString('views.ChannelsPane.satsRecv')}
                             </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {getFormattedAmount(satsRecv, 'sats')}
+                                </Text>
+                            </View>
                         </View>
                     )}
-                </Row>
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -144,15 +164,15 @@ export function PeerItem({
 const styles = StyleSheet.create({
     container: {
         borderRadius: 12,
-        padding: 16,
-        marginBottom: 12
+        padding: 14,
+        marginBottom: 8
     },
     content: {
         flex: 1
     },
     header: {
         alignItems: 'flex-start',
-        marginBottom: 4
+        marginBottom: 2
     },
     titleWrap: {
         flex: 1,
@@ -160,19 +180,37 @@ const styles = StyleSheet.create({
         minWidth: 0
     },
     pubkey: {
-        marginTop: 2
+        marginTop: 1
     },
     address: {
-        marginTop: 4,
-        marginBottom: 12
+        marginTop: 2,
+        marginBottom: 6
     },
     stats: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        marginTop: 8
+        marginTop: 6,
+        gap: 2
     },
-    statText: {
-        marginRight: 20
+    statRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        minHeight: 20
+    },
+    statLabel: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14,
+        flexShrink: 0,
+        marginRight: 12
+    },
+    statValueWrap: {
+        flex: 1,
+        alignItems: 'flex-end',
+        minWidth: 0
+    },
+    statValue: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14,
+        textAlign: 'right'
     },
     disconnectButton: {
         padding: 4,
