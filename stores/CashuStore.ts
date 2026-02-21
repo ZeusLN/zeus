@@ -3278,7 +3278,13 @@ export default class CashuStore {
                         e.message?.includes('Spent')
                     ) {
                         // Token was double-spent by sender
-                        spent.push(token);
+                        spent.push(
+                            new CashuToken({
+                                ...token,
+                                spent: true,
+                                pendingClaim: false
+                            })
+                        );
                         results.alreadySpent++;
                     } else {
                         // Keep in pending for retry

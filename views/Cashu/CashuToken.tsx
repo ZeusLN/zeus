@@ -36,7 +36,10 @@ interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
-    route: Route<'CashuToken', { token?: string; decoded: CashuToken }>;
+    route: Route<
+        'CashuToken',
+        { token?: string; decoded: CashuToken; offlineSpent?: boolean }
+    >;
 }
 
 interface CashuTokenState {
@@ -201,15 +204,16 @@ export default class CashuTokenView extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: pendingClaim
-                            ? localeString('cashu.offlinePending.title')
-                            : received
-                            ? localeString('cashu.receivedToken')
-                            : sent && !spent
-                            ? localeString('cashu.unspentToken')
-                            : sent && spent
-                            ? localeString('cashu.sentToken')
-                            : localeString('cashu.token'),
+                        text:
+                            spent || route.params?.offlineSpent
+                                ? localeString('cashu.spentToken')
+                                : pendingClaim
+                                ? localeString('cashu.offlinePending.title')
+                                : received
+                                ? localeString('cashu.receivedToken')
+                                : sent
+                                ? localeString('cashu.unspentToken')
+                                : localeString('cashu.token'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -254,6 +258,14 @@ export default class CashuTokenView extends React.Component<
                             message={`${localeString(
                                 'views.Cashu.CashuToken.notSupported'
                             )}: ${unit}`}
+                        />
+                    )}
+
+                    {(spent || route.params?.offlineSpent) && (
+                        <ErrorMessage
+                            message={localeString(
+                                'cashu.offlineSpent.tokenSpent'
+                            )}
                         />
                     )}
 
