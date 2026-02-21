@@ -9,7 +9,10 @@ import EcashMintPicker from '../../components/EcashMintPicker';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import CashuToken from '../../models/CashuToken';
@@ -262,7 +265,7 @@ export default class SendEcash extends React.Component<
         const { CashuStore, navigation } = this.props;
         const { memo, value, satAmount, pubkey, duration } = this.state;
 
-        const { mintToken, mintingToken, loadingMsg } = CashuStore;
+        const { mintToken, mintingToken, loadingMsg, isOffline } = CashuStore;
         const loading = CashuStore.loading || this.state.loading;
 
         const error_msg = CashuStore.error_msg;
@@ -285,25 +288,33 @@ export default class SendEcash extends React.Component<
                             : undefined
                 })
             };
-            mintToken(params).then(
-                (
-                    result:
-                        | {
-                              token: string;
-                              decoded: CashuToken;
-                          }
-                        | undefined
-                ) => {
-                    if (result?.token && result.decoded) {
-                        const { token, decoded } = result;
-                        this.resetForm();
-                        navigation.navigate('CashuToken', {
-                            token,
-                            decoded
-                        });
+            mintToken(params)
+                .then(
+                    (
+                        result:
+                            | {
+                                  token: string;
+                                  decoded: CashuToken;
+                              }
+                            | undefined
+                    ) => {
+                        if (result?.token && result.decoded) {
+                            const { token, decoded } = result;
+                            this.resetForm();
+                            navigation.navigate('CashuToken', {
+                                token,
+                                decoded
+                            });
+                        }
                     }
-                }
-            );
+                )
+                .catch((err: any) => {
+                    console.error(
+                        'SendEcash mintToken error:',
+                        err?.message,
+                        err?.stack
+                    );
+                });
         };
 
         return (
@@ -328,6 +339,13 @@ export default class SendEcash extends React.Component<
                         keyboardDismissMode="on-drag"
                     >
                         {error_msg && <ErrorMessage message={error_msg} />}
+                        {isOffline && (
+                            <WarningMessage
+                                message={localeString(
+                                    'cashu.offlineSend.warning'
+                                )}
+                            />
+                        )}
 
                         <View>
                             {(mintingToken || loading) && (

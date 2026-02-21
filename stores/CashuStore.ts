@@ -18,8 +18,10 @@ import CashuDevKit, {
     CDKMeltQuote,
     CDKMelted,
     CDKToken,
+    CDKSendKind,
     CDKSpendingConditions,
-    CDKP2PKCondition
+    CDKP2PKCondition,
+    CDKProofWithY
 } from '../cashu-cdk';
 
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -58,6 +60,11 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
+
+import NetInfo, {
+    NetInfoState,
+    NetInfoSubscription
+} from '@react-native-community/netinfo';
 
 import NavigationService from '../NavigationService';
 
@@ -138,6 +145,7 @@ export interface ReviewerProfile {
 interface ClaimTokenResponse {
     success: boolean;
     errorMessage: string;
+    warningMessage?: string;
 }
 
 export default class CashuStore {
@@ -216,6 +224,15 @@ export default class CashuStore {
     private addedMintsCache: Set<string> = new Set();
     // Original seed version before CDK migration (preserved for v1 P2PK derivation)
     private originalSeedVersion: string | undefined;
+
+    // Offline support
+    @observable public isOffline: boolean = false;
+    @observable public offlinePendingTokens: Array<CashuToken> = [];
+    @observable public offlinePendingBalance: number = 0;
+    @observable public offlineSpentTokens: Array<CashuToken> = [];
+    @observable public showOfflineSpentAlert: boolean = false;
+    private isSweeping: boolean = false;
+    private netInfoUnsubscribe: NetInfoSubscription | null = null;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -446,7 +463,7 @@ export default class CashuStore {
                             keysetId: keyset.id
                         });
                         proofs = result.proofs || [];
-                    } catch {
+                    } catch (_e) {
                         proofs = [];
                     }
 
@@ -486,7 +503,7 @@ export default class CashuStore {
                     (_, idx) => states[idx].state !== CheckStateEnum.SPENT
                 );
                 unspentProofs = unspentProofs.concat(unspent);
-            } catch {
+            } catch (_e) {
                 // If state check fails, include the batch anyway
                 unspentProofs = unspentProofs.concat(batch);
             }
@@ -949,6 +966,62 @@ export default class CashuStore {
     };
 
     /**
+     * Select proofs to cover a requested amount using a greedy algorithm.
+     * Sorts proofs by amount descending and accumulates until sum >= amount.
+     */
+    private selectProofsForAmount = (
+        proofs: CDKProofWithY[],
+        amount: number
+    ): { selected: CDKProofWithY[]; total: number; overpay: number } => {
+        const sorted = [...proofs].sort((a, b) => b.amount - a.amount);
+        const selected: CDKProofWithY[] = [];
+        let total = 0;
+        for (const proof of sorted) {
+            if (total >= amount) break;
+            selected.push(proof);
+            total += proof.amount;
+        }
+        if (total < amount) {
+            throw new Error(
+                `Insufficient proofs: need ${amount} but only have ${total}`
+            );
+        }
+        return { selected, total, overpay: total - amount };
+    };
+
+    /**
+     * Build a cashu v3 token string from proofs.
+     * Format: cashuA + base64url(JSON)
+     */
+    private buildCashuToken = (
+        mintUrl: string,
+        proofs: CDKProofWithY[],
+        memo?: string
+    ): string => {
+        const tokenData: any = {
+            token: [
+                {
+                    mint: mintUrl,
+                    proofs: proofs.map((p) => ({
+                        amount: p.amount,
+                        secret: p.secret,
+                        C: p.c,
+                        id: p.keyset_id
+                    }))
+                }
+            ],
+            unit: 'sat'
+        };
+        if (memo) {
+            tokenData.memo = memo;
+        }
+        const jsonStr = JSON.stringify(tokenData);
+        const b64 = Base64Utils.utf8ToBase64(jsonStr);
+        const b64url = Base64Utils.base64ToBase64Url(b64);
+        return 'cashuA' + b64url;
+    };
+
+    /**
      * CDK: Send ecash token
      */
     public sendTokenCDK = async (
@@ -956,7 +1029,9 @@ export default class CashuStore {
         amount: number,
         memo?: string,
         p2pkPubkey?: string,
-        locktime?: number
+        locktime?: number,
+        sendKind?: CDKSendKind,
+        tolerance?: number
     ): Promise<CDKToken> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
@@ -975,7 +1050,73 @@ export default class CashuStore {
                 data: conditionData
             };
         }
-        const token = await CashuDevKit.send(mintUrl, amount, memo, conditions);
+
+        // Offline path: bypass CDK's send flow (which requires network)
+        // and construct the token directly from DB proofs.
+        // P2PK locking requires the mint to generate new proofs with
+        // appropriate secrets, so it cannot work offline.
+        if (this.isOffline) {
+            if (p2pkPubkey) {
+                throw new Error(
+                    localeString('cashu.offlineSend.p2pkNotSupported')
+                );
+            }
+            if (__DEV__) {
+                console.log(
+                    'sendTokenCDK: offline path via direct proof access',
+                    {
+                        mintUrl,
+                        amount
+                    }
+                );
+            }
+            const allProofs = await CashuDevKit.getUnspentProofs(mintUrl);
+            const { selected, total } = this.selectProofsForAmount(
+                allProofs,
+                amount
+            );
+            const encoded = this.buildCashuToken(mintUrl, selected, memo);
+            await CashuDevKit.removeProofs(selected.map((p) => p.y));
+            await this.syncCDKBalances();
+
+            return {
+                encoded,
+                value: total,
+                mint_url: mintUrl,
+                memo: memo || '',
+                unit: 'sat',
+                proofs: selected.map((p) => ({
+                    amount: p.amount,
+                    secret: p.secret,
+                    c: p.c,
+                    keyset_id: p.keyset_id
+                }))
+            };
+        }
+
+        // Online path: use CDK's normal send flow
+        const effectiveSendKind: CDKSendKind = sendKind || 'OnlineExact';
+
+        if (__DEV__) {
+            console.log('sendTokenCDK: calling CashuDevKit.send', {
+                mintUrl,
+                amount,
+                effectiveSendKind
+            });
+        }
+        const token = await CashuDevKit.send(
+            mintUrl,
+            amount,
+            memo,
+            conditions,
+            effectiveSendKind,
+            tolerance
+        );
+        if (__DEV__) {
+            console.log('sendTokenCDK: send succeeded', {
+                encoded: token.encoded?.substring(0, 30)
+            });
+        }
         await this.syncCDKBalances();
 
         return token;
@@ -1032,6 +1173,39 @@ export default class CashuStore {
     // =========================================================================
 
     @action
+    public startConnectivityMonitoring = () => {
+        if (this.netInfoUnsubscribe) return;
+        this.netInfoUnsubscribe = NetInfo.addEventListener(
+            (state: NetInfoState) => {
+                const wasOffline = this.isOffline;
+                runInAction(() => {
+                    // isInternetReachable can be null (unknown) initially;
+                    // treat null as "not offline" to avoid false positives
+                    this.isOffline =
+                        state.isConnected === false ||
+                        state.isInternetReachable === false;
+                });
+                // offline → online transition: sweep pending tokens
+                // delay briefly to let the network stabilize
+                if (wasOffline && !this.isOffline && !this.isSweeping) {
+                    setTimeout(() => {
+                        this.sweepOfflinePendingTokens();
+                        this.checkPendingItems();
+                    }, 3000);
+                }
+            }
+        );
+    };
+
+    @action
+    public stopConnectivityMonitoring = () => {
+        if (this.netInfoUnsubscribe) {
+            this.netInfoUnsubscribe();
+            this.netInfoUnsubscribe = null;
+        }
+    };
+
+    @action
     public reset = () => {
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
@@ -1049,6 +1223,12 @@ export default class CashuStore {
         this.shownThresholdModals = [];
         this.addedMintsCache.clear();
         this.originalSeedVersion = undefined;
+        this.offlinePendingTokens = [];
+        this.offlinePendingBalance = 0;
+        this.offlineSpentTokens = [];
+        this.showOfflineSpentAlert = false;
+        this.isSweeping = false;
+        this.stopConnectivityMonitoring();
     };
 
     @action
@@ -1883,6 +2063,9 @@ export default class CashuStore {
                 'stores.CashuStore.initializingWallet'
             );
         });
+
+        this.startConnectivityMonitoring();
+
         const lndDir = this.getLndDir();
 
         // Load app-specific data from local storage (activity, preferences, seed)
@@ -1930,6 +2113,31 @@ export default class CashuStore {
                   (token: any) => new CashuToken(token)
               )
             : [];
+
+        // Load pending received tokens (offline receive queue)
+        const storedPendingReceived = await Storage.getItem(
+            `${lndDir}-cashu-offline-pending-tokens`
+        );
+        if (storedPendingReceived) {
+            this.offlinePendingTokens = JSON.parse(storedPendingReceived).map(
+                (token: any) => new CashuToken(token)
+            );
+            this.offlinePendingBalance = this.offlinePendingTokens.reduce(
+                (sum, t) => sum + t.getAmount,
+                0
+            );
+        }
+
+        // Load spent pending tokens (rugged tokens awaiting user review)
+        const storedSpentPending = await Storage.getItem(
+            `${lndDir}-cashu-offline-spent-tokens`
+        );
+        if (storedSpentPending) {
+            this.offlineSpentTokens = JSON.parse(storedSpentPending).map(
+                (token: any) => new CashuToken(token)
+            );
+        }
+
         this.seedVersion = storedSeedVersion ? storedSeedVersion : undefined;
         this.seedPhrase = storedSeedPhrase
             ? JSON.parse(storedSeedPhrase)
@@ -2063,7 +2271,7 @@ export default class CashuStore {
                 // One-time v1 legacy restore for mints already in CDK
                 // (handles users who ran a previous CDK build that deleted
                 // local proofs before this fix was applied)
-                if (this.originalSeedVersion === 'v1') {
+                if (this.originalSeedVersion === 'v1' && !this.isOffline) {
                     const v1RestoreDone = await Storage.getItem(
                         `${lndDir}-cashu-v1-restore-done`
                     );
@@ -2107,9 +2315,13 @@ export default class CashuStore {
 
                 // Sync balances and fetch mint info from CDK
                 await this.syncCDKBalances(true); // Include transactions on init
-                await Promise.all(
-                    this.mintUrls.map((mintUrl) => this.fetchMintInfo(mintUrl))
-                );
+                if (!this.isOffline) {
+                    await Promise.all(
+                        this.mintUrls.map((mintUrl) =>
+                            this.fetchMintInfo(mintUrl)
+                        )
+                    );
+                }
 
                 // Enrich tokens with proofs if missing (migration for old tokens)
                 await this.enrichTokensWithProofs();
@@ -2206,8 +2418,14 @@ export default class CashuStore {
             this.initializing = false;
         });
 
-        // Check status of pending items after initialization
-        this.checkPendingItems();
+        // Check status of pending items after initialization (skip when offline)
+        if (!this.isOffline) {
+            this.checkPendingItems();
+            // Sweep any pending received tokens that were queued while offline
+            if (this.offlinePendingTokens.length > 0) {
+                this.sweepOfflinePendingTokens();
+            }
+        }
 
         const completionTime =
             (new Date().getTime() - start.getTime()) / 1000 + 's';
@@ -2791,10 +3009,11 @@ export default class CashuStore {
 
             return payment;
         } catch (err: any) {
+            const errorMsg = String(err?.message);
             console.error('CDK payLnInvoiceFromEcash error:', err);
             runInAction(() => {
                 this.paymentError = true;
-                this.paymentErrorMsg = String(err.message);
+                this.paymentErrorMsg = errorMsg;
                 this.loading = false;
             });
             return;
@@ -2804,6 +3023,11 @@ export default class CashuStore {
     @action
     public checkTokenSpent = async (decoded: CashuToken) => {
         const { mint } = decoded;
+
+        // Can't check spent status without network
+        if (this.isOffline) {
+            return false;
+        }
 
         if (this.cashuWallets[mint]?.errorConnecting) {
             return false;
@@ -2860,18 +3084,17 @@ export default class CashuStore {
 
             return alreadySpent;
         } catch (error: any) {
+            let errorMessage: string;
+            if (error && typeof error === 'object') {
+                errorMessage = error.message || String(error);
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else {
+                errorMessage = String(error);
+            }
             console.error('Error checking token spent status:', error);
             runInAction(() => {
                 this.error = true;
-                let errorMessage: string;
-                if (error && typeof error === 'object') {
-                    // CDKError has { type, message } structure
-                    errorMessage = error.message || String(error);
-                } else if (typeof error === 'string') {
-                    errorMessage = error;
-                } else {
-                    errorMessage = String(error);
-                }
                 this.error_msg =
                     errorMessage ||
                     localeString('stores.CashuStore.checkSpentError');
@@ -2903,12 +3126,247 @@ export default class CashuStore {
     };
 
     @action
+    public claimTokenOffline = async (
+        encodedToken: string,
+        decoded: CashuToken
+    ): Promise<ClaimTokenResponse> => {
+        // Check for duplicates in pending queue
+        const isDuplicate = this.offlinePendingTokens.some(
+            (t) => t.encodedToken === encodedToken
+        );
+        if (isDuplicate) {
+            return {
+                success: false,
+                errorMessage: localeString('cashu.offlinePending.duplicate')
+            };
+        }
+
+        const pendingToken = new CashuToken({
+            ...decoded,
+            received: true,
+            pendingClaim: true,
+            encodedToken,
+            received_at: Date.now() / 1000
+        });
+
+        runInAction(() => {
+            this.offlinePendingTokens.push(pendingToken);
+            this.offlinePendingBalance = this.offlinePendingTokens.reduce(
+                (sum, t) => sum + t.getAmount,
+                0
+            );
+        });
+
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-offline-pending-tokens`,
+            this.offlinePendingTokens
+        );
+
+        return {
+            success: true,
+            errorMessage: '',
+            warningMessage: localeString(
+                'cashu.offlinePending.bannerMessageSingular'
+            )
+        };
+    };
+
+    @action
+    public removeOfflinePendingToken = async (encodedToken: string) => {
+        this.offlinePendingTokens = this.offlinePendingTokens.filter(
+            (t) => t.encodedToken !== encodedToken
+        );
+        this.offlinePendingBalance = this.offlinePendingTokens.reduce(
+            (sum, t) => sum + t.getAmount,
+            0
+        );
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-offline-pending-tokens`,
+            this.offlinePendingTokens
+        );
+    };
+
+    @action
+    public removeOfflineSpentToken = async (encodedToken: string) => {
+        this.offlineSpentTokens = this.offlineSpentTokens.filter(
+            (t) => t.encodedToken !== encodedToken
+        );
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-offline-spent-tokens`,
+            this.offlineSpentTokens
+        );
+    };
+
+    @action
+    public dismissOfflineSpentTokens = () => {
+        this.showOfflineSpentAlert = false;
+    };
+
+    @action
+    public sweepOfflinePendingTokens = async () => {
+        if (
+            this.offlinePendingTokens.length === 0 ||
+            !this.cdkInitialized ||
+            this.isOffline ||
+            this.isSweeping
+        ) {
+            if (__DEV__) {
+                console.log('sweepOfflinePendingTokens: skipping', {
+                    count: this.offlinePendingTokens.length,
+                    cdkInitialized: this.cdkInitialized,
+                    isOffline: this.isOffline,
+                    isSweeping: this.isSweeping
+                });
+            }
+            return;
+        }
+
+        if (__DEV__) {
+            console.log(
+                `sweepOfflinePendingTokens: processing ${this.offlinePendingTokens.length} tokens`
+            );
+        }
+
+        this.isSweeping = true;
+
+        try {
+            const results = { claimed: 0, alreadySpent: 0, failed: 0 };
+            const remaining: CashuToken[] = [];
+            const spent: CashuToken[] = [];
+
+            const tokensToProcess = [...this.offlinePendingTokens];
+
+            for (let i = 0; i < tokensToProcess.length; i++) {
+                const token = tokensToProcess[i];
+                if (!token.encodedToken) {
+                    remaining.push(token);
+                    continue;
+                }
+                try {
+                    // Ensure the token's mint is added to CDK before receiving
+                    if (token.mint) {
+                        await this.ensureMintAdded(token.mint);
+                    }
+
+                    const isLocked = CashuUtils.isTokenP2PKLocked(token);
+                    const signingKey = isLocked
+                        ? this.deriveCashuSecretKey() ?? undefined
+                        : undefined;
+                    await this.receiveTokenCDK(token.encodedToken, signingKey);
+
+                    // Move to confirmed received tokens
+                    const confirmedToken = new CashuToken({
+                        ...token,
+                        pendingClaim: false
+                    });
+                    this.receivedTokens?.push(confirmedToken);
+                    results.claimed++;
+                } catch (e: any) {
+                    console.warn(
+                        'sweepOfflinePendingTokens: failed to claim token',
+                        e?.message
+                    );
+
+                    if (e.type === 'Network') {
+                        // Abort sweep on network error to avoid failing all tokens
+                        remaining.push(...tokensToProcess.slice(i));
+                        break;
+                    }
+
+                    if (
+                        e.message?.includes('spent') ||
+                        e.message?.includes('Spent')
+                    ) {
+                        // Token was double-spent by sender
+                        spent.push(
+                            new CashuToken({
+                                ...token,
+                                spent: true,
+                                pendingClaim: false
+                            })
+                        );
+                        results.alreadySpent++;
+                    } else {
+                        // Keep in pending for retry
+                        remaining.push(token);
+                        results.failed++;
+                    }
+                }
+            }
+
+            runInAction(() => {
+                this.offlinePendingTokens = remaining;
+                this.offlinePendingBalance = remaining.reduce(
+                    (sum, t) => sum + t.getAmount,
+                    0
+                );
+                if (spent.length > 0) {
+                    this.offlineSpentTokens = [
+                        ...this.offlineSpentTokens,
+                        ...spent
+                    ];
+                    this.showOfflineSpentAlert = true;
+                }
+            });
+
+            // Persist arrays
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-offline-pending-tokens`,
+                this.offlinePendingTokens
+            );
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-received-tokens`,
+                this.receivedTokens
+            );
+            if (spent.length > 0) {
+                await Storage.setItem(
+                    `${this.getLndDir()}-cashu-offline-spent-tokens`,
+                    this.offlineSpentTokens
+                );
+            }
+
+            await this.syncCDKBalances(true);
+
+            // Show summary alert (spent tokens handled by UI modal)
+            const parts: string[] = [];
+            if (results.claimed > 0) {
+                parts.push(
+                    `${results.claimed} ${localeString(
+                        'cashu.offlinePending.claimedMessage'
+                    )}`
+                );
+            }
+            if (results.failed > 0) {
+                parts.push(
+                    `${results.failed} ${localeString(
+                        'cashu.offlinePending.failedMessage'
+                    )}`
+                );
+            }
+            if (parts.length > 0) {
+                Alert.alert(
+                    localeString('cashu.offlinePending.claimedTitle'),
+                    parts.join('\n')
+                );
+            }
+        } finally {
+            this.isSweeping = false;
+        }
+    };
+
+    @action
     public claimToken = async (
         encodedToken: string,
         decoded: CashuToken,
         toSelfCustody?: boolean
     ): Promise<ClaimTokenResponse> => {
         this.loading = true;
+
+        // When offline, queue token for later claiming
+        if (this.isOffline) {
+            this.loading = false;
+            return await this.claimTokenOffline(encodedToken, decoded);
+        }
 
         const mintUrl = decoded.mint;
 
@@ -3268,7 +3726,54 @@ export default class CashuStore {
                 return;
             }
 
+            // When offline, estimate overpay via direct proof selection
+            if (this.isOffline) {
+                const allProofs = await CashuDevKit.getUnspentProofs(mintUrl);
+                const { overpay } = this.selectProofsForAmount(
+                    allProofs,
+                    Number(value)
+                );
+
+                if (overpay > 0) {
+                    const overpayInfo = `\n\n${localeString(
+                        'cashu.offlineSend.overpayEstimate'
+                    )}: +${overpay} sats`;
+
+                    const confirmed = await new Promise<boolean>((resolve) => {
+                        Alert.alert(
+                            localeString('cashu.offlineSend.overpayTitle'),
+                            localeString('cashu.offlineSend.overpayMessage') +
+                                overpayInfo,
+                            [
+                                {
+                                    text: localeString('general.cancel'),
+                                    style: 'cancel',
+                                    onPress: () => resolve(false)
+                                },
+                                {
+                                    text: localeString('general.confirm'),
+                                    onPress: () => resolve(true)
+                                }
+                            ]
+                        );
+                    });
+                    if (!confirmed) {
+                        runInAction(() => {
+                            this.mintingToken = false;
+                        });
+                        return;
+                    }
+                }
+            }
+
             // Send token via CDK (normalize pubkey so we never create P2PK by mistake)
+            if (__DEV__) {
+                console.log('mintToken: calling sendTokenCDK', {
+                    mintUrl,
+                    value: Number(value),
+                    isOffline: this.isOffline
+                });
+            }
             const cdkToken = await this.sendTokenCDK(
                 mintUrl,
                 Number(value),
@@ -3307,13 +3812,14 @@ export default class CashuStore {
 
             return { token, decoded };
         } catch (e: any) {
+            const errorMsg =
+                e?.message ||
+                localeString('stores.CashuStore.errorMintingToken');
             console.error('CDK mintToken error:', e);
             runInAction(() => {
                 this.mintingTokenError = true;
                 this.mintingToken = false;
-                this.error_msg =
-                    e.message ||
-                    localeString('stores.CashuStore.errorMintingToken');
+                this.error_msg = errorMsg;
             });
             return;
         }
@@ -3354,6 +3860,8 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-invoices`);
             await Storage.removeItem(`${lndDir}-cashu-payments`);
             await Storage.removeItem(`${lndDir}-cashu-received-tokens`);
+            await Storage.removeItem(`${lndDir}-cashu-offline-pending-tokens`);
+            await Storage.removeItem(`${lndDir}-cashu-offline-spent-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-sent-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-seed-version`);
             await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);

@@ -817,6 +817,7 @@ class CashuDevKitModule: RCTEventEmitter {
                 // Parse options if provided
                 var includeFee = false
                 var spendingConditions: SpendingConditions? = nil
+                var sendKind: SendKind = .onlineExact
                 if let json = optionsJson,
                    let data = json.data(using: .utf8),
                    let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -826,13 +827,26 @@ class CashuDevKitModule: RCTEventEmitter {
                     if let cond = parsed["conditions"] as? [String: Any] {
                     spendingConditions = parseP2PKConditions(from: cond)
                     }
+                    if let kindStr = parsed["send_kind"] as? String {
+                        let tolerance = (parsed["tolerance"] as? NSNumber).map { Amount(value: $0.uint64Value) } ?? Amount(value: 0)
+                        switch kindStr {
+                        case "OfflineExact":
+                            sendKind = .offlineExact
+                        case "OnlineTolerance":
+                            sendKind = .onlineTolerance(tolerance: tolerance)
+                        case "OfflineTolerance":
+                            sendKind = .offlineTolerance(tolerance: tolerance)
+                        default:
+                            sendKind = .onlineExact
+                        }
+                    }
                 }
 
                 let innerSendOptions = SendOptions(
                     memo: nil,
                     conditions: spendingConditions,
                     amountSplitTarget: .none,
-                    sendKind: .onlineExact,
+                    sendKind: sendKind,
                     includeFee: includeFee,
                     maxProofs: nil,
                     metadata: [:]
@@ -847,12 +861,20 @@ class CashuDevKitModule: RCTEventEmitter {
 
                 let prepared = try await wallet.prepareSend(mintUrl: url, amount: amt, options: sendOptions)
                 let preparedId = prepared.id()
+                let preparedAmount = prepared.amount().value
+                let preparedFee = prepared.fee().value
 
                 walletQueue.sync {
                     self.preparedSends[preparedId] = prepared
                 }
 
-                resolve(preparedId)
+                let result: [String: Any] = [
+                    "id": preparedId,
+                    "amount": preparedAmount,
+                    "fee": preparedFee
+                ]
+                let jsonData = try JSONSerialization.data(withJSONObject: result)
+                resolve(String(data: jsonData, encoding: .utf8)!)
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
                 reject(code, message, error)
@@ -1203,6 +1225,79 @@ class CashuDevKitModule: RCTEventEmitter {
                 reject(code, message, error)
             } catch {
                 reject("LIST_TRANSACTIONS_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
+    // MARK: - Direct Proof Access (Offline Send)
+
+    @objc(getUnspentProofs:resolver:rejecter:)
+    func getUnspentProofs(_ mintUrl: String,
+                          resolve: @escaping RCTPromiseResolveBlock,
+                          reject: @escaping RCTPromiseRejectBlock) {
+        guard let db = self.db else {
+            reject("NO_WALLET", "Wallet not initialized", nil)
+            return
+        }
+
+        Task {
+            do {
+                let url = MintUrl(url: mintUrl)
+                let proofInfos = try await db.getProofs(
+                    mintUrl: url,
+                    unit: .sat,
+                    state: [.unspent],
+                    spendingConditions: nil
+                )
+
+                let result = proofInfos.map { info -> [String: Any] in
+                    return [
+                        "amount": info.proof.amount.value,
+                        "secret": info.proof.secret,
+                        "c": info.proof.c,
+                        "keyset_id": info.proof.keysetId,
+                        "y": info.y.hex
+                    ]
+                }
+
+                resolve(encodeToJson(result))
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("GET_PROOFS_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(removeProofs:resolver:rejecter:)
+    func removeProofs(_ proofsYJson: String,
+                      resolve: @escaping RCTPromiseResolveBlock,
+                      reject: @escaping RCTPromiseRejectBlock) {
+        guard let db = self.db else {
+            reject("NO_WALLET", "Wallet not initialized", nil)
+            return
+        }
+
+        Task {
+            do {
+                guard let data = proofsYJson.data(using: .utf8),
+                      let yStrings = try? JSONSerialization.jsonObject(with: data) as? [String] else {
+                    reject("INVALID_INPUT", "Could not parse Y values JSON", nil)
+                    return
+                }
+
+                let ys = try yStrings.map { hex -> PublicKey in
+                    try PublicKey(hex: hex)
+                }
+
+                try await db.updateProofs(added: [], removedYs: ys)
+                resolve(nil)
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("REMOVE_PROOFS_ERROR", error.localizedDescription, error)
             }
         }
     }

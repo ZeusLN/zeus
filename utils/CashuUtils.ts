@@ -44,7 +44,8 @@ function safeParseP2PKSecret(secret: string): unknown | null {
 
 class CashuUtils {
     /**
-     * Extract raw token string from various URL formats
+     * Extract raw token string from various URL formats.
+     * Supports both cashuA (v3 JSON) and cashuB (v4 CBOR) token prefixes.
      */
     extractTokenString = (token: string): string => {
         if (!token || typeof token !== 'string') {
@@ -52,8 +53,12 @@ class CashuUtils {
         }
         token = token.trim();
 
-        // Find cashuA prefix if present
-        const idx = token.indexOf('cashuA');
+        // Find cashuA or cashuB prefix if present
+        const idxA = token.indexOf('cashuA');
+        const idxB = token.indexOf('cashuB');
+        // Pick the earliest match, or whichever exists
+        const idx =
+            idxA === -1 ? idxB : idxB === -1 ? idxA : Math.min(idxA, idxB);
         if (idx !== -1) {
             token = token.slice(idx);
         }

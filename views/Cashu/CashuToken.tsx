@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, ScrollView, View, Share } from 'react-native';
+import { Alert, StyleSheet, ScrollView, View, Share } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,6 +18,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import {
     SuccessMessage,
+    WarningMessage,
     ErrorMessage
 } from '../../components/SuccessErrorMessage';
 import Text from '../../components/Text';
@@ -35,13 +36,17 @@ interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
-    route: Route<'CashuToken', { token?: string; decoded: CashuToken }>;
+    route: Route<
+        'CashuToken',
+        { token?: string; decoded: CashuToken; offlineSpent?: boolean }
+    >;
 }
 
 interface CashuTokenState {
     updatedToken?: CashuToken;
     success: boolean;
     errorMessage: string;
+    warningMessage: string;
     infoIndex: number;
     isTokenTooLarge: boolean;
 }
@@ -58,6 +63,7 @@ export default class CashuTokenView extends React.Component<
         updatedToken: undefined,
         success: false,
         errorMessage: '',
+        warningMessage: '',
         infoIndex: 0,
         isTokenTooLarge: false
     };
@@ -76,9 +82,17 @@ export default class CashuTokenView extends React.Component<
         const decoded = route.params?.decoded;
         const token = route.params?.token || decoded?.encodedToken;
         const { spent, mint } = decoded;
+        const offlineSpent = route.params?.offlineSpent;
 
         if (token) {
             this.setState({ isTokenTooLarge: token.length > MAX_TOKEN_LENGTH });
+        }
+
+        if (spent || offlineSpent) {
+            this.setState({
+                errorMessage: localeString('cashu.offlineSpent.tokenSpent')
+            });
+            return;
         }
 
         if (!spent) {
@@ -125,6 +139,7 @@ export default class CashuTokenView extends React.Component<
         const {
             success,
             errorMessage,
+            warningMessage,
             updatedToken,
             infoIndex,
             isTokenTooLarge
@@ -148,10 +163,12 @@ export default class CashuTokenView extends React.Component<
             received,
             sent,
             spent,
+            pendingClaim,
             encodedToken,
             getDisplayTime
         } = decoded;
         const token: string = route.params?.token || encodedToken || '';
+        const isSpent = spent || route.params?.offlineSpent;
 
         const haveMint = mintUrls.includes(mint);
         const hasOpenChannels = ChannelsStore?.channels?.length > 0;
@@ -196,12 +213,14 @@ export default class CashuTokenView extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: received
+                        text: isSpent
+                            ? localeString('cashu.spentToken')
+                            : pendingClaim
+                            ? localeString('cashu.offlinePending.title')
+                            : received
                             ? localeString('cashu.receivedToken')
-                            : sent && !spent
+                            : sent
                             ? localeString('cashu.unspentToken')
-                            : sent && spent
-                            ? localeString('cashu.sentToken')
                             : localeString('cashu.token'),
                         style: {
                             color: themeColor('text'),
@@ -220,12 +239,16 @@ export default class CashuTokenView extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
-                    {success && (
+                    {success && !warningMessage && (
                         <SuccessMessage
                             message={localeString(
                                 'views.Cashu.CashuToken.success'
                             )}
                         />
+                    )}
+
+                    {warningMessage && (
+                        <WarningMessage message={warningMessage} />
                     )}
 
                     {(errorMessage || storeErrorMsg) && (
@@ -253,9 +276,11 @@ export default class CashuTokenView extends React.Component<
                                 sensitive
                                 jumboText
                                 toggleable
-                                credit={received}
-                                debit={sent && spent}
-                                pending={sent && !spent}
+                                credit={received && !pendingClaim && !isSpent}
+                                pending={pendingClaim && !isSpent}
+                                debit={
+                                    isSpent || (sent && spent && !pendingClaim)
+                                }
                             />
                         </View>
                     )}
@@ -354,101 +379,185 @@ export default class CashuTokenView extends React.Component<
                         />
                     )}
                 </ScrollView>
-                {infoIndex === 0 && !received && (!sent || (sent && !spent)) && (
-                    <View style={{ bottom: 15 }}>
-                        {BackendUtils.supportsCashuWallet() && (
-                            <>
-                                {!haveMint && (
-                                    <Button
-                                        title={localeString(
-                                            enableCashu
-                                                ? 'views.Cashu.AddMint.title'
-                                                : 'views.Cashu.AddMint.enableAndAdd'
-                                        )}
-                                        onPress={async () => {
-                                            if (!enableCashu) {
-                                                await settingsStore.updateSettings(
-                                                    {
-                                                        ecash: {
-                                                            ...(settingsStore
-                                                                .settings
-                                                                .ecash || {}),
-                                                            enableCashu: true
-                                                        }
-                                                    }
-                                                );
-                                                await CashuStore.initializeWallets();
-                                            }
-                                            await addMint(mint);
-                                        }}
-                                        containerStyle={{ marginTop: 15 }}
-                                        disabled={!isSupported || loading}
-                                        tertiary
-                                    />
+                {infoIndex === 0 &&
+                    (success || warningMessage) &&
+                    !received &&
+                    !pendingClaim && (
+                        <View style={{ bottom: 15 }}>
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.goToWallet'
                                 )}
-                                <Button
-                                    title={localeString('general.receive')}
-                                    onPress={async () => {
-                                        this.setState({
-                                            errorMessage: ''
-                                        });
+                                icon={{
+                                    name: 'list',
+                                    size: 25,
+                                    color: themeColor('background')
+                                }}
+                                onPress={() => {
+                                    navigation.popTo('Wallet');
+                                }}
+                                containerStyle={{ marginTop: 15 }}
+                            />
+                        </View>
+                    )}
+                {infoIndex === 0 &&
+                    !success &&
+                    !warningMessage &&
+                    !received &&
+                    !pendingClaim &&
+                    (!sent || (sent && !spent)) && (
+                        <View style={{ bottom: 15 }}>
+                            {BackendUtils.supportsCashuWallet() && (
+                                <>
+                                    {!haveMint && (
+                                        <Button
+                                            title={localeString(
+                                                enableCashu
+                                                    ? 'views.Cashu.AddMint.title'
+                                                    : 'views.Cashu.AddMint.enableAndAdd'
+                                            )}
+                                            onPress={async () => {
+                                                if (!enableCashu) {
+                                                    await settingsStore.updateSettings(
+                                                        {
+                                                            ecash: {
+                                                                ...(settingsStore
+                                                                    .settings
+                                                                    .ecash ||
+                                                                    {}),
+                                                                enableCashu:
+                                                                    true
+                                                            }
+                                                        }
+                                                    );
+                                                    await CashuStore.initializeWallets();
+                                                }
+                                                await addMint(mint);
+                                            }}
+                                            containerStyle={{ marginTop: 15 }}
+                                            disabled={!isSupported || loading}
+                                            tertiary
+                                        />
+                                    )}
+                                    <Button
+                                        title={localeString('general.receive')}
+                                        onPress={async () => {
+                                            this.setState({
+                                                errorMessage: '',
+                                                warningMessage: ''
+                                            });
 
-                                        // Use encodedToken from decoded (clean, no cashu: prefix)
-                                        const { success, errorMessage } =
-                                            await claimToken(
+                                            // Use encodedToken from decoded (clean, no cashu: prefix)
+                                            const {
+                                                success,
+                                                errorMessage,
+                                                warningMessage
+                                            } = await claimToken(
                                                 encodedToken!,
                                                 decoded
                                             );
-                                        if (errorMessage) {
-                                            this.setState({
-                                                errorMessage
-                                            });
-                                        } else if (success) {
-                                            this.setState({
-                                                success
-                                            });
+                                            if (errorMessage) {
+                                                this.setState({
+                                                    errorMessage
+                                                });
+                                            } else if (warningMessage) {
+                                                this.setState({
+                                                    success,
+                                                    warningMessage
+                                                });
+                                            } else if (success) {
+                                                this.setState({
+                                                    success
+                                                });
+                                            }
+                                        }}
+                                        containerStyle={{ marginTop: 15 }}
+                                        disabled={
+                                            !haveMint ||
+                                            errorAddingMint ||
+                                            !isSupported ||
+                                            loading
                                         }
-                                    }}
-                                    containerStyle={{ marginTop: 15 }}
-                                    disabled={
-                                        !haveMint ||
-                                        errorAddingMint ||
-                                        !isSupported ||
-                                        loading ||
-                                        success
-                                    }
-                                />
-                            </>
-                        )}
-                        <Button
-                            title={localeString(
-                                'views.Cashu.CashuToken.meltTokenSelfCustody'
+                                    />
+                                </>
                             )}
-                            onPress={async () => {
-                                this.setState({
-                                    errorMessage: ''
-                                });
+                            <Button
+                                title={localeString(
+                                    'views.Cashu.CashuToken.meltTokenSelfCustody'
+                                )}
+                                onPress={async () => {
+                                    this.setState({
+                                        errorMessage: ''
+                                    });
 
-                                const { success, errorMessage } =
-                                    await claimToken(token!!, decoded, true);
-                                if (errorMessage) {
-                                    this.setState({
-                                        errorMessage
-                                    });
-                                } else if (success) {
-                                    this.setState({
-                                        success
-                                    });
+                                    const { success, errorMessage } =
+                                        await claimToken(
+                                            token!!,
+                                            decoded,
+                                            true
+                                        );
+                                    if (errorMessage) {
+                                        this.setState({
+                                            errorMessage
+                                        });
+                                    } else if (success) {
+                                        this.setState({
+                                            success
+                                        });
+                                    }
+                                }}
+                                containerStyle={{ marginTop: 15 }}
+                                disabled={
+                                    !hasOpenChannels || !isSupported || loading
                                 }
+                                secondary
+                            />
+                        </View>
+                    )}
+                {infoIndex === 0 && isSpent && (
+                    <View style={{ bottom: 15 }}>
+                        <Button
+                            title={localeString('general.delete')}
+                            onPress={() => {
+                                Alert.alert(
+                                    localeString('cashu.deleteToken.title'),
+                                    localeString('cashu.deleteToken.message'),
+                                    [
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            style: 'cancel'
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.delete'
+                                            ),
+                                            style: 'destructive',
+                                            onPress: async () => {
+                                                const isSpentToken =
+                                                    CashuStore.offlineSpentTokens.some(
+                                                        (t) =>
+                                                            t.encodedToken ===
+                                                            encodedToken
+                                                    );
+                                                if (isSpentToken) {
+                                                    await CashuStore.removeOfflineSpentToken(
+                                                        encodedToken!
+                                                    );
+                                                } else {
+                                                    await CashuStore.removeOfflinePendingToken(
+                                                        encodedToken!
+                                                    );
+                                                }
+                                                navigation.goBack();
+                                            }
+                                        }
+                                    ]
+                                );
                             }}
                             containerStyle={{ marginTop: 15 }}
-                            disabled={
-                                !hasOpenChannels ||
-                                !isSupported ||
-                                loading ||
-                                success
-                            }
-                            secondary
+                            warning
                         />
                     </View>
                 )}

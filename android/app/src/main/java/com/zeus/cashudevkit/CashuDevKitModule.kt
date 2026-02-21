@@ -887,6 +887,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // Parse options if provided; be defensive so malformed JSON doesn't crash
                 var includeFee = false
                 var conditions: SpendingConditions? = null
+                var sendKind: SendKind = SendKind.OnlineExact
                 optionsJson?.let { raw ->
                     val parsed = runCatching { JSONObject(raw) }.getOrNull() ?: return@let
 
@@ -896,13 +897,25 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     parsed.optJSONObject("conditions")?.let { cond ->
                         conditions = parseP2PKConditions(cond)
                     }
+
+                    // Parse send_kind
+                    val kindStr = parsed.optString("send_kind", "")
+                    if (kindStr.isNotEmpty()) {
+                        val tolerance = Amount(parsed.optLong("tolerance", 0).toULong())
+                        sendKind = when (kindStr) {
+                            "OfflineExact" -> SendKind.OfflineExact
+                            "OnlineTolerance" -> SendKind.OnlineTolerance(tolerance)
+                            "OfflineTolerance" -> SendKind.OfflineTolerance(tolerance)
+                            else -> SendKind.OnlineExact
+                        }
+                    }
                 }
-    
+
                 val innerSendOptions = SendOptions(
                     memo = null,
                     conditions = conditions,
                     amountSplitTarget = SplitTarget.None,
-                    sendKind = SendKind.OnlineExact,
+                    sendKind = sendKind,
                     includeFee = includeFee,
                     maxProofs = 0U,
                     metadata = emptyMap()
@@ -917,13 +930,20 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 )
 
                 val prepared = wallet!!.prepareSend(url, amt, sendOptions)
-                
+
                 val preparedId = prepared.id()
+                val preparedAmount = prepared.amount().value
+                val preparedFee = prepared.fee().value
 
                 preparedSends[preparedId] = prepared
 
+                val result = org.json.JSONObject()
+                result.put("id", preparedId)
+                result.put("amount", preparedAmount)
+                result.put("fee", preparedFee)
+
                 withContext(Dispatchers.Main) {
-                    promise.resolve(preparedId)
+                    promise.resolve(result.toString())
                 }
             } catch (e: FfiException) {
                 val (code, message) = mapFfiException(e)
@@ -1333,6 +1353,90 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.e(TAG, "listTransactions error", e)
                 withContext(Dispatchers.Main) {
                     promise.reject("LIST_TRANSACTIONS_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    // ========================================================================
+    // Direct Proof Access (Offline Send)
+    // ========================================================================
+
+    @ReactMethod
+    fun getUnspentProofs(mintUrl: String, promise: Promise) {
+        if (!isInitialized || db == null) {
+            promise.reject("NO_WALLET", "Wallet not initialized")
+            return
+        }
+
+        scope.launch {
+            try {
+                val url = MintUrl(mintUrl)
+                val proofInfos = db!!.getProofs(
+                    mintUrl = url,
+                    unit = CurrencyUnit.Sat,
+                    state = listOf(ProofState.UNSPENT),
+                    spendingConditions = null
+                )
+
+                val result = JSONArray()
+                proofInfos.forEach { info ->
+                    result.put(JSONObject().apply {
+                        put("amount", info.proof.amount.value)
+                        put("secret", info.proof.secret)
+                        put("c", info.proof.c)
+                        put("keyset_id", info.proof.keysetId)
+                        put("y", info.y.hex)
+                    })
+                }
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result.toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "getUnspentProofs error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "getUnspentProofs error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("GET_PROOFS_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun removeProofs(proofsYJson: String, promise: Promise) {
+        if (!isInitialized || db == null) {
+            promise.reject("NO_WALLET", "Wallet not initialized")
+            return
+        }
+
+        scope.launch {
+            try {
+                val yArray = JSONArray(proofsYJson)
+                val ys = (0 until yArray.length()).map { i ->
+                    PublicKey(yArray.getString(i))
+                }
+
+                db!!.updateProofs(added = emptyList(), removedYs = ys)
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "removeProofs error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "removeProofs error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("REMOVE_PROOFS_ERROR", e.message, e)
                 }
             }
         }

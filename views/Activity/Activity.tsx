@@ -137,7 +137,9 @@ const ActivityListItem = React.memo(
                 </Text>
             );
         } else if (item instanceof CashuToken) {
-            displayName = item.received
+            displayName = item.pendingClaim
+                ? localeString('cashu.offlinePending.title')
+                : item.received
                 ? localeString('views.Activity.youReceived')
                 : item.spent
                 ? localeString('views.Activity.youSent')
