@@ -44,7 +44,8 @@ function safeParseP2PKSecret(secret: string): unknown | null {
 
 class CashuUtils {
     /**
-     * Extract raw token string from various URL formats
+     * Extract raw token string from various URL formats.
+     * Supports both cashuA (v3 JSON) and cashuB (v4 CBOR) token prefixes.
      */
     extractTokenString = (token: string): string => {
         if (!token || typeof token !== 'string') {

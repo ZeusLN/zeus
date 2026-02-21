@@ -1656,6 +1656,32 @@ describe('handleAnything', () => {
             ]);
         });
 
+        it('should route to CashuToken for V4 token (cashuB prefix)', async () => {
+            const simpleToken =
+                'cashuBo2FteBhodHRwczovL21pbnQuZXhhbXBsZS5jb21hdWNzYXRhdIGiYWlIAK0mjU0fWCZhcIGjYWEBYXN4QGFjYzEyNDM1ZTdiODQ4NGMzY2YxODUwMTQ5MjE4YWY5MGY3MTZhNTJiZjRhNWVkMzQ3ZTQ4ZWNjMTNmNzczODhhY1ghAkRTgxmeSF1cvtOymmQr7lh5N1q556Yg4R5IukgkIfPP';
+            const url = `${ZEUS_ECASH_GIFT_URL}${simpleToken}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockIsValidCashuToken = true;
+            mockDecodedCashuToken = {
+                token: [
+                    {
+                        mint: 'https://mint.example.com',
+                        proofs: []
+                    }
+                ]
+            };
+
+            const result = await handleAnything(url);
+
+            expect(result).toEqual([
+                'CashuToken',
+                {
+                    token: simpleToken,
+                    decoded: expect.any(Object)
+                }
+            ]);
+        });
+
         it('should throw error for zeusln.com/e/ URL with invalid token', async () => {
             const invalidToken = 'notavalidcashutoken';
             const url = `${ZEUS_ECASH_GIFT_URL}${invalidToken}`;
