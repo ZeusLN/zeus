@@ -2,9 +2,15 @@ import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
+import {
+    nodeInfoStore,
+    invoicesStore,
+    settingsStore,
+    transactionsStore
+} from '../stores/Stores';
 
 import AddressUtils, { ZEUS_ECASH_GIFT_URL } from './AddressUtils';
+import QuickPayUtils from './QuickPayUtils';
 import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
@@ -23,6 +29,23 @@ import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
+
+const checkQuickPayAndRedirect = async (
+    paymentRequest: string
+): Promise<[string, any]> => {
+    try {
+        const pay_req = invoicesStore.pay_req;
+        return await QuickPayUtils.checkQuickPayAndReturnRoute(
+            paymentRequest,
+            settingsStore,
+            transactionsStore,
+            pay_req
+        );
+    } catch (error) {
+        console.error('Quick-pay check failed:', error);
+        return ['PaymentRequest', {}];
+    }
+};
 
 const attemptNip05Lookup = async (data: string) => {
     try {
@@ -310,7 +333,7 @@ const handleAnything = async (
                     ];
                 } else {
                     await invoicesStore.getPayReq(lightning);
-                    return ['PaymentRequest', {}];
+                    return await checkQuickPayAndRedirect(lightning);
                 }
             }
         }
@@ -365,7 +388,7 @@ const handleAnything = async (
             ];
         } else {
             await invoicesStore.getPayReq(value || lightning);
-            return ['PaymentRequest', {}];
+            return await checkQuickPayAndRedirect(value || lightning);
         }
     } else if (
         !hasAt &&
