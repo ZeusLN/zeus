@@ -190,6 +190,7 @@ export default class CashuTokenView extends React.Component<
             getDisplayTime
         } = decoded;
         const token: string = route.params?.token || encodedToken || '';
+        const isSpent = spent || route.params?.offlineSpent;
 
         const haveMint = mintUrls.includes(mint);
         const hasOpenChannels = ChannelsStore?.channels?.length > 0;
@@ -234,16 +235,15 @@ export default class CashuTokenView extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text:
-                            spent || route.params?.offlineSpent
-                                ? localeString('cashu.spentToken')
-                                : pendingClaim
-                                ? localeString('cashu.offlinePending.title')
-                                : received
-                                ? localeString('cashu.receivedToken')
-                                : sent
-                                ? localeString('cashu.unspentToken')
-                                : localeString('cashu.token'),
+                        text: isSpent
+                            ? localeString('cashu.spentToken')
+                            : pendingClaim
+                            ? localeString('cashu.offlinePending.title')
+                            : received
+                            ? localeString('cashu.receivedToken')
+                            : sent
+                            ? localeString('cashu.unspentToken')
+                            : localeString('cashu.token'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -298,8 +298,11 @@ export default class CashuTokenView extends React.Component<
                                 sensitive
                                 jumboText
                                 toggleable
-                                credit={received && !pendingClaim}
-                                debit={sent && spent && !pendingClaim}
+                                credit={received && !pendingClaim && !isSpent}
+                                pending={pendingClaim && !isSpent}
+                                debit={
+                                    isSpent || (sent && spent && !pendingClaim)
+                                }
                             />
                         </View>
                     )}
@@ -533,7 +536,7 @@ export default class CashuTokenView extends React.Component<
                             />
                         </View>
                     )}
-                {infoIndex === 0 && pendingClaim && (
+                {infoIndex === 0 && isSpent && (
                     <View style={{ bottom: 15 }}>
                         <Button
                             title={localeString('general.delete')}
