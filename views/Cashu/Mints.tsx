@@ -136,17 +136,24 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                 mintInfo?.mintUrl &&
                                 selectedMintUrl === mintInfo?.mintUrl;
                             const errorConnecting = item.errorConnecting;
+                            const hasName = !!mintInfo?.name;
 
-                            let subTitle = isSelectedMint
-                                ? `${localeString('general.selected')} | ${
-                                      item.mintUrl
-                                  }`
-                                : item.mintUrl;
+                            let subTitle = hasName
+                                ? isSelectedMint
+                                    ? `${localeString('general.selected')} | ${
+                                          item.mintUrl
+                                      }`
+                                    : item.mintUrl
+                                : isSelectedMint
+                                ? localeString('general.selected')
+                                : '';
 
                             if (errorConnecting) {
-                                subTitle = `${localeString(
-                                    'general.errorConnecting'
-                                )} | ${subTitle}`;
+                                subTitle = subTitle
+                                    ? `${localeString(
+                                          'general.errorConnecting'
+                                      )} | ${subTitle}`
+                                    : localeString('general.errorConnecting');
                             }
                             return (
                                 <React.Fragment>
@@ -191,7 +198,8 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                             fontSize: 18
                                                         }}
                                                     >
-                                                        {mintInfo.name}
+                                                        {mintInfo.name ||
+                                                            item.mintUrl}
                                                     </ListItem.Title>
                                                 </View>
                                                 <View style={styles.row}>
