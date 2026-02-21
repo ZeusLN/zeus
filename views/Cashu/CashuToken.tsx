@@ -82,9 +82,17 @@ export default class CashuTokenView extends React.Component<
         const decoded = route.params?.decoded;
         const token = route.params?.token || decoded?.encodedToken;
         const { spent, mint } = decoded;
+        const offlineSpent = route.params?.offlineSpent;
 
         if (token) {
             this.setState({ isTokenTooLarge: token.length > MAX_TOKEN_LENGTH });
+        }
+
+        if (spent || offlineSpent) {
+            this.setState({
+                errorMessage: localeString('cashu.offlineSpent.tokenSpent')
+            });
+            return;
         }
 
         if (!spent) {
@@ -258,14 +266,6 @@ export default class CashuTokenView extends React.Component<
                             message={`${localeString(
                                 'views.Cashu.CashuToken.notSupported'
                             )}: ${unit}`}
-                        />
-                    )}
-
-                    {(spent || route.params?.offlineSpent) && (
-                        <ErrorMessage
-                            message={localeString(
-                                'cashu.offlineSpent.tokenSpent'
-                            )}
                         />
                     )}
 
