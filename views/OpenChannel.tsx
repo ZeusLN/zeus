@@ -6,12 +6,14 @@ import {
     View,
     TouchableOpacity
 } from 'react-native';
+import { Divider } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Text from '../components/Text';
 import Button from '../components/Button';
@@ -22,10 +24,7 @@ import KeyValue from '../components/KeyValue';
 import LightningIndicator from '../components/LightningIndicator';
 import { Row } from '../components/layout/Row';
 import Screen from '../components/Screen';
-import {
-    SuccessMessage,
-    ErrorMessage
-} from '../components/SuccessErrorMessage';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
@@ -39,7 +38,10 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import BalanceStore from '../stores/BalanceStore';
-import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
+import ChannelsStore, {
+    ChannelsType,
+    ChannelsView
+} from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -359,6 +361,23 @@ export default class OpenChannel extends React.Component<
         const isInvalidPeer = !isNodePubkeyValid || !isNodeHostValid;
         const isInvalidFeeRate = sat_per_vbyte === '0' || !sat_per_vbyte;
 
+        const peerAlias =
+            ChannelsStore.aliasesByPubkey[node_pubkey_string] ||
+            ChannelsStore.nodes[node_pubkey_string]?.alias;
+
+        // When fundMax is on, AmountInput is locked so onAmountChange never fires and
+        // satAmount stays ''. Use the same value the locked AmountInput displays instead.
+        const displaySatAmount = fundMax
+            ? utxoBalance > 0
+                ? utxoBalance
+                : Number(confirmedBlockchainBalance)
+            : satAmount;
+
+        const allChannels = [
+            { node_pubkey_string, satAmount: displaySatAmount },
+            ...additionalChannels
+        ];
+
         if (funded_psbt)
             navigation.navigate('PSBT', {
                 psbt: funded_psbt
@@ -374,593 +393,776 @@ export default class OpenChannel extends React.Component<
 
         return (
             <Screen>
-                <Header
-                    leftComponent="Back"
-                    rightComponent={<ScanButton />}
-                    navigation={navigation}
-                />
-                <ScrollView
-                    style={{
-                        flex: 1
-                    }}
-                    keyboardShouldPersistTaps="handled"
-                    ref={this.scrollViewRef}
-                >
-                    <View style={{ paddingTop: 15 }}>
-                        <ToggleButton
-                            options={[
-                                {
-                                    key: 'channels',
-                                    label:
-                                        this.state.additionalChannels.length > 0
-                                            ? localeString(
-                                                  'views.OpenChannel.openChannels'
-                                              )
-                                            : localeString(
-                                                  'views.OpenChannel.openChannel'
-                                              )
-                                },
-                                {
-                                    key: 'peers',
-                                    label: localeString(
-                                        'views.OpenChannel.connectPeer'
-                                    )
-                                }
-                            ]}
-                            value={
-                                this.state.connectPeerOnly
-                                    ? 'peers'
-                                    : 'channels'
-                            }
-                            onToggle={(key) => {
-                                this.props.ChannelsStore.errorMsgPeer = null;
-                                this.props.ChannelsStore.errorMsgChannel = null;
-                                this.setState({
-                                    connectPeerOnly: key === 'peers'
-                                });
-                            }}
-                        />
-                    </View>
-                    {!!suggestImport && (
-                        <View style={styles.clipboardImport}>
-                            <Text style={styles.textWhite}>
-                                {localeString('views.OpenChannel.importText')}
+                {!channelSuccess && !peerSuccess && (
+                    <Header
+                        leftComponent="Back"
+                        rightComponent={<ScanButton />}
+                        navigation={navigation}
+                    />
+                )}
+                {channelSuccess ? (
+                    <View style={{ flex: 1 }}>
+                        <ScrollView
+                            style={{ flex: 1 }}
+                            contentContainerStyle={styles.successContent}
+                        >
+                            <Text
+                                style={{
+                                    ...styles.successCheckmark,
+                                    color: themeColor('success')
+                                }}
+                            >
+                                ✓
                             </Text>
-                            <Text style={{ ...styles.textWhite, padding: 15 }}>
-                                {suggestImport}
+                            <Text
+                                style={{
+                                    ...styles.successTitle,
+                                    color: themeColor('success')
+                                }}
+                            >
+                                {additionalChannels.length > 0
+                                    ? localeString(
+                                          'views.OpenChannel.channelsSuccess'
+                                      )
+                                    : localeString(
+                                          'views.OpenChannel.channelSuccess'
+                                      )}
                             </Text>
-                            <Text style={styles.textWhite}>
-                                {localeString('views.OpenChannel.importPrompt')}
-                            </Text>
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.OpenChannel.import'
-                                    )}
-                                    onPress={() => this.importClipboard()}
-                                    tertiary
-                                />
-                            </View>
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString('general.cancel')}
-                                    onPress={() => this.clearImportSuggestion()}
-                                    tertiary
-                                />
-                            </View>
-                        </View>
-                    )}
-
-                    <View style={styles.content}>
-                        {loading && <LightningIndicator />}
-                        {peerSuccess && (
-                            <SuccessMessage
-                                message={localeString(
-                                    'views.OpenChannel.peerSuccess'
-                                )}
-                            />
-                        )}
-                        {channelSuccess && (
-                            <SuccessMessage
-                                message={
+                            {allChannels.map((channel, index) => {
+                                const channelAlias =
+                                    ChannelsStore.aliasesByPubkey[
+                                        channel.node_pubkey_string
+                                    ] ||
+                                    ChannelsStore.nodes[
+                                        channel.node_pubkey_string
+                                    ]?.alias;
+                                return (
+                                    <View
+                                        key={`${channel.node_pubkey_string}-${index}`}
+                                    >
+                                        {allChannels.length > 1 && (
+                                            <>
+                                                {index > 0 && (
+                                                    <Divider
+                                                        orientation="horizontal"
+                                                        style={{ margin: 20 }}
+                                                    />
+                                                )}
+                                                <Text
+                                                    style={{
+                                                        ...styles.channelIndex,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'views.Channel.title'
+                                                    )} ${index + 1}`}
+                                                </Text>
+                                            </>
+                                        )}
+                                        {!!channelAlias && (
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'general.channelPartner'
+                                                )}
+                                                value={channelAlias}
+                                            />
+                                        )}
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.OpenChannel.nodePubkey'
+                                            )}
+                                            value={channel.node_pubkey_string}
+                                        />
+                                        {/* Host is intentionally not shown: Lightning backends treat the entered
+                                            address as a hint only and may connect via a gossip-discovered address
+                                            instead. Displaying the user-entered host would be potentially misleading. */}
+                                        {!!channel.satAmount && (
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Channel.capacity'
+                                                )}
+                                                value={
+                                                    <Amount
+                                                        sats={Number(
+                                                            channel.satAmount
+                                                        )}
+                                                        sensitive
+                                                        toggleable
+                                                    />
+                                                }
+                                            />
+                                        )}
+                                    </View>
+                                );
+                            })}
+                            <Text
+                                style={{
+                                    ...styles.successNote,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
                                     additionalChannels.length > 0
-                                        ? localeString(
-                                              'views.OpenChannel.channelsSuccess'
-                                          )
-                                        : localeString(
-                                              'views.OpenChannel.channelSuccess'
-                                          )
-                                }
-                            />
-                        )}
-                        {(errorMsgPeer || errorMsgChannel) && (
-                            <ErrorMessage
-                                message={
-                                    errorMsgChannel ||
-                                    errorMsgPeer ||
-                                    localeString('general.error')
-                                }
-                                dismissable
-                            />
-                        )}
-
-                        <DropdownSetting
-                            title={
-                                connectPeerOnly
-                                    ? localeString('general.peer')
-                                    : localeString('general.channelPartner')
-                            }
-                            selectedValue={channelDestination}
-                            values={[
-                                {
-                                    key: 'Olympus by ZEUS',
-                                    value: 'Olympus by ZEUS'
-                                },
-                                {
-                                    key: 'Custom',
-                                    translateKey: 'general.custom',
-                                    value: 'Custom'
-                                }
-                            ]}
-                            onValueChange={(value: string) => {
-                                if (value === 'Olympus by ZEUS') {
-                                    if (NodeInfoStore.nodeInfo.isTestNet) {
-                                        this.setState({
-                                            channelDestination:
-                                                'Olympus by ZEUS',
-                                            node_pubkey_string:
-                                                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
-                                            host: '139.144.22.237:9735'
-                                        });
-                                    } else {
-                                        this.setState({
-                                            channelDestination:
-                                                'Olympus by ZEUS',
-                                            node_pubkey_string:
-                                                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
-                                            host: '45.79.192.236:9735'
-                                        });
-                                    }
-                                } else {
-                                    this.setState({
-                                        channelDestination: 'Custom',
-                                        node_pubkey_string: '',
-                                        host: ''
-                                    });
-                                }
-                            }}
-                        />
-
-                        {channelDestination === 'Custom' && (
-                            <>
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.OpenChannel.nodePubkey'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        textColor={
-                                            isNodePubkeyValid
-                                                ? themeColor('text')
-                                                : themeColor('error')
-                                        }
-                                        placeholder={'0A...'}
-                                        value={node_pubkey_string}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                node_pubkey_string: text,
-                                                isNodePubkeyValid:
-                                                    ValidationUtils.validateNodePubkey(
-                                                        text
-                                                    )
-                                            })
-                                        }
-                                        autoCapitalize="none"
-                                        locked={openingChannel}
-                                    />
-                                </>
-
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString('views.OpenChannel.host')}
-                                    </Text>
-                                    <TextInput
-                                        textColor={
-                                            isNodeHostValid
-                                                ? themeColor('text')
-                                                : themeColor('error')
-                                        }
-                                        placeholder={localeString(
-                                            'views.OpenChannel.hostPort'
-                                        )}
-                                        value={host}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                host: text,
-                                                isNodeHostValid:
-                                                    ValidationUtils.validateNodeHost(
-                                                        text
-                                                    )
-                                            })
-                                        }
-                                        autoCapitalize="none"
-                                        locked={openingChannel}
-                                    />
-                                </>
-                            </>
-                        )}
-
-                        {!connectPeerOnly && (
-                            <>
-                                <AmountInput
-                                    amount={
-                                        fundMax
-                                            ? utxoBalance > 0
-                                                ? utxoBalance.toString()
-                                                : confirmedBlockchainBalance.toString()
-                                            : local_funding_amount
-                                    }
+                                        ? 'views.OpenChannel.channelsPendingNote'
+                                        : 'views.OpenChannel.channelPendingNote'
+                                )}
+                            </Text>
+                        </ScrollView>
+                        <View style={styles.successButtons}>
+                            {BackendUtils.supportsPendingChannels() && (
+                                <Button
                                     title={localeString(
-                                        'views.OpenChannel.localAmt'
+                                        'views.OpenChannel.viewStatus'
                                     )}
-                                    onAmountChange={(
-                                        amount: string,
-                                        satAmount: string | number
-                                    ) => {
-                                        this.setState({
-                                            local_funding_amount: amount,
-                                            satAmount
+                                    onPress={() => {
+                                        ChannelsStore.setChannelsType(
+                                            ChannelsType.Pending
+                                        );
+                                        NodeInfoStore.getNodeInfo();
+                                        ChannelsStore.getChannels();
+                                        navigation.navigate('Wallet', {
+                                            switchToChannels: true
                                         });
                                     }}
-                                    hideConversion={
-                                        local_funding_amount === 'all'
-                                    }
-                                    locked={fundMax}
-                                    forceUnit={fundMax ? 'sats' : undefined}
+                                    secondary
                                 />
+                            )}
+                            <Button
+                                title={localeString('general.ok')}
+                                onPress={() => {
+                                    NodeInfoStore.getNodeInfo();
+                                    ChannelsStore.getChannels();
+                                    navigation.goBack();
+                                }}
+                            />
+                        </View>
+                    </View>
+                ) : peerSuccess ? (
+                    <View style={{ flex: 1 }}>
+                        <ScrollView
+                            style={{ flex: 1 }}
+                            contentContainerStyle={styles.successContent}
+                        >
+                            <Text
+                                style={{
+                                    ...styles.successCheckmark,
+                                    color: themeColor('success')
+                                }}
+                            >
+                                ✓
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.successTitle,
+                                    color: themeColor('success')
+                                }}
+                            >
+                                {localeString('views.OpenChannel.peerSuccess')}
+                            </Text>
+                            {!!peerAlias && (
+                                <KeyValue
+                                    keyValue={localeString('general.peer')}
+                                    value={peerAlias}
+                                />
+                            )}
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.OpenChannel.nodePubkey'
+                                )}
+                                value={node_pubkey_string}
+                            />
+                            {/* Host is intentionally not shown: Lightning backends treat the entered
+                                address as a hint only and may connect via a gossip-discovered address
+                                instead. Displaying the user-entered host would be potentially misleading. */}
+                        </ScrollView>
+                        <View style={styles.successButtons}>
+                            <Button
+                                title={localeString(
+                                    'views.OpenChannel.openChannelToPeer'
+                                )}
+                                onPress={() => {
+                                    ChannelsStore.resetOpenChannel();
+                                    this.setState({ connectPeerOnly: false });
+                                }}
+                                secondary
+                            />
+                            <Button
+                                title={localeString('general.ok')}
+                                onPress={() => {
+                                    ChannelsStore.getPeers();
+                                    navigation.goBack();
+                                }}
+                            />
+                        </View>
+                    </View>
+                ) : (
+                    <ScrollView
+                        style={{
+                            flex: 1
+                        }}
+                        keyboardShouldPersistTaps="handled"
+                        ref={this.scrollViewRef}
+                    >
+                        <View style={{ paddingTop: 15 }}>
+                            <ToggleButton
+                                options={[
+                                    {
+                                        key: 'channels',
+                                        label:
+                                            this.state.additionalChannels
+                                                .length > 0
+                                                ? localeString(
+                                                      'views.OpenChannel.openChannels'
+                                                  )
+                                                : localeString(
+                                                      'views.OpenChannel.openChannel'
+                                                  )
+                                    },
+                                    {
+                                        key: 'peers',
+                                        label: localeString(
+                                            'views.OpenChannel.connectPeer'
+                                        )
+                                    }
+                                ]}
+                                value={
+                                    this.state.connectPeerOnly
+                                        ? 'peers'
+                                        : 'channels'
+                                }
+                                onToggle={(key) => {
+                                    this.props.ChannelsStore.errorMsgPeer =
+                                        null;
+                                    this.props.ChannelsStore.errorMsgChannel =
+                                        null;
+                                    this.setState({
+                                        connectPeerOnly: key === 'peers'
+                                    });
+                                }}
+                            />
+                        </View>
+                        {!!suggestImport && (
+                            <View style={styles.clipboardImport}>
+                                <Text style={styles.textWhite}>
+                                    {localeString(
+                                        'views.OpenChannel.importText'
+                                    )}
+                                </Text>
+                                <Text
+                                    style={{ ...styles.textWhite, padding: 15 }}
+                                >
+                                    {suggestImport}
+                                </Text>
+                                <Text style={styles.textWhite}>
+                                    {localeString(
+                                        'views.OpenChannel.importPrompt'
+                                    )}
+                                </Text>
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.OpenChannel.import'
+                                        )}
+                                        onPress={() => this.importClipboard()}
+                                        tertiary
+                                    />
+                                </View>
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString('general.cancel')}
+                                        onPress={() =>
+                                            this.clearImportSuggestion()
+                                        }
+                                        tertiary
+                                    />
+                                </View>
+                            </View>
+                        )}
 
-                                {BackendUtils.supportsChannelFundMax() &&
-                                    additionalChannels.length === 0 && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    marginTop: -20,
-                                                    top: 20,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.fundMax'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={fundMax}
-                                                onValueChange={() => {
-                                                    const newValue: boolean =
-                                                        !fundMax;
-                                                    this.setState({
-                                                        fundMax: newValue,
-                                                        local_funding_amount:
-                                                            newValue &&
-                                                            implementation ===
-                                                                'cln-rest'
-                                                                ? 'all'
-                                                                : ''
-                                                    });
-                                                }}
-                                            />
-                                        </>
+                        <View style={styles.content}>
+                            {loading && <LightningIndicator />}
+                            {(errorMsgPeer || errorMsgChannel) && (
+                                <ErrorMessage
+                                    message={
+                                        errorMsgChannel ||
+                                        errorMsgPeer ||
+                                        localeString('general.error')
+                                    }
+                                    dismissable
+                                />
+                            )}
+
+                            <DropdownSetting
+                                title={
+                                    connectPeerOnly
+                                        ? localeString('general.peer')
+                                        : localeString('general.channelPartner')
+                                }
+                                selectedValue={channelDestination}
+                                values={[
+                                    {
+                                        key: 'Olympus by ZEUS',
+                                        value: 'Olympus by ZEUS'
+                                    },
+                                    {
+                                        key: 'Custom',
+                                        translateKey: 'general.custom',
+                                        value: 'Custom'
+                                    }
+                                ]}
+                                onValueChange={(value: string) => {
+                                    if (value === 'Olympus by ZEUS') {
+                                        if (NodeInfoStore.nodeInfo.isTestNet) {
+                                            this.setState({
+                                                channelDestination:
+                                                    'Olympus by ZEUS',
+                                                node_pubkey_string:
+                                                    '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
+                                                host: '139.144.22.237:9735'
+                                            });
+                                        } else {
+                                            this.setState({
+                                                channelDestination:
+                                                    'Olympus by ZEUS',
+                                                node_pubkey_string:
+                                                    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581',
+                                                host: '45.79.192.236:9735'
+                                            });
+                                        }
+                                    } else {
+                                        this.setState({
+                                            channelDestination: 'Custom',
+                                            node_pubkey_string: '',
+                                            host: ''
+                                        });
+                                    }
+                                }}
+                            />
+
+                            {channelDestination === 'Custom' && (
+                                <>
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.nodePubkey'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            textColor={
+                                                isNodePubkeyValid
+                                                    ? themeColor('text')
+                                                    : themeColor('error')
+                                            }
+                                            placeholder={'0A...'}
+                                            value={node_pubkey_string}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    node_pubkey_string: text,
+                                                    isNodePubkeyValid:
+                                                        ValidationUtils.validateNodePubkey(
+                                                            text
+                                                        )
+                                                })
+                                            }
+                                            autoCapitalize="none"
+                                            locked={openingChannel}
+                                        />
+                                    </>
+
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.host'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            textColor={
+                                                isNodeHostValid
+                                                    ? themeColor('text')
+                                                    : themeColor('error')
+                                            }
+                                            placeholder={localeString(
+                                                'views.OpenChannel.hostPort'
+                                            )}
+                                            value={host}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    host: text,
+                                                    isNodeHostValid:
+                                                        ValidationUtils.validateNodeHost(
+                                                            text
+                                                        )
+                                                })
+                                            }
+                                            autoCapitalize="none"
+                                            locked={openingChannel}
+                                        />
+                                    </>
+                                </>
+                            )}
+
+                            {!connectPeerOnly && (
+                                <>
+                                    <AmountInput
+                                        amount={
+                                            fundMax
+                                                ? utxoBalance > 0
+                                                    ? utxoBalance.toString()
+                                                    : confirmedBlockchainBalance.toString()
+                                                : local_funding_amount
+                                        }
+                                        title={localeString(
+                                            'views.OpenChannel.localAmt'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                local_funding_amount: amount,
+                                                satAmount
+                                            });
+                                        }}
+                                        hideConversion={
+                                            local_funding_amount === 'all'
+                                        }
+                                        locked={fundMax}
+                                        forceUnit={fundMax ? 'sats' : undefined}
+                                    />
+
+                                    {BackendUtils.supportsChannelFundMax() &&
+                                        additionalChannels.length === 0 && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        marginTop: -20,
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.fundMax'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={fundMax}
+                                                    onValueChange={() => {
+                                                        const newValue: boolean =
+                                                            !fundMax;
+                                                        this.setState({
+                                                            fundMax: newValue,
+                                                            local_funding_amount:
+                                                                newValue &&
+                                                                implementation ===
+                                                                    'cln-rest'
+                                                                    ? 'all'
+                                                                    : ''
+                                                        });
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+
+                                    {additionalChannels.map(
+                                        (channel, index) => {
+                                            return (
+                                                <View
+                                                    key={`additionalChannel-${index}`}
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.nodePubkey'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={'0A...'}
+                                                        value={
+                                                            channel?.node_pubkey_string
+                                                        }
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) => {
+                                                            let newChannels =
+                                                                additionalChannels;
+
+                                                            newChannels[
+                                                                index
+                                                            ].node_pubkey_string =
+                                                                text;
+
+                                                            this.setState({
+                                                                additionalChannels:
+                                                                    newChannels
+                                                            });
+                                                        }}
+                                                    />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.host'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        value={channel?.host}
+                                                        placeholder={localeString(
+                                                            'views.OpenChannel.hostPort'
+                                                        )}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) => {
+                                                            let newChannels =
+                                                                additionalChannels;
+
+                                                            newChannels[
+                                                                index
+                                                            ].host = text;
+
+                                                            this.setState({
+                                                                additionalChannels:
+                                                                    newChannels
+                                                            });
+                                                        }}
+                                                    />
+                                                    <AmountInput
+                                                        amount={
+                                                            channel?.local_funding_amount
+                                                        }
+                                                        title={localeString(
+                                                            'views.OpenChannel.localAmt'
+                                                        )}
+                                                        onAmountChange={(
+                                                            amount: string,
+                                                            satAmount:
+                                                                | string
+                                                                | number
+                                                        ) => {
+                                                            let newChannels =
+                                                                additionalChannels;
+
+                                                            newChannels[
+                                                                index
+                                                            ].local_funding_amount =
+                                                                amount;
+                                                            newChannels[
+                                                                index
+                                                            ].satAmount = satAmount;
+
+                                                            this.setState({
+                                                                additionalChannels:
+                                                                    newChannels
+                                                            });
+                                                        }}
+                                                    />
+                                                    <View
+                                                        style={{
+                                                            marginTop: 10,
+                                                            marginBottom: 20
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            title={localeString(
+                                                                'views.OpenChannel.removeAdditionalChannel'
+                                                            )}
+                                                            icon={{
+                                                                name: 'remove',
+                                                                size: 25,
+                                                                color: themeColor(
+                                                                    'background'
+                                                                )
+                                                            }}
+                                                            onPress={() => {
+                                                                let newChannels =
+                                                                    additionalChannels;
+
+                                                                newChannels =
+                                                                    newChannels.filter(
+                                                                        (
+                                                                            item
+                                                                        ) =>
+                                                                            item !==
+                                                                            channel
+                                                                    );
+
+                                                                this.setState({
+                                                                    additionalChannels:
+                                                                        newChannels
+                                                                });
+                                                            }}
+                                                            tertiary
+                                                        />
+                                                    </View>
+                                                </View>
+                                            );
+                                        }
                                     )}
 
-                                {additionalChannels.map((channel, index) => {
-                                    return (
-                                        <View
-                                            key={`additionalChannel-${index}`}
-                                        >
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.nodePubkey'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                placeholder={'0A...'}
-                                                value={
-                                                    channel?.node_pubkey_string
-                                                }
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    let newChannels =
-                                                        additionalChannels;
-
-                                                    newChannels[
-                                                        index
-                                                    ].node_pubkey_string = text;
-
-                                                    this.setState({
-                                                        additionalChannels:
-                                                            newChannels
-                                                    });
-                                                }}
-                                            />
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.host'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                value={channel?.host}
-                                                placeholder={localeString(
-                                                    'views.OpenChannel.hostPort'
-                                                )}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    let newChannels =
-                                                        additionalChannels;
-
-                                                    newChannels[index].host =
-                                                        text;
-
-                                                    this.setState({
-                                                        additionalChannels:
-                                                            newChannels
-                                                    });
-                                                }}
-                                            />
-                                            <AmountInput
-                                                amount={
-                                                    channel?.local_funding_amount
-                                                }
-                                                title={localeString(
-                                                    'views.OpenChannel.localAmt'
-                                                )}
-                                                onAmountChange={(
-                                                    amount: string,
-                                                    satAmount: string | number
-                                                ) => {
-                                                    let newChannels =
-                                                        additionalChannels;
-
-                                                    newChannels[
-                                                        index
-                                                    ].local_funding_amount = amount;
-                                                    newChannels[
-                                                        index
-                                                    ].satAmount = satAmount;
-
-                                                    this.setState({
-                                                        additionalChannels:
-                                                            newChannels
-                                                    });
-                                                }}
-                                            />
+                                    {BackendUtils.supportsChannelBatching() &&
+                                        node_pubkey_string &&
+                                        host &&
+                                        !fundMax && (
                                             <View
                                                 style={{
-                                                    marginTop: 10,
-                                                    marginBottom: 20
+                                                    ...styles.button,
+                                                    marginTop:
+                                                        additionalChannels.length ===
+                                                        0
+                                                            ? 10
+                                                            : 0
                                                 }}
                                             >
                                                 <Button
                                                     title={localeString(
-                                                        'views.OpenChannel.removeAdditionalChannel'
+                                                        'views.OpenChannel.openAdditionalChannel'
                                                     )}
                                                     icon={{
-                                                        name: 'remove',
+                                                        name: 'add',
                                                         size: 25,
                                                         color: themeColor(
                                                             'background'
                                                         )
                                                     }}
                                                     onPress={() => {
-                                                        let newChannels =
-                                                            additionalChannels;
+                                                        const additionalChannels =
+                                                            this.state
+                                                                .additionalChannels;
 
-                                                        newChannels =
-                                                            newChannels.filter(
-                                                                (item) =>
-                                                                    item !==
-                                                                    channel
-                                                            );
+                                                        additionalChannels.push(
+                                                            {
+                                                                node_pubkey_string:
+                                                                    '',
+                                                                host: '',
+                                                                local_funding_amount:
+                                                                    '',
+                                                                satAmount: ''
+                                                            }
+                                                        );
 
                                                         this.setState({
-                                                            additionalChannels:
-                                                                newChannels
+                                                            additionalChannels,
+                                                            fundMax: false
                                                         });
                                                     }}
-                                                    tertiary
                                                 />
                                             </View>
-                                        </View>
-                                    );
-                                })}
+                                        )}
 
-                                {BackendUtils.supportsChannelBatching() &&
-                                    node_pubkey_string &&
-                                    host &&
-                                    !fundMax && (
-                                        <View
+                                    <View style={{ marginTop: 10 }}>
+                                        <Text
                                             style={{
-                                                ...styles.button,
-                                                marginTop:
-                                                    additionalChannels.length ===
-                                                    0
-                                                        ? 10
-                                                        : 0
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
                                             }}
                                         >
-                                            <Button
-                                                title={localeString(
-                                                    'views.OpenChannel.openAdditionalChannel'
-                                                )}
-                                                icon={{
-                                                    name: 'add',
-                                                    size: 25,
-                                                    color: themeColor(
-                                                        'background'
-                                                    )
-                                                }}
-                                                onPress={() => {
-                                                    const additionalChannels =
-                                                        this.state
-                                                            .additionalChannels;
+                                            {localeString(
+                                                'views.OpenChannel.satsPerVbyte'
+                                            )}
+                                        </Text>
+                                        <OnchainFeeInput
+                                            fee={sat_per_vbyte}
+                                            onChangeFee={(text: string) => {
+                                                this.setState({
+                                                    sat_per_vbyte: text
+                                                });
+                                            }}
+                                            navigation={navigation}
+                                        />
+                                    </View>
 
-                                                    additionalChannels.push({
-                                                        node_pubkey_string: '',
-                                                        host: '',
-                                                        local_funding_amount:
-                                                            '',
-                                                        satAmount: ''
-                                                    });
-
-                                                    this.setState({
-                                                        additionalChannels,
-                                                        fundMax: false
-                                                    });
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-
-                                <View style={{ marginTop: 10 }}>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.OpenChannel.satsPerVbyte'
-                                        )}
-                                    </Text>
-                                    <OnchainFeeInput
-                                        fee={sat_per_vbyte}
-                                        onChangeFee={(text: string) => {
+                                    <TouchableOpacity
+                                        onPress={() => {
                                             this.setState({
-                                                sat_per_vbyte: text
+                                                advancedSettingsToggle:
+                                                    !advancedSettingsToggle
                                             });
                                         }}
-                                        navigation={navigation}
-                                    />
-                                </View>
-
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        this.setState({
-                                            advancedSettingsToggle:
-                                                !advancedSettingsToggle
-                                        });
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            marginBottom: 10
-                                        }}
                                     >
-                                        <Row justify="space-between">
-                                            <View style={{ flex: 1 }}>
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'general.advancedSettings'
-                                                    )}
-                                                />
-                                            </View>
-                                            {advancedSettingsToggle ? (
-                                                <CaretDown
-                                                    fill={themeColor('text')}
-                                                    width="20"
-                                                    height="20"
-                                                />
-                                            ) : (
-                                                <CaretRight
-                                                    fill={themeColor('text')}
-                                                    width="20"
-                                                    height="20"
-                                                />
-                                            )}
-                                        </Row>
-                                    </View>
-                                </TouchableOpacity>
-
-                                {advancedSettingsToggle && (
-                                    <>
-                                        {BackendUtils.supportsChannelCoinControl() && (
-                                            <View
-                                                style={{
-                                                    marginTop: 10,
-                                                    marginBottom: 20
-                                                }}
-                                            >
-                                                <UTXOPicker
-                                                    onValueChange={
-                                                        this.selectUTXOs
-                                                    }
-                                                    UTXOsStore={UTXOsStore}
-                                                />
-                                            </View>
-                                        )}
-
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.numConf'
+                                        <View
+                                            style={{
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            <Row justify="space-between">
+                                                <View style={{ flex: 1 }}>
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'general.advancedSettings'
+                                                        )}
+                                                    />
+                                                </View>
+                                                {advancedSettingsToggle ? (
+                                                    <CaretDown
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <CaretRight
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
                                                 )}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder={'1'}
-                                                value={min_confs.toString()}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    const newMinConfs =
-                                                        Number(text);
-                                                    this.setState({
-                                                        min_confs: newMinConfs,
-                                                        spend_unconfirmed:
-                                                            newMinConfs === 0
-                                                    });
-                                                }}
-                                                locked={openingChannel}
-                                            />
-                                        </>
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
 
-                                        {BackendUtils.isLNDBased() && (
-                                            <View style={{ marginTop: 10 }}>
+                                    {advancedSettingsToggle && (
+                                        <>
+                                            {BackendUtils.supportsChannelCoinControl() && (
+                                                <View
+                                                    style={{
+                                                        marginTop: 10,
+                                                        marginBottom: 20
+                                                    }}
+                                                >
+                                                    <UTXOPicker
+                                                        onValueChange={
+                                                            this.selectUTXOs
+                                                        }
+                                                        UTXOsStore={UTXOsStore}
+                                                    />
+                                                </View>
+                                            )}
+
+                                            <>
                                                 <Text
                                                     style={{
                                                         ...styles.text,
@@ -968,54 +1170,64 @@ export default class OpenChannel extends React.Component<
                                                             'secondaryText'
                                                         )
                                                     }}
-                                                    infoModalText={localeString(
-                                                        'views.OpenChannel.closeAddressExplainer'
-                                                    )}
                                                 >
                                                     {localeString(
-                                                        'views.OpenChannel.closeAddress'
+                                                        'views.OpenChannel.numConf'
                                                     )}
                                                 </Text>
                                                 <TextInput
-                                                    placeholder={'bc1...'}
-                                                    value={close_address}
+                                                    keyboardType="numeric"
+                                                    placeholder={'1'}
+                                                    value={min_confs.toString()}
                                                     onChangeText={(
                                                         text: string
-                                                    ) =>
+                                                    ) => {
+                                                        const newMinConfs =
+                                                            Number(text);
                                                         this.setState({
-                                                            close_address: text
-                                                        })
-                                                    }
+                                                            min_confs:
+                                                                newMinConfs,
+                                                            spend_unconfirmed:
+                                                                newMinConfs ===
+                                                                0
+                                                        });
+                                                    }}
                                                     locked={openingChannel}
                                                 />
-                                            </View>
-                                        )}
-                                        <>
-                                            <Text
-                                                style={{
-                                                    top: 20,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.announceChannel'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={!privateChannel}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        privateChannel:
-                                                            !privateChannel
-                                                    })
-                                                }
-                                                disabled={simpleTaprootChannel}
-                                            />
-                                        </>
+                                            </>
 
-                                        {BackendUtils.isLNDBased() && (
+                                            {BackendUtils.isLNDBased() && (
+                                                <View style={{ marginTop: 10 }}>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                        infoModalText={localeString(
+                                                            'views.OpenChannel.closeAddressExplainer'
+                                                        )}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.closeAddress'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        placeholder={'bc1...'}
+                                                        value={close_address}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                close_address:
+                                                                    text
+                                                            })
+                                                        }
+                                                        locked={openingChannel}
+                                                    />
+                                                </View>
+                                            )}
                                             <>
                                                 <Text
                                                     style={{
@@ -1026,123 +1238,155 @@ export default class OpenChannel extends React.Component<
                                                     }}
                                                 >
                                                     {localeString(
-                                                        'views.OpenChannel.scidAlias'
+                                                        'views.OpenChannel.announceChannel'
                                                     )}
                                                 </Text>
                                                 <Switch
-                                                    value={scidAlias}
+                                                    value={!privateChannel}
                                                     onValueChange={() =>
                                                         this.setState({
-                                                            scidAlias:
-                                                                !scidAlias
+                                                            privateChannel:
+                                                                !privateChannel
                                                         })
+                                                    }
+                                                    disabled={
+                                                        simpleTaprootChannel
                                                     }
                                                 />
                                             </>
-                                        )}
 
-                                        {BackendUtils.supportsSimpleTaprootChannels() && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        top: 20,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.OpenChannel.simpleTaprootChannel'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={simpleTaprootChannel}
-                                                    onValueChange={() => {
-                                                        this.setState({
-                                                            simpleTaprootChannel:
-                                                                !simpleTaprootChannel
-                                                        });
-
-                                                        if (
-                                                            !simpleTaprootChannel
-                                                        ) {
+                                            {BackendUtils.isLNDBased() && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            top: 20,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.scidAlias'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={scidAlias}
+                                                        onValueChange={() =>
                                                             this.setState({
-                                                                privateChannel:
-                                                                    true
-                                                            });
+                                                                scidAlias:
+                                                                    !scidAlias
+                                                            })
                                                         }
-                                                    }}
-                                                />
-                                            </>
-                                        )}
-                                    </>
-                                )}
-                            </>
-                        )}
+                                                    />
+                                                </>
+                                            )}
 
-                        <View style={{ ...styles.button, paddingTop: 20 }}>
-                            <Button
-                                title={
-                                    connectPeerOnly
-                                        ? localeString(
-                                              'views.OpenChannel.connectPeer'
-                                          )
-                                        : additionalChannels.length > 0
-                                        ? localeString(
-                                              'views.OpenChannel.openChannels'
-                                          )
-                                        : localeString(
-                                              'views.OpenChannel.openChannel'
-                                          )
-                                }
-                                icon={{
-                                    name: 'swap-horiz',
-                                    size: 25,
-                                    color:
-                                        isInvalidFeeRate || isInvalidPeer
-                                            ? themeColor('secondaryText')
-                                            : themeColor('background')
-                                }}
-                                onPress={() => {
-                                    this.scrollViewRef.current?.scrollTo({
-                                        y: 0,
-                                        animated: true
-                                    });
-                                    connectPeer(
-                                        {
-                                            ...this.state,
-                                            local_funding_amount:
-                                                satAmount.toString()
-                                        },
-                                        false,
+                                            {BackendUtils.supportsSimpleTaprootChannels() && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            top: 20,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.simpleTaprootChannel'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={
+                                                            simpleTaprootChannel
+                                                        }
+                                                        onValueChange={() => {
+                                                            this.setState({
+                                                                simpleTaprootChannel:
+                                                                    !simpleTaprootChannel
+                                                            });
+
+                                                            if (
+                                                                !simpleTaprootChannel
+                                                            ) {
+                                                                this.setState({
+                                                                    privateChannel:
+                                                                        true
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                </>
+                                            )}
+                                        </>
+                                    )}
+                                </>
+                            )}
+
+                            <View style={{ ...styles.button, paddingTop: 20 }}>
+                                <Button
+                                    title={
                                         connectPeerOnly
-                                    );
-                                }}
-                                disabled={
-                                    loading ||
-                                    (!connectPeerOnly && isInvalidFeeRate) ||
-                                    isInvalidPeer
-                                }
-                            />
-                        </View>
+                                            ? localeString(
+                                                  'views.OpenChannel.connectPeer'
+                                              )
+                                            : additionalChannels.length > 0
+                                            ? localeString(
+                                                  'views.OpenChannel.openChannels'
+                                              )
+                                            : localeString(
+                                                  'views.OpenChannel.openChannel'
+                                              )
+                                    }
+                                    icon={{
+                                        name: 'swap-horiz',
+                                        size: 25,
+                                        color:
+                                            isInvalidFeeRate || isInvalidPeer
+                                                ? themeColor('secondaryText')
+                                                : themeColor('background')
+                                    }}
+                                    onPress={() => {
+                                        this.scrollViewRef.current?.scrollTo({
+                                            y: 0,
+                                            animated: true
+                                        });
+                                        connectPeer(
+                                            {
+                                                ...this.state,
+                                                local_funding_amount:
+                                                    satAmount.toString()
+                                            },
+                                            false,
+                                            connectPeerOnly
+                                        );
+                                    }}
+                                    disabled={
+                                        loading ||
+                                        (!connectPeerOnly &&
+                                            isInvalidFeeRate) ||
+                                        isInvalidPeer
+                                    }
+                                />
+                            </View>
 
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString('general.enableNfc')}
-                                icon={
-                                    <NfcIcon
-                                        stroke={themeColor('highlight')}
-                                        width={25}
-                                        height={25}
-                                        style={{ marginRight: 10 }}
-                                    />
-                                }
-                                onPress={() => this.enableNfc()}
-                                secondary
-                            />
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString('general.enableNfc')}
+                                    icon={
+                                        <NfcIcon
+                                            stroke={themeColor('highlight')}
+                                            width={25}
+                                            height={25}
+                                            style={{ marginRight: 10 }}
+                                        />
+                                    }
+                                    onPress={() => this.enableNfc()}
+                                    secondary
+                                />
+                            </View>
                         </View>
-                    </View>
-                </ScrollView>
+                    </ScrollView>
+                )}
             </Screen>
         );
     }
@@ -1174,5 +1418,42 @@ const styles = StyleSheet.create({
         padding: 10,
         backgroundColor: 'rgba(92, 99,216, 1)',
         color: 'white'
+    },
+    successContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 30
+    },
+    successCheckmark: {
+        fontSize: 60,
+        textAlign: 'center',
+        marginBottom: 10,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    successTitle: {
+        fontSize: 22,
+        textAlign: 'center',
+        fontFamily: 'PPNeueMontreal-Book',
+        marginBottom: 30
+    },
+    channelIndex: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 14,
+        marginTop: 10,
+        marginBottom: 2
+    },
+    successNote: {
+        fontSize: 16,
+        textAlign: 'center',
+        fontFamily: 'PPNeueMontreal-Book',
+        marginTop: 30,
+        paddingHorizontal: 10
+    },
+    successButtons: {
+        width: '100%',
+        gap: 15,
+        paddingBottom: 15,
+        paddingHorizontal: 10
     }
 });
