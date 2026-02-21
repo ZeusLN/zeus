@@ -365,6 +365,29 @@ export default class CashuTokenView extends React.Component<
                     )}
                 </ScrollView>
                 {infoIndex === 0 &&
+                    (success || warningMessage) &&
+                    !received &&
+                    !pendingClaim && (
+                        <View style={{ bottom: 15 }}>
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.goToWallet'
+                                )}
+                                icon={{
+                                    name: 'list',
+                                    size: 25,
+                                    color: themeColor('background')
+                                }}
+                                onPress={() => {
+                                    navigation.popTo('Wallet');
+                                }}
+                                containerStyle={{ marginTop: 15 }}
+                            />
+                        </View>
+                    )}
+                {infoIndex === 0 &&
+                    !success &&
+                    !warningMessage &&
                     !received &&
                     !pendingClaim &&
                     (!sent || (sent && !spent)) && (
@@ -438,8 +461,7 @@ export default class CashuTokenView extends React.Component<
                                             !haveMint ||
                                             errorAddingMint ||
                                             !isSupported ||
-                                            loading ||
-                                            success
+                                            loading
                                         }
                                     />
                                 </>
@@ -471,10 +493,7 @@ export default class CashuTokenView extends React.Component<
                                 }}
                                 containerStyle={{ marginTop: 15 }}
                                 disabled={
-                                    !hasOpenChannels ||
-                                    !isSupported ||
-                                    loading ||
-                                    success
+                                    !hasOpenChannels || !isSupported || loading
                                 }
                                 secondary
                             />
