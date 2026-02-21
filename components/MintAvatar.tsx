@@ -2,13 +2,14 @@ import * as React from 'react';
 import { Image, Text, View } from 'react-native';
 
 import { themeColor } from '../utils/ThemeUtils';
-import { getAvatarInitials } from '../utils/DisplayUtils';
+import { getAvatarInitials, getHostnameInitial } from '../utils/DisplayUtils';
 
 import Ecash from '../assets/images/SVG/Ecash.svg';
 
 interface MintAvatarProps {
     iconUrl?: string | null;
     name?: string | null;
+    mintUrl?: string | null;
     size?: 'small' | 'medium' | 'large';
     style?: object;
 }
@@ -22,6 +23,7 @@ const SIZES = {
 const MintAvatar: React.FC<MintAvatarProps> = ({
     iconUrl,
     name,
+    mintUrl,
     size = 'medium',
     style
 }) => {
@@ -35,7 +37,8 @@ const MintAvatar: React.FC<MintAvatarProps> = ({
     const dims = SIZES[size];
 
     if (showPlaceholder) {
-        const initials = getAvatarInitials(name || undefined);
+        const initials =
+            getAvatarInitials(name || undefined) || getHostnameInitial(mintUrl);
         return (
             <View
                 style={[

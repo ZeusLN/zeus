@@ -221,6 +221,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                         <MintAvatar
                                             iconUrl={mintInfo?.icon_url}
                                             name={mintInfo?.name}
+                                            mintUrl={mintInfo?.mintUrl}
                                             size="medium"
                                             style={{ alignSelf: 'center' }}
                                         />

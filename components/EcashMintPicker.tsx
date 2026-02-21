@@ -95,6 +95,7 @@ export default class EcashMintPicker extends React.Component<
                             <MintAvatar
                                 iconUrl={mints[displayMintUrl]?.icon_url}
                                 name={mints[displayMintUrl]?.name}
+                                mintUrl={displayMintUrl}
                                 size="small"
                                 style={{
                                     marginRight: 10,
