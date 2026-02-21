@@ -721,11 +721,15 @@ export default class WalletHeader extends React.Component<
                                         />
                                     </View>
                                 )}
-                                {!connecting && isSyncing && (
-                                    <View style={{ marginRight: 15 }}>
-                                        <SyncBadge navigation={navigation} />
-                                    </View>
-                                )}
+                                {!connecting &&
+                                    isSyncing &&
+                                    !CashuStore?.isOffline && (
+                                        <View style={{ marginRight: 15 }}>
+                                            <SyncBadge
+                                                navigation={navigation}
+                                            />
+                                        </View>
+                                    )}
                                 {!connecting && AlertStore?.hasError && (
                                     <AlertButton />
                                 )}

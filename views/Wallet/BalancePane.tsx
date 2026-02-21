@@ -32,6 +32,7 @@ import SyncStore from '../../stores/SyncStore';
 
 import AlertIcon from '../../assets/images/SVG/Alert.svg';
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
+import PauseIcon from '../../assets/images/SVG/Pause.svg';
 import LockIcon from '../../assets/images/SVG/Lock.svg';
 
 const ErrorZeus = require('../../assets/images/errorZeus.png');
@@ -382,77 +383,118 @@ export default class BalancePane extends React.PureComponent<
                             <TouchableOpacity
                                 onPress={() => navigation.navigate('Sync')}
                             >
-                                <View
-                                    style={[
-                                        styles.card,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            marginBottom: 20
-                                        }
-                                    ]}
-                                >
-                                    <Text
+                                {CashuStore.isOffline ? (
+                                    <View
                                         style={[
-                                            styles.cardTitleText,
-                                            { color: themeColor('text') }
+                                            styles.card,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                marginBottom: 10,
+                                                paddingVertical: 10,
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
+                                            }
                                         ]}
                                     >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.title'
-                                        )}
-                                    </Text>
-                                    <Text
+                                        <PauseIcon
+                                            color={themeColor('text')}
+                                            width={16}
+                                            height={16}
+                                            style={{ marginRight: 8 }}
+                                        />
+                                        <Text
+                                            style={[
+                                                styles.cardTitleText,
+                                                {
+                                                    color: themeColor('text'),
+                                                    fontSize: 14,
+                                                    marginBottom: 0
+                                                }
+                                            ]}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.BalancePane.sync.paused'
+                                            )}
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <View
                                         style={[
-                                            styles.cardBodyText,
-                                            { color: themeColor('text') }
+                                            styles.card,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                marginBottom: 10
+                                            }
                                         ]}
                                     >
-                                        {localeString(
-                                            'views.Wallet.BalancePane.sync.text'
-                                        ).replace('Zeus', 'ZEUS')}
-                                    </Text>
-                                    {currentBlockHeight !== undefined &&
-                                        bestBlockHeight && (
-                                            <View
-                                                style={styles.progressContainer}
-                                            >
-                                                <LinearProgress
-                                                    value={
-                                                        Math.floor(
+                                        <Text
+                                            style={[
+                                                styles.cardTitleText,
+                                                { color: themeColor('text') }
+                                            ]}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.BalancePane.sync.title'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.cardBodyText,
+                                                { color: themeColor('text') }
+                                            ]}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.BalancePane.sync.text'
+                                            ).replace('Zeus', 'ZEUS')}
+                                        </Text>
+                                        {currentBlockHeight !== undefined &&
+                                            bestBlockHeight && (
+                                                <View
+                                                    style={
+                                                        styles.progressContainer
+                                                    }
+                                                >
+                                                    <LinearProgress
+                                                        value={
+                                                            Math.floor(
+                                                                (currentBlockHeight /
+                                                                    bestBlockHeight) *
+                                                                    100
+                                                            ) / 100
+                                                        }
+                                                        variant="determinate"
+                                                        color={themeColor(
+                                                            'highlight'
+                                                        )}
+                                                        trackColor={themeColor(
+                                                            'secondaryBackground'
+                                                        )}
+                                                        style={
+                                                            styles.progressBar
+                                                        }
+                                                    />
+                                                    <Text
+                                                        style={[
+                                                            styles.progressText,
+                                                            {
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }
+                                                        ]}
+                                                    >
+                                                        {`${Math.floor(
                                                             (currentBlockHeight /
                                                                 bestBlockHeight) *
                                                                 100
-                                                        ) / 100
-                                                    }
-                                                    variant="determinate"
-                                                    color={themeColor(
-                                                        'highlight'
-                                                    )}
-                                                    trackColor={themeColor(
-                                                        'secondaryBackground'
-                                                    )}
-                                                    style={styles.progressBar}
-                                                />
-                                                <Text
-                                                    style={[
-                                                        styles.progressText,
-                                                        {
-                                                            color: themeColor(
-                                                                'text'
-                                                            )
-                                                        }
-                                                    ]}
-                                                >
-                                                    {`${Math.floor(
-                                                        (currentBlockHeight /
-                                                            bestBlockHeight) *
-                                                            100
-                                                    ).toString()}%`}
-                                                </Text>
-                                            </View>
-                                        )}
-                                </View>
+                                                        ).toString()}%`}
+                                                    </Text>
+                                                </View>
+                                            )}
+                                    </View>
+                                )}
                             </TouchableOpacity>
                         )}
                         {implementation === 'embedded-lnd' &&
