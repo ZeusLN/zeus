@@ -52,8 +52,12 @@ class CashuUtils {
         }
         token = token.trim();
 
-        // Find cashuA prefix if present
-        const idx = token.indexOf('cashuA');
+        // Find cashuA or cashuB prefix if present
+        const idxA = token.indexOf('cashuA');
+        const idxB = token.indexOf('cashuB');
+        // Pick the earliest match, or whichever exists
+        const idx =
+            idxA === -1 ? idxB : idxB === -1 ? idxA : Math.min(idxA, idxB);
         if (idx !== -1) {
             token = token.slice(idx);
         }

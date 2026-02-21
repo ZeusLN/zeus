@@ -336,6 +336,11 @@ export default class ActivityStore {
             if (this.cashuStore.receivedTokens) {
                 additions = additions.concat(this.cashuStore.receivedTokens);
             }
+            if (this.cashuStore.offlinePendingTokens) {
+                additions = additions.concat(
+                    this.cashuStore.offlinePendingTokens
+                );
+            }
         }
 
         // push payments, txs, invoices to one array

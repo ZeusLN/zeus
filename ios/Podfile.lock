@@ -2016,6 +2016,8 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-netinfo (11.4.1):
+    - React-Core
   - react-native-nfc-manager (3.17.2):
     - React-Core
   - react-native-notifications (5.2.2):
@@ -3362,6 +3364,7 @@ DEPENDENCIES:
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-hce (from `../node_modules/react-native-hce`)
   - react-native-image-picker (from `../node_modules/react-native-image-picker`)
+  - "react-native-netinfo (from `../node_modules/@react-native-community/netinfo`)"
   - react-native-nfc-manager (from `../node_modules/react-native-nfc-manager`)
   - react-native-notifications (from `../node_modules/react-native-notifications`)
   - react-native-ping (from `../node_modules/react-native-ping`)
@@ -3545,6 +3548,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-hce"
   react-native-image-picker:
     :path: "../node_modules/react-native-image-picker"
+  react-native-netinfo:
+    :path: "../node_modules/@react-native-community/netinfo"
   react-native-nfc-manager:
     :path: "../node_modules/react-native-nfc-manager"
   react-native-notifications:
@@ -3735,6 +3740,7 @@ SPEC CHECKSUMS:
   react-native-get-random-values: 419569b6ed3d15bfb9b6781b2f2e058f8e8d2698
   react-native-hce: f42561549a16f53ae98edb7f1b68ad87b6e732e1
   react-native-image-picker: 0314366753615115fa55c3cc937ac44cb7e75702
+  react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
   react-native-nfc-manager: c8891e460b4943b695d63f7f4effc6345bbefc83
   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
   react-native-ping: 589027e929c300b0b68cc5c34105f33610177055

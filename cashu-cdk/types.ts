@@ -27,6 +27,10 @@ export interface CDKProofDleq {
     r?: string;
 }
 
+export interface CDKProofWithY extends CDKProof {
+    y: string; // hex public key for DB removal
+}
+
 export interface CDKToken {
     value: number;
     memo?: string;
@@ -145,7 +149,14 @@ export interface CDKSendOptions {
     };
     conditions?: CDKSpendingConditions;
     send_kind: CDKSendKind;
+    tolerance?: number;
     include_fee: boolean;
+}
+
+export interface CDKPreparedSend {
+    id: string;
+    amount: number;
+    fee: number;
 }
 
 export interface CDKReceiveOptions {
@@ -308,6 +319,10 @@ export interface CashuDevKitNativeModule {
 
     // Transactions
     listTransactions(direction?: string): Promise<string>;
+
+    // Direct Proof Access (Offline Send)
+    getUnspentProofs(mintUrl: string): Promise<string>; // JSON string
+    removeProofs(proofsYJson: string): Promise<void>;
 
     // Database
     getDatabasePath(): Promise<string>;

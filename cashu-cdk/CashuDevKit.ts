@@ -8,6 +8,7 @@
 import { NativeModules } from 'react-native';
 import {
     CDKProof,
+    CDKProofWithY,
     CDKToken,
     CDKMintInfo,
     CDKKeyset,
@@ -15,7 +16,9 @@ import {
     CDKMeltQuote,
     CDKMelted,
     CDKSpendingConditions,
+    CDKSendKind,
     CDKSendOptions,
+    CDKPreparedSend,
     CDKReceiveOptions,
     CDKProofState,
     CDKTransaction,
@@ -439,19 +442,26 @@ class CashuDevKit {
      * @param mintUrl - The mint's URL
      * @param amount - Amount in sats to send
      * @param options - Send options (memo, conditions, etc.)
-     * @returns Prepared send ID for confirmation
+     * @returns Prepared send info (id, amount, fee)
      */
     async prepareSend(
         mintUrl: string,
         amount: number,
         options?: CDKSendOptions
-    ): Promise<string> {
+    ): Promise<CDKPreparedSend> {
         try {
-            return await CashuDevKitModule.prepareSend(
+            const result = await CashuDevKitModule.prepareSend(
                 mintUrl,
                 amount,
                 options ? JSON.stringify(options) : undefined
             );
+            // Native module returns JSON string with { id, amount, fee }
+            const parsed = JSON.parse(result);
+            if (typeof parsed === 'object' && parsed.id) {
+                return parsed;
+            }
+            // Fallback for older native module returning plain ID string
+            return { id: result, amount, fee: 0 };
         } catch (error) {
             throw mapCDKError(error);
         }
@@ -495,22 +505,27 @@ class CashuDevKit {
      * @param amount - Amount in sats
      * @param memo - Optional memo
      * @param conditions - Optional P2PK conditions
+     * @param sendKind - Send kind (OnlineExact, OfflineExact, etc.)
+     * @param tolerance - Tolerance amount for tolerance modes
      */
     async send(
         mintUrl: string,
         amount: number,
         memo?: string,
-        conditions?: CDKSpendingConditions
+        conditions?: CDKSpendingConditions,
+        sendKind: CDKSendKind = 'OnlineExact',
+        tolerance?: number
     ): Promise<CDKToken> {
         const options: CDKSendOptions = {
-            send_kind: 'OnlineExact',
+            send_kind: sendKind,
             include_fee: true,
             conditions,
+            tolerance,
             memo: memo ? { memo, include_memo: true } : undefined
         };
 
-        const preparedId = await this.prepareSend(mintUrl, amount, options);
-        return await this.confirmSend(preparedId, memo);
+        const prepared = await this.prepareSend(mintUrl, amount, options);
+        return await this.confirmSend(prepared.id, memo);
     }
 
     /**
@@ -582,7 +597,7 @@ class CashuDevKit {
     async isValidToken(token: string): Promise<boolean> {
         try {
             return await CashuDevKitModule.isValidToken(token);
-        } catch {
+        } catch (_e) {
             return false;
         }
     }
@@ -715,6 +730,36 @@ class CashuDevKit {
         try {
             const json = await CashuDevKitModule.listTransactions(direction);
             return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
+    // ========================================================================
+    // Direct Proof Access (Offline Send)
+    // ========================================================================
+
+    /**
+     * Get unspent proofs from the database for a specific mint
+     * Returns proofs with their Y public key values (needed for removal)
+     * @param mintUrl - The mint's URL
+     */
+    async getUnspentProofs(mintUrl: string): Promise<CDKProofWithY[]> {
+        try {
+            const json = await CashuDevKitModule.getUnspentProofs(mintUrl);
+            return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
+    /**
+     * Remove proofs from the database by their Y public key values
+     * @param proofsY - Array of hex-encoded Y public key strings
+     */
+    async removeProofs(proofsY: string[]): Promise<void> {
+        try {
+            await CashuDevKitModule.removeProofs(JSON.stringify(proofsY));
         } catch (error) {
             throw mapCDKError(error);
         }

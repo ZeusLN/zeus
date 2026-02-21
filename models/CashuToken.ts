@@ -31,6 +31,7 @@ export default class CashuToken extends BaseModel {
     public received?: boolean;
     public sent?: boolean;
     public spent?: boolean; // only for sent tokens
+    public pendingClaim?: boolean; // queued for offline claiming, not yet confirmed
     public encodedToken?: string;
     public proofs: Proof[];
     public value?: number; // cached value from CDK
