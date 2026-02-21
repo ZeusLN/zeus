@@ -238,6 +238,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
+        if (route?.params?.switchToChannels) {
+            this.props.navigation.setParams({ switchToChannels: undefined });
+            this.tabNavigationRef.current?.navigate(
+                localeString('views.Wallet.Wallet.channels')
+            );
+        }
+
         if (
             this.state.initialLoad ||
             SettingsStore.posWasEnabled ||
