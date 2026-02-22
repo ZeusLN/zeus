@@ -3,28 +3,27 @@ import {
     BackHandler,
     Dimensions,
     NativeEventSubscription,
-    StyleSheet,
     Text,
-    View,
-    TouchableOpacity
+    View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { getRouteStack } from '../NavigationService';
+
+import { loadDonationLnurl } from '../utils/LnurlUtils';
 
 import LnurlPaySuccess from './LnurlPay/Success';
 
 import Button from '../components/Button';
-import LightningLoadingPattern from '../components/LightningLoadingPattern';
-import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
-import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
-import KeyValue from '../components/KeyValue';
-import Amount from '../components/Amount';
-import ModalBox from '../components/ModalBox';
+import PaymentSuccessView from '../components/PaymentSuccessView';
+import PaymentErrorView from '../components/PaymentErrorView';
+import DonationInfoModal from '../components/DonationInfoModal';
+import SendingLoadingView from '../components/SendingLoadingView';
+import DonationGiftIcon from '../components/DonationGiftIcon';
+import { sendingStyles } from '../components/sendingStyles';
 
 import BalanceStore from '../stores/BalanceStore';
 import ContactStore from '../stores/ContactStore';
@@ -43,11 +42,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import Storage from '../storage';
 
 import Clock from '../assets/images/SVG/Clock.svg';
-import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
-import Gift from '../assets/images/SVG/gift.svg';
-import CopyBox from '../components/CopyBox';
-import LoadingIndicator from '../components/LoadingIndicator';
 import PaymentDetailsSheet from '../components/PaymentDetailsSheet';
 
 import { getFeePercentage } from '../utils/AmountUtils';
@@ -186,7 +181,7 @@ export default class SendingLightning extends React.Component<
         this.setState({ payingDonation: true, paymentType: 'donation' });
 
         try {
-            const paymentRequest = await this.loadLnurl(donationAmount);
+            const paymentRequest = await loadDonationLnurl(donationAmount);
             if (!paymentRequest) {
                 this.setState({
                     payingDonation: false,
@@ -278,234 +273,6 @@ export default class SendingLightning extends React.Component<
                 amountDonated: parseFloat(donationAmount)
             });
         }
-    };
-
-    loadLnurl = async (donationAmount: string) => {
-        const donationAddress = 'tips@pay.zeusln.app';
-
-        const [username, bolt11Domain] = donationAddress.split('@');
-        const url = bolt11Domain.includes('.onion')
-            ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
-            : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
-
-        try {
-            const response = await ReactNativeBlobUtil.fetch('GET', url);
-            const lnurlData = response.json();
-            const amount = parseFloat(donationAmount ?? '') * 1000;
-            const callbackUrl = `${lnurlData.callback}?amount=${amount}`;
-
-            const invoiceResponse = await ReactNativeBlobUtil.fetch(
-                'GET',
-                callbackUrl
-            );
-            const invoiceData = invoiceResponse.json();
-
-            return invoiceData.pr;
-        } catch (err) {
-            console.error('loadLnurl error:', err);
-            return null;
-        }
-    };
-
-    renderInfoModal = () => {
-        const {
-            showDonationInfo,
-            donationPreimage,
-            donationHandled,
-            amountDonated,
-            donationEnhancedPath,
-            donationPathExists,
-            donationFee,
-            donationFeePercentage
-        } = this.state;
-
-        const { navigation } = this.props;
-
-        return (
-            <ModalBox
-                isOpen={showDonationInfo}
-                style={{
-                    backgroundColor: 'transparent'
-                }}
-                onClosed={() => {
-                    this.setState({
-                        showDonationInfo: false
-                    });
-                }}
-                position="center"
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 24,
-                            padding: 20,
-                            alignItems: 'center',
-                            width: '90%'
-                        }}
-                    >
-                        {donationHandled ? (
-                            <>
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        color: themeColor('text'),
-                                        marginBottom: 12,
-                                        fontSize: 18,
-                                        textAlign: 'center'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.PaymentRequest.thankYouForDonation'
-                                    )}
-                                </Text>
-                                <View
-                                    style={{
-                                        width: '100%',
-                                        marginBottom: -10
-                                    }}
-                                >
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.PaymentRequest.amountDonated'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={amountDonated?.toString()}
-                                                sensitive
-                                                toggleable
-                                            />
-                                        }
-                                    />
-                                </View>
-                                {donationFee && donationFeePercentage && (
-                                    <View
-                                        style={{
-                                            width: '100%'
-                                        }}
-                                    >
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.Payment.fee'
-                                            )}
-                                            value={
-                                                <Row>
-                                                    <Amount
-                                                        sats={donationFee}
-                                                        debit
-                                                        sensitive
-                                                        toggleable
-                                                    />
-                                                    {donationFeePercentage && (
-                                                        <Text
-                                                            style={{
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book',
-                                                                color: themeColor(
-                                                                    'text'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {` (${donationFeePercentage})`}
-                                                        </Text>
-                                                    )}
-                                                </Row>
-                                            }
-                                        />
-                                    </View>
-                                )}
-
-                                {donationPreimage && (
-                                    <View
-                                        style={{
-                                            width: '100%',
-                                            marginTop: donationFee ? 12 : 16
-                                        }}
-                                    >
-                                        <CopyBox
-                                            heading={localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )}
-                                            headingCopied={`${localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )} ${localeString(
-                                                'components.ExternalLinkModal.copied'
-                                            )}`}
-                                            theme="dark"
-                                            URL={donationPreimage}
-                                        />
-                                    </View>
-                                )}
-                                {donationPathExists && (
-                                    <Button
-                                        title={`${localeString(
-                                            'views.Payment.title'
-                                        )} ${
-                                            donationEnhancedPath?.length > 1
-                                                ? `${localeString(
-                                                      'views.Payment.paths'
-                                                  )} (${
-                                                      donationEnhancedPath.length
-                                                  })`
-                                                : localeString(
-                                                      'views.Payment.path'
-                                                  )
-                                        } `}
-                                        onPress={() => {
-                                            this.setState({
-                                                showDonationInfo: false
-                                            });
-                                            navigation.navigate(
-                                                'PaymentPaths',
-                                                {
-                                                    enhancedPath:
-                                                        donationEnhancedPath
-                                                }
-                                            );
-                                        }}
-                                        buttonStyle={{
-                                            height: 40,
-                                            width: '100%'
-                                        }}
-                                        containerStyle={{ marginTop: 30 }}
-                                    />
-                                )}
-                            </>
-                        ) : (
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('text'),
-                                    fontSize: 18,
-                                    marginBottom: 20,
-                                    textAlign: 'center'
-                                }}
-                            >
-                                {localeString(
-                                    'views.SendingLightning.donationFailed'
-                                )}
-                            </Text>
-                        )}
-                        <Button
-                            title={localeString('general.close')}
-                            onPress={() =>
-                                this.setState({ showDonationInfo: false })
-                            }
-                            containerStyle={{
-                                marginTop: donationPathExists ? 14 : 18
-                            }}
-                            tertiary
-                        />
-                    </View>
-                </View>
-            </ModalBox>
-        );
     };
 
     fetchPayments = async () => {
@@ -605,74 +372,40 @@ export default class SendingLightning extends React.Component<
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
-        const amountFontSize = windowSize.width * windowSize.scale * 0.013;
 
         const stack = getRouteStack();
         const isSwap = stack.filter((route) => route.name === 'SwapDetails')[0];
 
         return (
             <Screen>
-                {this.renderInfoModal()}
-                {loading && (
-                    <View
-                        style={{
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '100%',
-                            marginTop: 25
-                        }}
-                    >
-                        <LightningLoadingPattern />
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                // paddingBottom for centering
-                                paddingBottom: windowSize.height / 10,
-                                fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
-                            }}
-                        >
-                            {localeString('views.SendingLightning.sending')}
-                        </Text>
-                    </View>
-                )}
+                <DonationInfoModal
+                    isOpen={this.state.showDonationInfo}
+                    onClose={() => this.setState({ showDonationInfo: false })}
+                    donationHandled={donationHandled}
+                    amountDonated={this.state.amountDonated}
+                    donationPreimage={this.state.donationPreimage}
+                    donationFee={this.state.donationFee}
+                    donationFeePercentage={this.state.donationFeePercentage}
+                    donationEnhancedPath={this.state.donationEnhancedPath}
+                    donationPathExists={this.state.donationPathExists}
+                    navigation={navigation}
+                />
+                {loading && <SendingLoadingView />}
                 {paymentType === 'donation' && (
-                    <View
-                        style={{
-                            position: 'absolute',
-                            top: 10,
-                            right: 10,
-                            zIndex: 1
-                        }}
-                    >
-                        {payingDonation ? (
-                            <LoadingIndicator />
-                        ) : (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.setState({ showDonationInfo: true })
-                                }
-                            >
-                                <Gift
-                                    fill={
-                                        donationHandled
-                                            ? themeColor('highlight')
-                                            : themeColor('error')
-                                    }
-                                    width={30}
-                                    height={30}
-                                />
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                    <DonationGiftIcon
+                        payingDonation={payingDonation}
+                        donationHandled={donationHandled}
+                        onPress={() =>
+                            this.setState({ showDonationInfo: true })
+                        }
+                    />
                 )}
 
                 {!loading && (
                     <>
                         <View
                             style={{
-                                ...styles.content,
+                                ...sendingStyles.content,
                                 paddingTop: windowSize.height * 0.05
                             }}
                         >
@@ -684,111 +417,11 @@ export default class SendingLightning extends React.Component<
                                 />
                             )}
                             {!!success && !error && (
-                                <>
-                                    <PaidIndicator />
-                                    <View style={{ alignItems: 'center' }}>
-                                        <SuccessAnimation />
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                paddingTop:
-                                                    windowSize.height * 0.03,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize:
-                                                    windowSize.width *
-                                                    windowSize.scale *
-                                                    0.017
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.SendingLightning.success'
-                                            )}
-                                        </Text>
-                                        {paymentAmount != null && (
-                                            <Row
-                                                style={{
-                                                    marginTop: 10,
-                                                    alignItems: 'baseline'
-                                                }}
-                                            >
-                                                <Amount
-                                                    sats={paymentAmount}
-                                                    sensitive
-                                                    toggleable
-                                                    fontSize={amountFontSize}
-                                                />
-                                                {feeAmount != null && (
-                                                    <Row
-                                                        style={{
-                                                            alignItems:
-                                                                'baseline'
-                                                        }}
-                                                    >
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book',
-                                                                fontSize:
-                                                                    amountFontSize
-                                                            }}
-                                                        >
-                                                            {' (+'}
-                                                        </Text>
-                                                        <Amount
-                                                            sats={feeAmount}
-                                                            sensitive
-                                                            toggleable
-                                                            fontSize={
-                                                                amountFontSize
-                                                            }
-                                                        />
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book',
-                                                                fontSize:
-                                                                    amountFontSize
-                                                            }}
-                                                        >
-                                                            {` ${localeString(
-                                                                'views.Payment.fee'
-                                                            ).toLowerCase()})`}
-                                                        </Text>
-                                                    </Row>
-                                                )}
-                                            </Row>
-                                        )}
-                                        {paymentDuration !== null && (
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    marginTop: 10,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.SendingLightning.paymentSettled',
-                                                    {
-                                                        seconds:
-                                                            paymentDuration.toFixed(
-                                                                2
-                                                            )
-                                                    }
-                                                )}
-                                            </Text>
-                                        )}
-                                    </View>
-                                </>
+                                <PaymentSuccessView
+                                    paymentAmount={paymentAmount}
+                                    feeAmount={feeAmount}
+                                    paymentDuration={paymentDuration}
+                                />
                             )}
                             {!!inTransit && !error && (
                                 <View
@@ -859,44 +492,11 @@ export default class SendingLightning extends React.Component<
                                 )}
                             {(!!error || !!payment_error) &&
                                 !LnurlPayStore.isZaplocker && (
-                                    <View style={{ alignItems: 'center' }}>
-                                        <ErrorIcon
-                                            width={windowSize.height * 0.13}
-                                            height={windowSize.height * 0.13}
-                                        />
-                                        <Text
-                                            style={{
-                                                color: themeColor('warning'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize: 32,
-                                                marginTop:
-                                                    windowSize.height * 0.07
-                                            }}
-                                        >
-                                            {localeString('general.error')}
-                                        </Text>
-                                        {(payment_error || error_msg) && (
-                                            <Text
-                                                style={{
-                                                    color: themeColor('text'),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    fontSize:
-                                                        windowSize.width *
-                                                        windowSize.scale *
-                                                        0.014,
-                                                    textAlign: 'center',
-                                                    marginTop:
-                                                        windowSize.height *
-                                                        0.025,
-                                                    padding: 5
-                                                }}
-                                            >
-                                                {payment_error || error_msg}
-                                            </Text>
-                                        )}
-                                    </View>
+                                    <PaymentErrorView
+                                        errorMessage={
+                                            payment_error || error_msg
+                                        }
+                                    />
                                 )}
                             {!!success &&
                                 !error &&
@@ -979,7 +579,7 @@ export default class SendingLightning extends React.Component<
 
                         <View
                             style={[
-                                styles.buttons,
+                                sendingStyles.buttons,
                                 !noteKey && { marginTop: 14 }
                             ]}
                         >
@@ -1123,20 +723,3 @@ export default class SendingLightning extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    },
-    content: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'space-evenly',
-        height: '100%'
-    },
-    buttons: {
-        width: '100%',
-        justifyContent: 'space-between',
-        gap: 15
-    }
-});
