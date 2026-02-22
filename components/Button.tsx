@@ -72,16 +72,18 @@ function Button(props: ButtonProps) {
             TouchableComponent={TouchableOpacity as unknown as typeof Component}
             icon={
                 icon
-                    ? {
-                          color: icon.color
-                              ? icon.color
-                              : iconOnly
-                              ? textColor
-                              : secondary
-                              ? themeColor('highlight')
-                              : themeColor('background'),
-                          ...icon
-                      }
+                    ? React.isValidElement(icon)
+                        ? icon
+                        : {
+                              color: icon.color
+                                  ? icon.color
+                                  : iconOnly
+                                  ? textColor
+                                  : secondary
+                                  ? themeColor('highlight')
+                                  : themeColor('background'),
+                              ...icon
+                          }
                     : null
             }
             title={title as string | React.ReactElement<{}>}

@@ -99,6 +99,7 @@ import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
+import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -2341,10 +2342,22 @@ export default class Receive extends React.Component<
                                                                                   'general.receiveNfc'
                                                                               )
                                                                     }
-                                                                    icon={{
-                                                                        name: 'nfc',
-                                                                        size: 25
-                                                                    }}
+                                                                    icon={
+                                                                        <NfcIcon
+                                                                            stroke={themeColor(
+                                                                                'highlight'
+                                                                            )}
+                                                                            width={
+                                                                                25
+                                                                            }
+                                                                            height={
+                                                                                25
+                                                                            }
+                                                                            style={{
+                                                                                marginRight: 10
+                                                                            }}
+                                                                        />
+                                                                    }
                                                                     onPress={() =>
                                                                         this.enableNfc()
                                                                     }
