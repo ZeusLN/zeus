@@ -276,7 +276,7 @@ describe('ChannelMigrationUtils', () => {
         };
 
         describe.each([
-            ['views/Tools/index.tsx', 'Tools'],
+            ['views/AppMenu.tsx', 'AppMenu'],
             ['views/Settings/Seed.tsx', 'Seed']
         ])('%s', (...screen) => {
             it('offers the Olympus upload to SQLite wallets', () => {
