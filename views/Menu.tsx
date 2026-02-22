@@ -5,6 +5,7 @@ import {
     Text,
     View,
     Image,
+    TextInput,
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
@@ -59,6 +60,7 @@ interface MenuProps {
 interface MenuState {
     showHiddenItems: boolean;
     easterEggCount: number;
+    searchQuery: string;
 }
 
 @inject('NodeInfoStore', 'LightningAddressStore', 'SettingsStore', 'UnitsStore')
@@ -66,7 +68,8 @@ interface MenuState {
 export default class Menu extends React.Component<MenuProps, MenuState> {
     state = {
         showHiddenItems: false,
-        easterEggCount: 0
+        easterEggCount: 0,
+        searchQuery: ''
     };
 
     focusListener: any = null;
@@ -91,8 +94,14 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             LightningAddressStore,
             SettingsStore
         } = this.props;
-        const { showHiddenItems, easterEggCount } = this.state;
+        const { showHiddenItems, easterEggCount, searchQuery } = this.state;
         const { implementation, settings, seedPhrase } = SettingsStore;
+        const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+        const isSearchMatch = (...terms: string[]) =>
+            !normalizedSearchQuery ||
+            terms.some((term) =>
+                term.toLocaleLowerCase().includes(normalizedSearchQuery)
+            );
 
         // Define the type for implementationDisplayValue
         interface ImplementationDisplayValue {
@@ -138,6 +147,132 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
         const youveGotSats = LightningAddressStore.paid?.length > 0;
         const forwardArrowColor = themeColor('secondaryText');
 
+        const createConnectWalletLabel = localeString(
+            'views.Settings.createConnectWallet'
+        );
+        const walletsLabel = localeString('views.Settings.Wallets.title');
+        const settingsLabel = localeString('views.Settings.title');
+        const seedLabel = localeString('views.Settings.Seed.title');
+        const embeddedNodeLabel = localeString(
+            'views.Settings.EmbeddedNode.title'
+        );
+        const nodeInfoLabel = localeString('views.NodeInfo.title');
+        const networkInfoLabel = localeString('views.NetworkInfo.title');
+        const mintsLabel = localeString('cashu.cashuMints');
+        const lightningAddressLabel = localeString('general.lightningAddress');
+        const swapsLabel = localeString('views.Swaps.title');
+        const onChainAddressesLabel = localeString(
+            'views.OnChainAddresses.title'
+        );
+        const bolt12AddressLabel = localeString('views.Settings.Bolt12Address');
+        const paycodesLabel = localeString('general.paycodes');
+        const routingLabel = localeString('general.routing');
+        const contactsLabel = localeString('views.Settings.Contacts.contacts');
+        const toolsLabel = localeString('views.Tools.title');
+        const supportLabel = localeString('views.Settings.Support.title');
+        const helpLabel = localeString('general.help');
+        const walletTerm = localeString('general.wallet');
+        const nodeTerm = localeString('general.node');
+        const connectTerm = localeString('views.LnurlChannel.connect');
+        const backupTerm = localeString(
+            'views.Wallet.BalancePane.backup.title'
+        );
+        const recoveryTerm = localeString(
+            'views.Wallet.BalancePane.recovery.title'
+        );
+        const bitcoinTerm = localeString('general.bitcoin');
+        const networkTerm = localeString('general.network');
+        const peersTerm = localeString('general.peers');
+        const cashuTerm = localeString('general.cashu');
+        const ecashTerm = localeString('general.ecash');
+        const swapTerm = localeString('general.swap');
+        const addressTerm = localeString('general.address');
+        const onChainTerm = localeString('general.onchain');
+        const payCodeTerm = localeString('general.paycode');
+        const receiveTerm = localeString('general.receive');
+        const donateTerm = localeString('views.PaymentRequest.donate');
+
+        const hasSelectedNode = !!selectedNode;
+        const hasEmbeddedSeed =
+            implementation === 'embedded-lnd' && !!seedPhrase;
+
+        const showCreateConnectWallet =
+            !hasSelectedNode &&
+            isSearchMatch(
+                createConnectWalletLabel,
+                walletsLabel,
+                walletTerm,
+                connectTerm,
+                nodeTerm
+            );
+
+        const showSettings = isSearchMatch(settingsLabel);
+
+        const showSeed =
+            hasEmbeddedSeed &&
+            isSearchMatch(seedLabel, backupTerm, recoveryTerm);
+
+        const showEmbeddedNode =
+            hasEmbeddedSeed &&
+            isSearchMatch(embeddedNodeLabel, nodeTerm, bitcoinTerm);
+
+        const supportsNodeInfoSection =
+            hasSelectedNode && BackendUtils.supportsNodeInfo();
+
+        const showNodeInfo =
+            supportsNodeInfoSection && isSearchMatch(nodeInfoLabel, nodeTerm);
+
+        const showNetworkInfo =
+            supportsNodeInfoSection &&
+            BackendUtils.supportsNetworkInfo() &&
+            isSearchMatch(networkInfoLabel, networkTerm, peersTerm);
+
+        const showCashuMints =
+            hasSelectedNode &&
+            BackendUtils.supportsCashuWallet() &&
+            !!SettingsStore.settings?.ecash?.enableCashu &&
+            isSearchMatch(mintsLabel, cashuTerm, ecashTerm);
+
+        const showLightningAddress =
+            hasSelectedNode &&
+            BackendUtils.supportsCustomPreimages() &&
+            !NodeInfoStore.testnet &&
+            isSearchMatch(
+                lightningAddressLabel,
+                localeString('general.lightningAddressCondensed')
+            );
+
+        const showSwaps =
+            hasSelectedNode && isSearchMatch(swapsLabel, swapTerm);
+
+        const showOnChainAddresses =
+            BackendUtils.supportsAddressesWithDerivationPaths() &&
+            isSearchMatch(onChainAddressesLabel, addressTerm, onChainTerm);
+
+        const showBolt12Address =
+            hasSelectedNode &&
+            !!NodeInfoStore.supportsOffers &&
+            isSearchMatch(bolt12AddressLabel);
+
+        const showPaycodes =
+            hasSelectedNode &&
+            !!NodeInfoStore.supportsOffers &&
+            isSearchMatch(paycodesLabel, payCodeTerm, receiveTerm);
+
+        const showRouting =
+            hasSelectedNode &&
+            BackendUtils.supportsRouting() &&
+            isSearchMatch(routingLabel);
+
+        const showContacts =
+            hasSelectedNode && isSearchMatch(contactsLabel, addressTerm);
+
+        const showTools = isSearchMatch(toolsLabel);
+
+        const showSupport = isSearchMatch(supportLabel, donateTerm);
+
+        const showHelp = isSearchMatch(helpLabel);
+
         return (
             <Screen>
                 <Header
@@ -152,6 +287,36 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
+                    <View
+                        style={[
+                            styles.searchFieldContainer,
+                            { backgroundColor: themeColor('secondary') }
+                        ]}
+                    >
+                        <Icon
+                            name="search"
+                            color={themeColor('secondaryText')}
+                            underlayColor="transparent"
+                            size={19}
+                        />
+                        <TextInput
+                            value={searchQuery}
+                            onChangeText={(value) =>
+                                this.setState({ searchQuery: value })
+                            }
+                            placeholder={localeString('general.search')}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            style={[
+                                styles.searchInput,
+                                { color: themeColor('text') }
+                            ]}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            returnKeyType="search"
+                            clearButtonMode="while-editing"
+                        />
+                    </View>
+
                     {selectedNode ? (
                         <TouchableOpacity
                             onPress={() => navigation.navigate('Wallets')}
@@ -212,7 +377,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 </View>
                             </View>
                         </TouchableOpacity>
-                    ) : (
+                    ) : showCreateConnectWallet ? (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -244,54 +409,16 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         color: themeColor('highlight')
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Settings.createConnectWallet'
-                                    )}
+                                    {createConnectWalletLabel}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
-                    )}
+                    ) : null}
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => {
-                                navigation.navigate('Settings');
-                            }}
-                        >
-                            <View style={styles.icon}>
-                                <GearIcon
-                                    fill={themeColor('text')}
-                                    width={25}
-                                    height={25}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    {implementation === 'embedded-lnd' && seedPhrase && (
+                    {showSettings && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -303,13 +430,15 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         >
                             <TouchableOpacity
                                 style={styles.columnField}
-                                onPress={() => navigation.navigate('Seed')}
+                                onPress={() => {
+                                    navigation.navigate('Settings');
+                                }}
                             >
                                 <View style={styles.icon}>
-                                    <KeyIcon
+                                    <GearIcon
                                         fill={themeColor('text')}
-                                        width={27}
-                                        height={27}
+                                        width={25}
+                                        height={25}
                                     />
                                 </View>
                                 <Text
@@ -318,37 +447,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.Settings.Seed.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-
-                            <View style={styles.separationLine} />
-
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('EmbeddedNodeSettings')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <BlockIcon
-                                        color={themeColor('text')}
-                                        width={27}
-                                        height={27}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.title'
-                                    )}
+                                    {settingsLabel}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
@@ -357,7 +456,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsNodeInfo() && (
+                    {(showSeed || showEmbeddedNode) && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -367,85 +466,16 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 marginVertical: 5
                             }}
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('NodeInfo')}
-                            >
-                                <View style={styles.icon}>
-                                    <NodeOn color={themeColor('text')} />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.NodeInfo.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-
-                            {BackendUtils.supportsNetworkInfo() && (
-                                <>
-                                    <View style={styles.separationLine} />
-
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('NetworkInfo')
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <NetworkIcon
-                                                fill={themeColor('text')}
-                                                width={24}
-                                                height={24}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.NetworkInfo.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                </>
-                            )}
-                        </View>
-                    )}
-
-                    {selectedNode &&
-                        BackendUtils.supportsCashuWallet() &&
-                        SettingsStore.settings?.ecash?.enableCashu && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
+                            {showSeed && (
                                 <TouchableOpacity
                                     style={styles.columnField}
-                                    onPress={() => navigation.navigate('Mints')}
+                                    onPress={() => navigation.navigate('Seed')}
                                 >
                                     <View style={styles.icon}>
-                                        <MintIcon
-                                            height={24}
-                                            width={24}
+                                        <KeyIcon
                                             fill={themeColor('text')}
+                                            width={27}
+                                            height={27}
                                         />
                                     </View>
                                     <Text
@@ -454,7 +484,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString('cashu.cashuMints')}
+                                        {seedLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -462,41 +492,26 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         />
                                     </View>
                                 </TouchableOpacity>
-                            </View>
-                        )}
+                            )}
 
-                    {selectedNode &&
-                        BackendUtils.supportsCustomPreimages() &&
-                        !NodeInfoStore.testnet && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
+                            {showSeed && showEmbeddedNode && (
+                                <View style={styles.separationLine} />
+                            )}
+
+                            {showEmbeddedNode && (
                                 <TouchableOpacity
                                     style={styles.columnField}
                                     onPress={() =>
                                         navigation.navigate(
-                                            'LightningAddress',
-                                            {
-                                                skipStatus: youveGotSats
-                                            }
+                                            'EmbeddedNodeSettings'
                                         )
                                     }
                                 >
                                     <View style={styles.icon}>
-                                        <ZeusPayIcon
-                                            height={19.25}
-                                            width={22}
-                                            fill={
-                                                youveGotSats
-                                                    ? themeColor('highlight')
-                                                    : themeColor('text')
-                                            }
+                                        <BlockIcon
+                                            color={themeColor('text')}
+                                            width={27}
+                                            height={27}
                                         />
                                     </View>
                                     <Text
@@ -505,9 +520,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString(
-                                            'general.lightningAddress'
-                                        )}
+                                        {embeddedNodeLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -515,9 +528,162 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         />
                                     </View>
                                 </TouchableOpacity>
-                            </View>
-                        )}
-                    {selectedNode && (
+                            )}
+                        </View>
+                    )}
+
+                    {(showNodeInfo || showNetworkInfo) && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            {showNodeInfo && (
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('NodeInfo')
+                                    }
+                                >
+                                    <View style={styles.icon}>
+                                        <NodeOn color={themeColor('text')} />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {nodeInfoLabel}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+
+                            {showNodeInfo && showNetworkInfo && (
+                                <View style={styles.separationLine} />
+                            )}
+
+                            {showNetworkInfo && (
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        navigation.navigate('NetworkInfo')
+                                    }
+                                >
+                                    <View style={styles.icon}>
+                                        <NetworkIcon
+                                            fill={themeColor('text')}
+                                            width={24}
+                                            height={24}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {networkInfoLabel}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    )}
+
+                    {showCashuMints && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Mints')}
+                            >
+                                <View style={styles.icon}>
+                                    <MintIcon
+                                        height={24}
+                                        width={24}
+                                        fill={themeColor('text')}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {mintsLabel}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {showLightningAddress && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('LightningAddress', {
+                                        skipStatus: youveGotSats
+                                    })
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <ZeusPayIcon
+                                        height={19.25}
+                                        width={22}
+                                        fill={
+                                            youveGotSats
+                                                ? themeColor('highlight')
+                                                : themeColor('text')
+                                        }
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {lightningAddressLabel}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                    {showSwaps && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -544,7 +710,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString('views.Swaps.title')}
+                                        {swapsLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -556,7 +722,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsAddressesWithDerivationPaths() && (
+                    {showOnChainAddresses && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -585,9 +751,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString(
-                                            'views.OnChainAddresses.title'
-                                        )}
+                                        {onChainAddressesLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -599,7 +763,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && NodeInfoStore.supportsOffers && (
+                    {showBolt12Address && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -629,9 +793,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString(
-                                            'views.Settings.Bolt12Address'
-                                        )}
+                                        {bolt12AddressLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon />
@@ -641,7 +803,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && NodeInfoStore.supportsOffers && (
+                    {showPaycodes && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -669,7 +831,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString('general.paycodes')}
+                                        {paycodesLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon />
@@ -679,7 +841,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsRouting() && (
+                    {showRouting && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -707,7 +869,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString('general.routing')}
+                                        {routingLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -719,7 +881,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && (
+                    {showContacts && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -746,9 +908,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString(
-                                            'views.Settings.Contacts.contacts'
-                                        )}
+                                        {contactsLabel}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -796,111 +956,117 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => {
-                                navigation.navigate('Tools');
+                    {showTools && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
                             }}
                         >
-                            <View style={styles.icon}>
-                                <WrenchIcon
-                                    fill={themeColor('text')}
-                                    width={25}
-                                    height={25}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => {
+                                    navigation.navigate('Tools');
                                 }}
                             >
-                                {localeString('views.Tools.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={styles.icon}>
+                                    <WrenchIcon
+                                        fill={themeColor('text')}
+                                        width={25}
+                                        height={25}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {toolsLabel}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Support')}
+                    {showSupport && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
                         >
-                            <View style={styles.icon}>
-                                <Icon
-                                    name="favorite"
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Support')}
                             >
-                                {localeString('views.Settings.Support.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="favorite"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {supportLabel}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Help')}
+                    {showHelp && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
                         >
-                            <View style={styles.icon}>
-                                <Icon
-                                    name="support"
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={23}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('Help')}
                             >
-                                {localeString('general.help')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="support"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {helpLabel}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     <TouchableWithoutFeedback
                         onPress={() => {
                             if (!showHiddenItems) {
@@ -931,6 +1097,22 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
 }
 
 const styles = StyleSheet.create({
+    searchFieldContainer: {
+        width: '90%',
+        alignSelf: 'center',
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        marginBottom: 6
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        fontFamily: 'PPNeueMontreal-Book',
+        marginLeft: 8,
+        paddingVertical: 10
+    },
     columnField: {
         flex: 1,
         flexDirection: 'row',
