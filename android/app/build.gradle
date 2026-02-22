@@ -197,7 +197,7 @@ dependencies {
 
     // CashuDevKit - Cashu wallet FFI bindings
     implementation files("../cdk/cashudevkit.aar")
-    // CDK dependencies
+    // CDK / LDK Node dependencies
     implementation "net.java.dev.jna:jna:5.14.0@aar"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"

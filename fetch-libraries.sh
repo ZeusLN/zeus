@@ -11,6 +11,12 @@ FILE_PATH=https://github.com/ZeusLN/lnd/releases/download/$VERSION/
 ANDROID_LINK=$FILE_PATH$ANDROID_FILE
 IOS_LINK=$FILE_PATH$IOS_FILE.zip
 
+# LDK Node
+LDK_NODE_VERSION=v0.7.0
+LDK_NODE_IOS_FILE=LDKNodeFFI.xcframework
+LDK_NODE_IOS_SHA256='37e909987c285ddaaabf7caede58f0695491398acd4561987914996f4623a3c3'
+LDK_NODE_IOS_LINK=https://github.com/lightningdevkit/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_IOS_FILE.zip
+
 # test that curl and unzip are installed
 if ! command -v curl &> /dev/null
 then
@@ -165,3 +171,31 @@ echo "Downloading CDK Swift bindings..." >&2
 curl -L "$CDK_SWIFT_BINDINGS_URL" > ios/CashuDevKit/CashuDevKit.swift
 
 echo "CashuDevKit Swift bindings updated to v$CDK_VERSION"
+
+################
+# LDK Node iOS #
+################
+
+mkdir -p ios/LdkNodeLibZipFile
+
+if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then
+    echo "LDK Node iOS library file missing or checksum failed" >&2
+
+    # delete old instance of library file
+    rm -f ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+
+    # download LDK Node iOS library file
+    curl -L $LDK_NODE_IOS_LINK > ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+
+    # check checksum
+    if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then
+        echo "LDK Node iOS checksum failed" >&2
+        exit 1
+    fi
+fi
+
+# delete old instances of library files
+rm -rf ios/LdkNodeMobile/$LDK_NODE_IOS_FILE
+
+# unzip LDK Node library file
+unzip ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip -d ios/LdkNodeMobile

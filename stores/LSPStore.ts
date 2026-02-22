@@ -784,6 +784,145 @@ export default class LSPStore {
             });
     }
 
+    // LSPS1 Native (for embedded LDK Node)
+
+    @action
+    public lsps1GetInfoNative = () => {
+        // For native LSPS1, the LSP is configured at node initialization
+        // LDK Node doesn't expose a getInfo method, so we provide sensible defaults
+        // that allow the user to configure their channel request
+        this.loadingLSPS1 = false;
+        this.error = false;
+        this.error_msg = '';
+        // Provide default options that work with most LSPs
+        this.getInfoData = {
+            native: true,
+            options: {
+                // Minimum/maximum LSP balance (channel size from LSP side)
+                min_initial_lsp_balance_sat: '100000', // 100k sats minimum
+                max_initial_lsp_balance_sat: '100000000', // 1 BTC maximum
+                // Minimum/maximum client balance (push amount)
+                min_initial_client_balance_sat: '0',
+                max_initial_client_balance_sat: '0', // Most LSPs don't allow client balance
+                // Channel expiry options
+                min_channel_expiry_blocks: 4380, // ~1 month
+                max_channel_expiry_blocks: 52560, // ~1 year
+                // Confirmation requirements
+                min_required_channel_confirmations: 0,
+                max_required_channel_confirmations: 6,
+                min_funding_confirms_within_blocks: 6,
+                max_funding_confirms_within_blocks: 144
+            }
+        };
+    };
+
+    @action
+    public lsps1CreateOrderNative = async (state: any) => {
+        this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
+
+        try {
+            const response = await BackendUtils.requestLsps1Liquidity({
+                amount_sat: parseInt(state.lspBalanceSat),
+                client_balance_sat: parseInt(state.clientBalanceSat) || 0,
+                expiry_blocks: parseInt(state.channelExpiryBlocks),
+                announce_channel: state.announceChannel || false
+            });
+
+            runInAction(() => {
+                // Transform response to match expected format
+                this.createOrderResponse = {
+                    result: {
+                        order_id: response.order_id,
+                        lsp_balance_sat: response.lsp_balance_sat?.toString(),
+                        client_balance_sat:
+                            response.client_balance_sat?.toString(),
+                        funding_confirms_within_blocks:
+                            response.funding_confirms_within_blocks,
+                        channel_expiry_blocks: response.channel_expiry_blocks,
+                        payment: {
+                            state: response.payment?.state,
+                            fee_total_sat:
+                                response.payment?.fee_total_sat?.toString(),
+                            order_total_sat:
+                                response.payment?.order_total_sat?.toString(),
+                            bolt11_invoice: response.payment?.bolt11_invoice,
+                            onchain_address: response.payment?.onchain_address,
+                            onchain_payment: response.payment?.onchain_address
+                                ? {
+                                      address: response.payment.onchain_address,
+                                      order_total_sat:
+                                          response.payment.onchain_total_sat?.toString()
+                                  }
+                                : undefined
+                        },
+                        channel: response.channel
+                    }
+                };
+                this.loadingLSPS1 = false;
+            });
+        } catch (err: any) {
+            const errorMessage =
+                err?.message || err?.toString() || 'Unknown error';
+            runInAction(() => {
+                this.error = true;
+                this.error_msg = errorToUserFriendly(errorMessage);
+                this.loadingLSPS1 = false;
+            });
+        }
+    };
+
+    @action
+    public lsps1GetOrderNative = async (orderId: string) => {
+        this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
+
+        try {
+            const response = await BackendUtils.checkLsps1OrderStatus(orderId);
+
+            runInAction(() => {
+                // Transform response to match expected format
+                this.getOrderResponse = {
+                    result: {
+                        order_id: response.order_id,
+                        lsp_balance_sat: response.lsp_balance_sat?.toString(),
+                        client_balance_sat:
+                            response.client_balance_sat?.toString(),
+                        payment: {
+                            state: response.payment?.state,
+                            fee_total_sat:
+                                response.payment?.fee_total_sat?.toString(),
+                            order_total_sat:
+                                response.payment?.order_total_sat?.toString(),
+                            bolt11_invoice: response.payment?.bolt11_invoice,
+                            bolt11_state: response.payment?.bolt11_state,
+                            onchain_address: response.payment?.onchain_address,
+                            onchain_state: response.payment?.onchain_state,
+                            onchain_payment: response.payment?.onchain_address
+                                ? {
+                                      address: response.payment.onchain_address,
+                                      state: response.payment.onchain_state
+                                  }
+                                : undefined
+                        },
+                        channel: response.channel
+                    }
+                };
+                this.loadingLSPS1 = false;
+            });
+        } catch (err: any) {
+            const errorMessage =
+                err?.message || err?.toString() || 'Unknown error';
+            runInAction(() => {
+                this.error = true;
+                this.error_msg = errorToUserFriendly(errorMessage);
+                this.loadingLSPS1 = false;
+            });
+        }
+    };
+
     // LSPS7
 
     @action

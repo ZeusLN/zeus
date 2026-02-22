@@ -34,6 +34,7 @@ class MainApplication : Application(), ReactApplication {
                 add(LncPackage())
                 add(NostrConnectPackage())
                 add(CashuDevKitPackage())
+                add(LdkNodePackage())
                 // add(new ZeusTorPackage());
             }
 

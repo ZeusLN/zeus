@@ -52,6 +52,10 @@ import {
     expressGraphSync,
     LND_FOLDER_MISSING_ERROR
 } from '../../utils/LndMobileUtils';
+import {
+    startLdkNodeWallet,
+    stopLdkNode
+} from '../../utils/EmbeddedLdkNodeUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
@@ -81,7 +85,9 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
-    INTERFACE_KEYS
+    INTERFACE_KEYS,
+    DEFAULT_LSPS1_PUBKEY_MAINNET,
+    DEFAULT_LSPS1_PUBKEY_TESTNET
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -438,6 +444,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             lndDir,
             embeddedLndNetwork,
             isSqlite,
+            // LDK Node settings
+            ldkNodeDir,
+            ldkMnemonic,
+            ldkPassphrase,
+            embeddedLdkNetwork,
+            ldkEsploraServer,
+            ldkRgsServer,
             updateSettings,
             fetchLock
         } = SettingsStore;
@@ -489,6 +502,58 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (fiatEnabled) {
             FiatStore.getFiatRates();
+        }
+
+        // Initialize and start LDK Node
+        if (implementation === 'embedded-ldk-node' && connecting) {
+            await stopLdkNode();
+
+            if (ldkMnemonic && ldkNodeDir) {
+                // Get LSPS1 config from settings based on network
+                const isTestnet =
+                    embeddedLdkNetwork === 'testnet' ||
+                    embeddedLdkNetwork === 'signet';
+                const lsps1Pubkey = isTestnet
+                    ? settings.lsps1PubkeyTestnet
+                    : settings.lsps1PubkeyMainnet;
+                const lsps1Host = isTestnet
+                    ? settings.lsps1HostTestnet
+                    : settings.lsps1HostMainnet;
+                const lsps1Token = settings.lsps1Token;
+
+                const lsps1Config =
+                    lsps1Pubkey && lsps1Host
+                        ? {
+                              nodeId: lsps1Pubkey,
+                              address: lsps1Host,
+                              token: lsps1Token || null
+                          }
+                        : undefined;
+
+                // Always include Flow LSP pubkey as trusted 0-conf peer
+                const flowLspPubkey = isTestnet
+                    ? DEFAULT_LSPS1_PUBKEY_TESTNET
+                    : DEFAULT_LSPS1_PUBKEY_MAINNET;
+
+                await startLdkNodeWallet({
+                    nodeDir: ldkNodeDir,
+                    seedMnemonic: ldkMnemonic,
+                    passphrase: ldkPassphrase,
+                    network: (embeddedLdkNetwork || 'mainnet') as
+                        | 'mainnet'
+                        | 'testnet'
+                        | 'signet'
+                        | 'regtest',
+                    esploraServerUrl: ldkEsploraServer,
+                    rgsServerUrl: ldkRgsServer,
+                    lsps1Config,
+                    trustedPeers0conf: [flowLspPubkey]
+                });
+            } else {
+                console.error(
+                    'LDK Node configuration missing mnemonic or nodeDir'
+                );
+            }
         }
 
         if (implementation === 'embedded-lnd') {
@@ -1429,7 +1494,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             : settings.nodes &&
                                               loggedIn &&
                                               implementation
-                                            ? implementation === 'embedded-lnd'
+                                            ? BackendUtils.isLocalWallet()
                                                 ? isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'

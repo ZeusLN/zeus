@@ -239,6 +239,7 @@ export default class Receive extends React.Component<
 
     listener: any;
     listenerSecondary: any;
+    ldkUnsubscribe: (() => void) | null = null;
     lnInterval: any;
     onChainInterval: any;
     hopPickerRef: HopPicker | null;
@@ -502,6 +503,10 @@ export default class Receive extends React.Component<
         if (this.listener && this.listener.stop) this.listener.stop();
         if (this.listenerSecondary && this.listenerSecondary.stop)
             this.listenerSecondary.stop();
+        if (this.ldkUnsubscribe) {
+            this.ldkUnsubscribe();
+            this.ldkUnsubscribe = null;
+        }
     };
 
     clearIntervals = () => {
@@ -1024,6 +1029,40 @@ export default class Receive extends React.Component<
                     }
                 );
             }
+        }
+
+        if (implementation === 'embedded-ldk-node') {
+            const ldkBackend = BackendUtils.embeddedLdkNode;
+
+            this.ldkUnsubscribe = ldkBackend.subscribeToEvents((event) => {
+                if (event.type === 'paymentReceived') {
+                    const amountSat = Math.floor(event.amountMsat / 1000);
+
+                    // Check if this is the invoice we're watching
+                    if (rHash && event.paymentHash === rHash) {
+                        setWatchedInvoicePaid(amountSat);
+                        BalanceStore.getCombinedBalance();
+
+                        if (orderId) {
+                            PosStore.recordPayment({
+                                orderId,
+                                orderTotal,
+                                orderTip,
+                                exchangeRate,
+                                rate,
+                                type: 'ln',
+                                tx: event.paymentHash
+                            });
+                            PosStore.clearOrderInvoice(orderId);
+                        }
+
+                        if (this.ldkUnsubscribe) {
+                            this.ldkUnsubscribe();
+                            this.ldkUnsubscribe = null;
+                        }
+                    }
+                }
+            });
         }
 
         if (implementation === 'lnd') {

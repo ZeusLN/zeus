@@ -83,3 +83,7 @@ android/cdk/cashudevkit.aar
 ios/Cdk/cdkFFI.xcframework
 ios/CashuDevKitLibZipFile
 ios/CashuDevKit/CashuDevKit.swift
+
+# LDK Node binaries
+ios/LdkNodeMobile/LDKNodeFFI.xcframework
+ios/LdkNodeLibZipFile

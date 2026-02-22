@@ -38,6 +38,7 @@ export default class ZaplockerGetChan extends React.Component<
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
         const supportsLSPS1 =
+            BackendUtils.supportsLSPS1native() ||
             BackendUtils.supportsLSPScustomMessage() ||
             BackendUtils.supportsLSPS1rest();
 

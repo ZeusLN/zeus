@@ -1042,7 +1042,10 @@ export default class ChannelsStore {
             request?.additionalChannels &&
             request.additionalChannels?.length > 0;
 
-        delete request.host;
+        // LDK Node needs the host for openChannel, other backends don't
+        if (this.settingsStore.implementation !== 'embedded-ldk-node') {
+            delete request.host;
+        }
         if (!multipleChans) delete request.additionalChannels;
 
         this.peerSuccess = false;

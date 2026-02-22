@@ -12,13 +12,15 @@ import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
+import SettingsStore from '../stores/SettingsStore';
 
 interface NetworkInfoProps {
     navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('NodeInfoStore')
+@inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
     componentDidMount() {
@@ -27,8 +29,11 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
     }
 
     render() {
-        const { navigation, NodeInfoStore } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const { getNetworkInfo, networkInfo, loading } = NodeInfoStore;
+        const { implementation } = SettingsStore;
+
+        const isLdkNode = implementation === 'embedded-ldk-node';
 
         const NETWORK_INFO = [
             {
@@ -41,26 +46,30 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
                 value: networkInfo.num_nodes || 0,
                 formatValue: true
             },
-            {
-                label: 'views.NetworkInfo.numZombieChannels',
-                value: networkInfo.num_zombie_chans || 0,
-                formatValue: true
-            },
-            {
-                label: 'views.NetworkInfo.graphDiameter',
-                value: networkInfo.graph_diameter || 0,
-                formatValue: false
-            },
-            {
-                label: 'views.NetworkInfo.averageOutDegree',
-                value: networkInfo.avg_out_degree || 0,
-                formatValue: false
-            },
-            {
-                label: 'views.NetworkInfo.maxOutDegree',
-                value: networkInfo.max_out_degree || 0,
-                formatValue: false
-            }
+            ...(!isLdkNode
+                ? [
+                      {
+                          label: 'views.NetworkInfo.numZombieChannels',
+                          value: networkInfo.num_zombie_chans || 0,
+                          formatValue: true
+                      },
+                      {
+                          label: 'views.NetworkInfo.graphDiameter',
+                          value: networkInfo.graph_diameter || 0,
+                          formatValue: false
+                      },
+                      {
+                          label: 'views.NetworkInfo.averageOutDegree',
+                          value: networkInfo.avg_out_degree || 0,
+                          formatValue: false
+                      },
+                      {
+                          label: 'views.NetworkInfo.maxOutDegree',
+                          value: networkInfo.max_out_degree || 0,
+                          formatValue: false
+                      }
+                  ]
+                : [])
         ];
 
         return (

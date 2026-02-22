@@ -1,11 +1,32 @@
 import { Alert, NativeModules, Platform } from 'react-native';
 import { localeString } from './LocaleUtils';
+import { settingsStore } from '../stores/Stores';
+import LdkNode from '../ldknode/LdkNodeInjection';
 
 interface Button {
     style: 'cancel' | 'default' | 'destructive' | undefined;
     text: string;
     onPress?: () => void;
 }
+
+const stopNode = async () => {
+    const { implementation } = settingsStore;
+
+    if (implementation === 'embedded-lnd') {
+        try {
+            await NativeModules.LndMobile.stopLnd();
+            await NativeModules.LndMobileTools.killLnd();
+        } catch (e) {
+            console.log('Error stopping LND:', e);
+        }
+    } else if (implementation === 'embedded-ldk-node') {
+        try {
+            await LdkNode.node.stop();
+        } catch (e) {
+            console.log('Error stopping LDK Node:', e);
+        }
+    }
+};
 
 const restartNeeded = (force?: boolean) => {
     const title = localeString('restart.title');
@@ -24,13 +45,7 @@ const restartNeeded = (force?: boolean) => {
                 ? localeString('views.Wallet.restart')
                 : localeString('general.yes'),
             onPress: async () => {
-                try {
-                    // await NativeModules.ZeusTor.stopTor();
-                    await NativeModules.LndMobile.stopLnd();
-                    await NativeModules.LndMobileTools.killLnd();
-                } catch (e) {
-                    console.log(e);
-                }
+                await stopNode();
                 NativeModules.LndMobileTools.restartApp();
             }
         });

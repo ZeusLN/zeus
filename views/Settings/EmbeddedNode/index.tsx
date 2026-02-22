@@ -25,8 +25,12 @@ export default class EmbeddedNode extends React.Component<
 > {
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { embeddedLndNetwork, settings }: any = SettingsStore;
+        const { embeddedLndNetwork, implementation, settings }: any =
+            SettingsStore;
         const { automaticDisasterRecoveryBackup, expressGraphSync } = settings;
+
+        const isEmbeddedLnd = implementation === 'embedded-lnd';
+        const isEmbeddedLdk = implementation === 'embedded-ldk-node';
 
         return (
             <Screen>
@@ -45,46 +49,109 @@ export default class EmbeddedNode extends React.Component<
                         navigation={navigation}
                     />
                     <ScrollView>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('DisasterRecovery')
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.DisasterRecovery.title'
-                                    )}
-                                </ListItem.Title>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.DisasterRecovery.automaticBackups'
-                                    )}
-                                    :{' '}
-                                    {automaticDisasterRecoveryBackup
-                                        ? localeString('general.enabled')
-                                        : localeString('general.disabled')}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
-                        {embeddedLndNetwork === 'Mainnet' && (
+                        {/* LDK Node: Esplora Server */}
+                        {isEmbeddedLdk && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('EsploraServer')
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.EsploraServer.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
+                        {/* LDK Node: RGS Settings */}
+                        {isEmbeddedLdk && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('RapidGossipSync')
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.RapidGossipSync.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
+                        {/* Embedded LND: Disaster Recovery */}
+                        {isEmbeddedLnd && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('DisasterRecovery')
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.DisasterRecovery.title'
+                                        )}
+                                    </ListItem.Title>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.DisasterRecovery.automaticBackups'
+                                        )}
+                                        :{' '}
+                                        {automaticDisasterRecoveryBackup
+                                            ? localeString('general.enabled')
+                                            : localeString('general.disabled')}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
+                        {/* Embedded LND: Express Graph Sync (Mainnet only) */}
+                        {isEmbeddedLnd && embeddedLndNetwork === 'Mainnet' && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'
@@ -121,105 +188,123 @@ export default class EmbeddedNode extends React.Component<
                                 />
                             </ListItem>
                         )}
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() => navigation.navigate('Peers')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'general.peers'
-                                    )[0].toUpperCase() +
-                                        localeString('general.peers').slice(1)}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() => navigation.navigate('LNDLogs')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.LNDLogs.title'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() =>
-                                navigation.navigate(
-                                    'EmbeddedNodeSettingsAdvanced'
-                                )
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString('general.advanced')}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() =>
-                                navigation.navigate(
-                                    'EmbeddedNodeTroubleshooting'
-                                )
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.EmbeddedNode.Troubleshooting.title'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
+
+                        {/* Embedded LND: Peers */}
+                        {isEmbeddedLnd && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => navigation.navigate('Peers')}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'general.peers'
+                                        )[0].toUpperCase() +
+                                            localeString('general.peers').slice(
+                                                1
+                                            )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
+                        {/* Embedded LND: LND Logs */}
+                        {isEmbeddedLnd && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => navigation.navigate('LNDLogs')}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.LNDLogs.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
+                        {/* Embedded LND: Advanced */}
+                        {isEmbeddedLnd && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'EmbeddedNodeSettingsAdvanced'
+                                    )
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString('general.advanced')}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
+                        {/* Embedded LND: Troubleshooting */}
+                        {isEmbeddedLnd && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'EmbeddedNodeTroubleshooting'
+                                    )
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.Troubleshooting.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
                     </ScrollView>
                 </View>
             </Screen>

@@ -161,7 +161,8 @@ export default class NodeInfoStore {
         const flowLspNotConfigured =
             implementation === 'lnd'
                 ? !restIsConfigured
-                : implementation === 'embedded-lnd'
+                : implementation === 'embedded-lnd' ||
+                  implementation === 'embedded-ldk-node'
                 ? false
                 : true;
 
