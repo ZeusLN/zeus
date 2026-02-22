@@ -30,9 +30,23 @@ import Storage from '../storage';
 
 import Swap, { SwapState, SwapType } from '../models/Swap';
 
+interface ReverseSwapInfo {
+    fees?: {
+        percentage?: number;
+        minerFees?: {
+            claim?: number;
+            lockup?: number;
+        };
+    };
+    limits?: {
+        minimal?: number;
+        maximal?: number;
+    };
+}
+
 export default class SwapStore {
     @observable public subInfo = {};
-    @observable public reverseInfo = {};
+    @observable public reverseInfo: ReverseSwapInfo = {};
     @observable public loading = true;
     @observable public apiError = '';
     @observable public swaps: any = [];
@@ -69,6 +83,10 @@ export default class SwapStore {
                   Referral: 'pro'
               }
             : undefined;
+    }
+
+    @computed get reverseSwapClaimFee(): number {
+        return this.reverseInfo?.fees?.minerFees?.claim || 0;
     }
 
     @computed get referralId() {
