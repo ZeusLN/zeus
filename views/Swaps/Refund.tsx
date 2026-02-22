@@ -215,10 +215,7 @@ export default class RefundSwap extends React.Component<
                         }}
                         onScan={() =>
                             this.props.navigation.navigate(
-                                'HandleAnythingQRScanner',
-                                {
-                                    view: 'RefundSwap'
-                                }
+                                'RefundSwapQRScanner'
                             )
                         }
                         placeholder={fetchingAddress ? '' : 'bc1...'}
