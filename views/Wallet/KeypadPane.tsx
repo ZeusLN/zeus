@@ -480,6 +480,7 @@ export default class KeypadPane extends React.PureComponent<
                                                             : true
                                                 }
                                             );
+                                            this.clearValue();
                                         }}
                                         buttonStyle={{ height: 40 }}
                                         disabled={
@@ -509,6 +510,7 @@ export default class KeypadPane extends React.PureComponent<
                                                     amount
                                                 }
                                             );
+                                            this.clearValue();
                                         }}
                                         buttonStyle={{ height: 40 }}
                                         disabled={
@@ -534,6 +536,7 @@ export default class KeypadPane extends React.PureComponent<
                                                               )
                                                             : ''
                                                 });
+                                                this.clearValue();
                                             }
                                         }}
                                         buttonStyle={{ height: 40 }}
@@ -579,6 +582,7 @@ export default class KeypadPane extends React.PureComponent<
                                     amount: amount !== '0' ? amount : ''
                                 });
                                 this.modalBoxRef.current?.close();
+                                this.clearValue();
                             }}
                             style={{
                                 ...styles.sendOption,
@@ -613,6 +617,7 @@ export default class KeypadPane extends React.PureComponent<
                                     amount: amount !== '0' ? amount : ''
                                 });
                                 this.modalBoxRef.current?.close();
+                                this.clearValue();
                             }}
                             style={{
                                 ...styles.sendOption,
