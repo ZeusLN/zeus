@@ -1327,6 +1327,7 @@
     "views.BumpFee.titleClose": "Speed up channel close",
     "views.BumpFee.titleForceClose": "Speed up channel force close",
     "views.BumpFee.targetConfs": "Target confirmations",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Successfully bumped fee!",
     "views.BumpFee.error": "Error bumping fee",
     "views.BumpFee.outpoint.explainer1": "An outpoint is a reference to a particular output of a previous transaction. It consists of two parts:",
