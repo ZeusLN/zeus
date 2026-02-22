@@ -27,18 +27,29 @@ import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
-import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { settingsListStyleDefinitions } from '../../utils/settingsListStyleDefinitions';
 
 import SettingsStore from '../../stores/SettingsStore';
 import { Icon } from '@rneui/themed';
+import { getMenuSearchItem } from '../Menu/searchRegistry';
+import {
+    buildMenuSearchContext,
+    handleMenuSearchItemPress
+} from '../Menu/searchUtils';
 
 interface ToolsProps {
     navigation: StackNavigationProp<any, any>;
     route: RouteProp<{ Tools: { showClearDataModal?: boolean } }, 'Tools'>;
     SettingsStore: SettingsStore;
+}
+
+interface ToolRowDefinition {
+    itemId: string;
+    icon: React.ReactNode;
+    textColor?: string;
 }
 
 @inject('SettingsStore')
@@ -104,7 +115,146 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
+        const textColor = themeColor('text');
+        const warningColor = themeColor('warning');
         const forwardArrowColor = themeColor('secondaryText');
+
+        const searchContext = buildMenuSearchContext({
+            hasSelectedNode: !!selectedNode,
+            hasEmbeddedSeed: false,
+            cashuEnabled: !!settings?.ecash?.enableCashu,
+            isTestnet: false,
+            supportsOffers: false
+        });
+
+        const toolRows: ToolRowDefinition[] = [
+            {
+                itemId: 'accounts',
+                icon: <AccountIcon fill={textColor} />
+            },
+            {
+                itemId: 'nwc',
+                icon: <NWCIcon fill={textColor} width={23} height={23} />
+            },
+            {
+                itemId: 'watchtowers',
+                icon: <WatchtowerIcon fill={textColor} width={23} height={23} />
+            },
+            {
+                itemId: 'bump-fee',
+                icon: (
+                    <SpeedometerIcon fill={textColor} width={23} height={23} />
+                )
+            },
+            {
+                itemId: 'sign-verify',
+                icon: <SignIcon fill={textColor} width={18} height={18} />
+            },
+            {
+                itemId: 'converter',
+                icon: <CurrencyIcon fill={textColor} width={18} height={18} />
+            },
+            {
+                itemId: 'rebalance',
+                icon: <RebalanceIcon fill={textColor} width={18} height={18} />
+            },
+            {
+                itemId: 'sweep',
+                icon: <SweepIcon fill={textColor} width={18} height={18} />
+            },
+            {
+                itemId: 'wif-sweeper',
+                icon: (
+                    <Icon
+                        name="key-plus"
+                        type="material-design"
+                        color={textColor}
+                        size={25}
+                    />
+                )
+            },
+            {
+                itemId: 'activity-export',
+                icon: (
+                    <Icon
+                        name="upload"
+                        type="feather"
+                        color={textColor}
+                        underlayColor="transparent"
+                        size={18}
+                    />
+                )
+            },
+            {
+                itemId: 'cashu-tools',
+                icon: <CashuIcon fill={textColor} width={20} height={20} />
+            },
+            {
+                itemId: 'config-export-import',
+                icon: (
+                    <ExportImportIcon
+                        stroke={textColor}
+                        width={18}
+                        height={18}
+                    />
+                )
+            },
+            {
+                itemId: 'withdrawal-request',
+                icon: (
+                    <Icon
+                        name="edit"
+                        type="feather"
+                        color={textColor}
+                        underlayColor="transparent"
+                        size={18}
+                    />
+                )
+            },
+            {
+                itemId: 'developer-tools',
+                icon: (
+                    <Text
+                        style={{
+                            color: textColor,
+                            fontSize: 14,
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {'</>'}
+                    </Text>
+                )
+            },
+            {
+                itemId: 'clear-storage',
+                icon: (
+                    <Icon
+                        name="trash-2"
+                        type="feather"
+                        color={warningColor}
+                        size={20}
+                    />
+                ),
+                textColor: warningColor
+            }
+        ];
+
+        const cardStyle = {
+            backgroundColor: themeColor('secondary'),
+            width: '90%' as const,
+            borderRadius: 10,
+            alignSelf: 'center' as const,
+            marginVertical: 5
+        };
+
+        const visibleRows = toolRows.filter((row) => {
+            const item = getMenuSearchItem(row.itemId);
+            if (!item) {
+                return false;
+            }
+
+            return item.isVisible(searchContext);
+        });
 
         return (
             <Screen>
@@ -113,7 +263,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                     centerComponent={{
                         text: localeString('views.Tools.title'),
                         style: {
-                            color: themeColor('text'),
+                            color: textColor,
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
@@ -126,77 +276,35 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.supportsAccounts() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Accounts')}
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <AccountIcon
-                                            fill={themeColor('text')}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Accounts.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-                    {selectedNode &&
-                        BackendUtils.supportsNostrWalletConnectService() && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
+                    {visibleRows.map((row) => {
+                        const item = getMenuSearchItem(row.itemId);
+                        if (!item) {
+                            return null;
+                        }
+
+                        return (
+                            <View key={row.itemId} style={cardStyle}>
                                 <TouchableOpacity
                                     style={styles.columnField}
                                     onPress={() =>
-                                        navigation.navigate(
-                                            'NostrWalletConnect'
-                                        )
+                                        handleMenuSearchItemPress({
+                                            item,
+                                            navigation,
+                                            onClearStorage:
+                                                row.itemId === 'clear-storage'
+                                                    ? this.handleClearStorage
+                                                    : undefined
+                                        })
                                     }
                                 >
-                                    <View style={styles.icon}>
-                                        <NWCIcon
-                                            fill={themeColor('text')}
-                                            width={23}
-                                            height={23}
-                                        />
-                                    </View>
+                                    <View style={styles.icon}>{row.icon}</View>
                                     <Text
                                         style={{
                                             ...styles.columnText,
-                                            color: themeColor('text')
+                                            color: row.textColor || textColor
                                         }}
                                     >
-                                        {localeString(
-                                            'views.Settings.NostrWalletConnect.title'
-                                        )}
+                                        {localeString(item.labelKey)}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
@@ -205,528 +313,8 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                     </View>
                                 </TouchableOpacity>
                             </View>
-                        )}
-
-                    {selectedNode && BackendUtils.supportsWatchtowerClient() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('Watchtowers')
-                                }
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <WatchtowerIcon
-                                            fill={themeColor('text')}
-                                            width={23}
-                                            height={23}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Tools.watchtowers'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.isLNDBased() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('BumpFee')}
-                            >
-                                <View style={styles.icon}>
-                                    <SpeedometerIcon
-                                        fill={themeColor('text')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.BumpFee.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.supportsMessageSigning() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('SignVerifyMessage')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <SignIcon
-                                        fill={themeColor('text')}
-                                        width={18}
-                                        height={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.SignMessage.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() =>
-                                navigation.navigate('CurrencyConverter')
-                            }
-                        >
-                            <View style={styles.icon}>
-                                <CurrencyIcon
-                                    fill={themeColor('text')}
-                                    width={18}
-                                    height={18}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.CurrencyConverter.title'
-                                )}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    {selectedNode && BackendUtils.supportsChannelManagement() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Rebalance')}
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <RebalanceIcon
-                                            fill={themeColor('text')}
-                                            width={18}
-                                            height={18}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Rebalance.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {BackendUtils.supportsSweep() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate('Sweep')}
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <SweepIcon
-                                            fill={themeColor('text')}
-                                            width={18}
-                                            height={18}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Sweep.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.supportsOnchainSends() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('WIFSweeper')
-                                }
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <Icon
-                                            name="key-plus"
-                                            type="material-design"
-                                            color={themeColor('text')}
-                                            size={25}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Wif.title')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('ActivityExport')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <Icon
-                                        name="upload"
-                                        type="feather"
-                                        color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.ActivityExport.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {BackendUtils.supportsCashuWallet() &&
-                        settings?.ecash?.enableCashu && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate('CashuTools')
-                                    }
-                                >
-                                    <View style={styles.columnField}>
-                                        <View style={styles.icon}>
-                                            <CashuIcon
-                                                fill={themeColor('text')}
-                                                width={20}
-                                                height={20}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString('views.Tools.cashu')}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() =>
-                                navigation.navigate('NodeConfigExportImport')
-                            }
-                        >
-                            <View style={styles.icon}>
-                                <ExportImportIcon
-                                    stroke={themeColor('text')}
-                                    width={18}
-                                    height={18}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Tools.nodeConfigExportImport.title'
-                                )}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    {BackendUtils.supportsWithdrawalRequests() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'CreateWithdrawalRequest'
-                                    )
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <Icon
-                                        name="edit"
-                                        type="feather"
-                                        color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.withdrawalRequest')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {BackendUtils.supportsDevTools() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('DeveloperTools')
-                                }
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 14,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {'</>'}
-                                        </Text>
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString('views.Tools.developers')}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity onPress={this.handleClearStorage}>
-                            <View style={styles.columnField}>
-                                <View style={styles.icon}>
-                                    <Icon
-                                        name="trash-2"
-                                        type="feather"
-                                        color={themeColor('warning')}
-                                        size={20}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('warning')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Tools.clearStorage.title'
-                                    )}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                        );
+                    })}
                 </ScrollView>
             </Screen>
         );
@@ -734,39 +322,12 @@ export default class Tools extends React.Component<ToolsProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    columnField: {
-        flex: 1,
-        flexDirection: 'row',
-        marginVertical: 8,
-        alignItems: 'center'
-    },
-    icon: {
-        width: 50,
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
+    ...settingsListStyleDefinitions,
     photo: {
         alignSelf: 'center',
         width: 60,
         height: 60,
         borderRadius: 68
-    },
-    columnText: {
-        fontSize: 16,
-        flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    separationLine: {
-        borderColor: '#A7A9AC',
-        opacity: 0.2,
-        borderWidth: 0.5,
-        marginLeft: 50,
-        marginRight: 40
-    },
-    ForwardArrow: {
-        alignItems: 'flex-end',
-        padding: 6,
-        marginRight: 6
     },
     form: {
         paddingTop: 20,

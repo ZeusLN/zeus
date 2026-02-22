@@ -25,15 +25,26 @@ import CloudIcon from '../../assets/images/SVG/Cloud.svg';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
-import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { settingsListStyleDefinitions } from '../../utils/settingsListStyleDefinitions';
 
 import SettingsStore from '../../stores/SettingsStore';
+import { getMenuSearchItem } from '../Menu/searchRegistry';
+import {
+    buildMenuSearchContext,
+    handleMenuSearchItemPress
+} from '../Menu/searchUtils';
 
 interface SettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+}
+
+interface SettingsRowDefinition {
+    itemId: string;
+    icon: React.ReactNode;
+    isVisible?: () => boolean;
 }
 
 @inject('SettingsStore')
@@ -65,7 +76,183 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
+        const textColor = themeColor('text');
         const forwardArrowColor = themeColor('secondaryText');
+
+        const hasSelectedNode = !!selectedNode;
+        const searchContext = buildMenuSearchContext({
+            hasSelectedNode,
+            hasEmbeddedSeed: false,
+            cashuEnabled: !!settings?.ecash?.enableCashu,
+            isTestnet: false,
+            supportsOffers: false
+        });
+
+        const sectionRows: SettingsRowDefinition[][] = [
+            [
+                {
+                    itemId: 'lsp',
+                    icon: <CloudIcon fill={textColor} width={25} height={25} />
+                }
+            ],
+            [
+                {
+                    itemId: 'ecash-settings',
+                    icon: <EcashIcon fill={textColor} width={20} height={20} />
+                }
+            ],
+            [
+                {
+                    itemId: 'payments-settings',
+                    icon: <SendIcon fill={textColor} width={27} height={27} />
+                },
+                {
+                    itemId: 'invoices-settings',
+                    icon: (
+                        <ReceiveIcon fill={textColor} width={27} height={27} />
+                    )
+                }
+            ],
+            [
+                {
+                    itemId: 'channels-settings',
+                    icon: (
+                        <ChannelsIcon fill={textColor} width={27} height={27} />
+                    )
+                }
+            ],
+            [
+                {
+                    itemId: 'invoices-settings',
+                    icon: (
+                        <ReceiveIcon fill={textColor} width={27} height={27} />
+                    ),
+                    isVisible: () =>
+                        hasSelectedNode &&
+                        !searchContext.isLNDBased &&
+                        implementation !== 'lndhub'
+                }
+            ],
+            [
+                {
+                    itemId: 'privacy',
+                    icon: <PrivacyIcon fill={textColor} />
+                },
+                {
+                    itemId: 'security',
+                    icon: (
+                        <SecurityIcon fill={textColor} width={26} height={26} />
+                    )
+                }
+            ],
+            [
+                {
+                    itemId: 'currency',
+                    icon: <CurrencyIcon fill={textColor} />
+                },
+                {
+                    itemId: 'language',
+                    icon: <LanguageIcon fill={textColor} />
+                }
+            ],
+            [
+                {
+                    itemId: 'display',
+                    icon: <BrushIcon fill={textColor} width={28} height={28} />
+                }
+            ],
+            [
+                {
+                    itemId: 'pos-settings',
+                    icon: (
+                        <POS
+                            stroke={textColor}
+                            fill={themeColor('secondary')}
+                            width={23}
+                            height={23}
+                        />
+                    )
+                }
+            ]
+        ];
+
+        const cardStyle = {
+            backgroundColor: themeColor('secondary'),
+            width: '90%' as const,
+            borderRadius: 10,
+            alignSelf: 'center' as const,
+            marginVertical: 5
+        };
+
+        const renderCard = (rows: SettingsRowDefinition[]) => {
+            const visibleRows = rows.filter((row) => {
+                const item = getMenuSearchItem(row.itemId);
+                if (!item) {
+                    return false;
+                }
+
+                if (!item.isVisible(searchContext)) {
+                    return false;
+                }
+
+                if (row.isVisible && !row.isVisible()) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            if (!visibleRows.length) {
+                return null;
+            }
+
+            return (
+                <View
+                    key={visibleRows.map((row) => row.itemId).join('-')}
+                    style={cardStyle}
+                >
+                    {visibleRows.map((row, index) => {
+                        const item = getMenuSearchItem(row.itemId);
+                        if (!item) {
+                            return null;
+                        }
+
+                        return (
+                            <React.Fragment key={`${row.itemId}-${index}`}>
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        handleMenuSearchItemPress({
+                                            item,
+                                            navigation
+                                        })
+                                    }
+                                >
+                                    <View style={styles.icon}>{row.icon}</View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: textColor
+                                        }}
+                                    >
+                                        {localeString(item.labelKey)}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+
+                                {index < visibleRows.length - 1 && (
+                                    <View style={styles.separationLine} />
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
+                </View>
+            );
+        };
 
         return (
             <Screen>
@@ -74,7 +261,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     centerComponent={{
                         text: localeString('views.Settings.title'),
                         style: {
-                            color: themeColor('text'),
+                            color: textColor,
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
@@ -87,428 +274,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.supportsFlowLSP() && selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => {
-                                    const supportsLSPS1 =
-                                        BackendUtils.supportsLSPScustomMessage() ||
-                                        BackendUtils.supportsLSPS1rest();
-                                    if (
-                                        BackendUtils.supportsFlowLSP() &&
-                                        supportsLSPS1
-                                    ) {
-                                        navigation.navigate('LSPServicesList');
-                                    } else {
-                                        navigation.navigate('LSPSettings');
-                                    }
-                                }}
-                            >
-                                <View style={styles.icon}>
-                                    <CloudIcon
-                                        fill={themeColor('text')}
-                                        width={25}
-                                        height={25}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.lsp')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {BackendUtils.supportsCashuWallet() && selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => {
-                                    navigation.navigate('EcashSettings');
-                                }}
-                            >
-                                <View style={styles.icon}>
-                                    <EcashIcon
-                                        fill={themeColor('text')}
-                                        width={20}
-                                        height={20}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.ecash')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('PaymentsSettings')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <SendIcon
-                                        fill={themeColor('text')}
-                                        width={27}
-                                        height={27}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.Settings.payments')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-
-                            <>
-                                <View style={styles.separationLine} />
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate('InvoicesSettings')
-                                    }
-                                >
-                                    <View style={styles.icon}>
-                                        <ReceiveIcon
-                                            fill={themeColor('text')}
-                                            width={27}
-                                            height={27}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.invoices'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </TouchableOpacity>
-                            </>
-                        </View>
-                    )}
-
-                    {selectedNode && BackendUtils.supportsChannelManagement() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('ChannelsSettings')
-                                }
-                            >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <ChannelsIcon
-                                            fill={themeColor('text')}
-                                            width={27}
-                                            height={27}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.channels'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode &&
-                        !BackendUtils.isLNDBased() &&
-                        implementation !== 'lndhub' && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
-                            >
-                                <TouchableOpacity
-                                    style={styles.columnField}
-                                    onPress={() =>
-                                        navigation.navigate('InvoicesSettings')
-                                    }
-                                >
-                                    <View style={styles.icon}>
-                                        <ReceiveIcon
-                                            fill={themeColor('text')}
-                                            width={27}
-                                            height={27}
-                                        />
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.invoices'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Privacy')}
-                        >
-                            <View style={styles.icon}>
-                                <PrivacyIcon fill={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.privacy')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-
-                        <View style={styles.separationLine} />
-
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Security')}
-                        >
-                            <View style={styles.icon}>
-                                <SecurityIcon
-                                    fill={themeColor('text')}
-                                    width={26}
-                                    height={26}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.security')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Currency')}
-                        >
-                            <View style={styles.icon}>
-                                <CurrencyIcon fill={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.Currency.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-
-                        <View style={styles.separationLine} />
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Language')}
-                        >
-                            <View style={styles.icon}>
-                                <LanguageIcon fill={themeColor('text')} />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.Language.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() => navigation.navigate('Display')}
-                        >
-                            <View style={styles.icon}>
-                                <BrushIcon
-                                    fill={themeColor('text')}
-                                    width={28}
-                                    height={28}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString('views.Settings.Display.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
-
-                    {selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('PointOfSaleSettings')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <POS
-                                        stroke={themeColor('text')}
-                                        fill={themeColor('secondary')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.pos')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    {sectionRows.map((rows) => renderCard(rows))}
                 </ScrollView>
             </Screen>
         );
@@ -516,38 +282,12 @@ export default class Settings extends React.Component<SettingsProps, {}> {
 }
 
 const styles = StyleSheet.create({
-    columnField: {
-        flex: 1,
-        flexDirection: 'row',
-        marginVertical: 8,
-        alignItems: 'center'
-    },
-    icon: {
-        width: 50,
-        alignItems: 'center'
-    },
+    ...settingsListStyleDefinitions,
     photo: {
         alignSelf: 'center',
         width: 60,
         height: 60,
         borderRadius: 68
-    },
-    columnText: {
-        fontSize: 16,
-        flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    separationLine: {
-        borderColor: '#A7A9AC',
-        opacity: 0.2,
-        borderWidth: 0.5,
-        marginLeft: 50,
-        marginRight: 40
-    },
-    ForwardArrow: {
-        alignItems: 'flex-end',
-        padding: 6,
-        marginRight: 6
     },
     form: {
         paddingTop: 20,
