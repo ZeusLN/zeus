@@ -89,7 +89,6 @@ import NostrContacts from './views/NostrContacts';
 import MultiQR from './views/MultiQR';
 
 // Settings views
-import Settings from './views/Settings/Settings';
 import WalletConfiguration from './views/Settings/WalletConfiguration';
 import Wallets from './views/Settings/Wallets';
 import Privacy from './views/Settings/Privacy';
@@ -260,10 +259,9 @@ import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
 import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
 
-import Menu from './views/Menu';
+import AppMenu from './views/AppMenu';
 
 // Tools
-import Tools from './views/Tools';
 import ActivityExport from './views/Tools/ActivityExport';
 import BumpFee from './views/Tools/BumpFee';
 import CurrencyConverter from './views/Tools/CurrencyConverter';
@@ -540,15 +538,15 @@ export default class App extends React.PureComponent {
                                                         />
                                                         <Stack.Screen
                                                             name="Menu" // @ts-ignore:next-line
-                                                            component={Menu}
+                                                            component={AppMenu}
                                                         />
                                                         <Stack.Screen
                                                             name="Settings" // @ts-ignore:next-line
-                                                            component={Settings}
+                                                            component={AppMenu}
                                                         />
                                                         <Stack.Screen
                                                             name="Tools" // @ts-ignore:next-line
-                                                            component={Tools}
+                                                            component={AppMenu}
                                                         />
                                                         <Stack.Screen
                                                             name="WalletConfiguration" // @ts-ignore:next-line
