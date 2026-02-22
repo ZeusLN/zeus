@@ -40,7 +40,8 @@ import {
     unitsStore,
     utxosStore,
     sweepStore,
-    nostrWalletConnectStore
+    nostrWalletConnectStore,
+    recurringPaymentsStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -281,6 +282,7 @@ import LinkingUtils from './utils/LinkingUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
+import RecurringPayments from './views/RecurringPayments';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -340,6 +342,8 @@ export default class App extends React.PureComponent {
             setTimeout(() => {
                 LinkingUtils.handleInitialUrl(this.navigation);
             }, 100);
+
+            recurringPaymentsStore.processDuePayments();
         }
     };
 
@@ -511,6 +515,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="Tools" // @ts-ignore:next-line
                                                         component={Tools}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RecurringPayments" // @ts-ignore:next-line
+                                                        component={RecurringPayments}
                                                     />
                                                     <Stack.Screen
                                                         name="WalletConfiguration" // @ts-ignore:next-line
