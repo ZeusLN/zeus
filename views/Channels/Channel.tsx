@@ -495,7 +495,9 @@ export default class ChannelView extends React.Component<
                     <Text
                         style={{ ...styles.status, color: themeColor('text') }}
                     >
-                        {pendingOpen
+                        {channel.isSplicing
+                            ? localeString('channel.status.splicing')
+                            : pendingOpen
                             ? localeString('views.Channel.pendingOpen')
                             : pendingClose || closing
                             ? localeString('views.Channel.pendingClose')
@@ -507,6 +509,58 @@ export default class ChannelView extends React.Component<
                             ? localeString('general.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
+                    {channel.isSplicing && channel.spliceOperation && (
+                        <View style={{ marginTop: 15, marginBottom: 10 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Tools.SpliceOut.executing'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    marginTop: 5
+                                }}
+                            >
+                                {`${
+                                    channel.spliceOperation.type === 'out'
+                                        ? localeString('views.Tools.spliceOut')
+                                        : localeString('views.Tools.spliceIn')
+                                } - ${channel.spliceOperation.status
+                                    .charAt(0)
+                                    .toUpperCase()}${channel.spliceOperation.status.slice(
+                                    1
+                                )}`}
+                            </Text>
+                            {channel.spliceOperation.destination && (
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginTop: 2,
+                                        fontSize: 12
+                                    }}
+                                >
+                                    {`${localeString('general.destination')}: ${
+                                        channel.spliceOperation.destination
+                                            .length > 30
+                                            ? `${channel.spliceOperation.destination.substring(
+                                                  0,
+                                                  30
+                                              )}...`
+                                            : channel.spliceOperation
+                                                  .destination
+                                    }`}
+                                </Text>
+                            )}
+                        </View>
+                    )}
                     {!!renewalInfo.maxExtensionInBlocks && (
                         <>
                             <Row
