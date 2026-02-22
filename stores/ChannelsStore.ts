@@ -14,10 +14,13 @@ import OpenChannelRequest from '../models/OpenChannelRequest';
 import CloseChannelRequest from '../models/CloseChannelRequest';
 
 import SettingsStore from './SettingsStore';
+import NotesStore from './NotesStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import Storage from '../storage';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -115,9 +118,11 @@ export default class ChannelsStore {
     @observable public haveAnnouncedChannels = false;
 
     settingsStore: SettingsStore;
+    notesStore: NotesStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(settingsStore: SettingsStore, notesStore: NotesStore) {
         this.settingsStore = settingsStore;
+        this.notesStore = notesStore;
 
         reaction(
             () => this.channelRequest,
@@ -1177,13 +1182,72 @@ export default class ChannelsStore {
                 .then((data: any) =>
                     runInAction(() => {
                         this.output_index = data.output_index;
-                        this.funding_txid_str = data.funding_txid_str;
+
+                        if (data.funding_txid_str) {
+                            this.funding_txid_str = data.funding_txid_str;
+                        } else if (data.funding_txid_bytes) {
+                            let hex: string | null = null;
+                            const fundingBytes = data.funding_txid_bytes;
+
+                            if (typeof fundingBytes === 'string') {
+                                hex = Base64Utils.base64ToHex(fundingBytes);
+                            } else if (
+                                fundingBytes instanceof Uint8Array ||
+                                Array.isArray(fundingBytes)
+                            ) {
+                                hex = Base64Utils.bytesToHex(
+                                    Array.from(fundingBytes)
+                                );
+                            } else if (fundingBytes?.data) {
+                                hex = Base64Utils.bytesToHex(fundingBytes.data);
+                            }
+
+                            this.funding_txid_str = hex
+                                ? hex
+                                      .match(/.{1,2}/g)
+                                      ?.reverse()
+                                      .join('') || null
+                                : null;
+                        } else {
+                            this.funding_txid_str = null;
+                        }
+
                         this.errorOpenChannel = false;
                         this.openingChannel = false;
                         this.errorMsgChannel = null;
                         this.channelRequest = null;
                         this.channelSuccess = true;
                         this.connectingToPeer = false;
+
+                        // Auto-save note for opened channel
+                        if (this.funding_txid_str) {
+                            const noteKey = `note-${this.funding_txid_str}`;
+                            const peer = this.peers.find(
+                                (p) =>
+                                    p.pubkey === request.node_pubkey_string ||
+                                    p.pubkey === request.node_pubkey
+                            );
+                            const peerInfo = peer?.alias
+                                ? `${peer.alias} (${
+                                      request.node_pubkey_string ||
+                                      request.node_pubkey
+                                  })`
+                                : request.node_pubkey_string ||
+                                  request.node_pubkey;
+                            const date = new Date().toLocaleString();
+                            const noteValue = `${localeString(
+                                'views.OpenChannel.openedChannelNote'
+                            )}: ${peerInfo}\n${date}`;
+                            try {
+                                Storage.setItem(noteKey, noteValue);
+                                this.notesStore.storeNoteKeys(
+                                    noteKey,
+                                    noteValue
+                                );
+                            } catch (e) {
+                                console.error('Failed to save channel note', e);
+                            }
+                        }
                     })
                 )
                 .catch((error: Error) => {

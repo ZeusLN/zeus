@@ -672,6 +672,7 @@
     "views.OpenChannel.peerSuccess": "Successfully connected to peer",
     "views.OpenChannel.channelSuccess": "Successfully opened channel",
     "views.OpenChannel.channelsSuccess": "Successfully opened channels",
+    "views.OpenChannel.openedChannelNote": "Opened channel",
     "views.OpenChannel.nodePubkey": "Node pubkey",
     "views.OpenChannel.host": "Host",
     "views.OpenChannel.hostPort": "Hostname:Port",
