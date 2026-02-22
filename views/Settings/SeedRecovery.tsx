@@ -198,7 +198,8 @@ export default class SeedRecovery extends React.PureComponent<
         updateSettings({
             nodes,
             selectedNode: nodes.length - 1,
-            recovery: recoveryCipherSeed ? true : false
+            recovery: recoveryCipherSeed ? true : false,
+            initialLoad: false
         }).then(async () => {
             if (nodes.length === 1) {
                 setConnectingStatus(true);

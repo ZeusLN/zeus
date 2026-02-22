@@ -285,6 +285,7 @@ export default class IntroSplash extends React.Component<
                                                 choosingPeers: false,
                                                 creatingWallet: false
                                             });
+                                            return;
                                         }
 
                                         const {

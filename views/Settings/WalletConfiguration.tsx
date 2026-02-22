@@ -534,7 +534,11 @@ export default class WalletConfiguration extends React.Component<
         if (newEmbeddedLndWallet) {
             update = {
                 nodes,
-                selectedNode: nodes.length - 1
+                selectedNode: nodes.length - 1,
+                // Force Wallet view to restart connection for new wallet
+                justDeletedWallet: false,
+                // Ensure Express Graph Sync runs for new wallet
+                initialLoad: false
             };
         } else {
             update = {
@@ -578,6 +582,9 @@ export default class WalletConfiguration extends React.Component<
                 navigation.popTo('Wallet');
             } else {
                 if (newEmbeddedLndWallet) {
+                    // New wallet created - trigger fresh connection
+                    // LND was already stopped in createNewWallet(), just navigate
+                    setConnectingStatus(true);
                     navigation.popTo('Wallet');
                 } else {
                     navigation.goBack();
@@ -642,7 +649,7 @@ export default class WalletConfiguration extends React.Component<
     deleteNodeConfig = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
-        const { index, implementation, lndDir } = this.state;
+        const { index, implementation, lndDir, active } = this.state;
         const { nodes } = settings;
 
         const newNodes: any = [];
@@ -652,28 +659,43 @@ export default class WalletConfiguration extends React.Component<
             }
         }
 
-        if (implementation === 'embedded-lnd') {
-            await deleteLndWallet(lndDir || 'lnd');
+        // If deleting active embedded LND wallet, stop it first
+        if (active && implementation === 'embedded-lnd' && embeddedLndStarted) {
+            try {
+                console.log(
+                    'Stopping active LND before deletion:',
+                    lndDir || 'lnd'
+                );
+                await stopLnd();
+            } catch (error) {
+                console.log('Error stopping LND before deletion:', error);
+                // Continue anyway - stopLnd handles errors gracefully
+            }
+            SettingsStore.embeddedLndStarted = false;
         }
 
-        updateSettings({
+        // Delete embedded LND wallet data if applicable
+        // Skip stopLnd: already stopped above if active, or inactive wallet (don't stop active)
+        if (implementation === 'embedded-lnd') {
+            await deleteLndWallet(lndDir || 'lnd', true);
+        }
+
+        const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
+            index,
+            settings
+        );
+
+        await updateSettings({
             nodes: newNodes,
-            selectedNode: this.getNewSelectedNodeIndex(index, settings)
-        }).then(() => {
-            if (
-                implementation === 'embedded-lnd' &&
-                Platform.OS === 'android' &&
-                embeddedLndStarted
-            ) {
-                restartNeeded(true);
-            } else {
-                if (newNodes.length === 0) {
-                    navigation.navigate('IntroSplash');
-                } else {
-                    navigation.popTo('Wallets');
-                }
-            }
+            selectedNode: newSelectedNodeIndex,
+            justDeletedWallet: active // Set flag only if active wallet was deleted
         });
+
+        if (newNodes.length === 0) {
+            navigation.navigate('IntroSplash');
+        } else {
+            navigation.popTo('Wallets');
+        }
     };
 
     getNewSelectedNodeIndex(
@@ -729,23 +751,51 @@ export default class WalletConfiguration extends React.Component<
 
     createNewWallet = async (network: string = 'Mainnet') => {
         const { recoveryCipherSeed, channelBackupsBase64 } = this.state;
+        const { SettingsStore } = this.props;
+        const { embeddedLndStarted } = SettingsStore;
 
         this.setState({
-            creatingWallet: true
+            creatingWallet: true,
+            errorCreatingWallet: false
         });
 
-        await stopLnd();
+        // CRITICAL: Stop old LND instance completely before creating new wallet
+        if (embeddedLndStarted) {
+            try {
+                console.log(
+                    'Stopping existing LND before creating new wallet...'
+                );
+                await stopLnd();
+                console.log('LND stopped successfully');
+            } catch (error) {
+                console.log(
+                    'Error stopping LND before creating new wallet:',
+                    error
+                );
+                // Continue anyway - stopLnd handles errors gracefully
+            }
+        }
 
         await optimizeNeutrinoPeers(network === 'Testnet');
 
         const lndDir = uuidv4();
 
-        const response = await createLndWallet({
-            lndDir,
-            seedMnemonic: recoveryCipherSeed,
-            isTestnet: network === 'Testnet',
-            channelBackupsBase64
-        });
+        let response;
+        try {
+            response = await createLndWallet({
+                lndDir,
+                seedMnemonic: recoveryCipherSeed,
+                isTestnet: network === 'Testnet',
+                channelBackupsBase64
+            });
+        } catch (error) {
+            console.log('Error creating wallet:', error);
+            this.setState({
+                creatingWallet: false,
+                errorCreatingWallet: true
+            });
+            return;
+        }
 
         const { wallet, seed, randomBase64 }: any = response;
 

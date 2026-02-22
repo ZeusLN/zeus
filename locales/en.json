@@ -462,6 +462,7 @@
     "views.Wallet.lndFolderMissing.title": "Wallet Data Not Found",
     "views.Wallet.lndFolderMissing.message": "The wallet data folder is missing but wallet configuration exists. This can happen after reinstalling the app. You can either delete the wallet configuration and set up a new wallet, or clear all storage to start fresh.",
     "views.Wallet.lndFolderMissing.deleteWallet": "Manage Wallets",
+    "views.Wallet.lndStartFailed.message": "The LND wallet could not be started after several attempts. Please restart the app to try again.",
     "views.Wallet.batterySaverWarningTitle": "Battery Saver Mode Detected",
     "views.Wallet.batterySaverWarningText": "Battery saver mode is currently enabled. This may affect Lightning payments, routing, and overall performance. For the best experience, consider disabling battery saver mode.",
     "views.Wallet.KeypadPane.lspExplainerFirstChannel": "It is recommended that your first lightning receive be 100,000 sats or more; the larger the better. A setup fee will be deducted from this amount.",
