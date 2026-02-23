@@ -604,6 +604,20 @@ class CashuDevKit {
         }
     }
 
+    /**
+     * Restore proofs from a raw seed (v1 legacy seed) for a mint
+     * @param mintUrl - The mint's URL
+     * @param seedHex - Hex-encoded raw seed bytes
+     * @returns Amount restored in sats
+     */
+    async restoreFromSeed(mintUrl: string, seedHex: string): Promise<number> {
+        try {
+            return await CashuDevKitModule.restoreFromSeed(mintUrl, seedHex);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
     // ========================================================================
     // Proof Management
     // ========================================================================

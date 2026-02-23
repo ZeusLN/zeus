@@ -16,11 +16,11 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.0'
 
-  # Vendored xcframework
-  s.vendored_frameworks = 'Cdk/cdkFFI.xcframework'
+  # Vendored xcframeworks
+  s.vendored_frameworks = 'Cdk/cdkFFI.xcframework', 'ZeusRestore/zeusRestoreFFI.xcframework'
 
-  # Source files - Swift bindings
-  s.source_files = 'CashuDevKit/CashuDevKit.swift'
+  # Source files - Swift bindings (CDK + Zeus Cashu Restore)
+  s.source_files = 'CashuDevKit/CashuDevKit.swift', 'CashuDevKit/zeus_cashu_restore.swift'
 
   # Framework dependencies
   s.frameworks = 'Foundation', 'Security'
@@ -37,6 +37,6 @@ Pod::Spec.new do |s|
     'ENABLE_BITCODE' => 'NO'
   }
 
-  # Preserve paths for the framework
-  s.preserve_paths = 'Cdk/cdkFFI.xcframework/**/*'
+  # Preserve paths for the frameworks
+  s.preserve_paths = 'Cdk/cdkFFI.xcframework/**/*', 'ZeusRestore/zeusRestoreFFI.xcframework/**/*'
 end

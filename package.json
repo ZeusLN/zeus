@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.1.1",
-    "@cashu/cashu-ts": "2.4.1",
     "@getalby/sdk": "5.1.2",
     "@keystonehq/bc-ur-registry": "0.7.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",

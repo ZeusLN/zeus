@@ -140,6 +140,11 @@ RCT_EXTERN_METHOD(restore:(NSString *)mintUrl
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+RCT_EXTERN_METHOD(restoreFromSeed:(NSString *)mintUrl
+                  seedHex:(NSString *)seedHex
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 // Proof Management
 RCT_EXTERN_METHOD(checkProofsState:(NSString *)mintUrl
                   proofsJson:(NSString *)proofsJson

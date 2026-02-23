@@ -83,7 +83,6 @@ CDK_IOS_FILE=cdkFFI.xcframework
 # Remote filename (what's on GitHub releases)
 CDK_ANDROID_REMOTE=cdk-kotlin-$CDK_VERSION.aar
 
-# Checksums
 CDK_ANDROID_SHA256='e8e9ee354cf21546e49946d351a6c482355f8b3800c60a8a9348c4ae40f529cb'
 CDK_IOS_SHA256='5c4a152cdcd6aaa6bbd1aef65c43eaeeb6ebde3f0f365fb2254cefbc49d5ea49'
 
@@ -165,3 +164,91 @@ echo "Downloading CDK Swift bindings..." >&2
 curl -L "$CDK_SWIFT_BINDINGS_URL" > ios/CashuDevKit/CashuDevKit.swift
 
 echo "CashuDevKit Swift bindings updated to v$CDK_VERSION"
+
+######################
+# Zeus Cashu Restore #
+######################
+
+RESTORE_VERSION=0.1.0
+RESTORE_ANDROID_FILE=zeus-cashu-restore.aar
+RESTORE_IOS_FILE=zeusRestoreFFI.xcframework
+
+RESTORE_ANDROID_SHA256='fee897ad09e054596004c4fbc87b2c022085e026d20a3e0c37eb1c1e9043249d'
+RESTORE_IOS_SHA256='dff4e911bde4b61d372581a9dba8494c23af6315228ea0d43e68703666bba8e3'
+
+RESTORE_PATH=https://github.com/ZeusLN/zeus-cashu-restore/releases/download/v$RESTORE_VERSION/
+
+RESTORE_ANDROID_LINK=$RESTORE_PATH$RESTORE_ANDROID_FILE
+RESTORE_IOS_LINK=$RESTORE_PATH$RESTORE_IOS_FILE.zip
+RESTORE_SWIFT_BINDINGS_URL="https://raw.githubusercontent.com/ZeusLN/zeus-cashu-restore/v$RESTORE_VERSION/bindings/swift/zeus_cashu_restore.swift"
+
+# Android Restore
+mkdir -p android/zeus-restore
+
+NEED_RESTORE_ANDROID=false
+if [ ! -f "android/zeus-restore/$RESTORE_ANDROID_FILE" ]; then
+    NEED_RESTORE_ANDROID=true
+elif [ -n "$RESTORE_ANDROID_SHA256" ]; then
+    if ! echo "$RESTORE_ANDROID_SHA256 android/zeus-restore/$RESTORE_ANDROID_FILE" | sha256sum -c - 2>/dev/null; then
+        NEED_RESTORE_ANDROID=true
+    fi
+fi
+
+if [ "$NEED_RESTORE_ANDROID" = true ]; then
+    echo "Downloading Zeus Cashu Restore Android library..." >&2
+    rm -f android/zeus-restore/$RESTORE_ANDROID_FILE
+    curl -L $RESTORE_ANDROID_LINK > android/zeus-restore/$RESTORE_ANDROID_FILE
+
+    if [ -n "$RESTORE_ANDROID_SHA256" ]; then
+        if ! echo "$RESTORE_ANDROID_SHA256 android/zeus-restore/$RESTORE_ANDROID_FILE" | sha256sum -c -; then
+            echo "Restore Android checksum failed" >&2
+            exit 1
+        fi
+    else
+        echo "Restore Android downloaded (checksum verification skipped)"
+        echo "SHA256: $(sha256sum android/zeus-restore/$RESTORE_ANDROID_FILE | cut -d' ' -f1)"
+    fi
+fi
+
+# iOS Restore
+mkdir -p ios/ZeusRestoreLibZipFile
+mkdir -p ios/ZeusRestore
+
+NEED_RESTORE_IOS=false
+if [ ! -f "ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" ]; then
+    NEED_RESTORE_IOS=true
+elif [ -n "$RESTORE_IOS_SHA256" ]; then
+    if ! echo "$RESTORE_IOS_SHA256 ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" | sha256sum -c - 2>/dev/null; then
+        NEED_RESTORE_IOS=true
+    fi
+fi
+
+if [ "$NEED_RESTORE_IOS" = true ]; then
+    echo "Downloading Zeus Cashu Restore iOS library..." >&2
+    rm -f ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip
+    curl -L $RESTORE_IOS_LINK > ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip
+
+    if [ -n "$RESTORE_IOS_SHA256" ]; then
+        if ! echo "$RESTORE_IOS_SHA256 ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip" | sha256sum -c -; then
+            echo "Restore iOS checksum failed" >&2
+            exit 1
+        fi
+    else
+        echo "Restore iOS downloaded (checksum verification skipped)"
+        echo "SHA256: $(sha256sum ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip | cut -d' ' -f1)"
+    fi
+fi
+
+# Extract to ios/ZeusRestore directory
+rm -rf ios/ZeusRestore/$RESTORE_IOS_FILE
+unzip ios/ZeusRestoreLibZipFile/$RESTORE_IOS_FILE.zip -d ios/ZeusRestore
+
+echo "Zeus Cashu Restore iOS framework installed to ios/ZeusRestore/$RESTORE_IOS_FILE"
+
+# Download matching Swift bindings
+mkdir -p ios/CashuDevKit
+
+echo "Downloading Zeus Cashu Restore Swift bindings..." >&2
+curl -L "$RESTORE_SWIFT_BINDINGS_URL" > ios/CashuDevKit/zeus_cashu_restore.swift
+
+echo "Zeus Cashu Restore Swift bindings updated to v$RESTORE_VERSION"

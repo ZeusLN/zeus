@@ -1,5 +1,7 @@
 import Foundation
 import CashuDevKit
+// ZeusCashuRestore bindings are compiled as part of the same CashuDevKit pod
+// (see ZeusCashuRestore.swift), so restoreFromSeed() is available directly.
 
 /// CashuDevKit Native Module for React Native
 /// Provides bridge to CDK FFI bindings
@@ -1021,6 +1023,51 @@ class CashuDevKitModule: RCTEventEmitter {
                 reject(code, message, error)
             } catch {
                 reject("RESTORE_ERROR", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(restoreFromSeed:seedHex:resolver:rejecter:)
+    func restoreFromSeed(_ mintUrl: String, seedHex: String,
+                         resolve: @escaping RCTPromiseResolveBlock,
+                         reject: @escaping RCTPromiseRejectBlock) {
+        guard let wallet = getInitializedWallet(reject: reject) else { return }
+
+        Task {
+            do {
+                // Step 1: Call standalone restore crate to get v1 proofs as a cashu token
+                let tokenString = try restoreFromSeed(mintUrl: mintUrl, seedHex: seedHex)
+
+                // If no proofs found, return 0
+                if tokenString.isEmpty {
+                    resolve(NSNumber(value: 0))
+                    return
+                }
+
+                // Step 2: Feed the token into CDK's receive to import proofs into the wallet
+                let token = try Token.fromString(encodedToken: tokenString)
+
+                let innerReceiveOptions = ReceiveOptions(
+                    amountSplitTarget: .none,
+                    p2pkSigningKeys: [],
+                    preimages: [],
+                    metadata: [:]
+                )
+                let receiveOptions = MultiMintReceiveOptions(
+                    allowUntrusted: true,
+                    transferToMint: nil,
+                    receiveOptions: innerReceiveOptions
+                )
+
+                let amount = try await wallet.receive(token: token, options: receiveOptions)
+                resolve(NSNumber(value: amount.value))
+            } catch let error as RestoreError {
+                reject("RESTORE_FROM_SEED_ERROR", "\(error)", nil)
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("RESTORE_FROM_SEED_ERROR", error.localizedDescription, error)
             }
         }
     }

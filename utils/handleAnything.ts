@@ -736,8 +736,15 @@ const handleAnything = async (
         const cashuToken = value.replace(ZEUS_ECASH_GIFT_URL, '');
         if (CashuUtils.isValidCashuToken(cashuToken)) {
             if (isClipboardValue) return true;
-            const tokenObj = CashuUtils.decodeCashuToken(cashuToken);
-            const decoded = new CashuToken(tokenObj);
+            const cdkToken = await CashuUtils.decodeCashuTokenAsync(cashuToken);
+            const decoded = new CashuToken({
+                memo: cdkToken.memo || '',
+                mint: cdkToken.mint_url,
+                unit: cdkToken.unit || 'sat',
+                value: cdkToken.value,
+                encodedToken: cdkToken.encoded,
+                proofs: cdkToken.proofs || []
+            });
             return [
                 'CashuToken',
                 {

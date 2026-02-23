@@ -285,6 +285,7 @@ export interface CashuDevKitNativeModule {
 
     // Restore
     restore(mintUrl: string): Promise<number>;
+    restoreFromSeed(mintUrl: string, seedHex: string): Promise<number>;
 
     // Proof Management
     checkProofsState(mintUrl: string, proofsJson: string): Promise<string>;

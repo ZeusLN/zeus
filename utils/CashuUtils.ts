@@ -1,4 +1,3 @@
-import { getDecodedToken } from '@cashu/cashu-ts';
 import CashuDevKit, { CDKToken } from '../cashu-cdk';
 
 export const cashuTokenPrefixes = [
@@ -69,7 +68,7 @@ class CashuUtils {
         return token.trim();
     };
 
-    isValidCashuToken = (token: string) => {
+    isValidCashuToken = (token: string): boolean => {
         if (!token || typeof token !== 'string') {
             return false;
         }
@@ -79,17 +78,11 @@ class CashuUtils {
             return false;
         }
 
-        try {
-            getDecodedToken(cleanToken);
-            return true;
-        } catch (_) {
-            return false;
-        }
+        return (
+            cleanToken.startsWith('cashuA') || cleanToken.startsWith('cashuB')
+        );
     };
 
-    /**
-     * Async token validation using CDK (more accurate)
-     */
     isValidCashuTokenAsync = async (token: string): Promise<boolean> => {
         if (!token || typeof token !== 'string') {
             return false;
@@ -100,12 +93,7 @@ class CashuUtils {
             return false;
         }
 
-        if (CashuDevKit.isAvailable()) {
-            return await CashuDevKit.isValidToken(cleanToken);
-        }
-
-        // Fall back to sync validation if CDK not available
-        return this.isValidCashuToken(token);
+        return await CashuDevKit.isValidToken(cleanToken);
     };
 
     sumProofsValue = (proofs: any) => {
@@ -117,54 +105,28 @@ class CashuUtils {
         }, 0);
     };
 
-    /**
-     * Decode cashu token (sync - uses cashu-ts)
-     */
-    decodeCashuToken = (token: string) => getDecodedToken(token.trim());
-
-    /**
-     * Decode cashu token using CDK (async)
-     */
     decodeCashuTokenAsync = async (token: string): Promise<CDKToken> => {
         const cleanToken = this.extractTokenString(token);
         return await CashuDevKit.decodeToken(cleanToken);
     };
 
-    /**
-     * Get token value without receiving it
-     */
     getTokenValue = async (token: string): Promise<number> => {
         try {
-            if (CashuDevKit.isAvailable()) {
-                const decoded = await CashuDevKit.decodeToken(
-                    this.extractTokenString(token)
-                );
-                return decoded.value;
-            }
-
-            // Fall back to cashu-ts if CDK not available
-            const decoded = this.decodeCashuToken(token);
-            return this.sumProofsValue(decoded.proofs);
+            const decoded = await CashuDevKit.decodeToken(
+                this.extractTokenString(token)
+            );
+            return decoded.value;
         } catch {
             return 0;
         }
     };
 
-    /**
-     * Get token mint URL
-     */
     getTokenMintUrl = async (token: string): Promise<string | null> => {
         try {
-            if (CashuDevKit.isAvailable()) {
-                const decoded = await CashuDevKit.decodeToken(
-                    this.extractTokenString(token)
-                );
-                return decoded.mint_url;
-            }
-
-            // Fall back to cashu-ts if CDK not available
-            const decoded = this.decodeCashuToken(token);
-            return decoded.mint || null;
+            const decoded = await CashuDevKit.decodeToken(
+                this.extractTokenString(token)
+            );
+            return decoded.mint_url;
         } catch {
             return null;
         }

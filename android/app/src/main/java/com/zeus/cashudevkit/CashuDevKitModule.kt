@@ -10,6 +10,8 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 import org.cashudevkit.*
+import uniffi.zeus_cashu_restore.restoreFromSeed as zeusRestoreFromSeed
+import uniffi.zeus_cashu_restore.RestoreException
 
 /**
  * CashuDevKit Native Module for React Native
@@ -1137,6 +1139,63 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 Log.e(TAG, "restore error", e)
                 withContext(Dispatchers.Main) {
                     promise.reject("RESTORE_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun restoreFromSeed(mintUrl: String, seedHex: String, promise: Promise) {
+        val wallet = getInitializedWallet(promise) ?: return
+
+        scope.launch {
+            try {
+                // Step 1: Call standalone restore crate to get v1 proofs as a cashu token
+                val tokenString = zeusRestoreFromSeed(mintUrl, seedHex)
+
+                // If no proofs found, return 0
+                if (tokenString.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        promise.resolve(0.0)
+                    }
+                    return@launch
+                }
+
+                // Step 2: Feed the token into CDK's receive to import proofs into the wallet
+                val token = Token.fromString(tokenString)
+
+                val innerReceiveOptions = ReceiveOptions(
+                    amountSplitTarget = SplitTarget.None,
+                    p2pkSigningKeys = emptyList(),
+                    preimages = emptyList(),
+                    metadata = emptyMap()
+                )
+                val receiveOptions = MultiMintReceiveOptions(
+                    allowUntrusted = true,
+                    transferToMint = null,
+                    receiveOptions = innerReceiveOptions
+                )
+
+                val amount = wallet.receive(token, receiveOptions)
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(amount.value.toDouble())
+                }
+            } catch (e: RestoreException) {
+                Log.e(TAG, "restoreFromSeed restore error: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("RESTORE_FROM_SEED_ERROR", e.message, e)
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "restoreFromSeed CDK error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "restoreFromSeed error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("RESTORE_FROM_SEED_ERROR", e.message, e)
                 }
             }
         }

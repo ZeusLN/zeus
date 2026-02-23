@@ -169,6 +169,12 @@ android {
         pickFirst "lib/x86/libcdk_ffi.so"
         pickFirst "lib/x86_64/libcdk_ffi.so"
 
+        // Zeus Cashu Restore native libraries (Rust FFI)
+        pickFirst "lib/armeabi-v7a/libuniffi_zeus_cashu_restore.so"
+        pickFirst "lib/arm64-v8a/libuniffi_zeus_cashu_restore.so"
+        pickFirst "lib/x86/libuniffi_zeus_cashu_restore.so"
+        pickFirst "lib/x86_64/libuniffi_zeus_cashu_restore.so"
+
         jniLibs {
             useLegacyPackaging true
         }
@@ -197,6 +203,8 @@ dependencies {
 
     // CashuDevKit - Cashu wallet FFI bindings
     implementation files("../cdk/cashudevkit.aar")
+    // Zeus Cashu Restore - standalone NUT-13 restore for v1 legacy seeds
+    implementation files("../zeus-restore/zeus-cashu-restore.aar")
     // CDK dependencies
     implementation "net.java.dev.jna:jna:5.14.0@aar"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"

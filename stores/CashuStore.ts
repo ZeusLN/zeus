@@ -1,13 +1,6 @@
 import { action, observable, runInAction } from 'mobx';
 import { Alert, InteractionManager } from 'react-native';
 import bolt11 from 'bolt11';
-import {
-    CashuMint,
-    CashuWallet,
-    CheckStateEnum,
-    getEncodedToken,
-    Proof
-} from '@cashu/cashu-ts';
 import url from 'url';
 import querystring from 'querystring-es3';
 
@@ -408,9 +401,9 @@ export default class CashuStore {
     };
 
     /**
-     * Restore v1 legacy proofs from a mint using cashu-ts and receive them
-     * into CDK. CDK's own restore uses the v2-bip39 mnemonic which can't
-     * find proofs created with the v1 seed (lndSeed[32:64]).
+     * Restore v1 legacy proofs from a mint using CDK's restoreFromSeed.
+     * This passes the raw v1 seed bytes (lndSeed[32:64]) to CDK's native
+     * Rust implementation, which handles all EC crypto natively.
      */
     private restoreV1Proofs = async (mintUrl: string): Promise<number> => {
         const lndSeedPhrase = this.settingsStore.seedPhrase;
@@ -420,92 +413,26 @@ export default class CashuStore {
         const legacySeed = new Uint8Array(
             bip39scure.mnemonicToSeedSync(lndMnemonic).slice(32, 64)
         );
+        const seedHex = bytesToHex(legacySeed);
 
-        const mint = new CashuMint(mintUrl);
-        const { keysets } = await mint.getKeySets();
-
-        let allProofs: Proof[] = [];
-
-        for (const keyset of keysets) {
-            try {
-                const wallet = new CashuWallet(mint, {
-                    bip39seed: legacySeed,
-                    unit: keyset.unit || 'sat'
-                });
-                await wallet.loadMint();
-
-                let start = 0;
-                let emptyBatchCount = 0;
-                const BATCH_SIZE = 200;
-                const MAX_GAP = 2;
-
-                while (emptyBatchCount < MAX_GAP) {
-                    let proofs: Proof[] = [];
-                    try {
-                        const result = await wallet.restore(start, BATCH_SIZE, {
-                            keysetId: keyset.id
-                        });
-                        proofs = result.proofs || [];
-                    } catch {
-                        proofs = [];
-                    }
-
-                    if (proofs.length === 0) {
-                        emptyBatchCount++;
-                    } else {
-                        allProofs = allProofs.concat(proofs);
-                        emptyBatchCount = 0;
-                    }
-                    start += BATCH_SIZE;
-                }
-            } catch (err) {
-                if (__DEV__) {
-                    console.log(
-                        `CDK: v1 restore keyset error for ${mintUrl}:`,
-                        err
-                    );
-                }
-            }
-        }
-
-        if (allProofs.length === 0) return 0;
-
-        // Filter to unspent proofs
-        let unspentProofs: Proof[] = [];
-        const checkWallet = new CashuWallet(mint, {
-            bip39seed: legacySeed,
-            unit: 'sat'
-        });
-        await checkWallet.loadMint();
-
-        for (let i = 0; i < allProofs.length; i += 200) {
-            const batch = allProofs.slice(i, i + 200);
-            try {
-                const states = await checkWallet.checkProofsStates(batch);
-                const unspent = batch.filter(
-                    (_, idx) => states[idx].state !== CheckStateEnum.SPENT
+        try {
+            await this.ensureMintAdded(mintUrl);
+            const amount = await CashuDevKit.restoreFromSeed(mintUrl, seedHex);
+            if (__DEV__ && amount > 0) {
+                console.log(
+                    `CDK: v1 restore recovered ${amount} sats from ${mintUrl}`
                 );
-                unspentProofs = unspentProofs.concat(unspent);
-            } catch {
-                // If state check fails, include the batch anyway
-                unspentProofs = unspentProofs.concat(batch);
             }
+            return amount;
+        } catch (err) {
+            if (__DEV__) {
+                console.log(
+                    `CDK: v1 restoreFromSeed error for ${mintUrl}:`,
+                    err
+                );
+            }
+            return 0;
         }
-
-        if (unspentProofs.length === 0) return 0;
-
-        const encoded = getEncodedToken({
-            mint: mintUrl,
-            proofs: unspentProofs
-        });
-        const amount = await CashuDevKit.receive(encoded);
-
-        if (__DEV__) {
-            console.log(
-                `CDK: v1 restore recovered ${amount} sats from ${mintUrl}`
-            );
-        }
-        return amount;
     };
 
     /**
@@ -2132,10 +2059,12 @@ export default class CashuStore {
                         try {
                             const proofs = JSON.parse(storedProofsJson);
                             if (proofs && proofs.length > 0) {
-                                const encoded = getEncodedToken({
-                                    mint: mintUrl,
-                                    proofs
+                                const tokenJson = JSON.stringify({
+                                    token: [{ mint: mintUrl, proofs }]
                                 });
+                                const encoded =
+                                    'cashuA' +
+                                    Buffer.from(tokenJson).toString('base64');
                                 await CashuDevKit.receive(encoded);
                                 if (__DEV__) {
                                     console.log(
@@ -2817,8 +2746,7 @@ export default class CashuStore {
                 decoded.encodedToken
             ) {
                 try {
-                    // Use cashu-ts sync decode which returns proofs directly
-                    const decodedToken = CashuUtils.decodeCashuToken(
+                    const decodedToken = await CashuUtils.decodeCashuTokenAsync(
                         decoded.encodedToken
                     );
                     proofs = decodedToken.proofs || [];
