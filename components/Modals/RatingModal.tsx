@@ -22,7 +22,7 @@ import {
 
 import ModalStore from '../../stores/ModalStore';
 
-const ZEUS = require('../../assets/images/ZEUS.jpg');
+const ZEUS = require('../../assets/images/zeus_icon.jpg');
 
 interface RatingModalProps {
     ModalStore?: ModalStore;

@@ -48,6 +48,13 @@ export interface Node {
     embeddedLndNetwork?: string;
     lndDir?: string;
     isSqlite?: boolean;
+    // Embedded LDK Node
+    embeddedLdkNetwork?: string;
+    ldkNodeDir?: string;
+    ldkMnemonic?: string;
+    ldkPassphrase?: string;
+    ldkEsploraServer?: string;
+    ldkRgsServer?: string;
 }
 
 interface PrivacySettings {
@@ -362,6 +369,7 @@ export const INTERFACE_KEYS: {
     value: string;
 }[] = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
+    { key: 'Embedded LDK Node', value: 'embedded-ldk-node' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
@@ -371,6 +379,7 @@ export const INTERFACE_KEYS: {
 
 export type Implementations =
     | 'embedded-lnd'
+    | 'embedded-ldk-node'
     | 'lnd'
     | 'lightning-node-connect'
     | 'cln-rest'
@@ -1538,6 +1547,13 @@ export default class SettingsStore {
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
     @observable public lndFolderMissing: boolean = false;
+    // Embedded LDK Node
+    @observable public ldkNodeDir?: string;
+    @observable public ldkMnemonic?: string;
+    @observable public ldkPassphrase?: string;
+    @observable public embeddedLdkNetwork?: string;
+    @observable public ldkEsploraServer?: string;
+    @observable public ldkRgsServer?: string;
     // NWC
     @observable public nostrWalletConnectUrl: string;
     // Favorite currencies
@@ -1732,6 +1748,13 @@ export default class SettingsStore {
             this.embeddedLndNetwork = node.embeddedLndNetwork;
             this.lndDir = node.lndDir || 'lnd';
             this.isSqlite = node.isSqlite;
+            // Embedded LDK Node
+            this.ldkNodeDir = node.ldkNodeDir;
+            this.ldkMnemonic = node.ldkMnemonic;
+            this.ldkPassphrase = node.ldkPassphrase;
+            this.embeddedLdkNetwork = node.embeddedLdkNetwork;
+            this.ldkEsploraServer = node.ldkEsploraServer;
+            this.ldkRgsServer = node.ldkRgsServer;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }

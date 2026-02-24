@@ -9,6 +9,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import BlockIcon from '../../assets/images/SVG/Block.svg';
 import EcashIcon from '../../assets/images/SVG/Ecash.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
@@ -87,6 +88,46 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
+                    {BackendUtils.isLocalWallet() && selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('EmbeddedNodeSettings')
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <BlockIcon
+                                        color={themeColor('text')}
+                                        width={27}
+                                        height={27}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.title'
+                                    )}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {BackendUtils.supportsFlowLSP() && selectedNode && (
                         <View
                             style={{
@@ -101,6 +142,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 style={styles.columnField}
                                 onPress={() => {
                                     const supportsLSPS1 =
+                                        BackendUtils.supportsLSPS1native() ||
                                         BackendUtils.supportsLSPScustomMessage() ||
                                         BackendUtils.supportsLSPS1rest();
                                     if (
