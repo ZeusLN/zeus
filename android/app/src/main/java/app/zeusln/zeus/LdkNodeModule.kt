@@ -30,6 +30,10 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private var storedLsps2Address: SocketAddress? = null
     private var storedLsps2Token: String? = null
 
+    // VSS (Versioned Storage Service) config
+    private var storedVssUrl: String? = null
+    private var storedVssStoreId: String? = null
+
     override fun getName(): String {
         return "LdkNodeModule"
     }
@@ -52,6 +56,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedLsps2NodeId = null
         storedLsps2Address = null
         storedLsps2Token = null
+        storedVssUrl = null
+        storedVssStoreId = null
     }
 
     // Builder Methods
@@ -192,6 +198,18 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    @ReactMethod
+    fun setVssServer(vssUrl: String, storeId: String, promise: Promise) {
+        try {
+            this.builder ?: throw Exception("Builder not initialized")
+            this.storedVssUrl = vssUrl
+            this.storedVssStoreId = storeId
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
+        }
+    }
+
     // Mnemonic Methods
 
     @ReactMethod
@@ -260,7 +278,14 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             }
 
             val nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic, passphrase)
-            this.node = builderToUse.buildWithFsStore(nodeEntropy)
+            val vssUrl = this.storedVssUrl
+            val vssStoreId = this.storedVssStoreId
+            if (vssUrl != null && vssStoreId != null) {
+                Log.d("LdkNodeModule", "Building node with VSS store: $vssUrl")
+                this.node = builderToUse.buildWithVssStoreAndFixedHeaders(nodeEntropy, vssUrl, vssStoreId, emptyMap())
+            } else {
+                this.node = builderToUse.buildWithFsStore(nodeEntropy)
+            }
             this.builder = null // Builder is consumed
             promise.resolve(null)
         } catch (e: Exception) {
