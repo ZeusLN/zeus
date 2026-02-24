@@ -1204,15 +1204,16 @@ export default class WalletConfiguration extends React.Component<
             seedPhrase
         } = SettingsStore;
 
+        const isLocalImpl =
+            implementation === 'embedded-lnd' ||
+            implementation === 'embedded-ldk-node';
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
-            implementation !== 'embedded-lnd' &&
-            implementation !== 'embedded-ldk-node' &&
+            !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
         const supportsCertVerification =
             implementation !== 'lightning-node-connect' &&
-            implementation !== 'embedded-lnd' &&
-            implementation !== 'embedded-ldk-node' &&
+            !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
 
         const CertInstallInstructions = () => (
@@ -2708,7 +2709,7 @@ export default class WalletConfiguration extends React.Component<
                         </View>
 
                         {implementation === 'embedded-ldk-node' && (
-                            <View style={{ ...styles.button, marginTop: 20 }}>
+                            <View style={{ ...styles.button }}>
                                 {!ldkNodeInitialized &&
                                     !creatingWallet &&
                                     !saved && (
@@ -2938,10 +2939,9 @@ export default class WalletConfiguration extends React.Component<
                                                 !saved &&
                                                 !certVerification &&
                                                 !enableTor &&
+                                                !isLocalImpl &&
                                                 implementation !==
                                                     'lightning-node-connect' &&
-                                                implementation !==
-                                                    'embedded-lnd' &&
                                                 implementation !==
                                                     'nostr-wallet-connect'
                                             ) {
