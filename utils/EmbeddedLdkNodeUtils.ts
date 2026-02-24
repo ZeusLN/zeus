@@ -23,6 +23,9 @@ export const ESPLORA_SERVERS_TESTNET = [
 
 export const ESPLORA_SERVERS_SIGNET = ['https://mempool.space/signet/api'];
 
+// Default VSS (Versioned Storage Service) server
+export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com';
+
 // Default RGS (Rapid Gossip Sync) servers
 export const RGS_SERVERS_MAINNET = [
     'https://rapidsync.lightningdevkit.org/snapshot'
@@ -130,7 +133,8 @@ export async function createLdkNodeWallet({
     rgsServerUrl,
     listeningAddresses,
     lsps1Config,
-    trustedPeers0conf
+    trustedPeers0conf,
+    vssServerUrl
 }: {
     nodeDir: string;
     seedMnemonic?: string;
@@ -145,6 +149,7 @@ export async function createLdkNodeWallet({
         token?: string | null;
     };
     trustedPeers0conf?: string[];
+    vssServerUrl?: string;
 }): Promise<{
     mnemonic: string;
     storagePath: string;
@@ -164,6 +169,7 @@ export async function createLdkNodeWallet({
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
 
     // Initialize the node
+    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
     await LdkNode.utils.initializeNode({
         network: networkType,
         storagePath,
@@ -173,7 +179,11 @@ export async function createLdkNodeWallet({
         rgsServerUrl: rgsUrl,
         listeningAddresses,
         lsps1Config,
-        trustedPeers0conf
+        trustedPeers0conf,
+        vssConfig: {
+            url: vssUrl,
+            storeId: nodeDir
+        }
     });
 
     return {
@@ -194,7 +204,8 @@ export async function startLdkNodeWallet({
     rgsServerUrl,
     listeningAddresses,
     lsps1Config,
-    trustedPeers0conf
+    trustedPeers0conf,
+    vssServerUrl
 }: {
     nodeDir: string;
     seedMnemonic: string;
@@ -209,6 +220,7 @@ export async function startLdkNodeWallet({
         token?: string | null;
     };
     trustedPeers0conf?: string[];
+    vssServerUrl?: string;
 }): Promise<void> {
     const storagePath = getLdkNodeStoragePath(nodeDir);
     const networkType = getNetworkType(network);
@@ -216,6 +228,7 @@ export async function startLdkNodeWallet({
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
 
     // Initialize the node with existing mnemonic
+    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
     await LdkNode.utils.initializeNode({
         network: networkType,
         storagePath,
@@ -225,7 +238,11 @@ export async function startLdkNodeWallet({
         rgsServerUrl: rgsUrl,
         listeningAddresses,
         lsps1Config,
-        trustedPeers0conf
+        trustedPeers0conf,
+        vssConfig: {
+            url: vssUrl,
+            storeId: nodeDir
+        }
     });
 
     // Start the node
@@ -321,5 +338,6 @@ export default {
     ESPLORA_SERVERS_TESTNET,
     ESPLORA_SERVERS_SIGNET,
     RGS_SERVERS_MAINNET,
-    RGS_SERVERS_TESTNET
+    RGS_SERVERS_TESTNET,
+    DEFAULT_VSS_SERVER
 };

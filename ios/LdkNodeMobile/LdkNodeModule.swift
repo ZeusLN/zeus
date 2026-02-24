@@ -23,6 +23,10 @@ class LdkNodeModule: RCTEventEmitter {
     private var storedLsps2Address: SocketAddress?
     private var storedLsps2Token: String?
 
+    // VSS (Versioned Storage Service) config
+    private var storedVssUrl: String?
+    private var storedVssStoreId: String?
+
     @objc
     override static func moduleName() -> String! {
         "LdkNodeModule"
@@ -50,6 +54,8 @@ class LdkNodeModule: RCTEventEmitter {
         storedLsps2NodeId = nil
         storedLsps2Address = nil
         storedLsps2Token = nil
+        storedVssUrl = nil
+        storedVssStoreId = nil
     }
 
     // MARK: - Builder Methods
@@ -133,6 +139,18 @@ class LdkNodeModule: RCTEventEmitter {
 
         // PublicKey is a typealias for String, so we can use the peers directly
         self.storedTrustedPeers0conf = peers
+        resolve(["status": "ok"])
+    }
+
+    @objc(setVssServer:storeId:resolver:rejecter:)
+    func setVssServer(_ vssUrl: String, storeId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard self.builder != nil else {
+            reject("error", "Builder not initialized", nil)
+            return
+        }
+
+        self.storedVssUrl = vssUrl
+        self.storedVssStoreId = storeId
         resolve(["status": "ok"])
     }
 
@@ -261,8 +279,13 @@ class LdkNodeModule: RCTEventEmitter {
                 builderToUse.setLiquiditySourceLsps2(nodeId: lsps2NodeId, address: lsps2Address, token: self.storedLsps2Token)
             }
 
-            builderToUse.setEntropyBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
-            self.node = try builderToUse.buildWithFsStore()
+            let nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
+            if let vssUrl = self.storedVssUrl, let vssStoreId = self.storedVssStoreId {
+                NSLog("LdkNodeModule: Building node with VSS store: \(vssUrl)")
+                self.node = try builderToUse.buildWithVssStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: [:])
+            } else {
+                self.node = try builderToUse.buildWithFsStore(nodeEntropy: nodeEntropy)
+            }
             self.builder = nil // Builder is consumed
             resolve(["status": "ok"])
         } catch {

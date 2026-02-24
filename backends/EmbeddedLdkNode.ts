@@ -47,7 +47,8 @@ export default class EmbeddedLdkNode {
         mnemonic,
         passphrase,
         rgsServerUrl,
-        listeningAddresses
+        listeningAddresses,
+        vssConfig
     }: {
         network: Network;
         storagePath: string;
@@ -56,6 +57,10 @@ export default class EmbeddedLdkNode {
         passphrase?: string | null;
         rgsServerUrl?: string;
         listeningAddresses?: string[];
+        vssConfig?: {
+            url: string;
+            storeId: string;
+        };
     }): Promise<void> => {
         await LdkNode.utils.initializeNode({
             network,
@@ -64,7 +69,8 @@ export default class EmbeddedLdkNode {
             mnemonic,
             passphrase,
             rgsServerUrl,
-            listeningAddresses
+            listeningAddresses,
+            vssConfig
         });
     };
 

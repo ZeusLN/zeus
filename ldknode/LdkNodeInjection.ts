@@ -86,6 +86,10 @@ const setTrustedPeers0conf = async (peers: string[]): Promise<void> => {
     return await LdkNodeModule.setTrustedPeers0conf(peers);
 };
 
+const setVssServer = async (vssUrl: string, storeId: string): Promise<void> => {
+    return await LdkNodeModule.setVssServer(vssUrl, storeId);
+};
+
 // ============================================================================
 // Mnemonic Functions
 // ============================================================================
@@ -407,7 +411,8 @@ const initializeNode = async ({
     rgsServerUrl,
     listeningAddresses,
     lsps1Config,
-    trustedPeers0conf
+    trustedPeers0conf,
+    vssConfig
 }: {
     network: Network;
     storagePath: string;
@@ -422,6 +427,10 @@ const initializeNode = async ({
         token?: string | null;
     };
     trustedPeers0conf?: string[];
+    vssConfig?: {
+        url: string;
+        storeId: string;
+    };
 }): Promise<void> => {
     console.log('LDK Node: Initializing...');
     await createBuilder();
@@ -478,6 +487,12 @@ const initializeNode = async ({
         );
     }
 
+    // Configure VSS (Versioned Storage Service) for cloud backup
+    if (vssConfig && vssConfig.url && vssConfig.storeId) {
+        await setVssServer(vssConfig.url, vssConfig.storeId);
+        console.log(`LDK Node: VSS server set to ${vssConfig.url}`);
+    }
+
     await buildNode(mnemonic, passphrase);
     console.log('LDK Node: Build complete');
 };
@@ -506,6 +521,7 @@ export interface ILdkNodeInjections {
             token?: string | null;
         }) => Promise<void>;
         setTrustedPeers0conf: (peers: string[]) => Promise<void>;
+        setVssServer: (vssUrl: string, storeId: string) => Promise<void>;
     };
     mnemonic: {
         generateMnemonic: (wordCount?: number) => Promise<string>;
@@ -616,6 +632,10 @@ export interface ILdkNodeInjections {
                 token?: string | null;
             };
             trustedPeers0conf?: string[];
+            vssConfig?: {
+                url: string;
+                storeId: string;
+            };
         }) => Promise<void>;
     };
 }
@@ -635,7 +655,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         setListeningAddresses,
         setLiquiditySourceLsps1,
         setLiquiditySourceLsps2,
-        setTrustedPeers0conf
+        setTrustedPeers0conf,
+        setVssServer
     },
     mnemonic: {
         generateMnemonic
