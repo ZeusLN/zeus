@@ -49,6 +49,14 @@ RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription exp
 RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
+// BOLT12 Payment Methods
+RCT_EXTERN_METHOD(bolt12Receive:(double)amountMsat description:(NSString *)description expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12ReceiveVariableAmount:(NSString *)description expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12Send:(NSString *)offerStr payerNote:(NSString *)payerNote resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12SendUsingAmount:(NSString *)offerStr amountMsat:(double)amountMsat payerNote:(NSString *)payerNote resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12InitiateRefund:(double)amountMsat expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12RequestRefundPayment:(NSString *)refundStr resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
 // Payment Methods
 RCT_EXTERN_METHOD(listPayments:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 

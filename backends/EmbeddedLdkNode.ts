@@ -807,6 +807,187 @@ export default class EmbeddedLdkNode {
     };
 
     // ========================================================================
+    // LSPS7 Methods
+    // ========================================================================
+
+    lsps7GetExtendableChannels = async (): Promise<any> => {
+        return await LdkNode.lsps7.getExtendableChannels();
+    };
+
+    lsps7CreateOrder = async (params: {
+        shortChannelId: string;
+        channelExtensionExpiryBlocks: number;
+        token?: string;
+        refundOnchainAddress?: string;
+    }): Promise<any> => {
+        const response = await LdkNode.lsps7.createOrder({
+            shortChannelId: params.shortChannelId,
+            channelExtensionExpiryBlocks: params.channelExtensionExpiryBlocks,
+            token: params.token || null,
+            refundOnchainAddress: params.refundOnchainAddress || null
+        });
+
+        // Transform to match LSPStore expected format
+        const paymentInfo = response.paymentInfo || {};
+        const bolt11 = paymentInfo.bolt11Invoice;
+        const onchain = paymentInfo.onchainPayment;
+
+        return {
+            order_id: response.orderId,
+            order_state: response.orderState,
+            channel_extension_expiry_blocks:
+                response.channelExtensionExpiryBlocks,
+            new_channel_expiry_block: response.newChannelExpiryBlock,
+            payment: {
+                state: paymentInfo.state || bolt11?.state || onchain?.state,
+                fee_total_sat:
+                    paymentInfo.feeTotalSat ||
+                    bolt11?.feeTotalSat ||
+                    onchain?.feeTotalSat,
+                order_total_sat:
+                    paymentInfo.orderTotalSat ||
+                    bolt11?.orderTotalSat ||
+                    onchain?.orderTotalSat,
+                bolt11_invoice: bolt11?.invoice,
+                onchain_address: onchain?.address,
+                onchain_total_sat: onchain?.orderTotalSat
+            },
+            channel: response.channel
+                ? {
+                      short_channel_id: response.channel.shortChannelId,
+                      max_channel_extension_expiry_blocks:
+                          response.channel.maxChannelExtensionExpiryBlocks,
+                      expiration_block: response.channel.expirationBlock
+                  }
+                : null
+        };
+    };
+
+    lsps7CheckOrderStatus = async (orderId: string): Promise<any> => {
+        const response = await LdkNode.lsps7.checkOrderStatus(orderId);
+
+        const paymentInfo = response.paymentInfo || {};
+        const bolt11 = paymentInfo.bolt11Invoice;
+        const onchain = paymentInfo.onchainPayment;
+
+        return {
+            order_id: response.orderId,
+            order_state: response.orderState,
+            channel_extension_expiry_blocks:
+                response.channelExtensionExpiryBlocks,
+            new_channel_expiry_block: response.newChannelExpiryBlock,
+            payment: {
+                state: paymentInfo.state || bolt11?.state || onchain?.state,
+                fee_total_sat:
+                    paymentInfo.feeTotalSat ||
+                    bolt11?.feeTotalSat ||
+                    onchain?.feeTotalSat,
+                order_total_sat:
+                    paymentInfo.orderTotalSat ||
+                    bolt11?.orderTotalSat ||
+                    onchain?.orderTotalSat,
+                bolt11_invoice: bolt11?.invoice,
+                bolt11_state: bolt11?.state,
+                onchain_address: onchain?.address,
+                onchain_state: onchain?.state
+            },
+            channel: response.channel
+                ? {
+                      short_channel_id: response.channel.shortChannelId,
+                      max_channel_extension_expiry_blocks:
+                          response.channel.maxChannelExtensionExpiryBlocks,
+                      expiration_block: response.channel.expirationBlock
+                  }
+                : null
+        };
+    };
+
+    // ========================================================================
+    // BOLT12 / Offers Methods
+    // ========================================================================
+
+    createOffer = async ({
+        description,
+        label: _label,
+        singleUse
+    }: {
+        description?: string;
+        label?: string;
+        singleUse?: boolean;
+    }): Promise<any> => {
+        const result = await LdkNode.bolt12.bolt12ReceiveVariableAmount({
+            description: description || '',
+            expirySecs: 0
+        });
+
+        return {
+            bolt12: result.offer,
+            offer_id: result.offerId,
+            active: true,
+            single_use: singleUse || false,
+            used: false
+        };
+    };
+
+    listOffers = async (): Promise<any> => {
+        // LDK Node doesn't store offers natively
+        return { offers: [] };
+    };
+
+    disableOffer = async ({ offer_id }: { offer_id: string }): Promise<any> => {
+        // No-op: LDK Node doesn't support disabling offers natively
+        return { offer_id, active: false };
+    };
+
+    fetchInvoiceFromOffer = async (
+        bolt12: string,
+        amountSatoshis: string
+    ): Promise<any> => {
+        const paymentId = await LdkNode.bolt12.bolt12SendUsingAmount({
+            offer: bolt12,
+            amountMsat: Number(amountSatoshis) * 1000
+        });
+
+        const { hash, preimage } =
+            await this.awaitPaymentCompletion(paymentId);
+
+        return {
+            payment_hash: hash,
+            payment_preimage: preimage,
+            status: 'SUCCEEDED'
+        };
+    };
+
+    createWithdrawalRequest = async ({
+        amount,
+        description: _description
+    }: {
+        amount: string;
+        description: string;
+    }): Promise<any> => {
+        const refundStr = await LdkNode.bolt12.bolt12InitiateRefund({
+            amountMsat: Number(amount) * 1000,
+            expirySecs: 3600
+        });
+
+        return { bolt12: refundStr };
+    };
+
+    redeemWithdrawalRequest = async ({
+        invreq,
+        label: _label
+    }: {
+        invreq: string;
+        label: string;
+    }): Promise<any> => {
+        const invoiceStr = await LdkNode.bolt12.bolt12RequestRefundPayment(
+            invreq
+        );
+
+        return { bolt12: invoiceStr };
+    };
+
+    // ========================================================================
     // Message Signing Methods
     // ========================================================================
 
@@ -1078,7 +1259,7 @@ export default class EmbeddedLdkNode {
     supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
-    supportsWithdrawalRequests = () => false;
+    supportsWithdrawalRequests = () => true;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsNestedSegWit = () => false;
@@ -1096,7 +1277,8 @@ export default class EmbeddedLdkNode {
     supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => true; // Use REST API for LSPS1 (Olympus supports this)
     supportsLSPS1native = () => false; // Disabled - Olympus doesn't support native LSPS1 over custom messages
-    supportsOffers = () => false; // LDK Node supports BOLT12 but needs implementation
+    supportsLSPS7native = () => true;
+    supportsOffers = () => true;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     isLNDBased = () => false;

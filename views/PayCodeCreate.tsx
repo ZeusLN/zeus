@@ -133,9 +133,10 @@ export default class PayCodeCreateView extends React.Component<
                                     description,
                                     label,
                                     singleUse
-                                }).then(() => {
-                                    // OffersStore.listOffers();
-                                    navigation.pop();
+                                }).then((result) => {
+                                    if (result) {
+                                        navigation.pop();
+                                    }
                                 });
                             }}
                         />
