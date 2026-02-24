@@ -352,22 +352,32 @@ export async function startLnd({
             if (e?.message?.includes("doesn't exist")) {
                 throw new Error(LND_FOLDER_MISSING_ERROR);
             }
-            let started;
-            while (!started) {
-                try {
-                    console.log('error starting LND - retrying momentarily', e);
-                    await sleep(3000);
-                    await startLnd({
-                        args: '',
-                        lndDir,
-                        isTorEnabled,
-                        isTestnet
-                    });
-                    started = true;
-                } catch (e2: any) {
-                    // Stop retrying if folder is missing
-                    if (e2?.message?.includes("doesn't exist")) {
-                        throw new Error(LND_FOLDER_MISSING_ERROR);
+            // LND is already running (e.g. after createLndWallet) - proceed to state subscription
+            if (!e?.message?.includes('already started')) {
+                let started;
+                while (!started) {
+                    try {
+                        console.log(
+                            'error starting LND - retrying momentarily',
+                            e
+                        );
+                        await sleep(3000);
+                        await startLnd({
+                            args: '',
+                            lndDir,
+                            isTorEnabled,
+                            isTestnet
+                        });
+                        started = true;
+                    } catch (e2: any) {
+                        // Stop retrying if folder is missing
+                        if (e2?.message?.includes("doesn't exist")) {
+                            throw new Error(LND_FOLDER_MISSING_ERROR);
+                        }
+                        // LND already running during retry - proceed to state subscription
+                        if (e2?.message?.includes('already started')) {
+                            started = true;
+                        }
                     }
                 }
             }
