@@ -662,6 +662,111 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - BOLT12 Payment Methods
+
+    @objc(bolt12Receive:description:expirySecs:resolver:rejecter:)
+    func bolt12Receive(_ amountMsat: Double, description: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let bolt12 = node.bolt12Payment()
+            let offer = try bolt12.receive(amountMsat: UInt64(amountMsat), description: description, expirySecs: expirySecs > 0 ? UInt32(expirySecs) : nil, quantity: nil)
+            resolve(["offer": offer.description, "offerId": offer.id()])
+        } catch {
+            reject("error", error.localizedDescription, error)
+        }
+    }
+
+    @objc(bolt12ReceiveVariableAmount:expirySecs:resolver:rejecter:)
+    func bolt12ReceiveVariableAmount(_ description: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let bolt12 = node.bolt12Payment()
+            let offer = try bolt12.receiveVariableAmount(description: description, expirySecs: expirySecs > 0 ? UInt32(expirySecs) : nil)
+            resolve(["offer": offer.description, "offerId": offer.id()])
+        } catch {
+            reject("error", error.localizedDescription, error)
+        }
+    }
+
+    @objc(bolt12Send:payerNote:resolver:rejecter:)
+    func bolt12Send(_ offerStr: String, payerNote: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt12 = node.bolt12Payment()
+                let offer = try Offer.fromStr(offerStr: offerStr)
+                let paymentId = try bolt12.send(offer: offer, quantity: nil, payerNote: payerNote, routeParameters: nil)
+                resolve(["paymentId": paymentId])
+            } catch {
+                reject("error", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(bolt12SendUsingAmount:amountMsat:payerNote:resolver:rejecter:)
+    func bolt12SendUsingAmount(_ offerStr: String, amountMsat: Double, payerNote: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt12 = node.bolt12Payment()
+                let offer = try Offer.fromStr(offerStr: offerStr)
+                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: UInt64(amountMsat), quantity: nil, payerNote: payerNote, routeParameters: nil)
+                resolve(["paymentId": paymentId])
+            } catch {
+                reject("error", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(bolt12InitiateRefund:expirySecs:resolver:rejecter:)
+    func bolt12InitiateRefund(_ amountMsat: Double, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let bolt12 = node.bolt12Payment()
+            let refund = try bolt12.initiateRefund(amountMsat: UInt64(amountMsat), expirySecs: UInt32(expirySecs), quantity: nil, payerNote: nil, routeParameters: nil)
+            resolve(["refund": refund.description])
+        } catch {
+            reject("error", error.localizedDescription, error)
+        }
+    }
+
+    @objc(bolt12RequestRefundPayment:resolver:rejecter:)
+    func bolt12RequestRefundPayment(_ refundStr: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let bolt12 = node.bolt12Payment()
+            let refund = try Refund.fromStr(refundStr: refundStr)
+            let invoice = try bolt12.requestRefundPayment(refund: refund)
+            resolve(["invoice": String(describing: invoice)])
+        } catch {
+            reject("error", error.localizedDescription, error)
+        }
+    }
+
     // MARK: - Payment Methods
 
     @objc(listPayments:rejecter:)

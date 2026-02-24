@@ -711,7 +711,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
             val invoice = bolt11.receive(amountMsat.toLong().toULong(), invoiceDescription, expirySecs.toInt().toUInt())
-            promise.resolve(mapOf("invoice" to invoice.toString()))
+            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            promise.resolve(result)
         } catch (e: Exception) {
             promise.reject("error", e.message, e)
         }
@@ -724,7 +725,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
             val invoice = bolt11.receiveVariableAmount(invoiceDescription, expirySecs.toInt().toUInt())
-            promise.resolve(mapOf("invoice" to invoice.toString()))
+            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            promise.resolve(result)
         } catch (e: Exception) {
             promise.reject("error", e.message, e)
         }
@@ -771,6 +773,113 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     promise.reject("error", e.message, e)
                 }
             }
+        }
+    }
+
+    // BOLT12 Payment Methods
+
+    @ReactMethod
+    fun bolt12Receive(amountMsat: Double, description: String, expirySecs: Double, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt12 = node.bolt12Payment()
+            val expiry = if (expirySecs > 0) expirySecs.toInt().toUInt() else null
+            val offer = bolt12.receive(amountMsat.toLong().toULong(), description, expiry, null)
+            val result = Arguments.createMap().apply {
+                putString("offer", offer.toString())
+                putString("offerId", offer.id())
+            }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun bolt12ReceiveVariableAmount(description: String, expirySecs: Double, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt12 = node.bolt12Payment()
+            val expiry = if (expirySecs > 0) expirySecs.toInt().toUInt() else null
+            val offer = bolt12.receiveVariableAmount(description, expiry)
+            val result = Arguments.createMap().apply {
+                putString("offer", offer.toString())
+                putString("offerId", offer.id())
+            }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun bolt12Send(offerStr: String, payerNote: String?, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val bolt12 = node.bolt12Payment()
+                val offer = Offer.fromStr(offerStr)
+                val paymentId = bolt12.send(offer, null, payerNote, null)
+                val result = Arguments.createMap().apply {
+                    putString("paymentId", paymentId)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun bolt12SendUsingAmount(offerStr: String, amountMsat: Double, payerNote: String?, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val bolt12 = node.bolt12Payment()
+                val offer = Offer.fromStr(offerStr)
+                val paymentId = bolt12.sendUsingAmount(offer, amountMsat.toLong().toULong(), null, payerNote, null)
+                val result = Arguments.createMap().apply {
+                    putString("paymentId", paymentId)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun bolt12InitiateRefund(amountMsat: Double, expirySecs: Double, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt12 = node.bolt12Payment()
+            val refund = bolt12.initiateRefund(amountMsat.toLong().toULong(), expirySecs.toInt().toUInt(), null, null, null)
+            val result = Arguments.createMap().apply { putString("refund", refund.toString()) }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
+        }
+    }
+
+    @ReactMethod
+    fun bolt12RequestRefundPayment(refundStr: String, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt12 = node.bolt12Payment()
+            val refund = Refund.fromStr(refundStr)
+            val invoice = bolt12.requestRefundPayment(refund)
+            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
         }
     }
 

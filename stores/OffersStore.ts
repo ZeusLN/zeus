@@ -63,6 +63,7 @@ export default class OffersStore {
                 return data;
             })
             .catch((e: any) => {
+                console.error('OffersStore.createOffer error:', e);
                 const errorMsg = errorToUserFriendly(e);
                 runInAction(() => {
                     this.error = true;

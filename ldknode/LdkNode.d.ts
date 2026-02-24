@@ -446,6 +446,31 @@ export interface ILdkNodeModule {
     sendBolt11(invoice: string): Promise<string>;
     sendBolt11UsingAmount(invoice: string, amountMsat: number): Promise<string>;
 
+    // BOLT12 Payment Methods
+    bolt12Receive(
+        amountMsat: number,
+        description: string,
+        expirySecs: number
+    ): Promise<{ offer: string; offerId: string }>;
+    bolt12ReceiveVariableAmount(
+        description: string,
+        expirySecs: number
+    ): Promise<{ offer: string; offerId: string }>;
+    bolt12Send(
+        offerStr: string,
+        payerNote?: string | null
+    ): Promise<{ paymentId: string }>;
+    bolt12SendUsingAmount(
+        offerStr: string,
+        amountMsat: number,
+        payerNote?: string | null
+    ): Promise<{ paymentId: string }>;
+    bolt12InitiateRefund(
+        amountMsat: number,
+        expirySecs: number
+    ): Promise<{ refund: string }>;
+    bolt12RequestRefundPayment(refundStr: string): Promise<{ invoice: string }>;
+
     // Payment Methods
     listPayments(): Promise<PaymentDetails[]>;
 
