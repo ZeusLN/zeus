@@ -77,7 +77,8 @@ import {
     stopLdkNode,
     deleteLdkNodeWallet,
     getDefaultEsploraServer,
-    getDefaultRgsServer
+    getDefaultRgsServer,
+    DEFAULT_VSS_SERVER
 } from '../../utils/EmbeddedLdkNodeUtils';
 
 interface WalletConfigurationProps {
@@ -150,6 +151,7 @@ interface WalletConfigurationState {
     embeddedLdkNetwork?: string;
     ldkEsploraServer?: string;
     ldkRgsServer?: string;
+    ldkVssServer?: string;
     ldkNodeInitialized?: boolean;
     // NWC
     nostrWalletConnectUrl: string;
@@ -227,6 +229,7 @@ export default class WalletConfiguration extends React.Component<
         embeddedLdkNetwork: 'mainnet',
         ldkEsploraServer: '',
         ldkRgsServer: '',
+        ldkVssServer: '',
         ldkNodeInitialized: false,
         // NWC
         nostrWalletConnectUrl: '',
@@ -431,6 +434,7 @@ export default class WalletConfiguration extends React.Component<
                 embeddedLdkNetwork,
                 ldkEsploraServer,
                 ldkRgsServer,
+                ldkVssServer,
                 // NWC
                 nostrWalletConnectUrl
             } = node as any;
@@ -474,6 +478,7 @@ export default class WalletConfiguration extends React.Component<
                 embeddedLdkNetwork,
                 ldkEsploraServer,
                 ldkRgsServer,
+                ldkVssServer,
                 ldkNodeInitialized: !!ldkMnemonic,
                 // NWC
                 nostrWalletConnectUrl
@@ -525,7 +530,8 @@ export default class WalletConfiguration extends React.Component<
             ldkNodeDir,
             embeddedLdkNetwork,
             ldkEsploraServer,
-            ldkRgsServer
+            ldkRgsServer,
+            ldkVssServer
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -567,7 +573,8 @@ export default class WalletConfiguration extends React.Component<
             ldkNodeDir,
             embeddedLdkNetwork,
             ldkEsploraServer,
-            ldkRgsServer
+            ldkRgsServer,
+            ldkVssServer
         };
 
         let nodes: Node[];
@@ -1007,7 +1014,8 @@ export default class WalletConfiguration extends React.Component<
             ),
             ldkRgsServer: getDefaultRgsServer(
                 network as 'mainnet' | 'testnet' | 'signet' | 'regtest'
-            )
+            ),
+            ldkVssServer: DEFAULT_VSS_SERVER
         };
 
         let nodes: any;
@@ -1091,7 +1099,8 @@ export default class WalletConfiguration extends React.Component<
                     ldkEsploraServer || getDefaultEsploraServer(networkType),
                 rgsServerUrl: ldkRgsServer || getDefaultRgsServer(networkType),
                 lsps1Config,
-                trustedPeers0conf: trustedPeers
+                trustedPeers0conf: trustedPeers,
+                vssServerUrl: DEFAULT_VSS_SERVER
             });
 
             if (response && response.mnemonic) {
