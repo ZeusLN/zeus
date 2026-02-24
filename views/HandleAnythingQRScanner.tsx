@@ -85,7 +85,7 @@ export default class HandleAnythingQRScanner extends React.Component<
                     navigation.goBack();
                     navigation.navigate('Swaps', {
                         initialInvoice: value,
-                        initialAmountSats: satAmount,
+                        initialAmountSats: satAmount || 0,
                         initialReverse: true
                     });
                     return;
