@@ -161,8 +161,7 @@ export default class NodeInfoStore {
         const flowLspNotConfigured =
             implementation === 'lnd'
                 ? !restIsConfigured
-                : implementation === 'embedded-lnd' ||
-                  implementation === 'embedded-ldk-node'
+                : BackendUtils.isLocalWallet()
                 ? false
                 : true;
 
