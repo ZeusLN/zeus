@@ -539,6 +539,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                 split[1] || bolt12,
                 satAmount
             );
+            if (res.payment_hash) {
+                // LDK Node: payment already completed directly
+                this.setState({ loading: false, error_msg: '' });
+                this.props.navigation.navigate('SendingLightning');
+                return;
+            }
             if (!res.invoice) {
                 this.setState({
                     loading: false,

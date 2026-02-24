@@ -281,6 +281,88 @@ const sendBolt11UsingAmount = async ({
 };
 
 // ============================================================================
+// BOLT12 Payment Functions
+// ============================================================================
+
+const bolt12Receive = async ({
+    amountMsat,
+    description,
+    expirySecs
+}: {
+    amountMsat: number;
+    description: string;
+    expirySecs: number;
+}): Promise<{ offer: string; offerId: string }> => {
+    return await LdkNodeModule.bolt12Receive(
+        amountMsat,
+        description,
+        expirySecs
+    );
+};
+
+const bolt12ReceiveVariableAmount = async ({
+    description,
+    expirySecs
+}: {
+    description: string;
+    expirySecs: number;
+}): Promise<{ offer: string; offerId: string }> => {
+    return await LdkNodeModule.bolt12ReceiveVariableAmount(
+        description,
+        expirySecs
+    );
+};
+
+const bolt12Send = async ({
+    offer,
+    payerNote
+}: {
+    offer: string;
+    payerNote?: string | null;
+}): Promise<string> => {
+    const result = await LdkNodeModule.bolt12Send(offer, payerNote ?? null);
+    return result.paymentId;
+};
+
+const bolt12SendUsingAmount = async ({
+    offer,
+    amountMsat,
+    payerNote
+}: {
+    offer: string;
+    amountMsat: number;
+    payerNote?: string | null;
+}): Promise<string> => {
+    const result = await LdkNodeModule.bolt12SendUsingAmount(
+        offer,
+        amountMsat,
+        payerNote ?? null
+    );
+    return result.paymentId;
+};
+
+const bolt12InitiateRefund = async ({
+    amountMsat,
+    expirySecs
+}: {
+    amountMsat: number;
+    expirySecs: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.bolt12InitiateRefund(
+        amountMsat,
+        expirySecs
+    );
+    return result.refund;
+};
+
+const bolt12RequestRefundPayment = async (
+    refundStr: string
+): Promise<string> => {
+    const result = await LdkNodeModule.bolt12RequestRefundPayment(refundStr);
+    return result.invoice;
+};
+
+// ============================================================================
 // Payment Functions
 // ============================================================================
 
@@ -583,6 +665,31 @@ export interface ILdkNodeInjections {
             amountMsat: number;
         }) => Promise<string>;
     };
+    bolt12: {
+        bolt12Receive: (params: {
+            amountMsat: number;
+            description: string;
+            expirySecs: number;
+        }) => Promise<{ offer: string; offerId: string }>;
+        bolt12ReceiveVariableAmount: (params: {
+            description: string;
+            expirySecs: number;
+        }) => Promise<{ offer: string; offerId: string }>;
+        bolt12Send: (params: {
+            offer: string;
+            payerNote?: string | null;
+        }) => Promise<string>;
+        bolt12SendUsingAmount: (params: {
+            offer: string;
+            amountMsat: number;
+            payerNote?: string | null;
+        }) => Promise<string>;
+        bolt12InitiateRefund: (params: {
+            amountMsat: number;
+            expirySecs: number;
+        }) => Promise<string>;
+        bolt12RequestRefundPayment: (refundStr: string) => Promise<string>;
+    };
     payments: {
         listPayments: () => Promise<PaymentDetails[]>;
     };
@@ -686,6 +793,14 @@ const LdkNodeInjection: ILdkNodeInjections = {
         receiveVariableAmountBolt11,
         sendBolt11,
         sendBolt11UsingAmount
+    },
+    bolt12: {
+        bolt12Receive,
+        bolt12ReceiveVariableAmount,
+        bolt12Send,
+        bolt12SendUsingAmount,
+        bolt12InitiateRefund,
+        bolt12RequestRefundPayment
     },
     payments: {
         listPayments
