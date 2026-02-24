@@ -51,6 +51,8 @@ export default function NodeIdenticon({
                 return `nwc-${selectedNode.nostrWalletConnectUrl || ''}`;
             case 'embedded-lnd':
                 return `embedded-lnd-${selectedNode.lndDir || 'lnd'}`;
+            case 'embedded-ldk-node':
+                return `embedded-ldk-node-${selectedNode.ldkNodeDir || 'ldk'}`;
             default:
                 return selectedNode.url
                     ? `${selectedNode.implementation || ''}-${selectedNode.url}`

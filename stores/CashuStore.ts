@@ -396,22 +396,30 @@ export default class CashuStore {
             console.warn('CDK: Stored cashu seed is not valid BIP-39');
         }
 
-        // No valid stored cashu seed - derive from LND seed
+        // No valid stored cashu seed - derive from wallet seed
+        // LDK Node stores mnemonic as a single string; LND as a word array
+        const ldkMnemonic = this.settingsStore.ldkMnemonic;
         const lndSeedPhrase = this.settingsStore.seedPhrase;
-        if (!lndSeedPhrase || lndSeedPhrase.length === 0) {
-            console.warn('CDK: No LND seed phrase available');
+
+        let cashuSeedPhrase: string;
+        if (ldkMnemonic) {
+            // LDK Node uses a 12-word mnemonic - use it directly as the
+            // cashu seed since it already has exactly 128 bits of entropy
+            cashuSeedPhrase = ldkMnemonic;
+        } else if (lndSeedPhrase && lndSeedPhrase.length > 0) {
+            // LND uses a 24-word mnemonic - derive a 12-word cashu seed
+            // from bytes [48:64] of the BIP-39 seed (v2-bip39 style)
+            const lndMnemonic = lndSeedPhrase.join(' ');
+            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(lndMnemonic);
+            const entropy = seedFromMnemonic.slice(48, 64);
+            cashuSeedPhrase = bip39scure.entropyToMnemonic(
+                entropy,
+                BIP39_WORD_LIST
+            );
+        } else {
+            console.warn('CDK: No wallet seed phrase available');
             return null;
         }
-
-        const lndMnemonic = lndSeedPhrase.join(' ');
-
-        // Derive cashu seed from LND seed (v2-bip39 style)
-        const seedFromMnemonic = bip39scure.mnemonicToSeedSync(lndMnemonic);
-        const entropy = seedFromMnemonic.slice(48, 64);
-        const cashuSeedPhrase = bip39scure.entropyToMnemonic(
-            entropy,
-            BIP39_WORD_LIST
-        );
 
         // Store derived seed for future use
         const derivedSeedPhrase = cashuSeedPhrase.split(' ');
@@ -423,7 +431,7 @@ export default class CashuStore {
         this.seedVersion = 'v2-bip39';
         Storage.setItem(`${this.getLndDir()}-cashu-seed-version`, 'v2-bip39');
 
-        console.log('CDK: Derived and stored cashu seed from LND seed');
+        console.log('CDK: Derived and stored cashu seed from wallet seed');
         return cashuSeedPhrase;
     };
 
@@ -1722,7 +1730,10 @@ export default class CashuStore {
         try {
             // Ensure CDK is initialized
             if (!this.cdkInitialized) {
-                await this.initializeCDK();
+                const initialized = await this.initializeCDK();
+                if (!initialized) {
+                    throw new Error('CDK wallet not initialized');
+                }
             }
             if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
                 const seedVersion = 'v2-bip39';
@@ -3478,7 +3489,10 @@ export default class CashuStore {
         try {
             // Ensure CDK is initialized
             if (!this.cdkInitialized) {
-                await this.initializeCDK();
+                const initialized = await this.initializeCDK();
+                if (!initialized) {
+                    throw new Error('CDK wallet not initialized');
+                }
             }
 
             // Check if token is valid
