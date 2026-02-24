@@ -208,8 +208,11 @@ export default class NodeConfigExportImport extends React.Component<
         const allNodesSelected =
             nodes.length > 0 &&
             selectedNodes.length ===
-                nodes.filter((node) => node.implementation !== 'embedded-lnd')
-                    .length;
+                nodes.filter(
+                    (node) =>
+                        node.implementation !== 'embedded-lnd' &&
+                        node.implementation !== 'embedded-ldk-node'
+                ).length;
 
         return (
             <Modal
@@ -253,7 +256,10 @@ export default class NodeConfigExportImport extends React.Component<
                                                     (index) =>
                                                         nodes[index]
                                                             .implementation !==
-                                                        'embedded-lnd'
+                                                            'embedded-lnd' &&
+                                                        nodes[index]
+                                                            .implementation !==
+                                                            'embedded-ldk-node'
                                                 );
                                             this.setState({
                                                 selectedNodes: selectableNodes
@@ -275,7 +281,8 @@ export default class NodeConfigExportImport extends React.Component<
 
                             {nodes.map((node: Node, index: number) => {
                                 const isEmbedded =
-                                    node.implementation === 'embedded-lnd';
+                                    node.implementation === 'embedded-lnd' ||
+                                    node.implementation === 'embedded-ldk-node';
                                 const isSelected =
                                     selectedNodes.includes(index);
 

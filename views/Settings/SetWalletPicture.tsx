@@ -78,7 +78,8 @@ export default class SetWalletPicture extends React.Component<
             'cln-rest': [
                 require('../../assets/images/CLN.jpg'),
                 require('../../assets/images/BTCpay.jpg')
-            ]
+            ],
+            'embedded-ldk-node': [require('../../assets/images/ldk.png')]
         };
 
         if (implementation && implementation in implementationImagesMap) {

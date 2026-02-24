@@ -91,7 +91,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     async componentDidMount() {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
-        if (BackendUtils.supportsLSPS1rest()) {
+        if (BackendUtils.supportsLSPS1native()) {
+            // Native LSPS1 - LSP is configured at node initialization
+            LSPStore.lsps1GetInfoNative();
+        } else if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.lsps1GetInfoREST();
         } else if (BackendUtils.supportsLSPScustomMessage()) {
             console.log('connecting');
@@ -390,6 +393,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'
+            : BackendUtils.supportsLSPS1native()
+            ? localeString('views.LSPS1.nativeLsps1Enabled')
             : BackendUtils.supportsLSPScustomMessage()
             ? LSPStore.getLSPSPubkey()
             : LSPStore.getLSPS1Rest();
@@ -1208,7 +1213,15 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         Object.keys(createOrderResponse)
                                             .length === 0
                                     ) {
-                                        if (BackendUtils.supportsLSPS1rest()) {
+                                        if (
+                                            BackendUtils.supportsLSPS1native()
+                                        ) {
+                                            LSPStore.lsps1CreateOrderNative(
+                                                this.state
+                                            );
+                                        } else if (
+                                            BackendUtils.supportsLSPS1rest()
+                                        ) {
                                             LSPStore.lsps1CreateOrderREST(
                                                 this.state
                                             );
@@ -1266,6 +1279,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         this.props.NodeInfoStore.nodeInfo.nodeId;
 
                                                     if (
+                                                        BackendUtils.supportsLSPS1native()
+                                                    ) {
+                                                        orderData.native = true;
+                                                    } else if (
                                                         BackendUtils.supportsLSPScustomMessage()
                                                     ) {
                                                         orderData.peer =
@@ -1357,7 +1374,11 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                             <Button
                                 title={localeString('general.retry')}
                                 onPress={async () => {
-                                    if (BackendUtils.supportsLSPS1rest()) {
+                                    if (BackendUtils.supportsLSPS1native()) {
+                                        LSPStore.lsps1GetInfoNative();
+                                    } else if (
+                                        BackendUtils.supportsLSPS1rest()
+                                    ) {
                                         LSPStore.lsps1GetInfoREST();
                                     } else if (
                                         BackendUtils.supportsLSPScustomMessage()
