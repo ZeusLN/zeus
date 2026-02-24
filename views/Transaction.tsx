@@ -336,7 +336,7 @@ export default class TransactionView extends React.Component<
                     {!!status && (
                         <KeyValue
                             keyValue={localeString('views.Transaction.status')}
-                            value={status}
+                            value={transaction.getStatusDisplay}
                         />
                     )}
 

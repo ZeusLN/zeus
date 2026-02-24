@@ -1348,8 +1348,8 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
-                let ys = try yStrings.map { hex -> PublicKey in
-                    try PublicKey(hex: hex)
+                let ys = try yStrings.map { hex -> CashuDevKit.PublicKey in
+                    try CashuDevKit.PublicKey(hex: hex)
                 }
 
                 try await db.updateProofs(added: [], removedYs: ys)

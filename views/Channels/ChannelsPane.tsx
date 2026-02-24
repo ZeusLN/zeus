@@ -534,7 +534,8 @@ export default class ChannelsPane extends React.PureComponent<
                             <View style={{ marginTop: 40 }}>
                                 <LoadingIndicator />
                             </View>
-                        ) : BackendUtils.supportsPendingChannels() ? (
+                        ) : BackendUtils.supportsPendingChannels() &&
+                          BackendUtils.supportsClosedChannels() ? (
                             <NavigationIndependentTree>
                                 <NavigationContainer
                                     theme={Theme}
@@ -572,6 +573,40 @@ export default class ChannelsPane extends React.PureComponent<
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Closed
+                                                    )
+                                            }}
+                                        />
+                                    </Tab.Navigator>
+                                </NavigationContainer>
+                            </NavigationIndependentTree>
+                        ) : BackendUtils.supportsPendingChannels() ? (
+                            <NavigationIndependentTree>
+                                <NavigationContainer
+                                    theme={Theme}
+                                    ref={this.tabNavigationRef}
+                                >
+                                    <Tab.Navigator
+                                        initialRouteName={initialRoute}
+                                        backBehavior="none"
+                                        screenOptions={getTabScreenOptions}
+                                    >
+                                        <Tab.Screen
+                                            name={openChannelsTabName}
+                                            component={OpenChannelsScreen}
+                                            listeners={{
+                                                focus: () =>
+                                                    setChannelsType(
+                                                        ChannelsType.Open
+                                                    )
+                                            }}
+                                        />
+                                        <Tab.Screen
+                                            name={pendingChannelsTabName}
+                                            component={PendingChannelsScreen}
+                                            listeners={{
+                                                focus: () =>
+                                                    setChannelsType(
+                                                        ChannelsType.Pending
                                                     )
                                             }}
                                         />

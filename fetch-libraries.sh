@@ -11,6 +11,12 @@ FILE_PATH=https://github.com/ZeusLN/lnd/releases/download/$VERSION/
 ANDROID_LINK=$FILE_PATH$ANDROID_FILE
 IOS_LINK=$FILE_PATH$IOS_FILE.zip
 
+# LDK Node
+LDK_NODE_VERSION=v0.7.0-zeus-lsps7-rgs-fix
+LDK_NODE_IOS_FILE=LDKNodeFFI.xcframework
+LDK_NODE_IOS_SHA256='04744f8366ec61644b149a40cb3460241019ed0cf7831a7fe9286c452a8ea42e'
+LDK_NODE_IOS_LINK=https://github.com/ZeusLN/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_IOS_FILE.zip
+
 # test that curl and unzip are installed
 if ! command -v curl &> /dev/null
 then
@@ -262,3 +268,31 @@ echo "Downloading Zeus Cashu Restore Kotlin bindings..." >&2
 curl -L "$RESTORE_KOTLIN_BINDINGS_URL" > "$RESTORE_KOTLIN_DIR/zeus_cashu_restore.kt"
 
 echo "Zeus Cashu Restore Kotlin bindings updated to v$RESTORE_VERSION"
+
+################
+# LDK Node iOS #
+################
+
+mkdir -p ios/LdkNodeLibZipFile
+
+if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then
+    echo "LDK Node iOS library file missing or checksum failed" >&2
+
+    # delete old instance of library file
+    rm -f ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+
+    # download LDK Node iOS library file
+    curl -L $LDK_NODE_IOS_LINK > ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip
+
+    # check checksum
+    if ! echo "$LDK_NODE_IOS_SHA256 ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip" | sha256sum -c -; then
+        echo "LDK Node iOS checksum failed" >&2
+        exit 1
+    fi
+fi
+
+# delete old instances of library files
+rm -rf ios/LdkNodeMobile/$LDK_NODE_IOS_FILE
+
+# unzip LDK Node library file
+unzip ios/LdkNodeLibZipFile/$LDK_NODE_IOS_FILE.zip -d ios/LdkNodeMobile

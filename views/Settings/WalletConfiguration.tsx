@@ -57,7 +57,9 @@ import SettingsStore, {
     EMBEDDED_NODE_NETWORK_KEYS,
     Settings,
     Node,
-    Implementations
+    Implementations,
+    DEFAULT_LSPS1_PUBKEY_MAINNET,
+    DEFAULT_LSPS1_PUBKEY_TESTNET
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
@@ -70,6 +72,13 @@ import {
     deleteLndWallet,
     stopLnd
 } from '../../utils/LndMobileUtils';
+import {
+    createLdkNodeWallet,
+    stopLdkNode,
+    deleteLdkNodeWallet,
+    getDefaultEsploraServer,
+    getDefaultRgsServer
+} from '../../utils/EmbeddedLdkNodeUtils';
 
 interface WalletConfigurationProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -134,6 +143,14 @@ interface WalletConfigurationState {
     channelBackupsBase64?: string;
     creatingWallet: boolean;
     errorCreatingWallet: boolean;
+    // embedded ldk node
+    ldkMnemonic?: string;
+    ldkPassphrase?: string;
+    ldkNodeDir?: string;
+    embeddedLdkNetwork?: string;
+    ldkEsploraServer?: string;
+    ldkRgsServer?: string;
+    ldkNodeInitialized?: boolean;
     // NWC
     nostrWalletConnectUrl: string;
     // Errors
@@ -203,6 +220,14 @@ export default class WalletConfiguration extends React.Component<
         channelBackupsBase64: '',
         creatingWallet: false,
         errorCreatingWallet: false,
+        // embedded ldk node
+        ldkMnemonic: '',
+        ldkPassphrase: '',
+        ldkNodeDir: '',
+        embeddedLdkNetwork: 'mainnet',
+        ldkEsploraServer: '',
+        ldkRgsServer: '',
+        ldkNodeInitialized: false,
         // NWC
         nostrWalletConnectUrl: '',
         // Errors
@@ -409,6 +434,13 @@ export default class WalletConfiguration extends React.Component<
                 embeddedLndNetwork,
                 lndDir,
                 isSqlite,
+                // embedded LDK Node
+                ldkMnemonic,
+                ldkPassphrase,
+                ldkNodeDir,
+                embeddedLdkNetwork,
+                ldkEsploraServer,
+                ldkRgsServer,
                 // NWC
                 nostrWalletConnectUrl
             } = node as any;
@@ -445,6 +477,14 @@ export default class WalletConfiguration extends React.Component<
                 embeddedLndNetwork,
                 lndDir,
                 isSqlite,
+                // embedded LDK Node
+                ldkMnemonic,
+                ldkPassphrase,
+                ldkNodeDir,
+                embeddedLdkNetwork,
+                ldkEsploraServer,
+                ldkRgsServer,
+                ldkNodeInitialized: !!ldkMnemonic,
                 // NWC
                 nostrWalletConnectUrl
             });
@@ -488,7 +528,14 @@ export default class WalletConfiguration extends React.Component<
             lndDir,
             isSqlite,
             nostrWalletConnectUrl,
-            photo
+            photo,
+            // embedded LDK Node
+            ldkMnemonic,
+            ldkPassphrase,
+            ldkNodeDir,
+            embeddedLdkNetwork,
+            ldkEsploraServer,
+            ldkRgsServer
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -523,7 +570,14 @@ export default class WalletConfiguration extends React.Component<
             lndDir,
             isSqlite,
             nostrWalletConnectUrl,
-            photo
+            photo,
+            // embedded LDK Node
+            ldkMnemonic,
+            ldkPassphrase,
+            ldkNodeDir,
+            embeddedLdkNetwork,
+            ldkEsploraServer,
+            ldkRgsServer
         };
 
         let nodes: Node[];
@@ -661,7 +715,8 @@ export default class WalletConfiguration extends React.Component<
     deleteNodeConfig = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
-        const { index, implementation, lndDir, active } = this.state;
+        const { index, implementation, lndDir, ldkNodeDir, active } =
+            this.state;
         const { nodes } = settings;
 
         const newNodes: any = [];
@@ -687,10 +742,24 @@ export default class WalletConfiguration extends React.Component<
             SettingsStore.embeddedLndStarted = false;
         }
 
+        // If deleting active LDK Node wallet, stop it first
+        if (active && implementation === 'embedded-ldk-node') {
+            try {
+                await stopLdkNode();
+            } catch (error) {
+                console.log('Error stopping LDK Node before deletion:', error);
+            }
+        }
+
         // Delete embedded LND wallet data if applicable
         // Skip stopLnd: already stopped above if active, or inactive wallet (don't stop active)
         if (implementation === 'embedded-lnd') {
             await deleteLndWallet(lndDir || 'lnd');
+        }
+
+        // Delete LDK Node wallet data if applicable
+        if (implementation === 'embedded-ldk-node' && ldkNodeDir) {
+            await deleteLdkNodeWallet(ldkNodeDir);
         }
 
         const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
@@ -928,6 +997,142 @@ export default class WalletConfiguration extends React.Component<
         }
     };
 
+    saveLdkNodeWalletConfiguration = (
+        mnemonic: string,
+        nodeDir: string,
+        network: string
+    ) => {
+        const { SettingsStore, navigation } = this.props;
+        const { ldkPassphrase } = this.state;
+        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+
+        const node = {
+            implementation: 'embedded-ldk-node',
+            embeddedLdkNetwork: network,
+            ldkNodeDir: nodeDir,
+            ldkMnemonic: mnemonic,
+            ldkPassphrase,
+            ldkEsploraServer: getDefaultEsploraServer(
+                network as 'mainnet' | 'testnet' | 'signet' | 'regtest'
+            ),
+            ldkRgsServer: getDefaultRgsServer(
+                network as 'mainnet' | 'testnet' | 'signet' | 'regtest'
+            )
+        };
+
+        let nodes: any;
+        if (settings.nodes) {
+            nodes = [...settings.nodes];
+            nodes.push(node);
+        } else {
+            nodes = [node];
+        }
+
+        updateSettings({
+            nodes,
+            selectedNode: nodes.length - 1
+        }).then(async () => {
+            this.setState({ saved: true });
+
+            if (nodes.length === 1) {
+                setConnectingStatus(true);
+                navigation.popTo('Wallet');
+            } else {
+                navigation.popTo('Wallets');
+            }
+        });
+    };
+
+    createLdkNodeNewWallet = async (network: string = 'mainnet') => {
+        const { ldkPassphrase, ldkEsploraServer, ldkRgsServer, ldkMnemonic } =
+            this.state;
+
+        this.setState({
+            creatingWallet: true
+        });
+
+        try {
+            await stopLdkNode();
+
+            const ldkNodeDir = uuidv4();
+            const networkType = network as
+                | 'mainnet'
+                | 'testnet'
+                | 'signet'
+                | 'regtest';
+
+            // Get LSPS1 config from settings based on network
+            const { SettingsStore } = this.props;
+            const { settings } = SettingsStore;
+            const isTestnet = networkType === 'testnet';
+            const lsps1Pubkey = isTestnet
+                ? settings.lsps1PubkeyTestnet
+                : settings.lsps1PubkeyMainnet;
+            const lsps1Host = isTestnet
+                ? settings.lsps1HostTestnet
+                : settings.lsps1HostMainnet;
+            const lsps1Token = settings.lsps1Token;
+
+            const lsps1Config =
+                lsps1Pubkey && lsps1Host
+                    ? {
+                          nodeId: lsps1Pubkey,
+                          address: lsps1Host,
+                          token: lsps1Token || null
+                      }
+                    : undefined;
+
+            // Always include Flow LSP pubkey as trusted 0-conf peer
+            const flowLspPubkey = isTestnet
+                ? DEFAULT_LSPS1_PUBKEY_TESTNET
+                : DEFAULT_LSPS1_PUBKEY_MAINNET;
+
+            const trustedPeers = [flowLspPubkey];
+            if (lsps1Config?.nodeId && lsps1Config.nodeId !== flowLspPubkey) {
+                trustedPeers.push(lsps1Config.nodeId);
+            }
+
+            const response = await createLdkNodeWallet({
+                nodeDir: ldkNodeDir,
+                seedMnemonic: ldkMnemonic || undefined,
+                passphrase: ldkPassphrase || undefined,
+                network: networkType,
+                esploraServerUrl:
+                    ldkEsploraServer || getDefaultEsploraServer(networkType),
+                rgsServerUrl: ldkRgsServer || getDefaultRgsServer(networkType),
+                lsps1Config,
+                trustedPeers0conf: trustedPeers
+            });
+
+            if (response && response.mnemonic) {
+                this.setState({
+                    ldkMnemonic: response.mnemonic,
+                    ldkNodeDir,
+                    embeddedLdkNetwork: network,
+                    ldkNodeInitialized: true,
+                    creatingWallet: false
+                });
+
+                this.saveLdkNodeWalletConfiguration(
+                    response.mnemonic,
+                    ldkNodeDir,
+                    network
+                );
+            } else {
+                this.setState({
+                    creatingWallet: false,
+                    errorCreatingWallet: true
+                });
+            }
+        } catch (error) {
+            console.error('Error creating LDK Node wallet:', error);
+            this.setState({
+                creatingWallet: false,
+                errorCreatingWallet: true
+            });
+        }
+    };
+
     render() {
         const SERVER_ADDRESS_CHARS = "a-zA-Z0-9-._~!$&'()*+,;=";
 
@@ -966,6 +1171,11 @@ export default class WalletConfiguration extends React.Component<
             channelBackupsBase64,
             creatingWallet,
             errorCreatingWallet,
+            // LDK Node
+            ldkMnemonic,
+            embeddedLdkNetwork,
+            ldkNodeInitialized,
+            // NWC
             nostrWalletConnectUrl,
             lndhubUrlError,
             usernameError,
@@ -988,10 +1198,12 @@ export default class WalletConfiguration extends React.Component<
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
             implementation !== 'embedded-lnd' &&
+            implementation !== 'embedded-ldk-node' &&
             implementation !== 'nostr-wallet-connect';
         const supportsCertVerification =
             implementation !== 'lightning-node-connect' &&
             implementation !== 'embedded-lnd' &&
+            implementation !== 'embedded-ldk-node' &&
             implementation !== 'nostr-wallet-connect';
 
         const CertInstallInstructions = () => (
@@ -1486,6 +1698,26 @@ export default class WalletConfiguration extends React.Component<
                                                 })
                                             }
                                             locked={loading}
+                                        />
+                                    </View>
+                                )}
+
+                            {!ldkNodeInitialized &&
+                                implementation === 'embedded-ldk-node' && (
+                                    <View>
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'general.network'
+                                            )}
+                                            selectedValue={
+                                                embeddedLdkNetwork || 'mainnet'
+                                            }
+                                            onValueChange={(value: string) => {
+                                                this.setState({
+                                                    embeddedLdkNetwork: value
+                                                });
+                                            }}
+                                            values={EMBEDDED_NODE_NETWORK_KEYS}
                                         />
                                     </View>
                                 )}
@@ -2466,6 +2698,66 @@ export default class WalletConfiguration extends React.Component<
                             )}
                         </View>
 
+                        {implementation === 'embedded-ldk-node' && (
+                            <View style={{ ...styles.button, marginTop: 20 }}>
+                                {!ldkNodeInitialized &&
+                                    !creatingWallet &&
+                                    !saved && (
+                                        <>
+                                            <View style={styles.button}>
+                                                <Button
+                                                    title={
+                                                        embeddedLdkNetwork ===
+                                                        'mainnet'
+                                                            ? localeString(
+                                                                  'views.Settings.NodeConfiguration.createMainnetWallet'
+                                                              )
+                                                            : localeString(
+                                                                  'views.Settings.NodeConfiguration.createTestnetWallet'
+                                                              )
+                                                    }
+                                                    onPress={async () => {
+                                                        await this.createLdkNodeNewWallet(
+                                                            embeddedLdkNetwork ||
+                                                                'mainnet'
+                                                        );
+                                                    }}
+                                                    tertiary
+                                                    disabled={loading}
+                                                />
+                                            </View>
+                                            <View style={styles.button}>
+                                                <Button
+                                                    title={
+                                                        embeddedLdkNetwork ===
+                                                        'mainnet'
+                                                            ? localeString(
+                                                                  'views.Settings.NodeConfiguration.restoreMainnetWallet'
+                                                              )
+                                                            : localeString(
+                                                                  'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                              )
+                                                    }
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'SeedRecovery',
+                                                            {
+                                                                network:
+                                                                    embeddedLdkNetwork,
+                                                                implementation:
+                                                                    'embedded-ldk-node'
+                                                            }
+                                                        )
+                                                    }
+                                                    secondary
+                                                    disabled={loading}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                            </View>
+                        )}
+
                         {!existingAccount && implementation === 'lndhub' && (
                             <View style={{ ...styles.button }}>
                                 <Button
@@ -2530,6 +2822,35 @@ export default class WalletConfiguration extends React.Component<
                             </View>
                         )}
 
+                        {((implementation === 'embedded-lnd' &&
+                            adminMacaroon &&
+                            seedPhrase) ||
+                            (implementation === 'embedded-ldk-node' &&
+                                ldkNodeInitialized &&
+                                ldkMnemonic)) && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.NodeConfiguration.backUpWallet'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'Seed',
+                                            implementation ===
+                                                'embedded-ldk-node'
+                                                ? {
+                                                      implementation:
+                                                          'embedded-ldk-node'
+                                                  }
+                                                : undefined
+                                        )
+                                    }
+                                    secondary
+                                    disabled={loading}
+                                />
+                            </View>
+                        )}
+
                         {implementation === 'embedded-lnd' && (
                             <View style={{ ...styles.button }}>
                                 {!adminMacaroon && !creatingWallet && (
@@ -2587,25 +2908,15 @@ export default class WalletConfiguration extends React.Component<
                                         </View>
                                     </>
                                 )}
-                                {adminMacaroon && seedPhrase && (
-                                    <Button
-                                        title={localeString(
-                                            'views.Settings.NodeConfiguration.backUpWallet'
-                                        )}
-                                        onPress={() =>
-                                            navigation.navigate('Seed')
-                                        }
-                                        secondary
-                                        disabled={loading}
-                                    />
-                                )}
                             </View>
                         )}
 
                         {!creatingWallet &&
                             !(
-                                implementation === 'embedded-lnd' &&
-                                !adminMacaroon
+                                (implementation === 'embedded-lnd' &&
+                                    !adminMacaroon) ||
+                                (implementation === 'embedded-ldk-node' &&
+                                    !ldkNodeInitialized)
                             ) &&
                             !saved && (
                                 <View style={{ ...styles.button }}>
@@ -2727,30 +3038,34 @@ export default class WalletConfiguration extends React.Component<
                             </View>
                         )}
 
-                        {saved && implementation !== 'embedded-lnd' && (
-                            <View style={styles.button}>
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.WalletConfiguration.duplicateWallet'
-                                    )}
-                                    onPress={() => {
-                                        /**
-                                         * Scrolls to the top of the screen when going to the node config
-                                         * page for the copied node. Without this, the user would have to
-                                         * manually scroll to the top to edit the copied node properties.
-                                         */
-                                        this.scrollViewRef.current?.scrollTo({
-                                            x: 0,
-                                            y: 0,
-                                            animated: true
-                                        });
-                                        this.copyNodeConfig();
-                                    }}
-                                    secondary
-                                    disabled={loading}
-                                />
-                            </View>
-                        )}
+                        {saved &&
+                            implementation !== 'embedded-lnd' &&
+                            implementation !== 'embedded-ldk-node' && (
+                                <View style={styles.button}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.WalletConfiguration.duplicateWallet'
+                                        )}
+                                        onPress={() => {
+                                            /**
+                                             * Scrolls to the top of the screen when going to the node config
+                                             * page for the copied node. Without this, the user would have to
+                                             * manually scroll to the top to edit the copied node properties.
+                                             */
+                                            this.scrollViewRef.current?.scrollTo(
+                                                {
+                                                    x: 0,
+                                                    y: 0,
+                                                    animated: true
+                                                }
+                                            );
+                                            this.copyNodeConfig();
+                                        }}
+                                        secondary
+                                        disabled={loading}
+                                    />
+                                </View>
+                            )}
 
                         {saved && (
                             <View style={styles.button}>

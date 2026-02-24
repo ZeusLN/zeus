@@ -127,6 +127,13 @@ export default class Transaction extends BaseModel {
         return outpoint;
     }
 
+    @computed public get getStatusDisplay(): string {
+        if (this.isConfirmed) return localeString('general.confirmed');
+        if (this.status === 'pending')
+            return localeString('general.unconfirmed');
+        return this.status || '';
+    }
+
     @computed public get getNoteKey(): string {
         return `note-${this.tx}`;
     }

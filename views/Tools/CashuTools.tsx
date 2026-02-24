@@ -9,6 +9,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 
 import CashuStore from '../../stores/CashuStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -17,9 +18,10 @@ import UrlUtils from '../../utils/UrlUtils';
 interface CashuToolsProps {
     navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    SettingsStore: SettingsStore;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class CashuTools extends React.Component<CashuToolsProps, {}> {
     handleDeleteData = () => {
@@ -44,8 +46,9 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
     };
 
     render() {
-        const { navigation, CashuStore } = this.props;
+        const { navigation, CashuStore, SettingsStore } = this.props;
         const { seedVersion } = CashuStore;
+        const isLdk = SettingsStore.implementation === 'embedded-ldk-node';
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -61,7 +64,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                         navigation={navigation}
                     />
                     <ScrollView>
-                        {seedVersion === 'v2-bip39' && (
+                        {seedVersion === 'v2-bip39' && !isLdk && (
                             <>
                                 <ListItem
                                     containerStyle={{
@@ -103,41 +106,43 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                             </>
                         )}
 
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent'
-                            }}
-                            onPress={() =>
-                                navigation.navigate('LegacySeedRecovery')
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Cashu.LegacySeedRecovery.title'
-                                    )}
-                                </ListItem.Title>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Cashu.LegacySeedRecovery.subtitle'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
+                        {!isLdk && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() =>
+                                    navigation.navigate('LegacySeedRecovery')
+                                }
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.LegacySeedRecovery.title'
+                                        )}
+                                    </ListItem.Title>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.LegacySeedRecovery.subtitle'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
 
                         <View style={{ marginTop: 25 }}>
                             <Button
