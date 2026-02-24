@@ -1164,6 +1164,7 @@ export default class CashuStore {
         this.offlinePendingBalance = 0;
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
+        this.isOffline = false;
         this.isSweeping = false;
         this.stopConnectivityMonitoring();
     };
