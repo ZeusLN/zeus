@@ -1343,6 +1343,11 @@ class CashuDevKitModule: RCTEventEmitter {
                     return
                 }
 
+                if yStrings.isEmpty {
+                    resolve(nil)
+                    return
+                }
+
                 let ys = try yStrings.map { hex -> PublicKey in
                     try PublicKey(hex: hex)
                 }

@@ -1485,6 +1485,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val yArray = JSONArray(proofsYJson)
+                if (yArray.length() == 0) {
+                    withContext(Dispatchers.Main) {
+                        promise.resolve(null)
+                    }
+                    return@launch
+                }
+
                 val ys = (0 until yArray.length()).map { i ->
                     PublicKey(yArray.getString(i))
                 }
