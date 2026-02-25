@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "He respaldado mis 24 palabras",
     "views.Settings.Seed.dangerousText1": "¿Quieres copiar tu semilla de 24 palabras a tu portapapeles?",
     "views.Settings.Seed.dangerousText2": "Esto es PELIGROSO. Su semilla puede ser leída por otras aplicaciones que abra. Proceda con precaución.",
-    "views.Settings.Seed.dangerousButton": "Copiar peligrosamente la semilla al portapapeles",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Exportar semilla BIP-39 de la billetera Cashu",
     "views.Cashu.CashuSeed.text1": "Las siguientes 12 palabras son la copia de seguridad de tu billetera Cashu. No es necesario guardarlas si tienes una copia de seguridad de la frase semilla de 24 palabras de tu billetera LND, pero son útiles si quieres importar fondos a otra billetera Cashu.",
     "views.Cashu.LegacySeedRecovery.title": "Recuperación de semilla heredada",
