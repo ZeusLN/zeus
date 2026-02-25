@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "J'ai sauvegardé mes 24 mots",
     "views.Settings.Seed.dangerousText1": "Voulez-vous copier votre graine de 24 mots dans votre presse-papiers?",
     "views.Settings.Seed.dangerousText2": "C'est dangereux. Votre semence peut être lue par d'autres applications que vous ouvrez. Procéder avec prudence.",
-    "views.Settings.Seed.dangerousButton": "Copiez dangereusement les graines dans le presse-papiers",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Exporter la graine BIP-39 du portefeuille Cashu",
     "views.Cashu.CashuSeed.text1": "Les 12 mots suivants constituent la sauvegarde de votre portefeuille Cashu. Vous n'avez pas besoin de les sauvegarder si vous avez sauvegardé la phrase de départ de votre portefeuille LND intégré de 24 mots, mais cela peut être utile si vous souhaitez importer des fonds dans un autre portefeuille Cashu.",
     "views.Cashu.LegacySeedRecovery.title": "Récupération de semences patrimoniales",
