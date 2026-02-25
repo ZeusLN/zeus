@@ -948,6 +948,7 @@
     "views.Tools.migration.export.success": "Backup Successful",
     "views.Tools.migration.export.dbNotFound": "Channel database not found",
     "views.Tools.migration.export.failedToUpload": "Channel database failed to upload",
+    "views.Tools.migration.export.syncInProgress": "Please wait for the wallet to finish syncing before exporting channels.",
     "views.Tools.migration.export.backupFound": "backup found",
     "views.Tools.migration.import.success": "Import Successful",
     "views.Tools.migration.export.success.text": "Your channel database has been exported. Please restart the app to apply the configuration and lock the wallet.",
