@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Ho eseguito il backup delle mie 24 parole",
     "views.Settings.Seed.dangerousText1": "Vuoi copiare il tuo seme di 24 parole negli appunti?",
     "views.Settings.Seed.dangerousText2": "Questo è pericoloso. Il tuo seme può essere letto da altre applicazioni che apri. Procedi con cautela.",
-    "views.Settings.Seed.dangerousButton": "Copia pericolosamente semi negli appunti",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Esportazione seed BIP-39 del portafoglio Cashu",
     "views.Cashu.CashuSeed.text1": "Le 12 parole seguenti sono il backup del tuo portafoglio Cashu. Non è necessario salvarle se hai eseguito il backup della frase seed di 24 parole del tuo portafoglio LND incorporato, ma sono utili se desideri importare fondi in un altro portafoglio Cashu.",
     "views.Cashu.LegacySeedRecovery.title": "Recupero dei semi ereditati",
