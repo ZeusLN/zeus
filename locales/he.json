@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "גיביתי את 24 המילים שלי",
     "views.Settings.Seed.dangerousText1": "האם ברצונך להעתיק את גרעין 24 המילים ללוח שלך?",
     "views.Settings.Seed.dangerousText2": "סכנה! הגרעין שלכם יוכל להיקרא על ידי אפליקציות אחרות שתפתחו. המשיכו בזהירות.",
-    "views.Settings.Seed.dangerousButton": "העתקת גרעין באופן מסוכן ללוח",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Export Cashu wallet BIP-39 seed",
     "views.Cashu.CashuSeed.text1": "The following 12 words are your Cashu wallet backup. You do not have to save these if you have your 24 word embedded LND wallet seed phrase backed up, but it is useful if you want to import funds into another Cashu wallet.",
     "views.Cashu.LegacySeedRecovery.title": "Legacy seed recovery",
