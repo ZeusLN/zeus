@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Eu fiz backup das minhas 24 palavras",
     "views.Settings.Seed.dangerousText1": "Deseja copiar sua semente de 24 palavras para sua área de transferência?",
     "views.Settings.Seed.dangerousText2": "Isso é perigoso. Sua semente pode ser lida por outros aplicativos que você abre. Prossiga com cuidado.",
-    "views.Settings.Seed.dangerousButton": "Copie perigoso a semente para a área de transferência",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Exportar BIP-39 seed de carteira Cashu ",
     "views.Cashu.CashuSeed.text1": "As 12 palavras a seguir são o backup da sua carteira Cashu. Você não precisa salvá-las se tiver feito backup da frase-semente da carteira LND incorporada de 24 palavras, mas elas são úteis se você quiser importar fundos para outra carteira Cashu.",
     "views.Cashu.LegacySeedRecovery.title": "Recuperação de sementes antigas",
