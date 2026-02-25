@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Observer, Provider } from 'mobx-react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     BackHandler,
@@ -283,6 +283,8 @@ import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
+const Stack = createNativeStackNavigator();
+
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
     private appStateSubscription: NativeEventSubscription;
@@ -346,7 +348,6 @@ export default class App extends React.PureComponent {
     };
 
     render() {
-        const Stack = createStackNavigator();
         return (
             <Provider
                 ActivityStore={activityStore}
@@ -407,10 +408,10 @@ export default class App extends React.PureComponent {
                                                         );
                                                     }
                                                 }}
-                                                // @ts-ignore:next-line
                                                 theme={{
-                                                    dark: true,
+                                                    ...DarkTheme,
                                                     colors: {
+                                                        ...DarkTheme.colors,
                                                         background:
                                                             themeColor(
                                                                 'background'
@@ -436,9 +437,15 @@ export default class App extends React.PureComponent {
                                                         route
                                                     }) => ({
                                                         headerShown: false,
-                                                        animation: (
+                                                        // Only override animation when explicitly provided - undefined breaks shared element transitions
+                                                        ...((
                                                             route.params as any
-                                                        )?.animation
+                                                        )?.animation !=
+                                                            null && {
+                                                            animation: (
+                                                                route.params as any
+                                                            ).animation
+                                                        })
                                                     })}
                                                     screenListeners={({
                                                         navigation
