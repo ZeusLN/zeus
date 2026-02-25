@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Saya telah mencadangkan 24 kata saya",
     "views.Settings.Seed.dangerousText1": "Apakah Anda ingin menyalin 24 kata seed ke papan klip Anda?",
     "views.Settings.Seed.dangerousText2": "Ini BERBAHAYA. Seed Anda mungkin terbaca oleh aplikasi lain yang Anda buka. Lanjutkan dengan hati-hati.",
-    "views.Settings.Seed.dangerousButton": "(Bahaya) salin seed ke papan klip",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Ekspor seed BIP-39 dompet Cashu",
     "views.Cashu.CashuSeed.text1": "12 kata berikut adalah cadangan dompet Cashu Anda. Anda tidak perlu menyimpannya jika sudah memiliki 24 kata frasa pemulihan tersemat dompet LND yang dicadangkan, tetapi berguna jika ingin mengimpor dana ke dompet Cashu lain.",
     "views.Cashu.LegacySeedRecovery.title": "Pemulihan seed Legacy",
