@@ -15,7 +15,10 @@ import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
-const BACKUPS_HOST = 'http://localhost:1337';
+const BACKUPS_HOST =
+    Platform.OS === 'android'
+        ? 'http://10.0.2.2:1337'
+        : 'http://localhost:1337';
 
 const VALID_CHANNEL_DB_EXTENSIONS = ['.sqlite', '.db'];
 
@@ -168,6 +171,11 @@ export const uploadChannelBackupToOlympus = async (
                 if (setLoading) setLoading(false);
 
                 if (backupResponse.info().status === 200 && json.success) {
+                    await Storage.setItem(
+                        CHANNEL_MIGRATION_ACTIVE,
+                        JSON.stringify({ migrationStatus: true, lndDir })
+                    );
+
                     Alert.alert(
                         localeString('views.Tools.migration.export.success'),
                         localeString(
