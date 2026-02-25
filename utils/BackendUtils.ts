@@ -215,6 +215,7 @@ class BackendUtils {
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsChannelFundMax = () => this.call('supportsChannelFundMax');
     supportsOffers = () => this.call('supportsOffers');
+    supportsBolt12Address = () => this.call('supportsBolt12Address');
     supportsBolt11BlindedRoutes = () =>
         this.call('supportsBolt11BlindedRoutes');
     supportsAddressesWithDerivationPaths = () =>
