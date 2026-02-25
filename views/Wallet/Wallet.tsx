@@ -582,7 +582,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     trustedPeers.push(lsps1Config.nodeId);
                 }
 
-                await startLdkNodeWallet({
+                const ldkResult = await startLdkNodeWallet({
                     nodeDir: ldkNodeDir,
                     seedMnemonic: ldkMnemonic,
                     passphrase: ldkPassphrase,
@@ -597,6 +597,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     trustedPeers0conf: trustedPeers,
                     vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
                 });
+
+                if (ldkResult?.vssError) {
+                    AlertStore.setVssError(ldkResult.vssError);
+                }
+                if (ldkResult?.esploraError) {
+                    AlertStore.setEsploraError(ldkResult.esploraError);
+                }
+                if (ldkResult?.rgsError) {
+                    AlertStore.setRgsError(ldkResult.rgsError);
+                }
 
                 if (settings?.ecash?.enableCashu)
                     await CashuStore.initializeWallets();

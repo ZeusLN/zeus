@@ -22,10 +22,14 @@ class LdkNodeModule: RCTEventEmitter {
     private var storedLsps2NodeId: PublicKey?
     private var storedLsps2Address: SocketAddress?
     private var storedLsps2Token: String?
+    private var storedLsps7NodeId: PublicKey?
+    private var storedLsps7Address: SocketAddress?
+    private var storedLsps7Token: String?
 
     // VSS (Versioned Storage Service) config
     private var storedVssUrl: String?
     private var storedVssStoreId: String?
+    private var storedVssHeaders: [String: String] = [:]
 
     @objc
     override static func moduleName() -> String! {
@@ -54,8 +58,12 @@ class LdkNodeModule: RCTEventEmitter {
         storedLsps2NodeId = nil
         storedLsps2Address = nil
         storedLsps2Token = nil
+        storedLsps7NodeId = nil
+        storedLsps7Address = nil
+        storedLsps7Token = nil
         storedVssUrl = nil
         storedVssStoreId = nil
+        storedVssHeaders = [:]
     }
 
     // MARK: - Builder Methods
@@ -142,8 +150,8 @@ class LdkNodeModule: RCTEventEmitter {
         resolve(["status": "ok"])
     }
 
-    @objc(setVssServer:storeId:resolver:rejecter:)
-    func setVssServer(_ vssUrl: String, storeId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(setVssServer:storeId:headers:resolver:rejecter:)
+    func setVssServer(_ vssUrl: String, storeId: String, headers: NSDictionary?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard self.builder != nil else {
             reject("error", "Builder not initialized", nil)
             return
@@ -151,6 +159,11 @@ class LdkNodeModule: RCTEventEmitter {
 
         self.storedVssUrl = vssUrl
         self.storedVssStoreId = storeId
+        if let headers = headers as? [String: String] {
+            self.storedVssHeaders = headers
+        } else {
+            self.storedVssHeaders = [:]
+        }
         resolve(["status": "ok"])
     }
 
@@ -212,6 +225,19 @@ class LdkNodeModule: RCTEventEmitter {
         resolve(["status": "ok"])
     }
 
+    @objc(setLiquiditySourceLsps7:address:token:resolver:rejecter:)
+    func setLiquiditySourceLsps7(_ nodeId: String, address: String, token: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard self.builder != nil else {
+            reject("error", "Builder not initialized", nil)
+            return
+        }
+
+        self.storedLsps7NodeId = nodeId
+        self.storedLsps7Address = address
+        self.storedLsps7Token = token
+        resolve(["status": "ok"])
+    }
+
     // MARK: - Mnemonic Methods
 
     @objc(generateMnemonic:resolver:rejecter:)
@@ -241,55 +267,119 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
-        do {
-            // Always create a Config with anchor channels enabled to ensure proper channel type negotiation
-            // Create AnchorChannelsConfig (required for LSP zero-conf anchor channels)
-            let anchorConfig = AnchorChannelsConfig(
-                trustedPeersNoReserve: self.storedTrustedPeers0conf,
-                perChannelReserveSats: 25000
-            )
-
-            // Create a Config with anchorChannelsConfig always set
-            let config = Config(
-                storageDirPath: self.storedStorageDirPath,
-                network: self.storedNetwork,
-                listeningAddresses: self.storedListeningAddresses,
-                announcementAddresses: nil,
-                nodeAlias: nil,
-                trustedPeers0conf: self.storedTrustedPeers0conf,
-                probingLiquidityLimitMultiplier: 3,
-                anchorChannelsConfig: anchorConfig,
-                routeParameters: nil
-            )
-
-            // Create builder from config to ensure anchor channels are enabled
-            let builderToUse = Builder.fromConfig(config: config)
-
-            // Re-apply builder-only settings
-            if let esploraUrl = self.storedEsploraServerUrl {
-                builderToUse.setChainSourceEsplora(serverUrl: esploraUrl, config: createEsploraSyncConfig())
-            }
-            if let rgsUrl = self.storedRgsServerUrl {
-                builderToUse.setGossipSourceRgs(rgsServerUrl: rgsUrl)
-            }
-            if let lsps1NodeId = self.storedLsps1NodeId, let lsps1Address = self.storedLsps1Address {
-                builderToUse.setLiquiditySourceLsps1(nodeId: lsps1NodeId, address: lsps1Address, token: self.storedLsps1Token)
-            }
-            if let lsps2NodeId = self.storedLsps2NodeId, let lsps2Address = self.storedLsps2Address {
-                builderToUse.setLiquiditySourceLsps2(nodeId: lsps2NodeId, address: lsps2Address, token: self.storedLsps2Token)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else {
+                reject("error", "Module deallocated", nil)
+                return
             }
 
-            let nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
-            if let vssUrl = self.storedVssUrl, let vssStoreId = self.storedVssStoreId {
-                NSLog("LdkNodeModule: Building node with VSS store: \(vssUrl)")
-                self.node = try builderToUse.buildWithVssStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: [:])
-            } else {
-                self.node = try builderToUse.buildWithFsStore(nodeEntropy: nodeEntropy)
+            do {
+                // Always create a Config with anchor channels enabled to ensure proper channel type negotiation
+                // Create AnchorChannelsConfig (required for LSP zero-conf anchor channels)
+                let anchorConfig = AnchorChannelsConfig(
+                    trustedPeersNoReserve: self.storedTrustedPeers0conf,
+                    perChannelReserveSats: 25000
+                )
+
+                // Create a Config with anchorChannelsConfig always set
+                let config = Config(
+                    storageDirPath: self.storedStorageDirPath,
+                    network: self.storedNetwork,
+                    listeningAddresses: self.storedListeningAddresses,
+                    announcementAddresses: nil,
+                    nodeAlias: nil,
+                    trustedPeers0conf: self.storedTrustedPeers0conf,
+                    probingLiquidityLimitMultiplier: 3,
+                    anchorChannelsConfig: anchorConfig,
+                    routeParameters: nil
+                )
+
+                let nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic: mnemonic, passphrase: passphrase)
+                var vssError: String? = nil
+
+                if let vssUrl = self.storedVssUrl, let vssStoreId = self.storedVssStoreId {
+                    NSLog("LdkNodeModule: Building node with VSS store: \(vssUrl)")
+
+                    let semaphore = DispatchSemaphore(value: 0)
+                    var buildResult: Node?
+                    var buildError: Error?
+                    var timedOut = false
+
+                    let workItem = DispatchWorkItem {
+                        do {
+                            let vssBuilder = Builder.fromConfig(config: config)
+                            self.applyBuilderSettings(vssBuilder)
+                            buildResult = try vssBuilder.buildWithVssStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: self.storedVssHeaders)
+                        } catch {
+                            buildError = error
+                        }
+                        semaphore.signal()
+
+                        // If we timed out, the caller already moved on to the
+                        // filesystem fallback. Stop the orphaned node so it
+                        // doesn't leak resources.
+                        if timedOut, let orphan = buildResult {
+                            NSLog("LdkNodeModule: Stopping orphaned VSS node after timeout")
+                            do { try orphan.stop() } catch {}
+                        }
+                    }
+
+                    DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
+                    let timeout = semaphore.wait(timeout: .now() + 60)
+
+                    if timeout == .timedOut {
+                        timedOut = true
+                        workItem.cancel()
+                        vssError = "VSS server at \(vssUrl) did not respond within 60s"
+                        NSLog("LdkNodeModule: \(vssError!)")
+                    } else if let error = buildError {
+                        vssError = "VSS setup failed: \(error.localizedDescription)"
+                        NSLog("LdkNodeModule: \(vssError!)")
+                    } else {
+                        self.node = buildResult
+                        NSLog("LdkNodeModule: Node built with VSS store successfully")
+                    }
+                }
+
+                // Fall back to local filesystem store if VSS failed or was not configured
+                if self.node == nil {
+                    if vssError != nil {
+                        NSLog("LdkNodeModule: Falling back to local filesystem store")
+                    }
+                    let fsBuilder = Builder.fromConfig(config: config)
+                    self.applyBuilderSettings(fsBuilder)
+                    self.node = try fsBuilder.buildWithFsStore(nodeEntropy: nodeEntropy)
+                }
+
+                self.builder = nil // Builder is consumed
+                var result: [String: Any] = [:]
+                if let vssError = vssError {
+                    result["vssError"] = vssError
+                }
+                resolve(result)
+            } catch {
+                reject("error", error.localizedDescription, error)
             }
-            self.builder = nil // Builder is consumed
-            resolve(["status": "ok"])
-        } catch {
-            reject("error", error.localizedDescription, error)
+        }
+    }
+
+    private func applyBuilderSettings(_ builder: Builder) {
+        if let esploraUrl = self.storedEsploraServerUrl {
+            NSLog("LdkNodeModule: applyBuilderSettings: Esplora server = \(esploraUrl)")
+            builder.setChainSourceEsplora(serverUrl: esploraUrl, config: createEsploraSyncConfig())
+        }
+        if let rgsUrl = self.storedRgsServerUrl {
+            NSLog("LdkNodeModule: applyBuilderSettings: RGS server = \(rgsUrl)")
+            builder.setGossipSourceRgs(rgsServerUrl: rgsUrl)
+        }
+        if let lsps1NodeId = self.storedLsps1NodeId, let lsps1Address = self.storedLsps1Address {
+            builder.setLiquiditySourceLsps1(nodeId: lsps1NodeId, address: lsps1Address, token: self.storedLsps1Token)
+        }
+        if let lsps2NodeId = self.storedLsps2NodeId, let lsps2Address = self.storedLsps2Address {
+            builder.setLiquiditySourceLsps2(nodeId: lsps2NodeId, address: lsps2Address, token: self.storedLsps2Token)
+        }
+        if let lsps7NodeId = self.storedLsps7NodeId, let lsps7Address = self.storedLsps7Address {
+            builder.setLiquiditySourceLsps7(nodeId: lsps7NodeId, address: lsps7Address, token: self.storedLsps7Token)
         }
     }
 
