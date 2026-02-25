@@ -700,6 +700,110 @@ export default class WalletConfiguration extends React.Component<
         }
     };
 
+    private handleDeletePress = () => {
+        Alert.alert(
+            localeString('views.Settings.WalletConfiguration.deleteWallet'),
+            localeString(
+                'views.Settings.WalletConfiguration.deleteWallet.confirm'
+            ),
+            [
+                {
+                    text: localeString(
+                        'views.Settings.WalletConfiguration.deleteWallet'
+                    ),
+                    style: 'destructive',
+                    onPress: this.performDelete
+                },
+                {
+                    text: localeString('general.cancel'),
+                    onPress: () => void 0,
+                    isPreferred: true
+                }
+            ],
+            { cancelable: false }
+        );
+    };
+
+    private performDelete = () => {
+        const { implementation, active } = this.state;
+        const { ChannelsStore, BalanceStore } = this.props;
+
+        if (implementation === 'embedded-lnd' && !active) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+                ),
+                [
+                    {
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.setWalletActive'
+                        ),
+                        onPress: () => this.setWalletConfigurationAsActive(),
+                        isPreferred: true
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else if (
+            implementation === 'embedded-lnd' &&
+            (ChannelsStore.channels.length > 0 ||
+                ChannelsStore.pendingChannels.length > 0)
+        ) {
+            Alert.alert(
+                localeString('general.warning'),
+                localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                ),
+                [
+                    {
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.deleteWallet'
+                        ),
+                        onPress: () => this.deleteNodeConfig()
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0,
+                        isPreferred: true
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else if (
+            implementation === 'embedded-lnd' &&
+            (BalanceStore.confirmedBlockchainBalance !== 0 ||
+                BalanceStore.unconfirmedBlockchainBalance !== 0)
+        ) {
+            Alert.alert(
+                localeString('general.warning'),
+                localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+                ),
+                [
+                    {
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.deleteWallet'
+                        ),
+                        onPress: () => this.deleteNodeConfig()
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0,
+                        isPreferred: true
+                    }
+                ],
+                { cancelable: false }
+            );
+        } else {
+            this.deleteNodeConfig();
+        }
+    };
+
     getNewSelectedNodeIndex(
         indexOfDeletedNode: number | null,
         settings: Settings
@@ -819,8 +923,7 @@ export default class WalletConfiguration extends React.Component<
     render() {
         const SERVER_ADDRESS_CHARS = "a-zA-Z0-9-._~!$&'()*+,;=";
 
-        const { navigation, BalanceStore, ChannelsStore, SettingsStore } =
-            this.props;
+        const { navigation, SettingsStore } = this.props;
         const {
             node,
             nickname,
@@ -2645,156 +2748,7 @@ export default class WalletConfiguration extends React.Component<
                                     title={localeString(
                                         'views.Settings.WalletConfiguration.deleteWallet'
                                     )}
-                                    onPress={() => {
-                                        Alert.alert(
-                                            localeString(
-                                                'views.Settings.WalletConfiguration.deleteWallet'
-                                            ),
-                                            localeString(
-                                                'views.Settings.WalletConfiguration.deleteWallet.confirm'
-                                            ),
-                                            [
-                                                {
-                                                    text: localeString(
-                                                        'views.Settings.WalletConfiguration.deleteWallet'
-                                                    ),
-                                                    style: 'destructive',
-                                                    onPress: () => {
-                                                        if (
-                                                            implementation ===
-                                                                'embedded-lnd' &&
-                                                            !active
-                                                        ) {
-                                                            Alert.alert(
-                                                                localeString(
-                                                                    'general.error'
-                                                                ),
-                                                                localeString(
-                                                                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
-                                                                ),
-                                                                [
-                                                                    {
-                                                                        text: localeString(
-                                                                            'views.Settings.WalletConfiguration.setWalletActive'
-                                                                        ),
-                                                                        onPress:
-                                                                            () =>
-                                                                                this.setWalletConfigurationAsActive(),
-                                                                        isPreferred:
-                                                                            true
-                                                                    },
-                                                                    {
-                                                                        text: localeString(
-                                                                            'general.cancel'
-                                                                        ),
-                                                                        onPress:
-                                                                            () =>
-                                                                                void 0
-                                                                    }
-                                                                ],
-                                                                {
-                                                                    cancelable:
-                                                                        false
-                                                                }
-                                                            );
-                                                        } else if (
-                                                            implementation ===
-                                                                'embedded-lnd' &&
-                                                            (ChannelsStore
-                                                                .channels
-                                                                .length > 0 ||
-                                                                ChannelsStore
-                                                                    .pendingChannels
-                                                                    .length > 0)
-                                                        ) {
-                                                            Alert.alert(
-                                                                localeString(
-                                                                    'general.warning'
-                                                                ),
-                                                                localeString(
-                                                                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
-                                                                ),
-                                                                [
-                                                                    {
-                                                                        text: localeString(
-                                                                            'views.Settings.WalletConfiguration.deleteWallet'
-                                                                        ),
-                                                                        onPress:
-                                                                            () =>
-                                                                                this.deleteNodeConfig()
-                                                                    },
-                                                                    {
-                                                                        text: localeString(
-                                                                            'general.cancel'
-                                                                        ),
-                                                                        onPress:
-                                                                            () =>
-                                                                                void 0,
-                                                                        isPreferred:
-                                                                            true
-                                                                    }
-                                                                ],
-                                                                {
-                                                                    cancelable:
-                                                                        false
-                                                                }
-                                                            );
-                                                        } else if (
-                                                            implementation ===
-                                                                'embedded-lnd' &&
-                                                            (BalanceStore.confirmedBlockchainBalance !==
-                                                                0 ||
-                                                                BalanceStore.unconfirmedBlockchainBalance !==
-                                                                    0)
-                                                        ) {
-                                                            Alert.alert(
-                                                                localeString(
-                                                                    'general.warning'
-                                                                ),
-                                                                localeString(
-                                                                    'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
-                                                                ),
-                                                                [
-                                                                    {
-                                                                        text: localeString(
-                                                                            'views.Settings.WalletConfiguration.deleteWallet'
-                                                                        ),
-                                                                        onPress:
-                                                                            () =>
-                                                                                this.deleteNodeConfig()
-                                                                    },
-                                                                    {
-                                                                        text: localeString(
-                                                                            'general.cancel'
-                                                                        ),
-                                                                        onPress:
-                                                                            () =>
-                                                                                void 0,
-                                                                        isPreferred:
-                                                                            true
-                                                                    }
-                                                                ],
-                                                                {
-                                                                    cancelable:
-                                                                        false
-                                                                }
-                                                            );
-                                                        } else {
-                                                            this.deleteNodeConfig();
-                                                        }
-                                                    }
-                                                },
-                                                {
-                                                    text: localeString(
-                                                        'general.cancel'
-                                                    ),
-                                                    onPress: () => void 0,
-                                                    isPreferred: true
-                                                }
-                                            ],
-                                            { cancelable: false }
-                                        );
-                                    }}
+                                    onPress={this.handleDeletePress}
                                     warning
                                     disabled={loading}
                                 />
