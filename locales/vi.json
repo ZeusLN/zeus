@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Tôi đã sao lưu dự phòng 24 chữ",
     "views.Settings.Seed.dangerousText1": "Bạn có muốn sao chép 24 chữ hạt giống đến khay nhớ tạm?",
     "views.Settings.Seed.dangerousText2": "NGUY HIỂM. Từ hạt giống của bạn có thể được đọc bởi các ứng dụng khác mà bạn mở. Hãy cảnh giác.",
-    "views.Settings.Seed.dangerousButton": "Rủi ro - Sao chép từ hạt giống vào khay nhớ tạm",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Export Cashu wallet BIP-39 seed",
     "views.Cashu.CashuSeed.text1": "The following 12 words are your Cashu wallet backup. You do not have to save these if you have your 24 word embedded LND wallet seed phrase backed up, but it is useful if you want to import funds into another Cashu wallet.",
     "views.Cashu.LegacySeedRecovery.title": "Legacy seed recovery",
