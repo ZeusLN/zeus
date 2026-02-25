@@ -12,13 +12,6 @@ export const buttonContainerStyle = () =>
     } as const);
 
 export default StyleSheet.create({
-    text: {
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    whiteText: {
-        color: 'white',
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     blackText: {
         color: 'black',
         fontFamily: 'PPNeueMontreal-Book'

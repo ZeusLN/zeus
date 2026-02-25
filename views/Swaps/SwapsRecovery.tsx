@@ -56,6 +56,7 @@ interface SwapsRecoveryState {
     rescueHost: string;
     customRescueHost: string;
     showSuggestions: boolean;
+    seedInputKey: number;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -80,7 +81,8 @@ export default class SwapsRecovery extends React.PureComponent<
                 ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
                 : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
             customRescueHost: settings.swaps?.customHost || '',
-            showSuggestions: false
+            showSuggestions: false,
+            seedInputKey: 0
         };
     }
 
@@ -102,7 +104,8 @@ export default class SwapsRecovery extends React.PureComponent<
             restoreSwaps,
             rescueHost,
             customRescueHost,
-            showSuggestions
+            showSuggestions,
+            seedInputKey
         } = this.state;
 
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
@@ -129,6 +132,7 @@ export default class SwapsRecovery extends React.PureComponent<
                 {!loading && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
                         <SeedWordInput
+                            key={seedInputKey}
                             wordCount={12}
                             seedArray={seedArray}
                             onSeedArrayChange={(arr) =>
@@ -209,10 +213,11 @@ export default class SwapsRecovery extends React.PureComponent<
                                     )}
                                     secondary
                                     onPress={async () => {
-                                        this.setState({
+                                        this.setState((prev) => ({
                                             errorMsg: '',
-                                            seedArray: []
-                                        });
+                                            seedArray: [],
+                                            seedInputKey: prev.seedInputKey + 1
+                                        }));
                                         try {
                                             const [res] = await pick({
                                                 type: [types.allFiles]

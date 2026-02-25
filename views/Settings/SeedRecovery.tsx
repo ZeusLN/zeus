@@ -44,7 +44,6 @@ interface SeedRecoveryState {
     adminMacaroon: string;
     embeddedLndNetwork: string;
     lndDir: string;
-    recoveryCipherSeed: string;
     channelBackupsBase64: string;
     errorMsg: string;
     showSuggestions: boolean;
@@ -68,7 +67,6 @@ export default class SeedRecovery extends React.PureComponent<
             adminMacaroon: '',
             embeddedLndNetwork: 'mainnet',
             lndDir: '',
-            recoveryCipherSeed: '',
             channelBackupsBase64: '',
             errorMsg: '',
             showSuggestions: false
