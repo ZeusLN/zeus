@@ -355,6 +355,7 @@
     "views.Settings.AddEditNode.scanBtcpay": "Scan BTCPay config",
     "views.Settings.AddEditNode.scanLndhub": "Scan LNDHub QR",
     "views.Settings.WalletConfiguration.deleteWallet": "Delete Wallet Config",
+    "views.Settings.WalletConfiguration.deleteWallet.confirm": "Are you sure you want to delete this wallet configuration?",
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Embedded LND wallets must be active to be deleted. Make this wallet the active wallet?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "This wallet has channels that are open or pending. We recommend closing these manually before proceeding, otherwise channels will be force closed upon recovery.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "This wallet has an on-chain balance. Make sure you back up your seed before proceeding.",
