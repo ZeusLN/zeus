@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Las billeteras LND integradas deben estar activas para ser eliminadas. ¿Esta billetera debe estar activa?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Esta billetera tiene canales abiertos o pendientes. Recomendamos cerrarlos manualmente antes de continuar; de lo contrario, los canales se cerrarán forzosamente al recuperarse.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Esta billetera tiene saldo en cadena. Asegúrate de hacer una copia de seguridad de tus semillas antes de continuar.",
-    "views.Settings.AddEditNode.tapToConfirm": "Tocar para confirmar",
     "views.Settings.WalletConfiguration.duplicateWallet": "Configuración de monedero duplicada",
     "views.Settings.WalletConfiguration.walletInterface": "Interfaz de monedero",
     "views.Settings.AddEditNode.useTor": "Utilizar Tor",

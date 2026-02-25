@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Dompet LND tersemat harus aktif untuk dihapus. Jadikan dompet ini sebagai dompet aktif?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Dompet ini memiliki saluran yang terbuka atau tertunda. Kami menyarankan untuk menutupnya secara manual sebelum melanjutkan, jika tidak, saluran akan ditutup secara paksa saat pemulihan.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Dompet ini memiliki saldo on-chain. Pastikan Anda sudah mencadangkan seed sebelum melanjutkan.",
-    "views.Settings.AddEditNode.tapToConfirm": "Tekan untuk konfirmasi",
     "views.Settings.WalletConfiguration.duplicateWallet": "Duplikasi Konfigurasi Dompet",
     "views.Settings.WalletConfiguration.walletInterface": "Antarmuka dompet",
     "views.Settings.AddEditNode.useTor": "Pakai Tor",

@@ -258,7 +258,6 @@
     "views.Settings.AddEditNode.scanLndhub": "LNDHub QRコードを読み取る",
     "views.Settings.AddEditNode.scanSpark": "SparkのQRをスキャン",
     "views.Settings.WalletConfiguration.deleteWallet": "Delete Wallet Config",
-    "views.Settings.AddEditNode.tapToConfirm": "Tap to confirm",
     "views.Settings.WalletConfiguration.duplicateWallet": "Duplicate Wallet Config",
     "views.Settings.WalletConfiguration.walletInterface": "Wallet interface",
     "views.Settings.AddEditNode.useTor": "Torを使用",

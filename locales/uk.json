@@ -259,7 +259,6 @@
     "views.Settings.AddEditNode.scanLndhub": "Сканувати LNDHub QR",
     "views.Settings.AddEditNode.scanSpark": "Scan Spark QR",
     "views.Settings.WalletConfiguration.deleteWallet": "Delete Wallet Config",
-    "views.Settings.AddEditNode.tapToConfirm": "Tap to confirm",
     "views.Settings.WalletConfiguration.duplicateWallet": "Duplicate Wallet Config",
     "views.Settings.WalletConfiguration.walletInterface": "Wallet interface",
     "views.Settings.AddEditNode.useTor": "Use Tor",

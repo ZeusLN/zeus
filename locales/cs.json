@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Vestavěné LND peněženky musí být aktivní, aby mohly být odstraněny. Učinit tuto peněženku aktivní peněženkou?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Tato peněženka má otevřené nebo probíhající kanály. Takové kanály doporučujeme ručně zavřít, než budete pokračovat, jinak budou kanály po obnovení vynuceně uzavřeny.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Tato peněženka obsahuje on-chain zůstatek. Předtím, než budete pokračovat, si prosím zazálohujte její seed.",
-    "views.Settings.AddEditNode.tapToConfirm": "Klepnutím potvrdíte",
     "views.Settings.WalletConfiguration.duplicateWallet": "Duplikovat konfiguraci peněženky",
     "views.Settings.WalletConfiguration.walletInterface": "Rozhraní peněženky",
     "views.Settings.AddEditNode.useTor": "Použít Tor",

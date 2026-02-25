@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Les portefeuilles LND intégrés doivent être actifs pour être supprimés. Ce portefeuille doit-il être actif ?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Ce portefeuille contient des canaux ouverts ou en attente. Nous vous recommandons de les fermer manuellement avant de continuer, sinon les canaux seront fermés de force lors de la récupération.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Ce portefeuille dispose d'un solde en chaîne. Assurez-vous de sauvegarder votre seed avant de continuer.",
-    "views.Settings.AddEditNode.tapToConfirm": "Appuyez pour confirmer",
     "views.Settings.WalletConfiguration.duplicateWallet": "Dupliquer la configuration du portefeuille",
     "views.Settings.WalletConfiguration.walletInterface": "Interface de portefeuille",
     "views.Settings.AddEditNode.useTor": "Utiliser Tor",

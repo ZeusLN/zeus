@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, Platform } from 'react-native';
+import { Alert, StyleSheet, Text, View, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -28,7 +28,6 @@ interface SetPassphraseState {
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
-    confirmDelete: boolean;
     isBiometryEnabled: boolean;
 }
 
@@ -45,7 +44,6 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
-        confirmDelete: false,
         isBiometryEnabled: false
     };
 
@@ -259,38 +257,60 @@ export default class SetPassphrase extends React.Component<
                     {!!savedPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
-                                title={
-                                    this.state.confirmDelete
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.SetPassword.deletePassword'
-                                          )
-                                }
+                                title={localeString(
+                                    'views.Settings.SetPassword.deletePassword'
+                                )}
                                 onPress={() => {
-                                    if (!this.state.confirmDelete) {
-                                        this.setState({
-                                            confirmDelete: true
-                                        });
-                                    } else if (this.state.isBiometryEnabled) {
-                                        this.props.ModalStore.toggleInfoModal({
-                                            text: localeString(
-                                                'views.Settings.Security.biometricsWillBeDisabled'
-                                            ),
-                                            buttons: [
-                                                {
-                                                    title: localeString(
-                                                        'general.ok'
-                                                    ),
-                                                    callback: () =>
-                                                        this.deletePassword()
+                                    Alert.alert(
+                                        localeString(
+                                            'views.Settings.SetPassword.deletePassword'
+                                        ),
+                                        localeString(
+                                            'views.Settings.SetPassword.deletePassword.confirm'
+                                        ),
+                                        [
+                                            {
+                                                text: localeString(
+                                                    'views.Settings.SetPassword.deletePassword'
+                                                ),
+                                                style: 'destructive',
+                                                onPress: () => {
+                                                    if (
+                                                        this.state
+                                                            .isBiometryEnabled
+                                                    ) {
+                                                        this.props.ModalStore.toggleInfoModal(
+                                                            {
+                                                                text: localeString(
+                                                                    'views.Settings.Security.biometricsWillBeDisabled'
+                                                                ),
+                                                                buttons: [
+                                                                    {
+                                                                        title: localeString(
+                                                                            'general.ok'
+                                                                        ),
+                                                                        callback:
+                                                                            () =>
+                                                                                this.deletePassword()
+                                                                    }
+                                                                ]
+                                                            }
+                                                        );
+                                                    } else {
+                                                        this.deletePassword();
+                                                    }
                                                 }
-                                            ]
-                                        });
-                                    } else {
-                                        this.deletePassword();
-                                    }
+                                            },
+                                            {
+                                                text: localeString(
+                                                    'general.cancel'
+                                                ),
+                                                onPress: () => void 0,
+                                                isPreferred: true
+                                            }
+                                        ],
+                                        { cancelable: false }
+                                    );
                                 }}
                                 warning
                             />

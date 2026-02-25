@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     Text,
     View,
     TouchableOpacity,
@@ -43,7 +44,6 @@ interface ContactsSettingsProps {
 interface ContactsSettingsState {
     search: string;
     SendScreen: boolean;
-    deletionAwaitingConfirmation: boolean;
     CashuLockSettingsScreen: boolean;
 }
 
@@ -62,7 +62,6 @@ export default class Contacts extends React.Component<
         this.state = {
             search: '',
             SendScreen,
-            deletionAwaitingConfirmation: false,
             CashuLockSettingsScreen
         };
     }
@@ -291,12 +290,7 @@ export default class Contacts extends React.Component<
     render() {
         const { navigation, ContactStore } = this.props;
         const { loading } = ContactStore;
-        const {
-            search,
-            SendScreen,
-            deletionAwaitingConfirmation,
-            CashuLockSettingsScreen
-        } = this.state;
+        const { search, SendScreen, CashuLockSettingsScreen } = this.state;
         const { contacts } = ContactStore;
 
         // Calculate if we have any contacts with Cashu pubkeys
@@ -537,27 +531,41 @@ export default class Contacts extends React.Component<
                         filteredContacts.length > 0 &&
                         !CashuLockSettingsScreen && (
                             <Button
-                                title={
-                                    deletionAwaitingConfirmation
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.Contacts.deleteAllContacts'
-                                          )
-                                }
-                                onPress={async () => {
-                                    if (!deletionAwaitingConfirmation) {
-                                        this.setState({
-                                            deletionAwaitingConfirmation: true
-                                        });
-                                    } else {
-                                        await Storage.setItem(CONTACTS_KEY, []);
-                                        this.setState({
-                                            deletionAwaitingConfirmation: false
-                                        });
-                                        ContactStore?.loadContacts();
-                                    }
+                                title={localeString(
+                                    'views.Settings.Contacts.deleteAllContacts'
+                                )}
+                                onPress={() => {
+                                    Alert.alert(
+                                        localeString(
+                                            'views.Settings.Contacts.deleteAllContacts'
+                                        ),
+                                        localeString(
+                                            'views.Settings.Contacts.deleteAllContacts.confirm'
+                                        ),
+                                        [
+                                            {
+                                                text: localeString(
+                                                    'views.Settings.Contacts.deleteAllContacts'
+                                                ),
+                                                style: 'destructive',
+                                                onPress: async () => {
+                                                    await Storage.setItem(
+                                                        CONTACTS_KEY,
+                                                        []
+                                                    );
+                                                    ContactStore?.loadContacts();
+                                                }
+                                            },
+                                            {
+                                                text: localeString(
+                                                    'general.cancel'
+                                                ),
+                                                onPress: () => void 0,
+                                                isPreferred: true
+                                            }
+                                        ],
+                                        { cancelable: false }
+                                    );
                                 }}
                                 containerStyle={{
                                     borderColor: themeColor('delete')

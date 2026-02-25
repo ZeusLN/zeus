@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "एम्बेडेड LND वॉलेट्स को हटाने के लिए सक्रिय होना चाहिए। इस वॉलेट को सक्रिय वॉलेट बनाएं?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "इस वॉलेट के चैनल खुले या लंबित हैं। हम आगे बढ़ने से पहले इन्हें मैन्युअल रूप से बंद करने की सलाह देते हैं, अन्यथा रिकवरी पर चैनल्स को बलपूर्वक बंद कर दिया जाएगा।",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "इस वॉलेट में एक ऑन-चेन बैलेंस है। आगे बढ़ने से पहले अपने सीड का बैकअप लेना सुनिश्चित करें।",
-    "views.Settings.AddEditNode.tapToConfirm": "पुष्टि करने के लिए टैप करें",
     "views.Settings.WalletConfiguration.duplicateWallet": "वॉलेट कॉन्फ़िग की प्रतिलिपि बनाएं",
     "views.Settings.WalletConfiguration.walletInterface": "वॉलेट इंटरफेस",
     "views.Settings.AddEditNode.useTor": "Tor का उपयोग करें",

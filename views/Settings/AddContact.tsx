@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     View,
     TouchableOpacity,
     StyleSheet,
@@ -91,7 +92,6 @@ interface AddContactState {
     description: string;
     photo: string | null;
     showFieldModal: boolean;
-    confirmDelete: boolean;
     isFavourite: boolean;
     isValidLightningAddress: boolean[];
     isValidBolt12Address: boolean[];
@@ -183,7 +183,6 @@ export default class AddContact extends React.Component<
             description: '',
             photo: null,
             showFieldModal: false,
-            confirmDelete: false,
             isFavourite: false,
             isValidLightningAddress: [],
             isValidBolt12Address: [],
@@ -1098,23 +1097,36 @@ export default class AddContact extends React.Component<
                     {isEdit && ContactStore?.prefillContact && (
                         <View style={styles.button}>
                             <Button
-                                title={
-                                    this.state.confirmDelete
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.AddContact.deleteContact'
-                                          )
-                                }
+                                title={localeString(
+                                    'views.Settings.AddContact.deleteContact'
+                                )}
                                 onPress={() => {
-                                    if (!this.state.confirmDelete) {
-                                        this.setState({
-                                            confirmDelete: true
-                                        });
-                                    } else {
-                                        this.deleteContact();
-                                    }
+                                    Alert.alert(
+                                        localeString(
+                                            'views.Settings.AddContact.deleteContact'
+                                        ),
+                                        localeString(
+                                            'views.Settings.AddContact.deleteContact.confirm'
+                                        ),
+                                        [
+                                            {
+                                                text: localeString(
+                                                    'views.Settings.AddContact.deleteContact'
+                                                ),
+                                                style: 'destructive',
+                                                onPress: () =>
+                                                    this.deleteContact()
+                                            },
+                                            {
+                                                text: localeString(
+                                                    'general.cancel'
+                                                ),
+                                                onPress: () => void 0,
+                                                isPreferred: true
+                                            }
+                                        ],
+                                        { cancelable: false }
+                                    );
                                 }}
                                 warning
                             />
