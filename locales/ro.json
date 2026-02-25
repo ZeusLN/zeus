@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Am făcut o copie a celor 24 de cuvinte",
     "views.Settings.Seed.dangerousText1": "Doriți să copiați cheile dvs. de 24 de cuvinte in clipboard?",
     "views.Settings.Seed.dangerousText2": "Asta e periculos. Cheia dvs. poate fi citită de alte aplicații pe care le deschideți. Continuați cu precauție.",
-    "views.Settings.Seed.dangerousButton": "Copiați periculos cheia in clipboard",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Exportați semințe BIP-39 ale portofelului Cashu ",
     "views.Cashu.CashuSeed.text1": "Următoarele 12 cuvinte reprezintă copia de rezervă a portofelului tău Cashu. Nu trebuie să le salvezi dacă ai o copie de rezervă a frazei inițiale încorporate în portofelul LND de 24 de cuvinte, dar este util dacă vrei să importi fonduri într-un alt portofel Cashu.",
     "views.Cashu.LegacySeedRecovery.title": "Recuperarea seed vechi",
