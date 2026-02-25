@@ -13,42 +13,33 @@ import SettingsStore from '../../../stores/SettingsStore';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import { getDefaultEsploraServer } from '../../../utils/EmbeddedLdkNodeUtils';
+import { DEFAULT_VSS_SERVER } from '../../../utils/EmbeddedLdkNodeUtils';
 
-interface EsploraServerProps {
+interface VssServerProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 
-interface EsploraServerState {
-    esploraServer: string;
+interface VssServerState {
+    vssServer: string;
 }
 
 @inject('SettingsStore')
 @observer
-export default class EsploraServer extends React.Component<
-    EsploraServerProps,
-    EsploraServerState
+export default class VssServer extends React.Component<
+    VssServerProps,
+    VssServerState
 > {
     state = {
-        esploraServer: this.props.SettingsStore.ldkEsploraServer || ''
+        vssServer: this.props.SettingsStore.ldkVssServer || ''
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { esploraServer } = this.state;
-        const { embeddedLdkNetwork, updateSettings }: any = SettingsStore;
+        const { vssServer } = this.state;
+        const { updateSettings }: any = SettingsStore;
 
-        const defaultServer = getDefaultEsploraServer(
-            (embeddedLdkNetwork?.toLowerCase() as
-                | 'mainnet'
-                | 'testnet'
-                | 'signet'
-                | 'regtest') || 'mainnet'
-        );
-
-        const showReset =
-            esploraServer !== '' && esploraServer !== defaultServer;
+        const showReset = vssServer !== '' && vssServer !== DEFAULT_VSS_SERVER;
 
         return (
             <Screen>
@@ -57,7 +48,7 @@ export default class EsploraServer extends React.Component<
                         leftComponent="Back"
                         centerComponent={{
                             text: localeString(
-                                'views.Settings.EmbeddedNode.EsploraServer.title'
+                                'views.Settings.EmbeddedNode.VssServer.title'
                             ),
                             style: {
                                 color: themeColor('text'),
@@ -76,7 +67,7 @@ export default class EsploraServer extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.EmbeddedNode.EsploraServer.subtitle'
+                                    'views.Settings.EmbeddedNode.VssServer.subtitle'
                                 )}
                             </Text>
                         </View>
@@ -88,20 +79,20 @@ export default class EsploraServer extends React.Component<
                             }}
                         >
                             {localeString(
-                                'views.Settings.EmbeddedNode.EsploraServer.serverUrl'
+                                'views.Settings.EmbeddedNode.VssServer.serverUrl'
                             )}
                         </Text>
                         <TextInput
-                            value={esploraServer}
-                            placeholder={defaultServer || ''}
+                            value={vssServer}
+                            placeholder={DEFAULT_VSS_SERVER}
                             onChangeText={(text: string) => {
                                 this.setState({
-                                    esploraServer: text
+                                    vssServer: text
                                 });
                             }}
                             onBlur={async () => {
                                 await updateSettings({
-                                    ldkEsploraServer: esploraServer
+                                    ldkVssServer: vssServer
                                 });
                                 restartNeeded();
                             }}
@@ -117,9 +108,9 @@ export default class EsploraServer extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.EmbeddedNode.EsploraServer.defaultServer'
+                                    'views.Settings.EmbeddedNode.VssServer.defaultServer'
                                 )}
-                                : {defaultServer || 'None'}
+                                : {DEFAULT_VSS_SERVER}
                             </Text>
                         </View>
 
@@ -132,10 +123,10 @@ export default class EsploraServer extends React.Component<
                                     )}
                                     onPress={async () => {
                                         this.setState({
-                                            esploraServer: defaultServer
+                                            vssServer: DEFAULT_VSS_SERVER
                                         });
                                         await updateSettings({
-                                            ldkEsploraServer: defaultServer
+                                            ldkVssServer: DEFAULT_VSS_SERVER
                                         });
                                         restartNeeded();
                                     }}

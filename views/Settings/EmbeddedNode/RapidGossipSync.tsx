@@ -3,6 +3,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import Button from '../../../components/Button';
 import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import TextInput from '../../../components/TextInput';
@@ -45,6 +46,8 @@ export default class RapidGossipSync extends React.Component<
                 | 'signet'
                 | 'regtest') || 'mainnet'
         );
+
+        const showReset = rgsServer !== '' && rgsServer !== defaultServer;
 
         return (
             <Screen>
@@ -90,15 +93,15 @@ export default class RapidGossipSync extends React.Component<
                         <TextInput
                             value={rgsServer}
                             placeholder={defaultServer || ''}
-                            onChangeText={async (text: string) => {
+                            onChangeText={(text: string) => {
                                 this.setState({
                                     rgsServer: text
                                 });
-
+                            }}
+                            onBlur={async () => {
                                 await updateSettings({
-                                    ldkRgsServer: text
+                                    ldkRgsServer: rgsServer
                                 });
-
                                 restartNeeded();
                             }}
                             autoCapitalize="none"
@@ -118,6 +121,26 @@ export default class RapidGossipSync extends React.Component<
                                 : {defaultServer || 'None'}
                             </Text>
                         </View>
+
+                        {showReset && (
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString('general.reset')}
+                                    accessibilityLabel={localeString(
+                                        'general.reset'
+                                    )}
+                                    onPress={async () => {
+                                        this.setState({
+                                            rgsServer: defaultServer || ''
+                                        });
+                                        await updateSettings({
+                                            ldkRgsServer: defaultServer || ''
+                                        });
+                                        restartNeeded();
+                                    }}
+                                />
+                            </View>
+                        )}
                     </ScrollView>
                 </View>
             </Screen>

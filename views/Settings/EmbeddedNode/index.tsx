@@ -107,6 +107,33 @@ export default class EmbeddedNode extends React.Component<
                             </ListItem>
                         )}
 
+                        {/* LDK Node: VSS Server */}
+                        {isEmbeddedLdk && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => navigation.navigate('VssServer')}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.VssServer.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
                         {/* Embedded LND: Disaster Recovery */}
                         {isEmbeddedLnd && (
                             <ListItem
