@@ -29,10 +29,14 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private var storedLsps2NodeId: PublicKey? = null
     private var storedLsps2Address: SocketAddress? = null
     private var storedLsps2Token: String? = null
+    private var storedLsps7NodeId: PublicKey? = null
+    private var storedLsps7Address: SocketAddress? = null
+    private var storedLsps7Token: String? = null
 
     // VSS (Versioned Storage Service) config
     private var storedVssUrl: String? = null
     private var storedVssStoreId: String? = null
+    private var storedVssHeaders: Map<String, String> = emptyMap()
 
     override fun getName(): String {
         return "LdkNodeModule"
@@ -56,8 +60,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         storedLsps2NodeId = null
         storedLsps2Address = null
         storedLsps2Token = null
+        storedLsps7NodeId = null
+        storedLsps7Address = null
+        storedLsps7Token = null
         storedVssUrl = null
         storedVssStoreId = null
+        storedVssHeaders = emptyMap()
     }
 
     // Builder Methods
@@ -184,6 +192,19 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
+    fun setLiquiditySourceLsps7(nodeId: String, address: String, token: String?, promise: Promise) {
+        try {
+            this.builder ?: throw Exception("Builder not initialized")
+            this.storedLsps7NodeId = nodeId
+            this.storedLsps7Address = address
+            this.storedLsps7Token = token
+            promise.resolve(null)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
+        }
+    }
+
+    @ReactMethod
     fun setTrustedPeers0conf(peers: ReadableArray, promise: Promise) {
         try {
             this.builder ?: throw Exception("Builder not initialized")
@@ -199,11 +220,22 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun setVssServer(vssUrl: String, storeId: String, promise: Promise) {
+    fun setVssServer(vssUrl: String, storeId: String, headers: ReadableMap?, promise: Promise) {
         try {
             this.builder ?: throw Exception("Builder not initialized")
             this.storedVssUrl = vssUrl
             this.storedVssStoreId = storeId
+            if (headers != null) {
+                val headerMap = mutableMapOf<String, String>()
+                val iter = headers.keySetIterator()
+                while (iter.hasNextKey()) {
+                    val key = iter.nextKey()
+                    headers.getString(key)?.let { headerMap[key] = it }
+                }
+                this.storedVssHeaders = headerMap
+            } else {
+                this.storedVssHeaders = emptyMap()
+            }
             promise.resolve(null)
         } catch (e: Exception) {
             promise.reject("error", e.message, e)
@@ -237,59 +269,123 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     @ReactMethod
     fun buildNode(mnemonic: String, passphrase: String?, promise: Promise) {
-        try {
-            this.builder ?: throw Exception("Builder not initialized")
+        moduleScope.launch {
+            try {
+                this@LdkNodeModule.builder ?: throw Exception("Builder not initialized")
 
-            // Always create a Config with anchor channels enabled to ensure proper channel type negotiation
-            // Create AnchorChannelsConfig (required for LSP zero-conf anchor channels)
-            val anchorConfig = AnchorChannelsConfig(
-                trustedPeersNoReserve = this.storedTrustedPeers0conf,
-                perChannelReserveSats = 25000UL
-            )
+                // Always create a Config with anchor channels enabled to ensure proper channel type negotiation
+                // Create AnchorChannelsConfig (required for LSP zero-conf anchor channels)
+                val anchorConfig = AnchorChannelsConfig(
+                    trustedPeersNoReserve = this@LdkNodeModule.storedTrustedPeers0conf,
+                    perChannelReserveSats = 25000UL
+                )
 
-            // Create a Config with anchorChannelsConfig always set
-            val config = Config(
-                storageDirPath = this.storedStorageDirPath,
-                network = this.storedNetwork,
-                listeningAddresses = this.storedListeningAddresses,
-                announcementAddresses = null,
-                nodeAlias = null,
-                trustedPeers0conf = this.storedTrustedPeers0conf,
-                probingLiquidityLimitMultiplier = 3UL,
-                anchorChannelsConfig = anchorConfig,
-                routeParameters = null
-            )
+                // Create a Config with anchorChannelsConfig always set
+                val config = Config(
+                    storageDirPath = this@LdkNodeModule.storedStorageDirPath,
+                    network = this@LdkNodeModule.storedNetwork,
+                    listeningAddresses = this@LdkNodeModule.storedListeningAddresses,
+                    announcementAddresses = null,
+                    nodeAlias = null,
+                    trustedPeers0conf = this@LdkNodeModule.storedTrustedPeers0conf,
+                    probingLiquidityLimitMultiplier = 3UL,
+                    anchorChannelsConfig = anchorConfig,
+                    routeParameters = null
+                )
 
-            // Create builder from config to ensure anchor channels are enabled
-            val builderToUse = Builder.fromConfig(config)
+                val nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic, passphrase)
+                val vssUrl = this@LdkNodeModule.storedVssUrl
+                val vssStoreId = this@LdkNodeModule.storedVssStoreId
 
-            // Re-apply builder-only settings
-            this.storedEsploraServerUrl?.let { builderToUse.setChainSourceEsplora(it, createEsploraSyncConfig()) }
-            this.storedRgsServerUrl?.let { builderToUse.setGossipSourceRgs(it) }
-            this.storedLsps1NodeId?.let { nodeId ->
-                this.storedLsps1Address?.let { address ->
-                    builderToUse.setLiquiditySourceLsps1(nodeId, address, this.storedLsps1Token)
+                var vssError: String? = null
+
+                if (vssUrl != null && vssStoreId != null) {
+                    try {
+                        Log.d("LdkNodeModule", "Building node with VSS store: $vssUrl")
+                        val vssBuilder = Builder.fromConfig(config)
+                        applyBuilderSettings(vssBuilder)
+
+                        // Use a real thread + CountDownLatch since the native JNI call
+                        // blocks and doesn't cooperate with coroutine cancellation
+                        var vssNode: Node? = null
+                        var vssBuildError: Exception? = null
+                        val latch = java.util.concurrent.CountDownLatch(1)
+
+                        val vssThread = Thread {
+                            try {
+                                vssNode = vssBuilder.buildWithVssStoreAndFixedHeaders(nodeEntropy, vssUrl, vssStoreId, this@LdkNodeModule.storedVssHeaders)
+                            } catch (e: Exception) {
+                                vssBuildError = e
+                            }
+                            latch.countDown()
+                        }
+                        vssThread.start()
+
+                        val completed = latch.await(60, java.util.concurrent.TimeUnit.SECONDS)
+                        if (!completed) {
+                            vssError = "VSS server at $vssUrl did not respond within 60s"
+                            Log.e("LdkNodeModule", "buildNode: $vssError")
+                        } else if (vssBuildError != null) {
+                            throw vssBuildError!!
+                        } else {
+                            this@LdkNodeModule.node = vssNode
+                            Log.d("LdkNodeModule", "Node built with VSS store successfully")
+                        }
+                    } catch (e: Exception) {
+                        vssError = "VSS setup failed: ${e.message}"
+                        Log.e("LdkNodeModule", "buildNode: $vssError", e)
+                    }
+                }
+
+                // Fall back to local filesystem store if VSS failed or was not configured
+                if (this@LdkNodeModule.node == null) {
+                    if (vssError != null) {
+                        Log.w("LdkNodeModule", "Falling back to local filesystem store")
+                    }
+                    val fsBuilder = Builder.fromConfig(config)
+                    applyBuilderSettings(fsBuilder)
+                    this@LdkNodeModule.node = fsBuilder.buildWithFsStore(nodeEntropy)
+                }
+
+                this@LdkNodeModule.builder = null // Builder is consumed
+                val result = Arguments.createMap()
+                if (vssError != null) {
+                    result.putString("vssError", vssError)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
                 }
             }
-            this.storedLsps2NodeId?.let { nodeId ->
-                this.storedLsps2Address?.let { address ->
-                    builderToUse.setLiquiditySourceLsps2(nodeId, address, this.storedLsps2Token)
-                }
-            }
+        }
+    }
 
-            val nodeEntropy = NodeEntropy.fromBip39Mnemonic(mnemonic, passphrase)
-            val vssUrl = this.storedVssUrl
-            val vssStoreId = this.storedVssStoreId
-            if (vssUrl != null && vssStoreId != null) {
-                Log.d("LdkNodeModule", "Building node with VSS store: $vssUrl")
-                this.node = builderToUse.buildWithVssStoreAndFixedHeaders(nodeEntropy, vssUrl, vssStoreId, emptyMap())
-            } else {
-                this.node = builderToUse.buildWithFsStore(nodeEntropy)
+    private fun applyBuilderSettings(builder: Builder) {
+        this.storedEsploraServerUrl?.let {
+            Log.d("LdkNodeModule", "applyBuilderSettings: Esplora server = $it")
+            builder.setChainSourceEsplora(it, createEsploraSyncConfig())
+        }
+        this.storedRgsServerUrl?.let {
+            Log.d("LdkNodeModule", "applyBuilderSettings: RGS server = $it")
+            builder.setGossipSourceRgs(it)
+        }
+        this.storedLsps1NodeId?.let { nodeId ->
+            this.storedLsps1Address?.let { address ->
+                builder.setLiquiditySourceLsps1(nodeId, address, this.storedLsps1Token)
             }
-            this.builder = null // Builder is consumed
-            promise.resolve(null)
-        } catch (e: Exception) {
-            promise.reject("error", e.message, e)
+        }
+        this.storedLsps2NodeId?.let { nodeId ->
+            this.storedLsps2Address?.let { address ->
+                builder.setLiquiditySourceLsps2(nodeId, address, this.storedLsps2Token)
+            }
+        }
+        this.storedLsps7NodeId?.let { nodeId ->
+            this.storedLsps7Address?.let { address ->
+                builder.setLiquiditySourceLsps7(nodeId, address, this.storedLsps7Token)
+            }
         }
     }
 

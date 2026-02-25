@@ -10,11 +10,14 @@ import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
 import { validateMnemonic as bip39Validate } from '@scure/bip39';
 import { BIP39_WORD_LIST } from './Bip39Utils';
+import { localeString } from './LocaleUtils';
+import { deriveVssSigningKey } from './VssAuthUtils';
 
 // Default Esplora servers
 export const ESPLORA_SERVERS_MAINNET = [
-    'https://mempool.space/api',
-    'https://blockstream.info/api'
+    'https://electrs.getalbypro.com',
+    'https://blockstream.info/api',
+    'https://mempool.space/api'
 ];
 
 export const ESPLORA_SERVERS_TESTNET = [
@@ -25,7 +28,7 @@ export const ESPLORA_SERVERS_TESTNET = [
 export const ESPLORA_SERVERS_SIGNET = ['https://mempool.space/signet/api'];
 
 // Default VSS (Versioned Storage Service) server
-export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com';
+export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
 
 // Default RGS (Rapid Gossip Sync) servers
 export const RGS_SERVERS_MAINNET = [
@@ -158,6 +161,7 @@ export async function createLdkNodeWallet({
 }): Promise<{
     mnemonic: string;
     storagePath: string;
+    vssError?: string;
 }> {
     // Create storage directory
     const storagePath = await createLdkNodeDirectory(nodeDir);
@@ -175,7 +179,10 @@ export async function createLdkNodeWallet({
 
     // Initialize the node
     const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
-    await LdkNode.utils.initializeNode({
+    const vssStoreId = Buffer.from(
+        deriveVssSigningKey(mnemonic, passphrase).publicKey
+    ).toString('hex');
+    const { vssError } = await LdkNode.utils.initializeNode({
         network: networkType,
         storagePath,
         esploraServerUrl: esploraUrl,
@@ -187,13 +194,14 @@ export async function createLdkNodeWallet({
         trustedPeers0conf,
         vssConfig: {
             url: vssUrl,
-            storeId: nodeDir
+            storeId: vssStoreId
         }
     });
 
     return {
         mnemonic,
-        storagePath
+        storagePath,
+        vssError
     };
 }
 
@@ -226,7 +234,7 @@ export async function startLdkNodeWallet({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
-}): Promise<void> {
+}): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
     const storagePath = getLdkNodeStoragePath(nodeDir);
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
@@ -234,7 +242,10 @@ export async function startLdkNodeWallet({
 
     // Initialize the node with existing mnemonic
     const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
-    await LdkNode.utils.initializeNode({
+    const vssStoreId = Buffer.from(
+        deriveVssSigningKey(seedMnemonic, passphrase).publicKey
+    ).toString('hex');
+    const { vssError } = await LdkNode.utils.initializeNode({
         network: networkType,
         storagePath,
         esploraServerUrl: esploraUrl,
@@ -246,27 +257,98 @@ export async function startLdkNodeWallet({
         trustedPeers0conf,
         vssConfig: {
             url: vssUrl,
-            storeId: nodeDir
+            storeId: vssStoreId
         }
     });
 
-    // Start the node
-    await LdkNode.node.start();
-    console.log('LDK Node: Started successfully');
+    // Start the node — start() kicks off background tasks (including fee estimation)
+    // that can reject asynchronously, so we catch those too
+    let esploraError: string | undefined;
+    let rgsError: string | undefined;
+    let nodeStarted = false;
 
-    // Sync wallets (on-chain and triggers RGS if configured)
     try {
-        await LdkNode.node.syncWallets();
-        console.log('LDK Node: Initial sync complete');
-
-        // Log network graph info
-        const graphInfo = await LdkNode.node.networkGraphInfo();
-        console.log(
-            `LDK Node: Network graph contains ${graphInfo.channelCount} channels and ${graphInfo.nodeCount} nodes`
-        );
-    } catch (e) {
-        console.log('LDK Node: Initial sync error:', e);
+        await LdkNode.node.start();
+        nodeStarted = true;
+        console.log('LDK Node: Started successfully');
+    } catch (e: any) {
+        const errorMsg = e?.message || e?.toString?.() || String(e);
+        console.warn('LDK Node: Start error:', errorMsg);
+        if (
+            errorMsg.includes('FeerateEstimation') ||
+            errorMsg.includes('fee rate')
+        ) {
+            esploraError = errorMsg;
+            // Node may still be running despite fee estimation failure —
+            // attempt sync to detect RGS errors too
+            nodeStarted = true;
+        }
     }
+
+    // Only sync if the node actually started
+    if (nodeStarted) {
+        // Sync wallets (on-chain via Esplora, network graph via RGS).
+        // syncWallets() throws the first error it encounters, so we call
+        // it twice: the first failure may be RGS, the second may be Esplora
+        // (or vice versa).
+        for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+                await LdkNode.node.syncWallets();
+                console.log('LDK Node: Sync complete');
+                break;
+            } catch (e: any) {
+                const errorMsg = e?.message || e?.toString?.() || String(e);
+                console.warn(
+                    `LDK Node: Sync error (attempt ${attempt + 1}):`,
+                    errorMsg
+                );
+
+                if (
+                    errorMsg.includes('FeerateEstimation') ||
+                    errorMsg.includes('Esplora') ||
+                    errorMsg.includes('fee rate')
+                ) {
+                    esploraError = esploraError || errorMsg;
+                }
+
+                if (
+                    errorMsg.includes('RapidGossipSync') ||
+                    errorMsg.includes('Rgs') ||
+                    errorMsg.includes('gossip')
+                ) {
+                    rgsError = rgsError || errorMsg;
+                }
+
+                // Unknown sync error — attribute to esplora if not already set
+                if (
+                    !esploraError &&
+                    !rgsError &&
+                    !errorMsg.includes('NotRunning')
+                ) {
+                    esploraError = errorMsg;
+                }
+            }
+        }
+
+        // Check network graph — if empty, RGS likely failed
+        try {
+            const graphInfo = await LdkNode.node.networkGraphInfo();
+            console.log(
+                `LDK Node: Network graph contains ${graphInfo.channelCount} channels and ${graphInfo.nodeCount} nodes`
+            );
+            if (
+                graphInfo.channelCount === 0 &&
+                graphInfo.nodeCount === 0 &&
+                !rgsError
+            ) {
+                rgsError = localeString('components.AlertModal.rgsEmptyGraph');
+            }
+        } catch (e) {
+            console.log('LDK Node: Could not fetch network graph info:', e);
+        }
+    }
+
+    return { vssError, esploraError, rgsError };
 }
 
 /**
