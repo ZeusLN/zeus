@@ -669,7 +669,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && NodeInfoStore.supportsOffers && (
+                    {selectedNode && BackendUtils.supportsBolt12Address() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

@@ -456,6 +456,7 @@ export default class EmbeddedLND extends LND {
     supportsLSPScustomMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
+    supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
