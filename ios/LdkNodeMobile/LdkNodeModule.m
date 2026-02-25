@@ -14,7 +14,7 @@ RCT_EXTERN_METHOD(setListeningAddresses:(NSArray *)addresses resolver:(RCTPromis
 RCT_EXTERN_METHOD(setLiquiditySourceLsps1:(NSString *)nodeId address:(NSString *)address token:(NSString *)token resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(setLiquiditySourceLsps2:(NSString *)nodeId address:(NSString *)address token:(NSString *)token resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(setTrustedPeers0conf:(NSArray *)peers resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(setVssServer:(NSString *)vssUrl storeId:(NSString *)storeId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(setVssServer:(NSString *)vssUrl storeId:(NSString *)storeId headers:(NSDictionary *)headers resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // Mnemonic Methods
 RCT_EXTERN_METHOD(generateMnemonic:(nonnull NSNumber *)wordCount resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)

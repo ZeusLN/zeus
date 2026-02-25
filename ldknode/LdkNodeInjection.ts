@@ -4,6 +4,7 @@
  */
 
 import { NativeModules, Platform } from 'react-native';
+import { generateVssAuthHeaders } from '../utils/VssAuthUtils';
 import type {
     Network,
     NodeStatus,
@@ -86,8 +87,12 @@ const setTrustedPeers0conf = async (peers: string[]): Promise<void> => {
     return await LdkNodeModule.setTrustedPeers0conf(peers);
 };
 
-const setVssServer = async (vssUrl: string, storeId: string): Promise<void> => {
-    return await LdkNodeModule.setVssServer(vssUrl, storeId);
+const setVssServer = async (
+    vssUrl: string,
+    storeId: string,
+    headers?: Record<string, string>
+): Promise<void> => {
+    return await LdkNodeModule.setVssServer(vssUrl, storeId, headers ?? null);
 };
 
 // ============================================================================
@@ -106,7 +111,7 @@ const generateMnemonic = async (wordCount: number = 12): Promise<string> => {
 const buildNode = async (
     mnemonic: string,
     passphrase?: string | null
-): Promise<void> => {
+): Promise<{ vssError?: string } | null> => {
     return await LdkNodeModule.buildNode(mnemonic, passphrase ?? null);
 };
 
@@ -518,7 +523,7 @@ const initializeNode = async ({
         url: string;
         storeId: string;
     };
-}): Promise<void> => {
+}): Promise<{ vssError?: string }> => {
     console.log('LDK Node: Initializing...');
     await createBuilder();
     await setNetwork(network);
@@ -576,12 +581,27 @@ const initializeNode = async ({
 
     // Configure VSS (Versioned Storage Service) for cloud backup
     if (vssConfig && vssConfig.url && vssConfig.storeId) {
-        await setVssServer(vssConfig.url, vssConfig.storeId);
+        let vssHeaders: Record<string, string> | undefined;
+        try {
+            vssHeaders = generateVssAuthHeaders(
+                mnemonic,
+                passphrase ?? undefined
+            );
+            console.log('LDK Node: VSS auth header generated');
+        } catch (e) {
+            console.warn('LDK Node: Failed to generate VSS auth header:', e);
+        }
+        await setVssServer(vssConfig.url, vssConfig.storeId, vssHeaders);
         console.log(`LDK Node: VSS server set to ${vssConfig.url}`);
     }
 
-    await buildNode(mnemonic, passphrase);
+    const buildResult = await buildNode(mnemonic, passphrase);
+    const vssError = buildResult?.vssError;
+    if (vssError) {
+        console.warn(`LDK Node: VSS failed (${vssError}), using local storage`);
+    }
     console.log('LDK Node: Build complete');
+    return { vssError };
 };
 
 // ============================================================================
@@ -608,7 +628,11 @@ export interface ILdkNodeInjections {
             token?: string | null;
         }) => Promise<void>;
         setTrustedPeers0conf: (peers: string[]) => Promise<void>;
-        setVssServer: (vssUrl: string, storeId: string) => Promise<void>;
+        setVssServer: (
+            vssUrl: string,
+            storeId: string,
+            headers?: Record<string, string>
+        ) => Promise<void>;
     };
     mnemonic: {
         generateMnemonic: (wordCount?: number) => Promise<string>;
@@ -617,7 +641,7 @@ export interface ILdkNodeInjections {
         buildNode: (
             mnemonic: string,
             passphrase?: string | null
-        ) => Promise<void>;
+        ) => Promise<{ vssError?: string } | null>;
         start: () => Promise<void>;
         stop: () => Promise<void>;
         syncWallets: () => Promise<void>;
@@ -749,7 +773,7 @@ export interface ILdkNodeInjections {
                 url: string;
                 storeId: string;
             };
-        }) => Promise<void>;
+        }) => Promise<{ vssError?: string }>;
     };
 }
 
