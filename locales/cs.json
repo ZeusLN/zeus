@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Zálohoval jsem si svých 24 slov",
     "views.Settings.Seed.dangerousText1": "Chcete zkopírovat váš 24slovný seed do schránky?",
     "views.Settings.Seed.dangerousText2": "Tohle je NEBEZPEČNÉ. Váš seed mohou přečíst další aplikace. Postupujte opatrně.",
-    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
+    "views.Settings.Seed.dangerousButton": "Zkopírovat seed do schránky",
     "views.Cashu.CashuSeed.title": "Exportovat BIP-39 seed Cashu peněženky",
     "views.Cashu.CashuSeed.text1": "Následujících 12 slov slouží pro zálohu vaší Cashu peněženky. Pokud máte bezpečně uloženou zálohu vaší vestavěné LND peněženky sestávají se z 24 slov, těchto 12 slov si ukládat nemusíte. Mohou se ale hodit, pokud byste chtěli importovat prostředky do jiné Cashu peněženky.",
     "views.Cashu.LegacySeedRecovery.title": "Obnova legacy seedu",
