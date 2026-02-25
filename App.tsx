@@ -186,6 +186,7 @@ import SwapDetails from './views/Swaps/SwapDetails';
 import SwapsPane from './views/Swaps/SwapsPane';
 import RefundSwap from './views/Swaps/Refund';
 import SwapSettings from './views/Swaps/Settings';
+import SwapsRecovery from './views/Swaps/SwapsRecovery';
 import SwapsRescueKey from './views/Swaps/SwapsRescueKey';
 
 // POS
@@ -1254,6 +1255,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="CashuSeed" // @ts-ignore:next-line
                                                         component={CashuSeed}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapsRecovery" // @ts-ignore:next-line
+                                                        component={
+                                                            SwapsRecovery
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="SwapsRescueKey" // @ts-ignore:next-line

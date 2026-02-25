@@ -672,7 +672,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     isModalVisible: false,
                                     isIntroModalVisible: false
                                 });
-                                navigation.navigate('SeedRecovery', {
+                                navigation.navigate('SwapsRecovery', {
                                     restoreRescueKey: true
                                 });
                             }}
