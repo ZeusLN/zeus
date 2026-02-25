@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "मैंने अपने 24 शब्दों का बैकअप ले लिया है",
     "views.Settings.Seed.dangerousText1": "क्या आप अपने 24 शब्द वाले सीड को अपने क्लिपबोर्ड पर कॉपी करना चाहते हैं?",
     "views.Settings.Seed.dangerousText2": "यह खतरनाक है। आपके सीड को अन्य एप्लिकेशन द्वारा पढ़ा जा सकता है जिन्हें आप खोलते हैं। सावधानी के साथ आगे बढ़ें।",
-    "views.Settings.Seed.dangerousButton": "खतरनाक तरीके से सीड को क्लिपबोर्ड पर कॉपी करें",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Export Cashu wallet BIP-39 seed",
     "views.Cashu.CashuSeed.text1": "The following 12 words are your Cashu wallet backup. You do not have to save these if you have your 24 word embedded LND wallet seed phrase backed up, but it is useful if you want to import funds into another Cashu wallet.",
     "views.Cashu.LegacySeedRecovery.title": "Legacy seed recovery",
