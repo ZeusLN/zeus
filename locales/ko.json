@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "나는 내 24 단어들을 백업하였습니다.",
     "views.Settings.Seed.dangerousText1": "24단어 시드를 클립보드에 복사하길 원하시나요?",
     "views.Settings.Seed.dangerousText2": "이 행위는 위험합니다! 다른 앱들이 시드 문구를 읽어 들일 수도 있습니다. 주의해서 진행하세요.",
-    "views.Settings.Seed.dangerousButton": "위험을 감수하고 시드를 클립보드에 복사합니다.",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "Cashu 지갑 BIP-39 시드 내보내기",
     "views.Cashu.CashuSeed.text1": "다음 12개 단어는 Cashu 지갑의 백업 문구입니다. 임베디드 LND 지갑의 24단어 시드 구문을 이미 백업해두었다면 별도로 저장하지 않아도 되지만, 다른 Cashu 지갑으로 자금을 가져오고 싶을 때 유용합니다.",
     "views.Cashu.LegacySeedRecovery.title": "레거시 시드 복구",
