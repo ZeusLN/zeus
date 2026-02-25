@@ -12,6 +12,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import RNRestart from 'react-native-restart';
 
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
@@ -26,7 +27,6 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 
 import Storage from '../../storage';
 
@@ -155,7 +155,7 @@ export default class BalancePane extends React.PureComponent<
                     onPress: async () => {
                         await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
                         this.props.onUnlock();
-                        restartNeeded();
+                        RNRestart.Restart();
                     }
                 }
             ]
@@ -1082,6 +1082,8 @@ export default class BalancePane extends React.PureComponent<
                                         </Modal>
                                     </>
                                 )}
+                            </View>
+                        )}
                                 {implementation === 'lndhub' ||
                                 implementation === 'nostr-wallet-connect' ? (
                                     <View style={styles.balanceContainer}>
