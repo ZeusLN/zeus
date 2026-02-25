@@ -578,6 +578,7 @@ export default class WalletConfiguration extends React.Component<
                 navigation.popTo('Wallet');
             } else {
                 if (newEmbeddedLndWallet) {
+                    setConnectingStatus(true);
                     navigation.popTo('Wallet');
                 } else {
                     navigation.goBack();
