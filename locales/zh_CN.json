@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "我已经备份了我的 24 个助记单词。",
     "views.Settings.Seed.dangerousText1": "您想将 24 个助记单词复制到剪贴板吗？",
     "views.Settings.Seed.dangerousText2": "危险！其他您打开的应用可能会读取您的助记词，请谨慎操作。",
-    "views.Settings.Seed.dangerousButton": "危险地复制助记词到剪贴板",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "导出 Cashu 钱包的 BIP-39 助记词",
     "views.Cashu.CashuSeed.text1": "以下 12 个助记单词是您的 Cashu 钱包备份。如果您已经备份了 24 个助记单词的嵌入式闪电网络守护进程（LND）助记词，则无需保存这些，但如果您想将资金导入另一个 Cashu 钱包，这些仍然很有用。",
     "views.Cashu.LegacySeedRecovery.title": "传统助记词恢复",
