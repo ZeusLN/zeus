@@ -27,6 +27,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SyncStore from '../../stores/SyncStore';
 
 import {
     SWAPS_KEY,
@@ -51,6 +52,7 @@ interface SeedProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    SyncStore: SyncStore;
     route: Route<
         'Seed',
         {
@@ -114,7 +116,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     );
 };
 
-@inject('SettingsStore', 'NodeInfoStore')
+@inject('SettingsStore', 'NodeInfoStore', 'SyncStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
@@ -198,7 +200,16 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     handleExportChannels = () => {
-        const { SettingsStore, NodeInfoStore } = this.props;
+        const { SettingsStore, NodeInfoStore, SyncStore } = this.props;
+        const { isSyncing } = SyncStore;
+
+        if (isSyncing) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.export.syncInProgress')
+            );
+            return;
+        }
         const { isSqlite }: any = SettingsStore;
         const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
         const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
