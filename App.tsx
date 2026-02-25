@@ -166,6 +166,7 @@ import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
 import RapidGossipSync from './views/Settings/EmbeddedNode/RapidGossipSync';
 import EsploraServer from './views/Settings/EmbeddedNode/EsploraServer';
+import VssServer from './views/Settings/EmbeddedNode/VssServer';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
@@ -1049,6 +1050,12 @@ export default class App extends React.PureComponent {
                                                             name="EsploraServer" // @ts-ignore:next-line
                                                             component={
                                                                 EsploraServer
+                                                            }
+                                                        />
+                                                        <Stack.Screen
+                                                            name="VssServer" // @ts-ignore:next-line
+                                                            component={
+                                                                VssServer
                                                             }
                                                         />
                                                         <Stack.Screen
