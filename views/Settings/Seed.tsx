@@ -8,9 +8,11 @@ import { Row } from '../../components/layout/Row';
 import Button from '../../components/Button';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import DangerousCopySeedButton from '../../components/DangerousCopySeedButton';
 import DangerousCopySeedModal from '../../components/Modals/DangerousCopySeedModal';
 import SeedWarningDisclaimer from '../../components/SeedWarningDisclaimer';
 import SeedWordGrid from '../../components/SeedWordGrid';
+import { buttonContainerStyle } from '../../components/seedStyles';
 
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -20,7 +22,6 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 
 import Storage from '../../storage';
 
-import Skull from '../../assets/images/SVG/Skull.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
 interface SeedProps {
@@ -51,15 +52,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         const { understood, showModal } = this.state;
         const seedPhrase = SettingsStore.seedPhrase;
 
-        const DangerouslyCopySeed = () => (
-            <TouchableOpacity
-                onPress={() => this.setState({ showModal: true })}
-                style={{ marginLeft: 10 }}
-            >
-                <Skull fill={themeColor('text')} />
-            </TouchableOpacity>
-        );
-
         const QRExport = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('SeedQRExport')}
@@ -81,9 +73,14 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         }
                     }}
                     rightComponent={
-                        understood && seedPhrase ? (
+                        understood && seedPhrase?.length > 0 ? (
                             <Row>
-                                <DangerouslyCopySeed />
+                                <DangerousCopySeedButton
+                                    onPress={() =>
+                                        this.setState({ showModal: true })
+                                    }
+                                    style={{ marginLeft: 10 }}
+                                />
                                 <QRExport />
                             </Row>
                         ) : undefined
@@ -102,18 +99,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         onUnderstood={() => this.setState({ understood: true })}
                     />
                 )}
-                {understood && seedPhrase && (
+                {understood && seedPhrase?.length > 0 && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
                         <SeedWordGrid seedPhrase={seedPhrase} />
-                        <View
-                            style={{
-                                alignSelf: 'center',
-                                marginTop: 45,
-                                bottom: 35,
-                                backgroundColor: themeColor('background'),
-                                width: '100%'
-                            }}
-                        >
+                        <View style={buttonContainerStyle()}>
                             <Button
                                 onPress={async () => {
                                     await Storage.setItem(

@@ -13,6 +13,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import SeedWordInput from '../../components/SeedWordInput';
+import { buttonContainerStyle } from '../../components/seedStyles';
 
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -45,7 +46,6 @@ interface SeedRecoveryState {
     lndDir: string;
     recoveryCipherSeed: string;
     channelBackupsBase64: string;
-    errorCreatingWallet: boolean;
     errorMsg: string;
     showSuggestions: boolean;
 }
@@ -70,7 +70,6 @@ export default class SeedRecovery extends React.PureComponent<
             lndDir: '',
             recoveryCipherSeed: '',
             channelBackupsBase64: '',
-            errorCreatingWallet: false,
             errorMsg: '',
             showSuggestions: false
         };
@@ -206,12 +205,13 @@ export default class SeedRecovery extends React.PureComponent<
                 } else {
                     this.setState({
                         loading: false,
-                        errorCreatingWallet: true
+                        errorMsg: localeString(
+                            'views.Intro.errorCreatingWallet'
+                        )
                     });
                 }
             } catch (e: any) {
                 this.setState({
-                    errorCreatingWallet: true,
                     errorMsg: e.toString(),
                     loading: false
                 });
@@ -255,15 +255,7 @@ export default class SeedRecovery extends React.PureComponent<
                             }
                         />
                         {!showSuggestions && (
-                            <View
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: 45,
-                                    bottom: 35,
-                                    backgroundColor: themeColor('background'),
-                                    width: '100%'
-                                }}
-                            >
+                            <View style={buttonContainerStyle()}>
                                 <Button
                                     onPress={() => restore()}
                                     title={

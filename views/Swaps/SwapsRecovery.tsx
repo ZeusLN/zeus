@@ -19,6 +19,7 @@ import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
 import SeedWordInput from '../../components/SeedWordInput';
+import { buttonContainerStyle } from '../../components/seedStyles';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -275,15 +276,7 @@ export default class SwapsRecovery extends React.PureComponent<
                             </>
                         )}
                         {!showSuggestions && (
-                            <View
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: 45,
-                                    bottom: 35,
-                                    backgroundColor: themeColor('background'),
-                                    width: '100%'
-                                }}
-                            >
+                            <View style={buttonContainerStyle()}>
                                 <Button
                                     onPress={async () => {
                                         if (restoreSwaps) {

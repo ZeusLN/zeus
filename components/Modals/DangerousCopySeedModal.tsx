@@ -28,7 +28,7 @@ const DangerousCopySeedModal = ({
                         <Text
                             style={{
                                 ...seedStyles.blackText,
-                                fontSize: 40,
+                                fontSize: 25,
                                 alignSelf: 'center',
                                 marginBottom: 20
                             }}

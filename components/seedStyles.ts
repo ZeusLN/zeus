@@ -1,5 +1,16 @@
 import { StyleSheet } from 'react-native';
 
+import { themeColor } from '../utils/ThemeUtils';
+
+export const buttonContainerStyle = () =>
+    ({
+        alignSelf: 'center',
+        marginTop: 45,
+        bottom: 35,
+        backgroundColor: themeColor('background'),
+        width: '100%'
+    } as const);
+
 export default StyleSheet.create({
     text: {
         fontFamily: 'PPNeueMontreal-Book'
