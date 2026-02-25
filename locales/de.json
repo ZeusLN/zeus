@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "Ich habe ein Backup meiner 24 Wörter",
     "views.Settings.Seed.dangerousText1": "Möchtest du deine 24 Wörter in die Zwischenablage kopieren?",
     "views.Settings.Seed.dangerousText2": "Dies ist GEFÄHRLICH! Dein Seed könnte von anderen Apps gelesen werden. Fahre nur fort, wenn du weißt, was du tust.",
-    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
+    "views.Settings.Seed.dangerousButton": "Seed in Zwischenablage kopieren",
     "views.Cashu.CashuSeed.title": "Export Cashu wallet BIP-39 seed",
     "views.Cashu.CashuSeed.text1": "Die folgenden 12 Wörter sind dein Cashu-Wallet-Backup. Du musst sie nicht speichern, wenn du die 24 Seed-Wörter deiner integrierten LND-Wallet bereits gesichert hast, sie können jedoch hilfreich sein, falls du Guthaben in eine andere Cashu-Wallet importieren möchtest.",
     "views.Cashu.LegacySeedRecovery.title": "Legacy seed recovery",
