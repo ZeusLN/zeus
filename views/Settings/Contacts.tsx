@@ -4,10 +4,10 @@ import {
     View,
     TouchableOpacity,
     FlatList,
-    Image,
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import Animated, { SharedTransition } from 'react-native-reanimated';
 import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -31,6 +31,9 @@ import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 import Ecash from '../../assets/images/SVG/Ecash.svg';
 import { CashuLockSettingsParams } from '../Cashu/CashuLockSettings';
+
+// Shared transition for contact list -> details (must match ContactDetails)
+const contactSharedTransition = SharedTransition.duration(450).springify();
 
 export interface ContactsParams extends CashuLockSettingsParams {
     SendScreen: boolean;
@@ -139,6 +142,10 @@ export default class Contacts extends React.Component<
                             this.props.navigation.navigate('ContactDetails', {
                                 contactId: item.contactId || item.id,
                                 isNostrContact: false,
+                                contactName: item.name,
+                                contactPhoto: contact.getPhoto,
+                                contactHasOnlyCashuPubkey:
+                                    contact.hasOnlyCashuPubkey,
                                 cashuLockData: {
                                     fromCashuLockSettings: true,
                                     memo,
@@ -209,7 +216,12 @@ export default class Contacts extends React.Component<
                     } else {
                         this.props.navigation.navigate('ContactDetails', {
                             contactId: item.contactId || item.id,
-                            isNostrContact: false
+                            isNostrContact: false,
+                            // Pass data for shared element transition
+                            contactName: item.name,
+                            contactPhoto: contact.getPhoto,
+                            contactHasOnlyCashuPubkey:
+                                contact.hasOnlyCashuPubkey
                         });
                     }
                 }}
@@ -223,7 +235,7 @@ export default class Contacts extends React.Component<
                     }}
                 >
                     {contact.photo ? (
-                        <Image
+                        <Animated.Image
                             source={{ uri: contact.getPhoto }}
                             style={{
                                 width: 40,
@@ -231,9 +243,13 @@ export default class Contacts extends React.Component<
                                 borderRadius: 20,
                                 marginRight: 10
                             }}
+                            sharedTransitionTag={`contact-photo-${
+                                item.contactId || item.id
+                            }`}
+                            sharedTransitionStyle={contactSharedTransition}
                         />
                     ) : (
-                        <View
+                        <Animated.View
                             style={{
                                 width: 40,
                                 height: 40,
@@ -241,8 +257,14 @@ export default class Contacts extends React.Component<
                                 marginRight: 10,
                                 backgroundColor: themeColor('secondary'),
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                overflow: 'hidden'
                             }}
+                            sharedTransitionTag={`contact-photo-${
+                                item.contactId || item.id
+                            }`}
+                            sharedTransitionStyle={contactSharedTransition}
+                            collapsable={false}
                         >
                             {contact.getAvatarInitials ? (
                                 <Text
@@ -259,14 +281,18 @@ export default class Contacts extends React.Component<
                             ) : (
                                 <Text style={{ fontSize: 20 }}>⚡</Text>
                             )}
-                        </View>
+                        </Animated.View>
                     )}
                     <View style={{ flex: 1 }}>
-                        <Text
+                        <Animated.Text
                             style={{ fontSize: 16, color: themeColor('text') }}
+                            sharedTransitionTag={`contact-name-${
+                                item.contactId || item.id
+                            }`}
+                            sharedTransitionStyle={contactSharedTransition}
                         >
                             {item.name}
-                        </Text>
+                        </Animated.Text>
                         <Text
                             numberOfLines={1}
                             ellipsizeMode="middle"
@@ -491,6 +517,7 @@ export default class Contacts extends React.Component<
                         renderItem={this.renderContactItem}
                         keyExtractor={(_item, index) => index.toString()}
                         scrollEnabled={false}
+                        removeClippedSubviews={false}
                     />
 
                     {/* Render non-favorite contacts */}
@@ -521,6 +548,7 @@ export default class Contacts extends React.Component<
                         renderItem={this.renderContactItem}
                         keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
+                        removeClippedSubviews={false}
                     />
                     {!loading &&
                         filteredContacts.length > 0 &&

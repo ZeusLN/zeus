@@ -8,6 +8,7 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import Animated, { FadeIn, SharedTransition } from 'react-native-reanimated';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,12 +31,19 @@ import QR from '../assets/images/SVG/QR.svg';
 import Ecash from '../assets/images/SVG/Ecash.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
+import { getAvatarInitials } from '../utils/DisplayUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
 
 import Contact from '../models/Contact';
+
+// Shared transition for smooth contact photo/name animation (Reanimated 4 New Arch)
+const contactSharedTransition = SharedTransition.duration(350).springify();
+
+// Delay content appearance until shared transition completes (prevents double image/name)
+const contentEntering = FadeIn.delay(320).duration(100);
 
 const AddressRow: React.FC<{
     address: string;
@@ -66,6 +74,9 @@ interface ContactDetailsProps {
         {
             isNostrContact: boolean;
             contactId: string;
+            contactName?: string;
+            contactPhoto?: string;
+            contactHasOnlyCashuPubkey?: boolean;
             nostrContact: any;
             cashuLockData?: any;
         }
@@ -347,35 +358,12 @@ export default class ContactDetails extends React.Component<
             );
         };
 
-        const avatarCircle = contact.photo ? (
-            <Image
-                source={{ uri: contact.getPhoto }}
-                style={styles.avatarContainer}
-            />
-        ) : (
-            <View
-                style={[
-                    styles.avatarContainer,
-                    styles.avatarView,
-                    { backgroundColor: themeColor('secondary') }
-                ]}
-            >
-                {contact.getAvatarInitials ? (
-                    <Text
-                        style={[
-                            styles.avatarInitials,
-                            { color: themeColor('text') }
-                        ]}
-                    >
-                        {contact.getAvatarInitials}
-                    </Text>
-                ) : contact.hasOnlyCashuPubkey ? (
-                    <Ecash fill="#FACC15" width={64} height={64} />
-                ) : (
-                    <Text style={{ fontSize: 64 }}>⚡</Text>
-                )}
-            </View>
-        );
+        // Get params for shared element transition during loading
+        const contactId = this.props.route.params?.contactId;
+        const contactName = this.props.route.params?.contactName;
+        const contactPhoto = this.props.route.params?.contactPhoto;
+        const contactHasOnlyCashuPubkey =
+            this.props.route.params?.contactHasOnlyCashuPubkey;
 
         return (
             <>
@@ -388,8 +376,84 @@ export default class ContactDetails extends React.Component<
                             }}
                             navigation={navigation}
                         />
-                        <View style={{ marginTop: 60 }}>
-                            <LoadingIndicator />
+                        <View style={{ alignItems: 'center', marginTop: 20 }}>
+                            {contactPhoto ? (
+                                <Animated.Image
+                                    source={{ uri: contactPhoto }}
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20
+                                    }}
+                                    sharedTransitionTag={`contact-photo-${contactId}`}
+                                    sharedTransitionStyle={
+                                        contactSharedTransition
+                                    }
+                                />
+                            ) : (
+                                contactId && (
+                                    <Animated.View
+                                        style={{
+                                            width: 150,
+                                            height: 150,
+                                            borderRadius: 75,
+                                            marginBottom: 20,
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            overflow: 'hidden'
+                                        }}
+                                        sharedTransitionTag={`contact-photo-${contactId}`}
+                                        sharedTransitionStyle={
+                                            contactSharedTransition
+                                        }
+                                        collapsable={false}
+                                    >
+                                        {contactHasOnlyCashuPubkey ? (
+                                            <Ecash
+                                                fill="#FACC15"
+                                                width={64}
+                                                height={64}
+                                            />
+                                        ) : getAvatarInitials(contactName) ? (
+                                            <Text
+                                                style={{
+                                                    fontSize: 48,
+                                                    fontWeight: 'bold',
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {getAvatarInitials(contactName)}
+                                            </Text>
+                                        ) : (
+                                            <Text style={{ fontSize: 64 }}>
+                                                ⚡
+                                            </Text>
+                                        )}
+                                    </Animated.View>
+                                )
+                            )}
+                            {contactName && (
+                                <Animated.Text
+                                    style={{
+                                        fontSize: 40,
+                                        fontWeight: 'bold',
+                                        marginBottom: 10,
+                                        color: 'white'
+                                    }}
+                                    sharedTransitionTag={`contact-name-${contactId}`}
+                                    sharedTransitionStyle={
+                                        contactSharedTransition
+                                    }
+                                >
+                                    {contactName}
+                                </Animated.Text>
+                            )}
+                            <View style={{ marginTop: 40 }}>
+                                <LoadingIndicator />
+                            </View>
                         </View>
                     </Screen>
                 ) : (
@@ -414,24 +478,93 @@ export default class ContactDetails extends React.Component<
                         <ScrollView
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {contact.banner ? (
-                                <View style={styles.bannerContainer}>
-                                    <Image
-                                        source={{ uri: contact.getBanner }}
-                                        style={styles.bannerImage}
-                                    />
-                                    <View style={styles.bannerAvatarOverlay}>
-                                        {avatarCircle}
-                                    </View>
-                                </View>
-                            ) : (
-                                <View style={{ marginBottom: 20 }}>
-                                    {avatarCircle}
-                                </View>
+                            {contact.banner && (
+                                <Image
+                                    source={{ uri: contact.getBanner }}
+                                    style={{
+                                        width: '100%',
+                                        height: 150,
+                                        marginBottom: 20
+                                    }}
+                                />
                             )}
-                            <Text style={styles.contactName}>
+                            {contact.photo ? (
+                                <Animated.Image
+                                    source={{ uri: contact.getPhoto }}
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20,
+                                        marginTop: contact.banner ? -100 : 0
+                                    }}
+                                    sharedTransitionTag={`contact-photo-${
+                                        contact.contactId || contact.id
+                                    }`}
+                                    sharedTransitionStyle={
+                                        contactSharedTransition
+                                    }
+                                    entering={contentEntering}
+                                />
+                            ) : (
+                                <Animated.View
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20,
+                                        marginTop: contact.banner ? -100 : 0,
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        overflow: 'hidden'
+                                    }}
+                                    sharedTransitionTag={`contact-photo-${
+                                        contact.contactId || contact.id
+                                    }`}
+                                    sharedTransitionStyle={
+                                        contactSharedTransition
+                                    }
+                                    entering={contentEntering}
+                                    collapsable={false}
+                                >
+                                    {contact.getAvatarInitials ? (
+                                        <Text
+                                            style={{
+                                                fontSize: 48,
+                                                fontWeight: 'bold',
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {contact.getAvatarInitials}
+                                        </Text>
+                                    ) : contact.hasOnlyCashuPubkey ? (
+                                        <Ecash
+                                            fill="#FACC15"
+                                            width={64}
+                                            height={64}
+                                        />
+                                    ) : (
+                                        <Text style={{ fontSize: 64 }}>⚡</Text>
+                                    )}
+                                </Animated.View>
+                            )}
+                            <Animated.Text
+                                style={{
+                                    fontSize: 40,
+                                    fontWeight: 'bold',
+                                    marginBottom: 10,
+                                    color: 'white'
+                                }}
+                                sharedTransitionTag={`contact-name-${
+                                    contact.contactId || contact.id
+                                }`}
+                                sharedTransitionStyle={contactSharedTransition}
+                                entering={contentEntering}
+                            >
                                 {contact.name}
-                            </Text>
+                            </Animated.Text>
                             <Text
                                 style={{
                                     ...styles.contactDescription,
