@@ -1123,7 +1123,7 @@
     "views.Settings.Seed.backupComplete": "24個單字都備份好了",
     "views.Settings.Seed.dangerousText1": "要把24個單字的錢包種子代碼複製到剪貼簿嗎？",
     "views.Settings.Seed.dangerousText2": "這個行為很危險！錢包種子代碼可能會被接下來開啟的其他應用程式讀取到，請小心謹慎。",
-    "views.Settings.Seed.dangerousButton": "冒險將錢包種子複製到剪貼簿",
+    "views.Settings.Seed.dangerousButton": "Copy seed to clipboard",
     "views.Cashu.CashuSeed.title": "匯出 Cashu 錢包的 BIP-39 種子代碼",
     "views.Cashu.CashuSeed.text1": "以下 12 個單字是你的 Cashu 錢包備份。如果你已經備份了 24 個單字的內嵌 LND 錢包種子代碼，那就不用再備份這組單字，但可以用在把資金匯入到其它 Cashu 錢包中。",
     "views.Cashu.LegacySeedRecovery.title": "Legacy seed recovery",
