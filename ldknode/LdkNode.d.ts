@@ -392,13 +392,20 @@ export interface ILdkNodeModule {
     setListeningAddresses(addresses: string[]): Promise<void>;
 
     // VSS Methods
-    setVssServer(vssUrl: string, storeId: string): Promise<void>;
+    setVssServer(
+        vssUrl: string,
+        storeId: string,
+        headers?: Record<string, string> | null
+    ): Promise<void>;
 
     // Mnemonic Methods
     generateMnemonic(wordCount: number): Promise<string>;
 
     // Node Build Methods
-    buildNode(mnemonic: string, passphrase?: string | null): Promise<void>;
+    buildNode(
+        mnemonic: string,
+        passphrase?: string | null
+    ): Promise<{ vssError?: string } | null>;
 
     // Node Lifecycle Methods
     start(): Promise<void>;

@@ -1284,7 +1284,7 @@ export default class EmbeddedLdkNode {
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;
-    supportsCashuWallet = () => false;
+    supportsCashuWallet = () => true;
     supportsAddressMessageSigning = () => false;
     supportsSettingInvoiceExpiration = () => true;
     supportsWatchtowerClient = () => false;

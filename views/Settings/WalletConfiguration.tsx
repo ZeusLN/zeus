@@ -1113,6 +1113,13 @@ export default class WalletConfiguration extends React.Component<
                 vssServerUrl: DEFAULT_VSS_SERVER
             });
 
+            if (response?.vssError) {
+                console.warn(
+                    'LDK Node: VSS unavailable during wallet creation:',
+                    response.vssError
+                );
+            }
+
             if (response && response.mnemonic) {
                 this.setState({
                     ldkMnemonic: response.mnemonic,
