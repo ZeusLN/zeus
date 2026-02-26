@@ -153,18 +153,11 @@ export default class LightningSwipeableRow extends Component<
     private renderActions = (
         progress: Animated.AnimatedInterpolation<number>
     ) => {
-        const width =
-            BackendUtils.supportsRouting() &&
-            BackendUtils.supportsLightningSends() &&
-            nodeInfoStore.supportsOffers
-                ? 280
-                : BackendUtils.supportsRouting() &&
-                  BackendUtils.supportsLightningSends()
-                ? 210
-                : BackendUtils.supportsRouting() ||
-                  BackendUtils.supportsLightningSends()
-                ? 140
-                : 70;
+        let actionCount = 1; // Receive is always shown
+        if (nodeInfoStore.supportsOffers) actionCount++;
+        if (BackendUtils.supportsRouting()) actionCount++;
+        if (BackendUtils.supportsLightningSends()) actionCount++;
+        const width = actionCount * 70;
         return (
             <View
                 style={{
