@@ -1245,7 +1245,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         const implementationDisplayValue: ImplementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
