@@ -243,7 +243,16 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const checkAndShowModal = async () => {
             if (!SwapStore.loading) {
-                const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+                let mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+
+                // LDK Node: auto-populate rescue key from wallet seed
+                if (
+                    !mnemonic &&
+                    SettingsStore.implementation === 'embedded-ldk-node' &&
+                    SettingsStore.ldkMnemonic
+                ) {
+                    mnemonic = await SwapStore.generateRescueKey();
+                }
 
                 if (mnemonic) {
                     this.setState({
@@ -279,7 +288,16 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const unsubFocus = this.props.navigation.addListener(
             'focus',
             async () => {
-                const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+                let mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+
+                // LDK Node: auto-populate rescue key from wallet seed
+                if (
+                    !mnemonic &&
+                    SettingsStore.implementation === 'embedded-ldk-node' &&
+                    SettingsStore.ldkMnemonic
+                ) {
+                    mnemonic = await SwapStore.generateRescueKey();
+                }
 
                 if (mnemonic) {
                     this.setState({
