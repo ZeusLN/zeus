@@ -638,6 +638,43 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    @ReactMethod
+    fun resetNetworkGraph(promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                node.resetNetworkGraph()
+                withContext(Dispatchers.Main) {
+                    promise.resolve(null)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun updateRgsSnapshot(promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val timestamp = node.updateRgsSnapshot()
+                val result = Arguments.createMap().apply {
+                    putDouble("timestamp", timestamp.toLong().toDouble())
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
     // Channel Methods
 
     @ReactMethod
@@ -893,7 +930,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     @ReactMethod
     fun sendSpontaneousPayment(nodeId: String, amountMsat: Double, promise: Promise) {
-        GlobalScope.launch(Dispatchers.IO) {
+        moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val paymentId = node.spontaneousPayment().send(amountMsat.toLong().toULong(), nodeId, null)
