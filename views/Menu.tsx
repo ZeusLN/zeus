@@ -711,7 +711,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && NodeInfoStore.supportsOffers && (
+                    {selectedNode && NodeInfoStore.supportsListingOffers && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -748,6 +748,50 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {selectedNode &&
+                        NodeInfoStore.supportsOffers &&
+                        !NodeInfoStore.supportsListingOffers && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginTop: 5,
+                                    marginBottom: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('CreatePayCode')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View>
+                                            <ReceiveIcon
+                                                fill={themeColor('text')}
+                                                width={48}
+                                                height={30}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PayCode.createOffer'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode && BackendUtils.supportsRouting() && (
                         <View

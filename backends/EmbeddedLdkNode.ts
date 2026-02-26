@@ -1293,6 +1293,7 @@ export default class EmbeddedLdkNode {
     supportsLSPS1native = () => false; // Disabled - Olympus doesn't support native LSPS1 over custom messages
     supportsLSPS7native = () => true;
     supportsOffers = () => true;
+    supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;

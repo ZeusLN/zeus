@@ -17,6 +17,7 @@ export default class NodeInfoStore {
     @observable public testnet: boolean;
     @observable public regtest: boolean;
     @observable public supportsOffers: boolean;
+    @observable public supportsListingOffers: boolean;
     channelsStore: ChannelsStore;
     settingsStore: SettingsStore;
 
@@ -43,6 +44,7 @@ export default class NodeInfoStore {
         this.testnet = false;
         this.errorMsg = '';
         this.supportsOffers = false;
+        this.supportsListingOffers = false;
     };
 
     @action
@@ -80,6 +82,8 @@ export default class NodeInfoStore {
                         this.loading = false;
                         this.error = false;
                         this.supportsOffers = BackendUtils.supportsOffers();
+                        this.supportsListingOffers =
+                            BackendUtils.supportsListingOffers();
                     });
                     resolve(nodeInfo);
                 })
