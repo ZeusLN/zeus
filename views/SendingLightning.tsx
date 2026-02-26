@@ -617,6 +617,9 @@ export default class SendingLightning extends React.Component<
                                 )}
                                 {(!!payment_error || !!error) && (
                                     <>
+                                    {(implementation === 'embedded-lnd' ||
+                                        implementation ===
+                                            'embedded-ldk-node') && (
                                         <Button
                                             title={localeString(
                                                 'views.SendingLightning.tryAgain'
