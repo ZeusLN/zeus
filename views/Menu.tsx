@@ -122,7 +122,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             null;
 
         const implementationDisplayValue: ImplementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 

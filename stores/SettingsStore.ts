@@ -375,9 +375,12 @@ export const SPEEDLOADER_KEYS = [
 export const INTERFACE_KEYS: {
     key: string;
     value: string;
+    isHeader?: boolean;
 }[] = [
+    { key: 'On-device', value: '', isHeader: true },
     { key: 'Embedded LND', value: 'embedded-lnd' },
-    { key: 'Embedded LDK Node', value: 'embedded-ldk-node' },
+    { key: 'LDK Node', value: 'embedded-ldk-node' },
+    { key: 'Remote', value: '', isHeader: true },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },

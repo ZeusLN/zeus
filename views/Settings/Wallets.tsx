@@ -199,7 +199,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
         const implementationDisplayValue: { [key: string]: string } = {};
 
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
