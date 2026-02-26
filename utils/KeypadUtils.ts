@@ -228,6 +228,91 @@ export const startShakeAnimation = (
     ]).start();
 };
 
+export interface KeypadAnimationRefs {
+    textAnimationRef: Animated.CompositeAnimation | null;
+    shakeAnimationRef: Animated.CompositeAnimation | null;
+}
+
+export const resetKeypadTextAnimation = (
+    textAnimation: Animated.Value,
+    refs: KeypadAnimationRefs
+): void => {
+    if (refs.textAnimationRef) {
+        refs.textAnimationRef.stop();
+        refs.textAnimationRef = null;
+    }
+    textAnimation.setValue(0);
+};
+
+export const stopKeypadShakeAnimation = (refs: KeypadAnimationRefs): void => {
+    if (refs.shakeAnimationRef) {
+        refs.shakeAnimationRef.stop();
+        refs.shakeAnimationRef = null;
+    }
+};
+
+export const resetAllKeypadAnimations = (
+    shakeAnimation: Animated.Value,
+    textAnimation: Animated.Value,
+    refs: KeypadAnimationRefs
+): void => {
+    resetKeypadTextAnimation(textAnimation, refs);
+    stopKeypadShakeAnimation(refs);
+    shakeAnimation.setValue(0);
+};
+
+export const startKeypadInvalidInputAnimation = (
+    shakeAnimation: Animated.Value,
+    textAnimation: Animated.Value,
+    refs: KeypadAnimationRefs
+): void => {
+    resetKeypadTextAnimation(textAnimation, refs);
+    stopKeypadShakeAnimation(refs);
+
+    refs.textAnimationRef = Animated.sequence([
+        Animated.timing(textAnimation, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: false
+        }),
+        Animated.timing(textAnimation, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: false
+        })
+    ]);
+
+    refs.shakeAnimationRef = Animated.sequence([
+        Animated.timing(shakeAnimation, {
+            toValue: 10,
+            duration: 100,
+            useNativeDriver: true
+        }),
+        Animated.timing(shakeAnimation, {
+            toValue: -10,
+            duration: 100,
+            useNativeDriver: true
+        }),
+        Animated.timing(shakeAnimation, {
+            toValue: 10,
+            duration: 100,
+            useNativeDriver: true
+        }),
+        Animated.timing(shakeAnimation, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true
+        })
+    ]);
+
+    refs.textAnimationRef.start(() => {
+        refs.textAnimationRef = null;
+    });
+    refs.shakeAnimationRef.start(() => {
+        refs.shakeAnimationRef = null;
+    });
+};
+
 /**
  * Deletes the last character from the amount string.
  * Returns '0' if the amount would become empty.
