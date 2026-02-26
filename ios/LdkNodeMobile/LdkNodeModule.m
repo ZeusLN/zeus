@@ -49,6 +49,9 @@ RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription exp
 RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
+// Spontaneous Payment Methods
+RCT_EXTERN_METHOD(sendSpontaneousPayment:(NSString *)nodeId amountMsat:(double)amountMsat resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
 // BOLT12 Payment Methods
 RCT_EXTERN_METHOD(bolt12Receive:(double)amountMsat description:(NSString *)description expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(bolt12ReceiveVariableAmount:(NSString *)description expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
