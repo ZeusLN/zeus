@@ -1023,7 +1023,9 @@ export default class SendingLightning extends React.Component<
                                             margin: 3
                                         }}
                                     />
-                                    {implementation === 'embedded-lnd' && (
+                                    {(implementation === 'embedded-lnd' ||
+                                        implementation ===
+                                            'embedded-ldk-node') && (
                                         <Button
                                             title={localeString(
                                                 'views.Settings.EmbeddedNode.Troubleshooting.title'

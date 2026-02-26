@@ -302,8 +302,8 @@ export default class EmbeddedNode extends React.Component<
                             </ListItem>
                         )}
 
-                        {/* Embedded LND: Troubleshooting */}
-                        {isEmbeddedLnd && (
+                        {/* Troubleshooting */}
+                        {(isEmbeddedLnd || isEmbeddedLdk) && (
                             <ListItem
                                 containerStyle={{
                                     backgroundColor: 'transparent'

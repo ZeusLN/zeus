@@ -17,29 +17,29 @@ package org.lightningdevkit.ldknode
 // compile the Rust component. The easiest way to ensure this is to bundle the Kotlin
 // helpers directly inline like we're doing here.
 
-import com.sun.jna.Library
+import android.os.Build
+import androidx.annotation.RequiresApi
+import com.sun.jna.Callback
 import com.sun.jna.IntegerType
+import com.sun.jna.Library
 import com.sun.jna.Native
 import com.sun.jna.Pointer
 import com.sun.jna.Structure
-import com.sun.jna.Callback
 import com.sun.jna.ptr.*
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.CharBuffer
-import java.nio.charset.CodingErrorAction
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.ConcurrentHashMap
-import android.os.Build
-import androidx.annotation.RequiresApi
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.coroutines.resume
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.nio.CharBuffer
+import java.nio.charset.CodingErrorAction
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.resume
 
 // This is a helper for safely working with byte buffers returned from the Rust code.
 // A rust-owned buffer is represented by its capacity, its current length, and a
@@ -53,29 +53,41 @@ open class RustBuffer : Structure() {
     // Note: `capacity` and `len` are actually `ULong` values, but JVM only supports signed values.
     // When dealing with these fields, make sure to call `toULong()`.
     @JvmField var capacity: Long = 0
+
     @JvmField var len: Long = 0
+
     @JvmField var data: Pointer? = null
 
-    class ByValue: RustBuffer(), Structure.ByValue
-    class ByReference: RustBuffer(), Structure.ByReference
+    class ByValue :
+        RustBuffer(),
+        Structure.ByValue
 
-   internal fun setValue(other: RustBuffer) {
+    class ByReference :
+        RustBuffer(),
+        Structure.ByReference
+
+    internal fun setValue(other: RustBuffer) {
         capacity = other.capacity
         len = other.len
         data = other.data
     }
 
     companion object {
-        internal fun alloc(size: ULong = 0UL) = uniffiRustCall() { status ->
-            // Note: need to convert the size to a `Long` value to make this work with JVM.
-            UniffiLib.INSTANCE.ffi_ldk_node_rustbuffer_alloc(size.toLong(), status)
-        }.also {
-            if(it.data == null) {
-               throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=${size})")
-           }
-        }
+        internal fun alloc(size: ULong = 0UL) =
+            uniffiRustCall { status ->
+                // Note: need to convert the size to a `Long` value to make this work with JVM.
+                UniffiLib.INSTANCE.ffi_ldk_node_rustbuffer_alloc(size.toLong(), status)
+            }.also {
+                if (it.data == null) {
+                    throw RuntimeException("RustBuffer.alloc() returned null data pointer (size=$size)")
+                }
+            }
 
-        internal fun create(capacity: ULong, len: ULong, data: Pointer?): RustBuffer.ByValue {
+        internal fun create(
+            capacity: ULong,
+            len: ULong,
+            data: Pointer?,
+        ): RustBuffer.ByValue {
             var buf = RustBuffer.ByValue()
             buf.capacity = capacity.toLong()
             buf.len = len.toLong()
@@ -83,9 +95,10 @@ open class RustBuffer : Structure() {
             return buf
         }
 
-        internal fun free(buf: RustBuffer.ByValue) = uniffiRustCall() { status ->
-            UniffiLib.INSTANCE.ffi_ldk_node_rustbuffer_free(buf, status)
-        }
+        internal fun free(buf: RustBuffer.ByValue) =
+            uniffiRustCall { status ->
+                UniffiLib.INSTANCE.ffi_ldk_node_rustbuffer_free(buf, status)
+            }
     }
 
     @Suppress("TooGenericExceptionThrown")
@@ -138,10 +151,14 @@ class RustBufferByReference : ByReference(16) {
 @Structure.FieldOrder("len", "data")
 internal open class ForeignBytes : Structure() {
     @JvmField var len: Int = 0
+
     @JvmField var data: Pointer? = null
 
-    class ByValue : ForeignBytes(), Structure.ByValue
+    class ByValue :
+        ForeignBytes(),
+        Structure.ByValue
 }
+
 /**
  * The FfiConverter interface handles converter types to and from the FFI
  *
@@ -171,7 +188,10 @@ public interface FfiConverter<KotlinType, FfiType> {
     fun allocationSize(value: KotlinType): ULong
 
     // Write a Kotlin type to a `ByteBuffer`
-    fun write(value: KotlinType, buf: ByteBuffer)
+    fun write(
+        value: KotlinType,
+        buf: ByteBuffer,
+    )
 
     // Lower a value into a `RustBuffer`
     //
@@ -182,9 +202,10 @@ public interface FfiConverter<KotlinType, FfiType> {
     fun lowerIntoRustBuffer(value: KotlinType): RustBuffer.ByValue {
         val rbuf = RustBuffer.alloc(allocationSize(value))
         try {
-            val bbuf = rbuf.data!!.getByteBuffer(0, rbuf.capacity).also {
-                it.order(ByteOrder.BIG_ENDIAN)
-            }
+            val bbuf =
+                rbuf.data!!.getByteBuffer(0, rbuf.capacity).also {
+                    it.order(ByteOrder.BIG_ENDIAN)
+                }
             write(value, bbuf)
             rbuf.writeField("len", bbuf.position().toLong())
             return rbuf
@@ -201,11 +222,11 @@ public interface FfiConverter<KotlinType, FfiType> {
     fun liftFromRustBuffer(rbuf: RustBuffer.ByValue): KotlinType {
         val byteBuf = rbuf.asByteBuffer()!!
         try {
-           val item = read(byteBuf)
-           if (byteBuf.hasRemaining()) {
-               throw RuntimeException("junk remaining in buffer after lifting, something is very wrong!!")
-           }
-           return item
+            val item = read(byteBuf)
+            if (byteBuf.hasRemaining()) {
+                throw RuntimeException("junk remaining in buffer after lifting, something is very wrong!!")
+            }
+            return item
         } finally {
             RustBuffer.free(rbuf)
         }
@@ -217,8 +238,9 @@ public interface FfiConverter<KotlinType, FfiType> {
  *
  * @suppress
  */
-public interface FfiConverterRustBuffer<KotlinType>: FfiConverter<KotlinType, RustBuffer.ByValue> {
+public interface FfiConverterRustBuffer<KotlinType> : FfiConverter<KotlinType, RustBuffer.ByValue> {
     override fun lift(value: RustBuffer.ByValue) = liftFromRustBuffer(value)
+
     override fun lower(value: KotlinType) = lowerIntoRustBuffer(value)
 }
 // A handful of classes and functions to support the generated data structures.
@@ -231,24 +253,24 @@ internal const val UNIFFI_CALL_UNEXPECTED_ERROR = 2.toByte()
 @Structure.FieldOrder("code", "error_buf")
 internal open class UniffiRustCallStatus : Structure() {
     @JvmField var code: Byte = 0
+
     @JvmField var error_buf: RustBuffer.ByValue = RustBuffer.ByValue()
 
-    class ByValue: UniffiRustCallStatus(), Structure.ByValue
+    class ByValue :
+        UniffiRustCallStatus(),
+        Structure.ByValue
 
-    fun isSuccess(): Boolean {
-        return code == UNIFFI_CALL_SUCCESS
-    }
+    fun isSuccess(): Boolean = code == UNIFFI_CALL_SUCCESS
 
-    fun isError(): Boolean {
-        return code == UNIFFI_CALL_ERROR
-    }
+    fun isError(): Boolean = code == UNIFFI_CALL_ERROR
 
-    fun isPanic(): Boolean {
-        return code == UNIFFI_CALL_UNEXPECTED_ERROR
-    }
+    fun isPanic(): Boolean = code == UNIFFI_CALL_UNEXPECTED_ERROR
 
     companion object {
-        fun create(code: Byte, errorBuf: RustBuffer.ByValue): UniffiRustCallStatus.ByValue {
+        fun create(
+            code: Byte,
+            errorBuf: RustBuffer.ByValue,
+        ): UniffiRustCallStatus.ByValue {
             val callStatus = UniffiRustCallStatus.ByValue()
             callStatus.code = code
             callStatus.error_buf = errorBuf
@@ -257,7 +279,9 @@ internal open class UniffiRustCallStatus : Structure() {
     }
 }
 
-class InternalException(message: String) : kotlin.Exception(message)
+class InternalException(
+    message: String,
+) : kotlin.Exception(message)
 
 /**
  * Each top-level error class has a companion object that can lift the error from the call status's rust buffer
@@ -265,7 +289,7 @@ class InternalException(message: String) : kotlin.Exception(message)
  * @suppress
  */
 interface UniffiRustCallStatusErrorHandler<E> {
-    fun lift(error_buf: RustBuffer.ByValue): E;
+    fun lift(error_buf: RustBuffer.ByValue): E
 }
 
 // Helpers for calling Rust
@@ -273,7 +297,10 @@ interface UniffiRustCallStatusErrorHandler<E> {
 // synchronize itself
 
 // Call a rust function that returns a Result<>.  Pass in the Error class companion that corresponds to the Err
-private inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler: UniffiRustCallStatusErrorHandler<E>, callback: (UniffiRustCallStatus) -> U): U {
+private inline fun <U, E : kotlin.Exception> uniffiRustCallWithError(
+    errorHandler: UniffiRustCallStatusErrorHandler<E>,
+    callback: (UniffiRustCallStatus) -> U,
+): U {
     var status = UniffiRustCallStatus()
     val return_value = callback(status)
     uniffiCheckCallStatus(errorHandler, status)
@@ -281,7 +308,10 @@ private inline fun <U, E: kotlin.Exception> uniffiRustCallWithError(errorHandler
 }
 
 // Check UniffiRustCallStatus and throw an error if the call wasn't successful
-private fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustCallStatusErrorHandler<E>, status: UniffiRustCallStatus) {
+private fun <E : kotlin.Exception> uniffiCheckCallStatus(
+    errorHandler: UniffiRustCallStatusErrorHandler<E>,
+    status: UniffiRustCallStatus,
+) {
     if (status.isSuccess()) {
         return
     } else if (status.isError()) {
@@ -305,7 +335,7 @@ private fun<E: kotlin.Exception> uniffiCheckCallStatus(errorHandler: UniffiRustC
  *
  * @suppress
  */
-object UniffiNullRustCallStatusErrorHandler: UniffiRustCallStatusErrorHandler<InternalException> {
+object UniffiNullRustCallStatusErrorHandler : UniffiRustCallStatusErrorHandler<InternalException> {
     override fun lift(error_buf: RustBuffer.ByValue): InternalException {
         RustBuffer.free(error_buf)
         return InternalException("Unexpected CALL_ERROR")
@@ -313,32 +343,31 @@ object UniffiNullRustCallStatusErrorHandler: UniffiRustCallStatusErrorHandler<In
 }
 
 // Call a rust function that returns a plain value
-private inline fun <U> uniffiRustCall(callback: (UniffiRustCallStatus) -> U): U {
-    return uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
-}
+private inline fun <U> uniffiRustCall(callback: (UniffiRustCallStatus) -> U): U =
+    uniffiRustCallWithError(UniffiNullRustCallStatusErrorHandler, callback)
 
-internal inline fun<T> uniffiTraitInterfaceCall(
+internal inline fun <T> uniffiTraitInterfaceCall(
     callStatus: UniffiRustCallStatus,
     makeCall: () -> T,
     writeReturn: (T) -> Unit,
 ) {
     try {
         writeReturn(makeCall())
-    } catch(e: kotlin.Exception) {
+    } catch (e: kotlin.Exception) {
         callStatus.code = UNIFFI_CALL_UNEXPECTED_ERROR
         callStatus.error_buf = FfiConverterString.lower(e.toString())
     }
 }
 
-internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
+internal inline fun <T, reified E : Throwable> uniffiTraitInterfaceCallWithError(
     callStatus: UniffiRustCallStatus,
     makeCall: () -> T,
     writeReturn: (T) -> Unit,
-    lowerError: (E) -> RustBuffer.ByValue
+    lowerError: (E) -> RustBuffer.ByValue,
 ) {
     try {
         writeReturn(makeCall())
-    } catch(e: kotlin.Exception) {
+    } catch (e: kotlin.Exception) {
         if (e is E) {
             callStatus.code = UNIFFI_CALL_ERROR
             callStatus.error_buf = lowerError(e)
@@ -348,12 +377,15 @@ internal inline fun<T, reified E: Throwable> uniffiTraitInterfaceCallWithError(
         }
     }
 }
+
 // Map handles to objects
 //
 // This is used pass an opaque 64-bit handle representing a foreign object to the Rust code.
-internal class UniffiHandleMap<T: Any> {
+internal class UniffiHandleMap<T : Any> {
     private val map = ConcurrentHashMap<Long, T>()
-    private val counter = java.util.concurrent.atomic.AtomicLong(0)
+    private val counter =
+        java.util.concurrent.atomic
+            .AtomicLong(0)
 
     val size: Int
         get() = map.size
@@ -366,14 +398,10 @@ internal class UniffiHandleMap<T: Any> {
     }
 
     // Get an object from the handle map
-    fun get(handle: Long): T {
-        return map.get(handle) ?: throw InternalException("UniffiHandleMap.get: Invalid handle")
-    }
+    fun get(handle: Long): T = map.get(handle) ?: throw InternalException("UniffiHandleMap.get: Invalid handle")
 
     // Remove an entry from the handlemap and get the Kotlin object back
-    fun remove(handle: Long): T {
-        return map.remove(handle) ?: throw InternalException("UniffiHandleMap: Invalid handle")
-    }
+    fun remove(handle: Long): T = map.remove(handle) ?: throw InternalException("UniffiHandleMap: Invalid handle")
 }
 
 // Contains loading, initialization code,
@@ -387,22 +415,25 @@ private fun findLibraryName(componentName: String): String {
     return "ldk_node"
 }
 
-private inline fun <reified Lib : Library> loadIndirect(
-    componentName: String
-): Lib {
-    return Native.load<Lib>(findLibraryName(componentName), Lib::class.java)
-}
+private inline fun <reified Lib : Library> loadIndirect(componentName: String): Lib =
+    Native.load<Lib>(findLibraryName(componentName), Lib::class.java)
 
 // Define FFI callback types
 internal interface UniffiRustFutureContinuationCallback : com.sun.jna.Callback {
-    fun callback(`data`: Long,`pollResult`: Byte,)
+    fun callback(
+        `data`: Long,
+        `pollResult`: Byte,
+    )
 }
+
 internal interface UniffiForeignFutureFree : com.sun.jna.Callback {
-    fun callback(`handle`: Long,)
+    fun callback(`handle`: Long)
 }
+
 internal interface UniffiCallbackInterfaceFree : com.sun.jna.Callback {
-    fun callback(`handle`: Long,)
+    fun callback(`handle`: Long)
 }
+
 @Structure.FieldOrder("handle", "free")
 internal open class UniffiForeignFuture(
     @JvmField internal var `handle`: Long = 0.toLong(),
@@ -411,14 +442,15 @@ internal open class UniffiForeignFuture(
     class UniffiByValue(
         `handle`: Long = 0.toLong(),
         `free`: UniffiForeignFutureFree? = null,
-    ): UniffiForeignFuture(`handle`,`free`,), Structure.ByValue
+    ) : UniffiForeignFuture(`handle`, `free`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFuture) {
+    internal fun uniffiSetValue(other: UniffiForeignFuture) {
         `handle` = other.`handle`
         `free` = other.`free`
     }
-
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructU8(
     @JvmField internal var `returnValue`: Byte = 0.toByte(),
@@ -427,17 +459,22 @@ internal open class UniffiForeignFutureStructU8(
     class UniffiByValue(
         `returnValue`: Byte = 0.toByte(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructU8(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructU8(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructU8) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructU8) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteU8 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU8.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructU8.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructI8(
     @JvmField internal var `returnValue`: Byte = 0.toByte(),
@@ -446,17 +483,22 @@ internal open class UniffiForeignFutureStructI8(
     class UniffiByValue(
         `returnValue`: Byte = 0.toByte(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructI8(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructI8(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructI8) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructI8) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteI8 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI8.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructI8.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructU16(
     @JvmField internal var `returnValue`: Short = 0.toShort(),
@@ -465,17 +507,22 @@ internal open class UniffiForeignFutureStructU16(
     class UniffiByValue(
         `returnValue`: Short = 0.toShort(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructU16(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructU16(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructU16) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructU16) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteU16 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU16.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructU16.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructI16(
     @JvmField internal var `returnValue`: Short = 0.toShort(),
@@ -484,17 +531,22 @@ internal open class UniffiForeignFutureStructI16(
     class UniffiByValue(
         `returnValue`: Short = 0.toShort(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructI16(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructI16(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructI16) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructI16) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteI16 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI16.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructI16.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructU32(
     @JvmField internal var `returnValue`: Int = 0,
@@ -503,17 +555,22 @@ internal open class UniffiForeignFutureStructU32(
     class UniffiByValue(
         `returnValue`: Int = 0,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructU32(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructU32(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructU32) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructU32) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteU32 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU32.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructU32.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructI32(
     @JvmField internal var `returnValue`: Int = 0,
@@ -522,17 +579,22 @@ internal open class UniffiForeignFutureStructI32(
     class UniffiByValue(
         `returnValue`: Int = 0,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructI32(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructI32(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructI32) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructI32) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteI32 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI32.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructI32.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructU64(
     @JvmField internal var `returnValue`: Long = 0.toLong(),
@@ -541,17 +603,22 @@ internal open class UniffiForeignFutureStructU64(
     class UniffiByValue(
         `returnValue`: Long = 0.toLong(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructU64(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructU64(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructU64) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructU64) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteU64 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructU64.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructU64.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructI64(
     @JvmField internal var `returnValue`: Long = 0.toLong(),
@@ -560,17 +627,22 @@ internal open class UniffiForeignFutureStructI64(
     class UniffiByValue(
         `returnValue`: Long = 0.toLong(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructI64(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructI64(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructI64) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructI64) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteI64 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructI64.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructI64.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructF32(
     @JvmField internal var `returnValue`: Float = 0.0f,
@@ -579,17 +651,22 @@ internal open class UniffiForeignFutureStructF32(
     class UniffiByValue(
         `returnValue`: Float = 0.0f,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructF32(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructF32(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructF32) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructF32) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteF32 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructF32.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructF32.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructF64(
     @JvmField internal var `returnValue`: Double = 0.0,
@@ -598,17 +675,22 @@ internal open class UniffiForeignFutureStructF64(
     class UniffiByValue(
         `returnValue`: Double = 0.0,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructF64(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructF64(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructF64) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructF64) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteF64 : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructF64.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructF64.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructPointer(
     @JvmField internal var `returnValue`: Pointer = Pointer.NULL,
@@ -617,17 +699,22 @@ internal open class UniffiForeignFutureStructPointer(
     class UniffiByValue(
         `returnValue`: Pointer = Pointer.NULL,
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructPointer(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructPointer(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructPointer) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructPointer) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompletePointer : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructPointer.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructPointer.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("returnValue", "callStatus")
 internal open class UniffiForeignFutureStructRustBuffer(
     @JvmField internal var `returnValue`: RustBuffer.ByValue = RustBuffer.ByValue(),
@@ -636,39 +723,62 @@ internal open class UniffiForeignFutureStructRustBuffer(
     class UniffiByValue(
         `returnValue`: RustBuffer.ByValue = RustBuffer.ByValue(),
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructRustBuffer(`returnValue`,`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructRustBuffer(`returnValue`, `callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructRustBuffer) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructRustBuffer) {
         `returnValue` = other.`returnValue`
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteRustBuffer : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructRustBuffer.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructRustBuffer.UniffiByValue,
+    )
 }
+
 @Structure.FieldOrder("callStatus")
 internal open class UniffiForeignFutureStructVoid(
     @JvmField internal var `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
 ) : Structure() {
     class UniffiByValue(
         `callStatus`: UniffiRustCallStatus.ByValue = UniffiRustCallStatus.ByValue(),
-    ): UniffiForeignFutureStructVoid(`callStatus`,), Structure.ByValue
+    ) : UniffiForeignFutureStructVoid(`callStatus`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiForeignFutureStructVoid) {
+    internal fun uniffiSetValue(other: UniffiForeignFutureStructVoid) {
         `callStatus` = other.`callStatus`
     }
+}
 
-}
 internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
-    fun callback(`callbackData`: Long,`result`: UniffiForeignFutureStructVoid.UniffiByValue,)
+    fun callback(
+        `callbackData`: Long,
+        `result`: UniffiForeignFutureStructVoid.UniffiByValue,
+    )
 }
+
 internal interface UniffiCallbackInterfaceLogWriterMethod0 : com.sun.jna.Callback {
-    fun callback(`uniffiHandle`: Long,`record`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,)
+    fun callback(
+        `uniffiHandle`: Long,
+        `record`: RustBuffer.ByValue,
+        `uniffiOutReturn`: Pointer,
+        uniffiCallStatus: UniffiRustCallStatus,
+    )
 }
+
 internal interface UniffiCallbackInterfaceVssHeaderProviderMethod0 : com.sun.jna.Callback {
-    fun callback(`uniffiHandle`: Long,`request`: RustBuffer.ByValue,`uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,`uniffiCallbackData`: Long,`uniffiOutReturn`: UniffiForeignFuture,)
+    fun callback(
+        `uniffiHandle`: Long,
+        `request`: RustBuffer.ByValue,
+        `uniffiFutureCallback`: UniffiForeignFutureCompleteRustBuffer,
+        `uniffiCallbackData`: Long,
+        `uniffiOutReturn`: UniffiForeignFuture,
+    )
 }
+
 @Structure.FieldOrder("log", "uniffiFree")
 internal open class UniffiVTableCallbackInterfaceLogWriter(
     @JvmField internal var `log`: UniffiCallbackInterfaceLogWriterMethod0? = null,
@@ -677,14 +787,15 @@ internal open class UniffiVTableCallbackInterfaceLogWriter(
     class UniffiByValue(
         `log`: UniffiCallbackInterfaceLogWriterMethod0? = null,
         `uniffiFree`: UniffiCallbackInterfaceFree? = null,
-    ): UniffiVTableCallbackInterfaceLogWriter(`log`,`uniffiFree`,), Structure.ByValue
+    ) : UniffiVTableCallbackInterfaceLogWriter(`log`, `uniffiFree`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceLogWriter) {
+    internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceLogWriter) {
         `log` = other.`log`
         `uniffiFree` = other.`uniffiFree`
     }
-
 }
+
 @Structure.FieldOrder("getHeaders", "uniffiFree")
 internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
     @JvmField internal var `getHeaders`: UniffiCallbackInterfaceVssHeaderProviderMethod0? = null,
@@ -693,470 +804,14 @@ internal open class UniffiVTableCallbackInterfaceVssHeaderProvider(
     class UniffiByValue(
         `getHeaders`: UniffiCallbackInterfaceVssHeaderProviderMethod0? = null,
         `uniffiFree`: UniffiCallbackInterfaceFree? = null,
-    ): UniffiVTableCallbackInterfaceVssHeaderProvider(`getHeaders`,`uniffiFree`,), Structure.ByValue
+    ) : UniffiVTableCallbackInterfaceVssHeaderProvider(`getHeaders`, `uniffiFree`),
+        Structure.ByValue
 
-   internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceVssHeaderProvider) {
+    internal fun uniffiSetValue(other: UniffiVTableCallbackInterfaceVssHeaderProvider) {
         `getHeaders` = other.`getHeaders`
         `uniffiFree` = other.`uniffiFree`
     }
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // A JNA Library to expose the extern-C FFI definitions.
 // This is an implementation detail which will be called internally by the public API.
@@ -1165,932 +820,1951 @@ internal interface UniffiLib : Library {
     companion object {
         internal val INSTANCE: UniffiLib by lazy {
             loadIndirect<UniffiLib>(componentName = "ldk_node")
-            .also { lib: UniffiLib ->
-                uniffiCheckContractApiVersion(lib)
-                uniffiCheckApiChecksums(lib)
-                uniffiCallbackInterfaceLogWriter.register(lib)
+                .also { lib: UniffiLib ->
+                    uniffiCheckContractApiVersion(lib)
+                    uniffiCheckApiChecksums(lib)
+                    uniffiCallbackInterfaceLogWriter.register(lib)
                 }
         }
-        
+
         // The Cleaner for the whole library
         internal val CLEANER: UniffiCleaner by lazy {
             UniffiCleaner.create()
         }
     }
 
-    fun uniffi_ldk_node_fn_clone_bolt11invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+    fun uniffi_ldk_node_fn_clone_bolt11invoice(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt11invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_bolt11invoice(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_constructor_bolt11invoice_from_str(`invoiceStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_constructor_bolt11invoice_from_str(
+        `invoiceStr`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11invoice_amount_milli_satoshis(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_amount_milli_satoshis(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_currency(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_currency(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_expiry_time_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_expiry_time_seconds(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_fallback_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_fallback_addresses(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_invoice_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_invoice_description(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_is_expired(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    fun uniffi_ldk_node_fn_method_bolt11invoice_min_final_cltv_expiry_delta(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_min_final_cltv_expiry_delta(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_network(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_network(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_payment_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_payment_hash(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_payment_secret(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_payment_secret(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_recover_payee_pub_key(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_recover_payee_pub_key(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_route_hints(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_route_hints(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_since_epoch(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_since_epoch(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_until_expiry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_seconds_until_expiry(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_would_expire(`ptr`: Pointer,`atTimeSeconds`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_would_expire(
+        `ptr`: Pointer,
+        `atTimeSeconds`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_debug(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_display(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_eq(
+        `ptr`: Pointer,
+        `other`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_ne(
+        `ptr`: Pointer,
+        `other`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    fun uniffi_ldk_node_fn_clone_bolt11payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_clone_bolt11payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt11payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_bolt11payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_claim_for_hash(`ptr`: Pointer,`paymentHash`: RustBuffer.ByValue,`claimableAmountMsat`: Long,`preimage`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_claim_for_hash(
+        `ptr`: Pointer,
+        `paymentHash`: RustBuffer.ByValue,
+        `claimableAmountMsat`: Long,
+        `preimage`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_fail_for_hash(`ptr`: Pointer,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_fail_for_hash(
+        `ptr`: Pointer,
+        `paymentHash`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `paymentHash`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(
+        `ptr`: Pointer,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash(
+        `ptr`: Pointer,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `paymentHash`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel(
+        `ptr`: Pointer,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(
+        `ptr`: Pointer,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `maxProportionalLspFeeLimitPpmMsat`: RustBuffer.ByValue,
+        `paymentHash`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxLspFeeLimitMsat`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `maxLspFeeLimitMsat`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: Int,`maxLspFeeLimitMsat`: RustBuffer.ByValue,`paymentHash`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: Int,
+        `maxLspFeeLimitMsat`: RustBuffer.ByValue,
+        `paymentHash`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt11payment_send(`ptr`: Pointer,`invoice`: Pointer,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_send(
+        `ptr`: Pointer,
+        `invoice`: Pointer,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt11payment_send_probes(`ptr`: Pointer,`invoice`: Pointer,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_send_probes(
+        `ptr`: Pointer,
+        `invoice`: Pointer,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_send_probes_using_amount(`ptr`: Pointer,`invoice`: Pointer,`amountMsat`: Long,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_send_probes_using_amount(
+        `ptr`: Pointer,
+        `invoice`: Pointer,
+        `amountMsat`: Long,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(`ptr`: Pointer,`invoice`: Pointer,`amountMsat`: Long,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(
+        `ptr`: Pointer,
+        `invoice`: Pointer,
+        `amountMsat`: Long,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_bolt12invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_clone_bolt12invoice(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt12invoice(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_bolt12invoice(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_constructor_bolt12invoice_from_str(`invoiceStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_constructor_bolt12invoice_from_str(
+        `invoiceStr`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12invoice_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_absolute_expiry_seconds(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_amount(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_amount_msats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_amount_msats(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt12invoice_chain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_chain(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_created_at(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_created_at(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt12invoice_encode(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_encode(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_fallback_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_fallback_addresses(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_invoice_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_invoice_description(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_is_expired(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Byte
-    fun uniffi_ldk_node_fn_method_bolt12invoice_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_issuer(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_issuer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_issuer_signing_pubkey(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_metadata(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_payer_note(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_payer_note(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_payer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_payer_signing_pubkey(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_payment_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_payment_hash(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_quantity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_relative_expiry(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_relative_expiry(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12invoice_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12invoice_signing_pubkey(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_bolt12payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_clone_bolt12payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_bolt12payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_bolt12payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_bolt12payment_blinded_paths_for_async_recipient(`ptr`: Pointer,`recipientId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_blinded_paths_for_async_recipient(
+        `ptr`: Pointer,
+        `recipientId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(`ptr`: Pointer,`amountMsat`: Long,`expirySecs`: Int,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `expirySecs`: Int,
+        `quantity`: RustBuffer.ByValue,
+        `payerNote`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_receive(`ptr`: Pointer,`amountMsat`: Long,`description`: RustBuffer.ByValue,`expirySecs`: RustBuffer.ByValue,`quantity`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_receive(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: RustBuffer.ByValue,
+        `quantity`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_receive_async(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_receive_async(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_receive_variable_amount(`ptr`: Pointer,`description`: RustBuffer.ByValue,`expirySecs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_receive_variable_amount(
+        `ptr`: Pointer,
+        `description`: RustBuffer.ByValue,
+        `expirySecs`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_request_refund_payment(`ptr`: Pointer,`refund`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_request_refund_payment(
+        `ptr`: Pointer,
+        `refund`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_bolt12payment_send(`ptr`: Pointer,`offer`: Pointer,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_send(
+        `ptr`: Pointer,
+        `offer`: Pointer,
+        `quantity`: RustBuffer.ByValue,
+        `payerNote`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(`ptr`: Pointer,`offer`: Pointer,`amountMsat`: Long,`quantity`: RustBuffer.ByValue,`payerNote`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(
+        `ptr`: Pointer,
+        `offer`: Pointer,
+        `amountMsat`: Long,
+        `quantity`: RustBuffer.ByValue,
+        `payerNote`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_bolt12payment_set_paths_to_static_invoice_server(`ptr`: Pointer,`paths`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_bolt12payment_set_paths_to_static_invoice_server(
+        `ptr`: Pointer,
+        `paths`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_clone_builder(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_clone_builder(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_builder(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_builder(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_constructor_builder_from_config(`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_constructor_builder_from_config(
+        `config`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_constructor_builder_new(uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_constructor_builder_new(uniffi_out_err: UniffiRustCallStatus): Pointer
+
+    fun uniffi_ldk_node_fn_method_builder_build(
+        `ptr`: Pointer,
+        `nodeEntropy`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build(`ptr`: Pointer,`nodeEntropy`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_builder_build_with_fs_store(
+        `ptr`: Pointer,
+        `nodeEntropy`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_fs_store(`ptr`: Pointer,`nodeEntropy`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store(
+        `ptr`: Pointer,
+        `nodeEntropy`: Pointer,
+        `vssUrl`: RustBuffer.ByValue,
+        `storeId`: RustBuffer.ByValue,
+        `lnurlAuthServerUrl`: RustBuffer.ByValue,
+        `fixedHeaders`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`lnurlAuthServerUrl`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_fixed_headers(
+        `ptr`: Pointer,
+        `nodeEntropy`: Pointer,
+        `vssUrl`: RustBuffer.ByValue,
+        `storeId`: RustBuffer.ByValue,
+        `fixedHeaders`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_fixed_headers(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`fixedHeaders`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(
+        `ptr`: Pointer,
+        `nodeEntropy`: Pointer,
+        `vssUrl`: RustBuffer.ByValue,
+        `storeId`: RustBuffer.ByValue,
+        `headerProvider`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(`ptr`: Pointer,`nodeEntropy`: Pointer,`vssUrl`: RustBuffer.ByValue,`storeId`: RustBuffer.ByValue,`headerProvider`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_builder_set_announcement_addresses(
+        `ptr`: Pointer,
+        `announcementAddresses`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_async_payments_role(
+        `ptr`: Pointer,
+        `role`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rest(
+        `ptr`: Pointer,
+        `restHost`: RustBuffer.ByValue,
+        `restPort`: Short,
+        `rpcHost`: RustBuffer.ByValue,
+        `rpcPort`: Short,
+        `rpcUser`: RustBuffer.ByValue,
+        `rpcPassword`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(
+        `ptr`: Pointer,
+        `rpcHost`: RustBuffer.ByValue,
+        `rpcPort`: Short,
+        `rpcUser`: RustBuffer.ByValue,
+        `rpcPassword`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(
+        `ptr`: Pointer,
+        `serverUrl`: RustBuffer.ByValue,
+        `config`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(
+        `ptr`: Pointer,
+        `serverUrl`: RustBuffer.ByValue,
+        `config`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_custom_logger(
+        `ptr`: Pointer,
+        `logWriter`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_filesystem_logger(
+        `ptr`: Pointer,
+        `logFilePath`: RustBuffer.ByValue,
+        `maxLogLevel`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_p2p(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs(
+        `ptr`: Pointer,
+        `rgsServerUrl`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps1(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `token`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps2(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `token`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps7(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `token`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_listening_addresses(
+        `ptr`: Pointer,
+        `listeningAddresses`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_log_facade_logger(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_network(
+        `ptr`: Pointer,
+        `network`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_node_alias(
+        `ptr`: Pointer,
+        `nodeAlias`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_pathfinding_scores_source(
+        `ptr`: Pointer,
+        `url`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_builder_set_storage_dir_path(
+        `ptr`: Pointer,
+        `storageDirPath`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_clone_feerate(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_builder_set_announcement_addresses(`ptr`: Pointer,`announcementAddresses`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_feerate(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_async_payments_role(`ptr`: Pointer,`role`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rest(`ptr`: Pointer,`restHost`: RustBuffer.ByValue,`restPort`: Short,`rpcHost`: RustBuffer.ByValue,`rpcPort`: Short,`rpcUser`: RustBuffer.ByValue,`rpcPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(`ptr`: Pointer,`rpcHost`: RustBuffer.ByValue,`rpcPort`: Short,`rpcUser`: RustBuffer.ByValue,`rpcPassword`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(`ptr`: Pointer,`serverUrl`: RustBuffer.ByValue,`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_custom_logger(`ptr`: Pointer,`logWriter`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_filesystem_logger(`ptr`: Pointer,`logFilePath`: RustBuffer.ByValue,`maxLogLevel`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_p2p(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs(`ptr`: Pointer,`rgsServerUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps1(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps2(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`token`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_listening_addresses(`ptr`: Pointer,`listeningAddresses`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_log_facade_logger(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_network(`ptr`: Pointer,`network`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_node_alias(`ptr`: Pointer,`nodeAlias`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_pathfinding_scores_source(`ptr`: Pointer,`url`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_builder_set_storage_dir_path(`ptr`: Pointer,`storageDirPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_clone_feerate(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_kwu(
+        `satKwu`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_feerate(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_kwu(`satKwu`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_vb_unchecked(
+        `satVb`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_constructor_feerate_from_sat_per_vb_unchecked(`satVb`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_kwu(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_kwu(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_ceil(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_ceil(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_floor(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_floor(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun uniffi_ldk_node_fn_clone_lsps1liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_clone_lsps1liquidity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_lsps1liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_lsps1liquidity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_lsps1liquidity_check_order_status(`ptr`: Pointer,`orderId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_lsps1liquidity_check_order_status(
+        `ptr`: Pointer,
+        `orderId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_lsps1liquidity_request_channel(`ptr`: Pointer,`lspBalanceSat`: Long,`clientBalanceSat`: Long,`channelExpiryBlocks`: Int,`announceChannel`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_lsps1liquidity_request_channel(
+        `ptr`: Pointer,
+        `lspBalanceSat`: Long,
+        `clientBalanceSat`: Long,
+        `channelExpiryBlocks`: Int,
+        `announceChannel`: Byte,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_logwriter(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_clone_lsps7liquidity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_logwriter(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_lsps7liquidity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_init_callback_vtable_logwriter(`vtable`: UniffiVTableCallbackInterfaceLogWriter,
-    ): Unit
-    fun uniffi_ldk_node_fn_method_logwriter_log(`ptr`: Pointer,`record`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_clone_networkgraph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_lsps7liquidity_check_order_status(
+        `ptr`: Pointer,
+        `orderId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_lsps7liquidity_create_order(
+        `ptr`: Pointer,
+        `shortChannelId`: RustBuffer.ByValue,
+        `channelExtensionExpiryBlocks`: Int,
+        `token`: RustBuffer.ByValue,
+        `refundOnchainAddress`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_lsps7liquidity_get_extendable_channels(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_clone_logwriter(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_networkgraph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_logwriter(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_networkgraph_channel(`ptr`: Pointer,`shortChannelId`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_networkgraph_list_channels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_networkgraph_list_nodes(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_networkgraph_node(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_node(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_init_callback_vtable_logwriter(`vtable`: UniffiVTableCallbackInterfaceLogWriter): Unit
+
+    fun uniffi_ldk_node_fn_method_logwriter_log(
+        `ptr`: Pointer,
+        `record`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_clone_networkgraph(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_node(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_networkgraph(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_method_node_announcement_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_networkgraph_channel(
+        `ptr`: Pointer,
+        `shortChannelId`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_bolt11_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_networkgraph_list_channels(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_networkgraph_list_nodes(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_networkgraph_node(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_clone_node(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_bolt12_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_free_node(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_announcement_addresses(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_bolt11_payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_close_channel(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_config(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_connect(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`persist`: Byte,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_disconnect(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_event_handled(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_export_pathfinding_scores(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_force_close_channel(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`reason`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_list_balances(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_list_channels(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_list_payments(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_list_peers(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_listening_addresses(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_lsps1_liquidity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_bolt12_payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_network_graph(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_close_channel(
+        `ptr`: Pointer,
+        `userChannelId`: RustBuffer.ByValue,
+        `counterpartyNodeId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_config(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_connect(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `persist`: Byte,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_disconnect(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_event_handled(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_export_pathfinding_scores(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_force_close_channel(
+        `ptr`: Pointer,
+        `userChannelId`: RustBuffer.ByValue,
+        `counterpartyNodeId`: RustBuffer.ByValue,
+        `reason`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_list_balances(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_list_channels(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_list_payments(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_list_peers(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_listening_addresses(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_lsps1_liquidity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_next_event(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_next_event_async(`ptr`: Pointer,
-    ): Long
-    fun uniffi_ldk_node_fn_method_node_node_alias(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_node_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_onchain_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_lsps7_liquidity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_open_announced_channel(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`channelAmountSats`: Long,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_open_channel(`ptr`: Pointer,`nodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`channelAmountSats`: Long,`pushToCounterpartyMsat`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_remove_payment(`ptr`: Pointer,`paymentId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_sign_message(`ptr`: Pointer,`msg`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_splice_in(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_splice_out(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`address`: RustBuffer.ByValue,`spliceAmountSats`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_spontaneous_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_network_graph(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_start(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_status(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_next_event(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_node_stop(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_sync_wallets(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_unified_qr_payment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_next_event_async(`ptr`: Pointer): Long
+
+    fun uniffi_ldk_node_fn_method_node_node_alias(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_node_id(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_onchain_payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_method_node_update_channel_config(`ptr`: Pointer,`userChannelId`: RustBuffer.ByValue,`counterpartyNodeId`: RustBuffer.ByValue,`channelConfig`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_node_verify_signature(`ptr`: Pointer,`msg`: RustBuffer.ByValue,`sig`: RustBuffer.ByValue,`pkey`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_node_wait_next_event(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_open_announced_channel(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `channelAmountSats`: Long,
+        `pushToCounterpartyMsat`: RustBuffer.ByValue,
+        `channelConfig`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_nodeentropy(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_open_channel(
+        `ptr`: Pointer,
+        `nodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `channelAmountSats`: Long,
+        `pushToCounterpartyMsat`: RustBuffer.ByValue,
+        `channelConfig`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_payment(
+        `ptr`: Pointer,
+        `paymentId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_remove_payment(
+        `ptr`: Pointer,
+        `paymentId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_reset_network_graph(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_sign_message(
+        `ptr`: Pointer,
+        `msg`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_splice_in(
+        `ptr`: Pointer,
+        `userChannelId`: RustBuffer.ByValue,
+        `counterpartyNodeId`: RustBuffer.ByValue,
+        `spliceAmountSats`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_splice_out(
+        `ptr`: Pointer,
+        `userChannelId`: RustBuffer.ByValue,
+        `counterpartyNodeId`: RustBuffer.ByValue,
+        `address`: RustBuffer.ByValue,
+        `spliceAmountSats`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_spontaneous_payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_free_nodeentropy(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_start(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(`mnemonic`: RustBuffer.ByValue,`passphrase`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_status(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_node_stop(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_sync_wallets(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_node_unified_qr_payment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_bytes(`seedBytes`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_path(`seedPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_clone_offer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_offer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_update_channel_config(
+        `ptr`: Pointer,
+        `userChannelId`: RustBuffer.ByValue,
+        `counterpartyNodeId`: RustBuffer.ByValue,
+        `channelConfig`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun uniffi_ldk_node_fn_constructor_offer_from_str(`offerStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_offer_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_amount(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_chains(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_expects_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_id(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_is_valid_quantity(`ptr`: Pointer,`quantity`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_issuer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_offer_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_supports_chain(`ptr`: Pointer,`chain`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_clone_onchainpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_onchainpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_onchainpayment_new_address(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`retainReserve`: Byte,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_onchainpayment_send_to_address(`ptr`: Pointer,`address`: RustBuffer.ByValue,`amountSats`: Long,`feeRate`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_refund(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_refund(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_constructor_refund_from_str(`refundStr`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_method_refund_absolute_expiry_seconds(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_amount_msats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Long
-    fun uniffi_ldk_node_fn_method_refund_chain(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_is_expired(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_refund_issuer(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_payer_metadata(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_payer_note(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_payer_signing_pubkey(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_quantity(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_refund_description(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_debug(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_display(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_eq(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_ne(`ptr`: Pointer,`other`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun uniffi_ldk_node_fn_clone_spontaneouspayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_spontaneouspayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_probes(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,`customTlvs`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`preimage`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(`ptr`: Pointer,`amountMsat`: Long,`nodeId`: RustBuffer.ByValue,`customTlvs`: RustBuffer.ByValue,`preimage`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_unifiedqrpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_unifiedqrpayment(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_unifiedqrpayment_receive(`ptr`: Pointer,`amountSats`: Long,`message`: RustBuffer.ByValue,`expirySec`: Int,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_method_unifiedqrpayment_send(`ptr`: Pointer,`uriStr`: RustBuffer.ByValue,`routeParameters`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_clone_vssheaderprovider(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Pointer
-    fun uniffi_ldk_node_fn_free_vssheaderprovider(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_fn_method_vssheaderprovider_get_headers(`ptr`: Pointer,`request`: RustBuffer.ByValue,
-    ): Long
-    fun uniffi_ldk_node_fn_func_default_config(uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun uniffi_ldk_node_fn_func_generate_entropy_mnemonic(`wordCount`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rustbuffer_from_bytes(`bytes`: ForeignBytes.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rustbuffer_free(`buf`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun ffi_ldk_node_rustbuffer_reserve(`buf`: RustBuffer.ByValue,`additional`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): RustBuffer.ByValue
-    fun ffi_ldk_node_rust_future_poll_u8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun ffi_ldk_node_rust_future_poll_i8(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i8(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i8(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Byte
-    fun ffi_ldk_node_rust_future_poll_u16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Short
-    fun ffi_ldk_node_rust_future_poll_i16(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i16(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i16(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Short
-    fun ffi_ldk_node_rust_future_poll_u32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_u32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_node_update_rgs_snapshot(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Int
-    fun ffi_ldk_node_rust_future_poll_i32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun uniffi_ldk_node_fn_method_node_verify_signature(
+        `ptr`: Pointer,
+        `msg`: RustBuffer.ByValue,
+        `sig`: RustBuffer.ByValue,
+        `pkey`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_node_wait_next_event(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_clone_nodeentropy(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_nodeentropy(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i32(`handle`: Long,
+
+    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(
+        `mnemonic`: RustBuffer.ByValue,
+        `passphrase`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_bytes(
+        `seedBytes`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_path(
+        `seedPath`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_clone_offer(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_offer(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun ffi_ldk_node_rust_future_free_i32(`handle`: Long,
+
+    fun uniffi_ldk_node_fn_constructor_offer_from_str(
+        `offerStr`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_method_offer_absolute_expiry_seconds(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_amount(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_chains(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_expects_quantity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_offer_id(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_is_expired(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_offer_is_valid_quantity(
+        `ptr`: Pointer,
+        `quantity`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_offer_issuer(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_issuer_signing_pubkey(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_metadata(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_offer_description(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_supports_chain(
+        `ptr`: Pointer,
+        `chain`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_debug(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_display(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_eq(
+        `ptr`: Pointer,
+        `other`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_ne(
+        `ptr`: Pointer,
+        `other`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_clone_onchainpayment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_onchainpayment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun ffi_ldk_node_rust_future_complete_i32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun uniffi_ldk_node_fn_method_onchainpayment_new_address(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(
+        `ptr`: Pointer,
+        `address`: RustBuffer.ByValue,
+        `retainReserve`: Byte,
+        `feeRate`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_onchainpayment_send_to_address(
+        `ptr`: Pointer,
+        `address`: RustBuffer.ByValue,
+        `amountSats`: Long,
+        `feeRate`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_clone_refund(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_refund(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_constructor_refund_from_str(
+        `refundStr`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_method_refund_absolute_expiry_seconds(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_amount_msats(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Long
+
+    fun uniffi_ldk_node_fn_method_refund_chain(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_is_expired(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_refund_issuer(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_payer_metadata(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_payer_note(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_payer_signing_pubkey(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_quantity(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_refund_description(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_debug(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_display(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_eq(
+        `ptr`: Pointer,
+        `other`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_ne(
+        `ptr`: Pointer,
+        `other`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun uniffi_ldk_node_fn_clone_spontaneouspayment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_spontaneouspayment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_spontaneouspayment_send(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `nodeId`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_probes(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `nodeId`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `nodeId`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        `customTlvs`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `nodeId`: RustBuffer.ByValue,
+        `preimage`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(
+        `ptr`: Pointer,
+        `amountMsat`: Long,
+        `nodeId`: RustBuffer.ByValue,
+        `customTlvs`: RustBuffer.ByValue,
+        `preimage`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_clone_unifiedqrpayment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_unifiedqrpayment(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_unifiedqrpayment_receive(
+        `ptr`: Pointer,
+        `amountSats`: Long,
+        `message`: RustBuffer.ByValue,
+        `expirySec`: Int,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_method_unifiedqrpayment_send(
+        `ptr`: Pointer,
+        `uriStr`: RustBuffer.ByValue,
+        `routeParameters`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_clone_vssheaderprovider(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Pointer
+
+    fun uniffi_ldk_node_fn_free_vssheaderprovider(
+        `ptr`: Pointer,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun uniffi_ldk_node_fn_method_vssheaderprovider_get_headers(
+        `ptr`: Pointer,
+        `request`: RustBuffer.ByValue,
+    ): Long
+
+    fun uniffi_ldk_node_fn_func_default_config(uniffi_out_err: UniffiRustCallStatus): RustBuffer.ByValue
+
+    fun uniffi_ldk_node_fn_func_generate_entropy_mnemonic(
+        `wordCount`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_ldk_node_rustbuffer_alloc(
+        `size`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_ldk_node_rustbuffer_from_bytes(
+        `bytes`: ForeignBytes.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_ldk_node_rustbuffer_free(
+        `buf`: RustBuffer.ByValue,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Unit
+
+    fun ffi_ldk_node_rustbuffer_reserve(
+        `buf`: RustBuffer.ByValue,
+        `additional`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): RustBuffer.ByValue
+
+    fun ffi_ldk_node_rust_future_poll_u8(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
+    ): Unit
+
+    fun ffi_ldk_node_rust_future_cancel_u8(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_u8(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_u8(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun ffi_ldk_node_rust_future_poll_i8(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
+    ): Unit
+
+    fun ffi_ldk_node_rust_future_cancel_i8(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_i8(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_i8(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Byte
+
+    fun ffi_ldk_node_rust_future_poll_u16(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
+    ): Unit
+
+    fun ffi_ldk_node_rust_future_cancel_u16(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_u16(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_u16(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Short
+
+    fun ffi_ldk_node_rust_future_poll_i16(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
+    ): Unit
+
+    fun ffi_ldk_node_rust_future_cancel_i16(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_i16(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_i16(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Short
+
+    fun ffi_ldk_node_rust_future_poll_u32(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
+    ): Unit
+
+    fun ffi_ldk_node_rust_future_cancel_u32(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_u32(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_u32(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Int
-    fun ffi_ldk_node_rust_future_poll_u64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_i32(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_u64(`handle`: Long,
+
+    fun ffi_ldk_node_rust_future_cancel_i32(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_i32(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_i32(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
+    ): Int
+
+    fun ffi_ldk_node_rust_future_poll_u64(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_free_u64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_u64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun ffi_ldk_node_rust_future_cancel_u64(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_u64(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_u64(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun ffi_ldk_node_rust_future_poll_i64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_i64(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_i64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_i64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_i64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun ffi_ldk_node_rust_future_cancel_i64(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_i64(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_i64(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Long
-    fun ffi_ldk_node_rust_future_poll_f32(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_f32(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_f32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_f32(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_f32(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun ffi_ldk_node_rust_future_cancel_f32(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_f32(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_f32(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Float
-    fun ffi_ldk_node_rust_future_poll_f64(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_f64(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_f64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_f64(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_f64(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun ffi_ldk_node_rust_future_cancel_f64(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_f64(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_f64(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Double
-    fun ffi_ldk_node_rust_future_poll_pointer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_pointer(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_pointer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_pointer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_pointer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun ffi_ldk_node_rust_future_cancel_pointer(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_pointer(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_pointer(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
-    fun ffi_ldk_node_rust_future_poll_rust_buffer(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_rust_buffer(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_rust_buffer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_free_rust_buffer(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_rust_buffer(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
+
+    fun ffi_ldk_node_rust_future_cancel_rust_buffer(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_rust_buffer(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_rust_buffer(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
-    fun ffi_ldk_node_rust_future_poll_void(`handle`: Long,`callback`: UniffiRustFutureContinuationCallback,`callbackData`: Long,
+
+    fun ffi_ldk_node_rust_future_poll_void(
+        `handle`: Long,
+        `callback`: UniffiRustFutureContinuationCallback,
+        `callbackData`: Long,
     ): Unit
-    fun ffi_ldk_node_rust_future_cancel_void(`handle`: Long,
+
+    fun ffi_ldk_node_rust_future_cancel_void(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_free_void(`handle`: Long): Unit
+
+    fun ffi_ldk_node_rust_future_complete_void(
+        `handle`: Long,
+        uniffi_out_err: UniffiRustCallStatus,
     ): Unit
-    fun ffi_ldk_node_rust_future_free_void(`handle`: Long,
-    ): Unit
-    fun ffi_ldk_node_rust_future_complete_void(`handle`: Long,uniffi_out_err: UniffiRustCallStatus, 
-    ): Unit
-    fun uniffi_ldk_node_checksum_func_default_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_func_generate_entropy_mnemonic(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_amount_milli_satoshis(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_currency(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_expiry_time_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_fallback_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_invoice_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_min_final_cltv_expiry_delta(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_network(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_secret(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_recover_payee_pub_key(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_route_hints(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_since_epoch(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_until_expiry(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_signable_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11invoice_would_expire(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_claim_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_fail_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_amount_msats(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_chain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_created_at(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_encode(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_fallback_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_invoice_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_metadata(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_offer_chains(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_note(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_payment_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_relative_expiry(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_signable_hash(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12invoice_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_receive(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_receive_async(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_receive_variable_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_fs_store(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_fixed_headers(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_header_provider(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_announcement_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_async_payments_role(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rest(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rpc(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_electrum(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_esplora(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_custom_logger(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_filesystem_logger(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_p2p(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps1(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_listening_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_log_facade_logger(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_network(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_node_alias(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_pathfinding_scores_source(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_builder_set_storage_dir_path(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_kwu(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_ceil(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_floor(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_lsps1liquidity_check_order_status(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_logwriter_log(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_list_channels(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_list_nodes(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_networkgraph_node(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_announcement_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_bolt11_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_bolt12_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_close_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_connect(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_disconnect(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_event_handled(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_export_pathfinding_scores(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_force_close_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_balances(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_channels(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_payments(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_list_peers(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_listening_addresses(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_lsps1_liquidity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_network_graph(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_next_event(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_next_event_async(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_node_alias(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_node_id(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_onchain_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_open_announced_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_open_channel(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_remove_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_sign_message(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_splice_in(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_splice_out(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_spontaneous_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_start(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_status(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_stop(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_sync_wallets(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_unified_qr_payment(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_update_channel_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_verify_signature(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_node_wait_next_event(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_amount(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_chains(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_expects_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_id(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_is_valid_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_issuer(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_issuer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_metadata(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_offer_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_offer_supports_chain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_new_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_onchainpayment_send_to_address(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_amount_msats(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_chain(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_is_expired(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_issuer(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_payer_metadata(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_payer_note(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_payer_signing_pubkey(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_quantity(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_refund_refund_description(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_unifiedqrpayment_receive(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_unifiedqrpayment_send(
-    ): Short
-    fun uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_bolt11invoice_from_str(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_bolt12invoice_from_str(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_builder_from_config(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_builder_new(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_kwu(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_vb_unchecked(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_bip39_mnemonic(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_bytes(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_path(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_offer_from_str(
-    ): Short
-    fun uniffi_ldk_node_checksum_constructor_refund_from_str(
-    ): Short
-    fun ffi_ldk_node_uniffi_contract_version(
-    ): Int
-    
+
+    fun uniffi_ldk_node_checksum_func_default_config(): Short
+
+    fun uniffi_ldk_node_checksum_func_generate_entropy_mnemonic(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_amount_milli_satoshis(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_currency(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_expiry_time_seconds(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_fallback_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_invoice_description(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_is_expired(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_min_final_cltv_expiry_delta(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_network(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_payment_secret(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_recover_payee_pub_key(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_route_hints(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_since_epoch(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_seconds_until_expiry(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_signable_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11invoice_would_expire(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_claim_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_fail_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_send(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_send_probes_using_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt11payment_send_using_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_absolute_expiry_seconds(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_amount_msats(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_chain(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_created_at(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_encode(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_fallback_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_invoice_description(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_is_expired(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_issuer_signing_pubkey(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_metadata(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_offer_chains(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_note(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_payer_signing_pubkey(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_payment_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_quantity(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_relative_expiry(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_signable_hash(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12invoice_signing_pubkey(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_blinded_paths_for_async_recipient(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_initiate_refund(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_receive(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_receive_async(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_receive_variable_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_request_refund_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_send(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_send_using_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_bolt12payment_set_paths_to_static_invoice_server(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_build(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_build_with_fs_store(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_fixed_headers(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_build_with_vss_store_and_header_provider(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_announcement_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_async_payments_role(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rest(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_bitcoind_rpc(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_electrum(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_chain_source_esplora(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_custom_logger(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_filesystem_logger(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_p2p(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_gossip_source_rgs(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps1(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps7(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_listening_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_log_facade_logger(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_network(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_node_alias(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_pathfinding_scores_source(): Short
+
+    fun uniffi_ldk_node_checksum_method_builder_set_storage_dir_path(): Short
+
+    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_kwu(): Short
+
+    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_ceil(): Short
+
+    fun uniffi_ldk_node_checksum_method_feerate_to_sat_per_vb_floor(): Short
+
+    fun uniffi_ldk_node_checksum_method_lsps1liquidity_check_order_status(): Short
+
+    fun uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_lsps7liquidity_check_order_status(): Short
+
+    fun uniffi_ldk_node_checksum_method_lsps7liquidity_create_order(): Short
+
+    fun uniffi_ldk_node_checksum_method_lsps7liquidity_get_extendable_channels(): Short
+
+    fun uniffi_ldk_node_checksum_method_logwriter_log(): Short
+
+    fun uniffi_ldk_node_checksum_method_networkgraph_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_networkgraph_list_channels(): Short
+
+    fun uniffi_ldk_node_checksum_method_networkgraph_list_nodes(): Short
+
+    fun uniffi_ldk_node_checksum_method_networkgraph_node(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_announcement_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_bolt11_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_bolt12_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_close_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_config(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_connect(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_disconnect(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_event_handled(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_export_pathfinding_scores(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_force_close_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_list_balances(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_list_channels(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_list_payments(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_list_peers(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_listening_addresses(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_lsps1_liquidity(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_lsps7_liquidity(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_network_graph(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_next_event(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_next_event_async(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_node_alias(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_node_id(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_onchain_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_open_announced_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_open_channel(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_remove_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_reset_network_graph(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_sign_message(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_splice_in(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_splice_out(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_spontaneous_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_start(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_status(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_stop(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_sync_wallets(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_unified_qr_payment(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_update_channel_config(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_update_rgs_snapshot(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_verify_signature(): Short
+
+    fun uniffi_ldk_node_checksum_method_node_wait_next_event(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_absolute_expiry_seconds(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_amount(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_chains(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_expects_quantity(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_id(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_is_expired(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_is_valid_quantity(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_issuer(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_issuer_signing_pubkey(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_metadata(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_offer_description(): Short
+
+    fun uniffi_ldk_node_checksum_method_offer_supports_chain(): Short
+
+    fun uniffi_ldk_node_checksum_method_onchainpayment_new_address(): Short
+
+    fun uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address(): Short
+
+    fun uniffi_ldk_node_checksum_method_onchainpayment_send_to_address(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_amount_msats(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_chain(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_is_expired(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_issuer(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_payer_metadata(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_payer_note(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_payer_signing_pubkey(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_quantity(): Short
+
+    fun uniffi_ldk_node_checksum_method_refund_refund_description(): Short
+
+    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send(): Short
+
+    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_probes(): Short
+
+    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_custom_tlvs(): Short
+
+    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage(): Short
+
+    fun uniffi_ldk_node_checksum_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(): Short
+
+    fun uniffi_ldk_node_checksum_method_unifiedqrpayment_receive(): Short
+
+    fun uniffi_ldk_node_checksum_method_unifiedqrpayment_send(): Short
+
+    fun uniffi_ldk_node_checksum_method_vssheaderprovider_get_headers(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_bolt11invoice_from_str(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_bolt12invoice_from_str(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_builder_from_config(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_builder_new(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_kwu(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_feerate_from_sat_per_vb_unchecked(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_bip39_mnemonic(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_bytes(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_nodeentropy_from_seed_path(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_offer_from_str(): Short
+
+    fun uniffi_ldk_node_checksum_constructor_refund_from_str(): Short
+
+    fun ffi_ldk_node_uniffi_contract_version(): Int
 }
 
 private fun uniffiCheckContractApiVersion(lib: UniffiLib) {
@@ -2339,6 +3013,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps2() != 14430.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_builder_set_liquidity_source_lsps7() != 55727.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_builder_set_listening_addresses() != 14051.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2370,6 +3047,15 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_lsps1liquidity_request_channel() != 18153.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_lsps7liquidity_check_order_status() != 29177.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_lsps7liquidity_create_order() != 62945.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_lsps7liquidity_get_extendable_channels() != 31595.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_logwriter_log() != 3299.toShort()) {
@@ -2435,6 +3121,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_lsps1_liquidity() != 38201.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_node_lsps7_liquidity() != 22809.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_node_network_graph() != 2695.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2465,6 +3154,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_remove_payment() != 47952.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_ldk_node_checksum_method_node_reset_network_graph() != 24091.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_ldk_node_checksum_method_node_sign_message() != 49319.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2493,6 +3185,9 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_update_channel_config() != 37852.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_ldk_node_checksum_method_node_update_rgs_snapshot() != 59073.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_verify_signature() != 20486.toShort()) {
@@ -2644,33 +3339,37 @@ internal const val UNIFFI_RUST_FUTURE_POLL_MAYBE_READY = 1.toByte()
 internal val uniffiContinuationHandleMap = UniffiHandleMap<CancellableContinuation<Byte>>()
 
 // FFI type for Rust future continuations
-internal object uniffiRustFutureContinuationCallbackImpl: UniffiRustFutureContinuationCallback {
-    override fun callback(data: Long, pollResult: Byte) {
+internal object uniffiRustFutureContinuationCallbackImpl : UniffiRustFutureContinuationCallback {
+    override fun callback(
+        data: Long,
+        pollResult: Byte,
+    ) {
         uniffiContinuationHandleMap.remove(data).resume(pollResult)
     }
 }
 
-internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
+internal suspend fun <T, F, E : kotlin.Exception> uniffiRustCallAsync(
     rustFuture: Long,
     pollFunc: (Long, UniffiRustFutureContinuationCallback, Long) -> Unit,
     completeFunc: (Long, UniffiRustCallStatus) -> F,
     freeFunc: (Long) -> Unit,
     liftFunc: (F) -> T,
-    errorHandler: UniffiRustCallStatusErrorHandler<E>
+    errorHandler: UniffiRustCallStatusErrorHandler<E>,
 ): T {
     try {
         do {
-            val pollResult = suspendCancellableCoroutine<Byte> { continuation ->
-                pollFunc(
-                    rustFuture,
-                    uniffiRustFutureContinuationCallbackImpl,
-                    uniffiContinuationHandleMap.insert(continuation)
-                )
-            }
-        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY);
+            val pollResult =
+                suspendCancellableCoroutine<Byte> { continuation ->
+                    pollFunc(
+                        rustFuture,
+                        uniffiRustFutureContinuationCallbackImpl,
+                        uniffiContinuationHandleMap.insert(continuation),
+                    )
+                }
+        } while (pollResult != UNIFFI_RUST_FUTURE_POLL_READY)
 
         return liftFunc(
-            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) })
+            uniffiRustCallWithError(errorHandler, { status -> completeFunc(rustFuture, status) }),
         )
     } finally {
         freeFunc(rustFuture)
@@ -2678,7 +3377,6 @@ internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
 }
 
 // Public interface members begin here.
-
 
 // Interface implemented by anything that can contain an object reference.
 //
@@ -2690,9 +3388,11 @@ internal suspend fun<T, F, E: kotlin.Exception> uniffiRustCallAsync(
 // helper method to execute a block and destroy the object at the end.
 interface Disposable {
     fun destroy()
+
     companion object {
         fun destroy(vararg args: Any?) {
-            args.filterIsInstance<Disposable>()
+            args
+                .filterIsInstance<Disposable>()
                 .forEach(Disposable::destroy)
         }
     }
@@ -2713,7 +3413,7 @@ inline fun <T : Disposable?, R> T.use(block: (T) -> R) =
         }
     }
 
-/** 
+/**
  * Used to instantiate an interface without an actual pointer, for fakes in tests, mostly.
  *
  * @suppress
@@ -2723,22 +3423,19 @@ object NoPointer
 /**
  * @suppress
  */
-public object FfiConverterUByte: FfiConverter<UByte, Byte> {
-    override fun lift(value: Byte): UByte {
-        return value.toUByte()
-    }
+public object FfiConverterUByte : FfiConverter<UByte, Byte> {
+    override fun lift(value: Byte): UByte = value.toUByte()
 
-    override fun read(buf: ByteBuffer): UByte {
-        return lift(buf.get())
-    }
+    override fun read(buf: ByteBuffer): UByte = lift(buf.get())
 
-    override fun lower(value: UByte): Byte {
-        return value.toByte()
-    }
+    override fun lower(value: UByte): Byte = value.toByte()
 
     override fun allocationSize(value: UByte) = 1UL
 
-    override fun write(value: UByte, buf: ByteBuffer) {
+    override fun write(
+        value: UByte,
+        buf: ByteBuffer,
+    ) {
         buf.put(value.toByte())
     }
 }
@@ -2746,22 +3443,19 @@ public object FfiConverterUByte: FfiConverter<UByte, Byte> {
 /**
  * @suppress
  */
-public object FfiConverterUShort: FfiConverter<UShort, Short> {
-    override fun lift(value: Short): UShort {
-        return value.toUShort()
-    }
+public object FfiConverterUShort : FfiConverter<UShort, Short> {
+    override fun lift(value: Short): UShort = value.toUShort()
 
-    override fun read(buf: ByteBuffer): UShort {
-        return lift(buf.getShort())
-    }
+    override fun read(buf: ByteBuffer): UShort = lift(buf.getShort())
 
-    override fun lower(value: UShort): Short {
-        return value.toShort()
-    }
+    override fun lower(value: UShort): Short = value.toShort()
 
     override fun allocationSize(value: UShort) = 2UL
 
-    override fun write(value: UShort, buf: ByteBuffer) {
+    override fun write(
+        value: UShort,
+        buf: ByteBuffer,
+    ) {
         buf.putShort(value.toShort())
     }
 }
@@ -2769,22 +3463,19 @@ public object FfiConverterUShort: FfiConverter<UShort, Short> {
 /**
  * @suppress
  */
-public object FfiConverterUInt: FfiConverter<UInt, Int> {
-    override fun lift(value: Int): UInt {
-        return value.toUInt()
-    }
+public object FfiConverterUInt : FfiConverter<UInt, Int> {
+    override fun lift(value: Int): UInt = value.toUInt()
 
-    override fun read(buf: ByteBuffer): UInt {
-        return lift(buf.getInt())
-    }
+    override fun read(buf: ByteBuffer): UInt = lift(buf.getInt())
 
-    override fun lower(value: UInt): Int {
-        return value.toInt()
-    }
+    override fun lower(value: UInt): Int = value.toInt()
 
     override fun allocationSize(value: UInt) = 4UL
 
-    override fun write(value: UInt, buf: ByteBuffer) {
+    override fun write(
+        value: UInt,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.toInt())
     }
 }
@@ -2792,22 +3483,19 @@ public object FfiConverterUInt: FfiConverter<UInt, Int> {
 /**
  * @suppress
  */
-public object FfiConverterULong: FfiConverter<ULong, Long> {
-    override fun lift(value: Long): ULong {
-        return value.toULong()
-    }
+public object FfiConverterULong : FfiConverter<ULong, Long> {
+    override fun lift(value: Long): ULong = value.toULong()
 
-    override fun read(buf: ByteBuffer): ULong {
-        return lift(buf.getLong())
-    }
+    override fun read(buf: ByteBuffer): ULong = lift(buf.getLong())
 
-    override fun lower(value: ULong): Long {
-        return value.toLong()
-    }
+    override fun lower(value: ULong): Long = value.toLong()
 
     override fun allocationSize(value: ULong) = 8UL
 
-    override fun write(value: ULong, buf: ByteBuffer) {
+    override fun write(
+        value: ULong,
+        buf: ByteBuffer,
+    ) {
         buf.putLong(value.toLong())
     }
 }
@@ -2815,22 +3503,19 @@ public object FfiConverterULong: FfiConverter<ULong, Long> {
 /**
  * @suppress
  */
-public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
-    override fun lift(value: Byte): Boolean {
-        return value.toInt() != 0
-    }
+public object FfiConverterBoolean : FfiConverter<Boolean, Byte> {
+    override fun lift(value: Byte): Boolean = value.toInt() != 0
 
-    override fun read(buf: ByteBuffer): Boolean {
-        return lift(buf.get())
-    }
+    override fun read(buf: ByteBuffer): Boolean = lift(buf.get())
 
-    override fun lower(value: Boolean): Byte {
-        return if (value) 1.toByte() else 0.toByte()
-    }
+    override fun lower(value: Boolean): Byte = if (value) 1.toByte() else 0.toByte()
 
     override fun allocationSize(value: Boolean) = 1UL
 
-    override fun write(value: Boolean, buf: ByteBuffer) {
+    override fun write(
+        value: Boolean,
+        buf: ByteBuffer,
+    ) {
         buf.put(lower(value))
     }
 }
@@ -2838,7 +3523,7 @@ public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
 /**
  * @suppress
  */
-public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
+public object FfiConverterString : FfiConverter<String, RustBuffer.ByValue> {
     // Note: we don't inherit from FfiConverterRustBuffer, because we use a
     // special encoding when lowering/lifting.  We can use `RustBuffer.len` to
     // store our length and avoid writing it out to the buffer.
@@ -2885,7 +3570,10 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         return sizeForLength + sizeForString
     }
 
-    override fun write(value: String, buf: ByteBuffer) {
+    override fun write(
+        value: String,
+        buf: ByteBuffer,
+    ) {
         val byteBuf = toUtf8(value)
         buf.putInt(byteBuf.limit())
         buf.put(byteBuf)
@@ -2895,22 +3583,24 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 /**
  * @suppress
  */
-public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+public object FfiConverterByteArray : FfiConverterRustBuffer<ByteArray> {
     override fun read(buf: ByteBuffer): ByteArray {
         val len = buf.getInt()
         val byteArr = ByteArray(len)
         buf.get(byteArr)
         return byteArr
     }
-    override fun allocationSize(value: ByteArray): ULong {
-        return 4UL + value.size.toULong()
-    }
-    override fun write(value: ByteArray, buf: ByteBuffer) {
+
+    override fun allocationSize(value: ByteArray): ULong = 4UL + value.size.toULong()
+
+    override fun write(
+        value: ByteArray,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         buf.put(value)
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -3008,7 +3698,6 @@ public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
 //
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
-
 
 /**
  * The cleaner interface for Object finalization code to run.
@@ -3025,17 +3714,24 @@ interface UniffiCleaner {
         fun clean()
     }
 
-    fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable
+    fun register(
+        value: Any,
+        cleanUpTask: Runnable,
+    ): UniffiCleaner.Cleanable
 
     companion object
 }
 
 // The fallback Jna cleaner, which is available for both Android, and the JVM.
 private class UniffiJnaCleaner : UniffiCleaner {
-    private val cleaner = com.sun.jna.internal.Cleaner.getCleaner()
+    private val cleaner =
+        com.sun.jna.internal.Cleaner
+            .getCleaner()
 
-    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
-        UniffiJnaCleanable(cleaner.register(value, cleanUpTask))
+    override fun register(
+        value: Any,
+        cleanUpTask: Runnable,
+    ): UniffiCleaner.Cleanable = UniffiJnaCleanable(cleaner.register(value, cleanUpTask))
 }
 
 private class UniffiJnaCleanable(
@@ -3048,7 +3744,6 @@ private class UniffiJnaCleanable(
 // using Android or not.
 // There are further runtime checks to chose the correct implementation
 // of the cleaner.
-
 
 private fun UniffiCleaner.Companion.create(): UniffiCleaner =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
@@ -3063,8 +3758,10 @@ private fun UniffiCleaner.Companion.create(): UniffiCleaner =
 private class AndroidSystemCleaner : UniffiCleaner {
     val cleaner = android.system.SystemCleaner.cleaner()
 
-    override fun register(value: Any, cleanUpTask: Runnable): UniffiCleaner.Cleanable =
-        AndroidSystemCleanable(cleaner.register(value, cleanUpTask))
+    override fun register(
+        value: Any,
+        cleanUpTask: Runnable,
+    ): UniffiCleaner.Cleanable = AndroidSystemCleanable(cleaner.register(value, cleanUpTask))
 }
 
 @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
@@ -3073,45 +3770,47 @@ private class AndroidSystemCleanable(
 ) : UniffiCleaner.Cleanable {
     override fun clean() = cleanable.clean()
 }
+
 public interface Bolt11InvoiceInterface {
-    
     fun `amountMilliSatoshis`(): kotlin.ULong?
-    
+
     fun `currency`(): Currency
-    
+
     fun `expiryTimeSeconds`(): kotlin.ULong
-    
+
     fun `fallbackAddresses`(): List<Address>
-    
+
     fun `invoiceDescription`(): Bolt11InvoiceDescription
-    
+
     fun `isExpired`(): kotlin.Boolean
-    
+
     fun `minFinalCltvExpiryDelta`(): kotlin.ULong
-    
+
     fun `network`(): Network
-    
+
     fun `paymentHash`(): PaymentHash
-    
+
     fun `paymentSecret`(): PaymentSecret
-    
+
     fun `recoverPayeePubKey`(): PublicKey
-    
+
     fun `routeHints`(): List<List<RouteHintHop>>
-    
+
     fun `secondsSinceEpoch`(): kotlin.ULong
-    
+
     fun `secondsUntilExpiry`(): kotlin.ULong
-    
+
     fun `signableHash`(): List<kotlin.UByte>
-    
+
     fun `wouldExpire`(`atTimeSeconds`: kotlin.ULong): kotlin.Boolean
-    
+
     companion object
 }
 
-open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
-
+open class Bolt11Invoice :
+    Disposable,
+    AutoCloseable,
+    Bolt11InvoiceInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -3161,7 +3860,7 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -3175,7 +3874,9 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -3185,261 +3886,205 @@ open class Bolt11Invoice: Disposable, AutoCloseable, Bolt11InvoiceInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_bolt11invoice(pointer!!, status)
         }
-    }
 
-    override fun `amountMilliSatoshis`(): kotlin.ULong? {
-            return FfiConverterOptionalULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_amount_milli_satoshis(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `amountMilliSatoshis`(): kotlin.ULong? =
+        FfiConverterOptionalULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_amount_milli_satoshis(it, _status)
+                }
+            },
+        )
 
-    override fun `currency`(): Currency {
-            return FfiConverterTypeCurrency.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_currency(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `currency`(): Currency =
+        FfiConverterTypeCurrency.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_currency(it, _status)
+                }
+            },
+        )
 
-    override fun `expiryTimeSeconds`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_expiry_time_seconds(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `expiryTimeSeconds`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_expiry_time_seconds(it, _status)
+                }
+            },
+        )
 
-    override fun `fallbackAddresses`(): List<Address> {
-            return FfiConverterSequenceTypeAddress.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_fallback_addresses(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `fallbackAddresses`(): List<Address> =
+        FfiConverterSequenceTypeAddress.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_fallback_addresses(it, _status)
+                }
+            },
+        )
 
-    override fun `invoiceDescription`(): Bolt11InvoiceDescription {
-            return FfiConverterTypeBolt11InvoiceDescription.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_invoice_description(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `invoiceDescription`(): Bolt11InvoiceDescription =
+        FfiConverterTypeBolt11InvoiceDescription.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_invoice_description(it, _status)
+                }
+            },
+        )
 
-    override fun `isExpired`(): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_is_expired(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `isExpired`(): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_is_expired(it, _status)
+                }
+            },
+        )
 
-    override fun `minFinalCltvExpiryDelta`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_min_final_cltv_expiry_delta(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `minFinalCltvExpiryDelta`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_min_final_cltv_expiry_delta(it, _status)
+                }
+            },
+        )
 
-    override fun `network`(): Network {
-            return FfiConverterTypeNetwork.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_network(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `network`(): Network =
+        FfiConverterTypeNetwork.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_network(it, _status)
+                }
+            },
+        )
 
-    override fun `paymentHash`(): PaymentHash {
-            return FfiConverterTypePaymentHash.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_payment_hash(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `paymentHash`(): PaymentHash =
+        FfiConverterTypePaymentHash.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_payment_hash(it, _status)
+                }
+            },
+        )
 
-    override fun `paymentSecret`(): PaymentSecret {
-            return FfiConverterTypePaymentSecret.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_payment_secret(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `paymentSecret`(): PaymentSecret =
+        FfiConverterTypePaymentSecret.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_payment_secret(it, _status)
+                }
+            },
+        )
 
-    override fun `recoverPayeePubKey`(): PublicKey {
-            return FfiConverterTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_recover_payee_pub_key(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `recoverPayeePubKey`(): PublicKey =
+        FfiConverterTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_recover_payee_pub_key(it, _status)
+                }
+            },
+        )
 
-    override fun `routeHints`(): List<List<RouteHintHop>> {
-            return FfiConverterSequenceSequenceTypeRouteHintHop.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_route_hints(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `routeHints`(): List<List<RouteHintHop>> =
+        FfiConverterSequenceSequenceTypeRouteHintHop.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_route_hints(it, _status)
+                }
+            },
+        )
 
-    override fun `secondsSinceEpoch`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_seconds_since_epoch(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `secondsSinceEpoch`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_seconds_since_epoch(it, _status)
+                }
+            },
+        )
 
-    override fun `secondsUntilExpiry`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_seconds_until_expiry(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `secondsUntilExpiry`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_seconds_until_expiry(it, _status)
+                }
+            },
+        )
 
-    override fun `signableHash`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `signableHash`(): List<kotlin.UByte> =
+        FfiConverterSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_signable_hash(it, _status)
+                }
+            },
+        )
 
-    override fun `wouldExpire`(`atTimeSeconds`: kotlin.ULong): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_would_expire(
-        it, FfiConverterULong.lower(`atTimeSeconds`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `wouldExpire`(`atTimeSeconds`: kotlin.ULong): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_would_expire(
+                        it,
+                        FfiConverterULong.lower(`atTimeSeconds`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    override fun toString(): String {
-        return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_display(
-        it, _status)
-}
-    }
-    )
-    }
-    
-    
+    override fun toString(): String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_display(it, _status)
+                }
+            },
+        )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Bolt11Invoice) return false
         return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_eq(
-        it, FfiConverterTypeBolt11Invoice.lower(`other`),_status)
-}
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11invoice_uniffi_trait_eq_eq(
+                        it,
+                        FfiConverterTypeBolt11Invoice.lower(`other`),
+                        _status,
+                    )
+                }
+            },
+        )
     }
-    )
-    }
-    
 
-    
     companion object {
-        
-    @Throws(NodeException::class) fun `fromStr`(`invoiceStr`: kotlin.String): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_bolt11invoice_from_str(
-        FfiConverterString.lower(`invoiceStr`),_status)
-}
-    )
+        @Throws(NodeException::class)
+        fun `fromStr`(`invoiceStr`: kotlin.String): Bolt11Invoice =
+            FfiConverterTypeBolt11Invoice.lift(
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_bolt11invoice_from_str(
+                        FfiConverterString.lower(`invoiceStr`),
+                        _status,
+                    )
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBolt11Invoice: FfiConverter<Bolt11Invoice, Pointer> {
+public object FfiConverterTypeBolt11Invoice : FfiConverter<Bolt11Invoice, Pointer> {
+    override fun lower(value: Bolt11Invoice): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Bolt11Invoice): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Bolt11Invoice {
-        return Bolt11Invoice(value)
-    }
+    override fun lift(value: Pointer): Bolt11Invoice = Bolt11Invoice(value)
 
     override fun read(buf: ByteBuffer): Bolt11Invoice {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -3449,13 +4094,15 @@ public object FfiConverterTypeBolt11Invoice: FfiConverter<Bolt11Invoice, Pointer
 
     override fun allocationSize(value: Bolt11Invoice) = 8UL
 
-    override fun write(value: Bolt11Invoice, buf: ByteBuffer) {
+    override fun write(
+        value: Bolt11Invoice,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -3554,42 +4201,96 @@ public object FfiConverterTypeBolt11Invoice: FfiConverter<Bolt11Invoice, Pointer
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface Bolt11PaymentInterface {
-    
-    fun `claimForHash`(`paymentHash`: PaymentHash, `claimableAmountMsat`: kotlin.ULong, `preimage`: PaymentPreimage)
-    
+    fun `claimForHash`(
+        `paymentHash`: PaymentHash,
+        `claimableAmountMsat`: kotlin.ULong,
+        `preimage`: PaymentPreimage,
+    )
+
     fun `failForHash`(`paymentHash`: PaymentHash)
-    
-    fun `receive`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice
-    
-    fun `receiveForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice
-    
-    fun `receiveVariableAmount`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice
-    
-    fun `receiveVariableAmountForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice
-    
-    fun `receiveVariableAmountViaJitChannel`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?): Bolt11Invoice
-    
-    fun `receiveVariableAmountViaJitChannelForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice
-    
-    fun `receiveViaJitChannel`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?): Bolt11Invoice
-    
-    fun `receiveViaJitChannelForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice
-    
-    fun `send`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?): PaymentId
-    
-    fun `sendProbes`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?)
-    
-    fun `sendProbesUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?)
-    
-    fun `sendUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?): PaymentId
-    
+
+    fun `receive`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+    ): Bolt11Invoice
+
+    fun `receiveForHash`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice
+
+    fun `receiveVariableAmount`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+    ): Bolt11Invoice
+
+    fun `receiveVariableAmountForHash`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice
+
+    fun `receiveVariableAmountViaJitChannel`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?,
+    ): Bolt11Invoice
+
+    fun `receiveVariableAmountViaJitChannelForHash`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice
+
+    fun `receiveViaJitChannel`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxLspFeeLimitMsat`: kotlin.ULong?,
+    ): Bolt11Invoice
+
+    fun `receiveViaJitChannelForHash`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxLspFeeLimitMsat`: kotlin.ULong?,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice
+
+    fun `send`(
+        `invoice`: Bolt11Invoice,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
+    fun `sendProbes`(
+        `invoice`: Bolt11Invoice,
+        `routeParameters`: RouteParametersConfig?,
+    )
+
+    fun `sendProbesUsingAmount`(
+        `invoice`: Bolt11Invoice,
+        `amountMsat`: kotlin.ULong,
+        `routeParameters`: RouteParametersConfig?,
+    )
+
+    fun `sendUsingAmount`(
+        `invoice`: Bolt11Invoice,
+        `amountMsat`: kotlin.ULong,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
     companion object
 }
 
-open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
-
+open class Bolt11Payment :
+    Disposable,
+    AutoCloseable,
+    Bolt11PaymentInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -3639,7 +4340,7 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -3653,7 +4354,9 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -3663,210 +4366,288 @@ open class Bolt11Payment: Disposable, AutoCloseable, Bolt11PaymentInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_bolt11payment(pointer!!, status)
+        }
+
+    @Throws(NodeException::class)
+    override fun `claimForHash`(
+        `paymentHash`: PaymentHash,
+        `claimableAmountMsat`: kotlin.ULong,
+        `preimage`: PaymentPreimage,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_claim_for_hash(
+                it,
+                FfiConverterTypePaymentHash.lower(`paymentHash`),
+                FfiConverterULong.lower(`claimableAmountMsat`),
+                FfiConverterTypePaymentPreimage.lower(`preimage`),
+                _status,
+            )
         }
     }
 
-    
-    @Throws(NodeException::class)override fun `claimForHash`(`paymentHash`: PaymentHash, `claimableAmountMsat`: kotlin.ULong, `preimage`: PaymentPreimage)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_claim_for_hash(
-        it, FfiConverterTypePaymentHash.lower(`paymentHash`),FfiConverterULong.lower(`claimableAmountMsat`),FfiConverterTypePaymentPreimage.lower(`preimage`),_status)
-}
-    }
-    
-    
+    @Throws(NodeException::class)
+    override fun `failForHash`(`paymentHash`: PaymentHash) =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_fail_for_hash(
+                    it,
+                    FfiConverterTypePaymentHash.lower(`paymentHash`),
+                    _status,
+                )
+            }
+        }
 
-    
-    @Throws(NodeException::class)override fun `failForHash`(`paymentHash`: PaymentHash)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_fail_for_hash(
-        it, FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
-}
-    }
-    
-    
+    @Throws(NodeException::class)
+    override fun `receive`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receive`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveForHash`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterTypePaymentHash.lower(`paymentHash`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveVariableAmount`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(
+                        it,
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveVariableAmount`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(
-        it, FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveVariableAmountForHash`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash(
+                        it,
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterTypePaymentHash.lower(`paymentHash`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveVariableAmountForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `paymentHash`: PaymentHash): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash(
-        it, FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveVariableAmountViaJitChannel`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel(
+                        it,
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterOptionalULong.lower(`maxProportionalLspFeeLimitPpmMsat`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveVariableAmountViaJitChannel`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel(
-        it, FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxProportionalLspFeeLimitPpmMsat`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveVariableAmountViaJitChannelForHash`(
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(
+                        it,
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterOptionalULong.lower(`maxProportionalLspFeeLimitPpmMsat`),
+                        FfiConverterTypePaymentHash.lower(`paymentHash`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveVariableAmountViaJitChannelForHash`(`description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxProportionalLspFeeLimitPpmMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash(
-        it, FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxProportionalLspFeeLimitPpmMsat`),FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveViaJitChannel`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxLspFeeLimitMsat`: kotlin.ULong?,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveViaJitChannel`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveViaJitChannelForHash`(
+        `amountMsat`: kotlin.ULong,
+        `description`: Bolt11InvoiceDescription,
+        `expirySecs`: kotlin.UInt,
+        `maxLspFeeLimitMsat`: kotlin.ULong?,
+        `paymentHash`: PaymentHash,
+    ): Bolt11Invoice =
+        FfiConverterTypeBolt11Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),
+                        FfiConverterTypePaymentHash.lower(`paymentHash`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveViaJitChannelForHash`(`amountMsat`: kotlin.ULong, `description`: Bolt11InvoiceDescription, `expirySecs`: kotlin.UInt, `maxLspFeeLimitMsat`: kotlin.ULong?, `paymentHash`: PaymentHash): Bolt11Invoice {
-            return FfiConverterTypeBolt11Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_receive_via_jit_channel_for_hash(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypeBolt11InvoiceDescription.lower(`description`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`maxLspFeeLimitMsat`),FfiConverterTypePaymentHash.lower(`paymentHash`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `send`(
+        `invoice`: Bolt11Invoice,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send(
+                        it,
+                        FfiConverterTypeBolt11Invoice.lower(`invoice`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `send`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send(
-        it, FfiConverterTypeBolt11Invoice.lower(`invoice`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
+    @Throws(NodeException::class)
+    override fun `sendProbes`(
+        `invoice`: Bolt11Invoice,
+        `routeParameters`: RouteParametersConfig?,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send_probes(
+                it,
+                FfiConverterTypeBolt11Invoice.lower(`invoice`),
+                FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                _status,
+            )
+        }
     }
-    )
-    }
-    
 
-    
-    @Throws(NodeException::class)override fun `sendProbes`(`invoice`: Bolt11Invoice, `routeParameters`: RouteParametersConfig?)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send_probes(
-        it, FfiConverterTypeBolt11Invoice.lower(`invoice`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
+    @Throws(NodeException::class)
+    override fun `sendProbesUsingAmount`(
+        `invoice`: Bolt11Invoice,
+        `amountMsat`: kotlin.ULong,
+        `routeParameters`: RouteParametersConfig?,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send_probes_using_amount(
+                it,
+                FfiConverterTypeBolt11Invoice.lower(`invoice`),
+                FfiConverterULong.lower(`amountMsat`),
+                FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                _status,
+            )
+        }
     }
-    
-    
 
-    
-    @Throws(NodeException::class)override fun `sendProbesUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send_probes_using_amount(
-        it, FfiConverterTypeBolt11Invoice.lower(`invoice`),FfiConverterULong.lower(`amountMsat`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    
-    
+    @Throws(NodeException::class)
+    override fun `sendUsingAmount`(
+        `invoice`: Bolt11Invoice,
+        `amountMsat`: kotlin.ULong,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(
+                        it,
+                        FfiConverterTypeBolt11Invoice.lower(`invoice`),
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendUsingAmount`(`invoice`: Bolt11Invoice, `amountMsat`: kotlin.ULong, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt11payment_send_using_amount(
-        it, FfiConverterTypeBolt11Invoice.lower(`invoice`),FfiConverterULong.lower(`amountMsat`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
-
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBolt11Payment: FfiConverter<Bolt11Payment, Pointer> {
+public object FfiConverterTypeBolt11Payment : FfiConverter<Bolt11Payment, Pointer> {
+    override fun lower(value: Bolt11Payment): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Bolt11Payment): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Bolt11Payment {
-        return Bolt11Payment(value)
-    }
+    override fun lift(value: Pointer): Bolt11Payment = Bolt11Payment(value)
 
     override fun read(buf: ByteBuffer): Bolt11Payment {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -3876,13 +4657,15 @@ public object FfiConverterTypeBolt11Payment: FfiConverter<Bolt11Payment, Pointer
 
     override fun allocationSize(value: Bolt11Payment) = 8UL
 
-    override fun write(value: Bolt11Payment, buf: ByteBuffer) {
+    override fun write(
+        value: Bolt11Payment,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -3981,54 +4764,54 @@ public object FfiConverterTypeBolt11Payment: FfiConverter<Bolt11Payment, Pointer
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface Bolt12InvoiceInterface {
-    
     fun `absoluteExpirySeconds`(): kotlin.ULong?
-    
+
     fun `amount`(): OfferAmount?
-    
+
     fun `amountMsats`(): kotlin.ULong
-    
+
     fun `chain`(): List<kotlin.UByte>
-    
+
     fun `createdAt`(): kotlin.ULong
-    
+
     fun `encode`(): List<kotlin.UByte>
-    
+
     fun `fallbackAddresses`(): List<Address>
-    
+
     fun `invoiceDescription`(): kotlin.String?
-    
+
     fun `isExpired`(): kotlin.Boolean
-    
+
     fun `issuer`(): kotlin.String?
-    
+
     fun `issuerSigningPubkey`(): PublicKey?
-    
+
     fun `metadata`(): List<kotlin.UByte>?
-    
+
     fun `offerChains`(): List<List<kotlin.UByte>>?
-    
+
     fun `payerNote`(): kotlin.String?
-    
+
     fun `payerSigningPubkey`(): PublicKey
-    
+
     fun `paymentHash`(): PaymentHash
-    
+
     fun `quantity`(): kotlin.ULong?
-    
+
     fun `relativeExpiry`(): kotlin.ULong
-    
+
     fun `signableHash`(): List<kotlin.UByte>
-    
+
     fun `signingPubkey`(): PublicKey
-    
+
     companion object
 }
 
-open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
-
+open class Bolt12Invoice :
+    Disposable,
+    AutoCloseable,
+    Bolt12InvoiceInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -4078,7 +4861,7 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -4092,7 +4875,9 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -4102,284 +4887,212 @@ open class Bolt12Invoice: Disposable, AutoCloseable, Bolt12InvoiceInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_bolt12invoice(pointer!!, status)
         }
-    }
 
-    override fun `absoluteExpirySeconds`(): kotlin.ULong? {
-            return FfiConverterOptionalULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_absolute_expiry_seconds(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `absoluteExpirySeconds`(): kotlin.ULong? =
+        FfiConverterOptionalULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_absolute_expiry_seconds(it, _status)
+                }
+            },
+        )
 
-    override fun `amount`(): OfferAmount? {
-            return FfiConverterOptionalTypeOfferAmount.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_amount(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `amount`(): OfferAmount? =
+        FfiConverterOptionalTypeOfferAmount.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_amount(it, _status)
+                }
+            },
+        )
 
-    override fun `amountMsats`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_amount_msats(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `amountMsats`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_amount_msats(it, _status)
+                }
+            },
+        )
 
-    override fun `chain`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_chain(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `chain`(): List<kotlin.UByte> =
+        FfiConverterSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_chain(it, _status)
+                }
+            },
+        )
 
-    override fun `createdAt`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_created_at(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `createdAt`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_created_at(it, _status)
+                }
+            },
+        )
 
-    override fun `encode`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_encode(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `encode`(): List<kotlin.UByte> =
+        FfiConverterSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_encode(it, _status)
+                }
+            },
+        )
 
-    override fun `fallbackAddresses`(): List<Address> {
-            return FfiConverterSequenceTypeAddress.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_fallback_addresses(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `fallbackAddresses`(): List<Address> =
+        FfiConverterSequenceTypeAddress.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_fallback_addresses(it, _status)
+                }
+            },
+        )
 
-    override fun `invoiceDescription`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_invoice_description(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `invoiceDescription`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_invoice_description(it, _status)
+                }
+            },
+        )
 
-    override fun `isExpired`(): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_is_expired(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `isExpired`(): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_is_expired(it, _status)
+                }
+            },
+        )
 
-    override fun `issuer`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_issuer(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `issuer`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_issuer(it, _status)
+                }
+            },
+        )
 
-    override fun `issuerSigningPubkey`(): PublicKey? {
-            return FfiConverterOptionalTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_issuer_signing_pubkey(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `issuerSigningPubkey`(): PublicKey? =
+        FfiConverterOptionalTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_issuer_signing_pubkey(it, _status)
+                }
+            },
+        )
 
-    override fun `metadata`(): List<kotlin.UByte>? {
-            return FfiConverterOptionalSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_metadata(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `metadata`(): List<kotlin.UByte>? =
+        FfiConverterOptionalSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_metadata(it, _status)
+                }
+            },
+        )
 
-    override fun `offerChains`(): List<List<kotlin.UByte>>? {
-            return FfiConverterOptionalSequenceSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `offerChains`(): List<List<kotlin.UByte>>? =
+        FfiConverterOptionalSequenceSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_offer_chains(it, _status)
+                }
+            },
+        )
 
-    override fun `payerNote`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_payer_note(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `payerNote`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_payer_note(it, _status)
+                }
+            },
+        )
 
-    override fun `payerSigningPubkey`(): PublicKey {
-            return FfiConverterTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_payer_signing_pubkey(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `payerSigningPubkey`(): PublicKey =
+        FfiConverterTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_payer_signing_pubkey(it, _status)
+                }
+            },
+        )
 
-    override fun `paymentHash`(): PaymentHash {
-            return FfiConverterTypePaymentHash.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_payment_hash(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `paymentHash`(): PaymentHash =
+        FfiConverterTypePaymentHash.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_payment_hash(it, _status)
+                }
+            },
+        )
 
-    override fun `quantity`(): kotlin.ULong? {
-            return FfiConverterOptionalULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_quantity(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `quantity`(): kotlin.ULong? =
+        FfiConverterOptionalULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_quantity(it, _status)
+                }
+            },
+        )
 
-    override fun `relativeExpiry`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_relative_expiry(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `relativeExpiry`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_relative_expiry(it, _status)
+                }
+            },
+        )
 
-    override fun `signableHash`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `signableHash`(): List<kotlin.UByte> =
+        FfiConverterSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_signable_hash(it, _status)
+                }
+            },
+        )
 
-    override fun `signingPubkey`(): PublicKey {
-            return FfiConverterTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_signing_pubkey(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `signingPubkey`(): PublicKey =
+        FfiConverterTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12invoice_signing_pubkey(it, _status)
+                }
+            },
+        )
 
-    
-
-    
     companion object {
-        
-    @Throws(NodeException::class) fun `fromStr`(`invoiceStr`: kotlin.String): Bolt12Invoice {
-            return FfiConverterTypeBolt12Invoice.lift(
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_bolt12invoice_from_str(
-        FfiConverterString.lower(`invoiceStr`),_status)
-}
-    )
+        @Throws(NodeException::class)
+        fun `fromStr`(`invoiceStr`: kotlin.String): Bolt12Invoice =
+            FfiConverterTypeBolt12Invoice.lift(
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_bolt12invoice_from_str(
+                        FfiConverterString.lower(`invoiceStr`),
+                        _status,
+                    )
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBolt12Invoice: FfiConverter<Bolt12Invoice, Pointer> {
+public object FfiConverterTypeBolt12Invoice : FfiConverter<Bolt12Invoice, Pointer> {
+    override fun lower(value: Bolt12Invoice): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Bolt12Invoice): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Bolt12Invoice {
-        return Bolt12Invoice(value)
-    }
+    override fun lift(value: Pointer): Bolt12Invoice = Bolt12Invoice(value)
 
     override fun read(buf: ByteBuffer): Bolt12Invoice {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -4389,13 +5102,15 @@ public object FfiConverterTypeBolt12Invoice: FfiConverter<Bolt12Invoice, Pointer
 
     override fun allocationSize(value: Bolt12Invoice) = 8UL
 
-    override fun write(value: Bolt12Invoice, buf: ByteBuffer) {
+    override fun write(
+        value: Bolt12Invoice,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -4494,32 +5209,57 @@ public object FfiConverterTypeBolt12Invoice: FfiConverter<Bolt12Invoice, Pointer
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface Bolt12PaymentInterface {
-    
     fun `blindedPathsForAsyncRecipient`(`recipientId`: kotlin.ByteArray): kotlin.ByteArray
-    
-    fun `initiateRefund`(`amountMsat`: kotlin.ULong, `expirySecs`: kotlin.UInt, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): Refund
-    
-    fun `receive`(`amountMsat`: kotlin.ULong, `description`: kotlin.String, `expirySecs`: kotlin.UInt?, `quantity`: kotlin.ULong?): Offer
-    
+
+    fun `initiateRefund`(
+        `amountMsat`: kotlin.ULong,
+        `expirySecs`: kotlin.UInt,
+        `quantity`: kotlin.ULong?,
+        `payerNote`: kotlin.String?,
+        `routeParameters`: RouteParametersConfig?,
+    ): Refund
+
+    fun `receive`(
+        `amountMsat`: kotlin.ULong,
+        `description`: kotlin.String,
+        `expirySecs`: kotlin.UInt?,
+        `quantity`: kotlin.ULong?,
+    ): Offer
+
     fun `receiveAsync`(): Offer
-    
-    fun `receiveVariableAmount`(`description`: kotlin.String, `expirySecs`: kotlin.UInt?): Offer
-    
+
+    fun `receiveVariableAmount`(
+        `description`: kotlin.String,
+        `expirySecs`: kotlin.UInt?,
+    ): Offer
+
     fun `requestRefundPayment`(`refund`: Refund): Bolt12Invoice
-    
-    fun `send`(`offer`: Offer, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId
-    
-    fun `sendUsingAmount`(`offer`: Offer, `amountMsat`: kotlin.ULong, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId
-    
+
+    fun `send`(
+        `offer`: Offer,
+        `quantity`: kotlin.ULong?,
+        `payerNote`: kotlin.String?,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
+    fun `sendUsingAmount`(
+        `offer`: Offer,
+        `amountMsat`: kotlin.ULong,
+        `quantity`: kotlin.ULong?,
+        `payerNote`: kotlin.String?,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
     fun `setPathsToStaticInvoiceServer`(`paths`: kotlin.ByteArray)
-    
+
     companion object
 }
 
-open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
-
+open class Bolt12Payment :
+    Disposable,
+    AutoCloseable,
+    Bolt12PaymentInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -4569,7 +5309,7 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -4583,7 +5323,9 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -4593,148 +5335,181 @@ open class Bolt12Payment: Disposable, AutoCloseable, Bolt12PaymentInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_bolt12payment(pointer!!, status)
         }
-    }
 
-    
-    @Throws(NodeException::class)override fun `blindedPathsForAsyncRecipient`(`recipientId`: kotlin.ByteArray): kotlin.ByteArray {
-            return FfiConverterByteArray.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_blinded_paths_for_async_recipient(
-        it, FfiConverterByteArray.lower(`recipientId`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `blindedPathsForAsyncRecipient`(`recipientId`: kotlin.ByteArray): kotlin.ByteArray =
+        FfiConverterByteArray.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_blinded_paths_for_async_recipient(
+                        it,
+                        FfiConverterByteArray.lower(`recipientId`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `initiateRefund`(`amountMsat`: kotlin.ULong, `expirySecs`: kotlin.UInt, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): Refund {
-            return FfiConverterTypeRefund.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`quantity`),FfiConverterOptionalString.lower(`payerNote`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `initiateRefund`(
+        `amountMsat`: kotlin.ULong,
+        `expirySecs`: kotlin.UInt,
+        `quantity`: kotlin.ULong?,
+        `payerNote`: kotlin.String?,
+        `routeParameters`: RouteParametersConfig?,
+    ): Refund =
+        FfiConverterTypeRefund.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_initiate_refund(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterUInt.lower(`expirySecs`),
+                        FfiConverterOptionalULong.lower(`quantity`),
+                        FfiConverterOptionalString.lower(`payerNote`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receive`(`amountMsat`: kotlin.ULong, `description`: kotlin.String, `expirySecs`: kotlin.UInt?, `quantity`: kotlin.ULong?): Offer {
-            return FfiConverterTypeOffer.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_receive(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterString.lower(`description`),FfiConverterOptionalUInt.lower(`expirySecs`),FfiConverterOptionalULong.lower(`quantity`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receive`(
+        `amountMsat`: kotlin.ULong,
+        `description`: kotlin.String,
+        `expirySecs`: kotlin.UInt?,
+        `quantity`: kotlin.ULong?,
+    ): Offer =
+        FfiConverterTypeOffer.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_receive(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterString.lower(`description`),
+                        FfiConverterOptionalUInt.lower(`expirySecs`),
+                        FfiConverterOptionalULong.lower(`quantity`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveAsync`(): Offer {
-            return FfiConverterTypeOffer.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_receive_async(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveAsync`(): Offer =
+        FfiConverterTypeOffer.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_receive_async(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `receiveVariableAmount`(`description`: kotlin.String, `expirySecs`: kotlin.UInt?): Offer {
-            return FfiConverterTypeOffer.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_receive_variable_amount(
-        it, FfiConverterString.lower(`description`),FfiConverterOptionalUInt.lower(`expirySecs`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receiveVariableAmount`(
+        `description`: kotlin.String,
+        `expirySecs`: kotlin.UInt?,
+    ): Offer =
+        FfiConverterTypeOffer.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_receive_variable_amount(
+                        it,
+                        FfiConverterString.lower(`description`),
+                        FfiConverterOptionalUInt.lower(`expirySecs`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `requestRefundPayment`(`refund`: Refund): Bolt12Invoice {
-            return FfiConverterTypeBolt12Invoice.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_request_refund_payment(
-        it, FfiConverterTypeRefund.lower(`refund`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `requestRefundPayment`(`refund`: Refund): Bolt12Invoice =
+        FfiConverterTypeBolt12Invoice.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_request_refund_payment(
+                        it,
+                        FfiConverterTypeRefund.lower(`refund`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `send`(`offer`: Offer, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_send(
-        it, FfiConverterTypeOffer.lower(`offer`),FfiConverterOptionalULong.lower(`quantity`),FfiConverterOptionalString.lower(`payerNote`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `send`(
+        `offer`: Offer,
+        `quantity`: kotlin.ULong?,
+        `payerNote`: kotlin.String?,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_send(
+                        it,
+                        FfiConverterTypeOffer.lower(`offer`),
+                        FfiConverterOptionalULong.lower(`quantity`),
+                        FfiConverterOptionalString.lower(`payerNote`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendUsingAmount`(`offer`: Offer, `amountMsat`: kotlin.ULong, `quantity`: kotlin.ULong?, `payerNote`: kotlin.String?, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(
-        it, FfiConverterTypeOffer.lower(`offer`),FfiConverterULong.lower(`amountMsat`),FfiConverterOptionalULong.lower(`quantity`),FfiConverterOptionalString.lower(`payerNote`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `sendUsingAmount`(
+        `offer`: Offer,
+        `amountMsat`: kotlin.ULong,
+        `quantity`: kotlin.ULong?,
+        `payerNote`: kotlin.String?,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_send_using_amount(
+                        it,
+                        FfiConverterTypeOffer.lower(`offer`),
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterOptionalULong.lower(`quantity`),
+                        FfiConverterOptionalString.lower(`payerNote`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `setPathsToStaticInvoiceServer`(`paths`: kotlin.ByteArray)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_set_paths_to_static_invoice_server(
-        it, FfiConverterByteArray.lower(`paths`),_status)
-}
-    }
-    
-    
+    @Throws(NodeException::class)
+    override fun `setPathsToStaticInvoiceServer`(`paths`: kotlin.ByteArray) =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_bolt12payment_set_paths_to_static_invoice_server(
+                    it,
+                    FfiConverterByteArray.lower(`paths`),
+                    _status,
+                )
+            }
+        }
 
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBolt12Payment: FfiConverter<Bolt12Payment, Pointer> {
+public object FfiConverterTypeBolt12Payment : FfiConverter<Bolt12Payment, Pointer> {
+    override fun lower(value: Bolt12Payment): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Bolt12Payment): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Bolt12Payment {
-        return Bolt12Payment(value)
-    }
+    override fun lift(value: Pointer): Bolt12Payment = Bolt12Payment(value)
 
     override fun read(buf: ByteBuffer): Bolt12Payment {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -4744,13 +5519,15 @@ public object FfiConverterTypeBolt12Payment: FfiConverter<Bolt12Payment, Pointer
 
     override fun allocationSize(value: Bolt12Payment) = 8UL
 
-    override fun write(value: Bolt12Payment, buf: ByteBuffer) {
+    override fun write(
+        value: Bolt12Payment,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -4849,60 +5626,111 @@ public object FfiConverterTypeBolt12Payment: FfiConverter<Bolt12Payment, Pointer
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface BuilderInterface {
-    
     fun `build`(`nodeEntropy`: NodeEntropy): Node
-    
+
     fun `buildWithFsStore`(`nodeEntropy`: NodeEntropy): Node
-    
-    fun `buildWithVssStore`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `lnurlAuthServerUrl`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node
-    
-    fun `buildWithVssStoreAndFixedHeaders`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node
-    
-    fun `buildWithVssStoreAndHeaderProvider`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `headerProvider`: VssHeaderProvider): Node
-    
+
+    fun `buildWithVssStore`(
+        `nodeEntropy`: NodeEntropy,
+        `vssUrl`: kotlin.String,
+        `storeId`: kotlin.String,
+        `lnurlAuthServerUrl`: kotlin.String,
+        `fixedHeaders`: Map<kotlin.String, kotlin.String>,
+    ): Node
+
+    fun `buildWithVssStoreAndFixedHeaders`(
+        `nodeEntropy`: NodeEntropy,
+        `vssUrl`: kotlin.String,
+        `storeId`: kotlin.String,
+        `fixedHeaders`: Map<kotlin.String, kotlin.String>,
+    ): Node
+
+    fun `buildWithVssStoreAndHeaderProvider`(
+        `nodeEntropy`: NodeEntropy,
+        `vssUrl`: kotlin.String,
+        `storeId`: kotlin.String,
+        `headerProvider`: VssHeaderProvider,
+    ): Node
+
     fun `setAnnouncementAddresses`(`announcementAddresses`: List<SocketAddress>)
-    
+
     fun `setAsyncPaymentsRole`(`role`: AsyncPaymentsRole?)
-    
-    fun `setChainSourceBitcoindRest`(`restHost`: kotlin.String, `restPort`: kotlin.UShort, `rpcHost`: kotlin.String, `rpcPort`: kotlin.UShort, `rpcUser`: kotlin.String, `rpcPassword`: kotlin.String)
-    
-    fun `setChainSourceBitcoindRpc`(`rpcHost`: kotlin.String, `rpcPort`: kotlin.UShort, `rpcUser`: kotlin.String, `rpcPassword`: kotlin.String)
-    
-    fun `setChainSourceElectrum`(`serverUrl`: kotlin.String, `config`: ElectrumSyncConfig?)
-    
-    fun `setChainSourceEsplora`(`serverUrl`: kotlin.String, `config`: EsploraSyncConfig?)
-    
+
+    fun `setChainSourceBitcoindRest`(
+        `restHost`: kotlin.String,
+        `restPort`: kotlin.UShort,
+        `rpcHost`: kotlin.String,
+        `rpcPort`: kotlin.UShort,
+        `rpcUser`: kotlin.String,
+        `rpcPassword`: kotlin.String,
+    )
+
+    fun `setChainSourceBitcoindRpc`(
+        `rpcHost`: kotlin.String,
+        `rpcPort`: kotlin.UShort,
+        `rpcUser`: kotlin.String,
+        `rpcPassword`: kotlin.String,
+    )
+
+    fun `setChainSourceElectrum`(
+        `serverUrl`: kotlin.String,
+        `config`: ElectrumSyncConfig?,
+    )
+
+    fun `setChainSourceEsplora`(
+        `serverUrl`: kotlin.String,
+        `config`: EsploraSyncConfig?,
+    )
+
     fun `setCustomLogger`(`logWriter`: LogWriter)
-    
-    fun `setFilesystemLogger`(`logFilePath`: kotlin.String?, `maxLogLevel`: LogLevel?)
-    
+
+    fun `setFilesystemLogger`(
+        `logFilePath`: kotlin.String?,
+        `maxLogLevel`: LogLevel?,
+    )
+
     fun `setGossipSourceP2p`()
-    
+
     fun `setGossipSourceRgs`(`rgsServerUrl`: kotlin.String)
-    
-    fun `setLiquiditySourceLsps1`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
-    
-    fun `setLiquiditySourceLsps2`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
-    
+
+    fun `setLiquiditySourceLsps1`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `token`: kotlin.String?,
+    )
+
+    fun `setLiquiditySourceLsps2`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `token`: kotlin.String?,
+    )
+
+    fun `setLiquiditySourceLsps7`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `token`: kotlin.String?,
+    )
+
     fun `setListeningAddresses`(`listeningAddresses`: List<SocketAddress>)
-    
+
     fun `setLogFacadeLogger`()
-    
+
     fun `setNetwork`(`network`: Network)
-    
+
     fun `setNodeAlias`(`nodeAlias`: kotlin.String)
-    
+
     fun `setPathfindingScoresSource`(`url`: kotlin.String)
-    
+
     fun `setStorageDirPath`(`storageDirPath`: kotlin.String)
-    
+
     companion object
 }
 
-open class Builder: Disposable, AutoCloseable, BuilderInterface {
-
+open class Builder :
+    Disposable,
+    AutoCloseable,
+    BuilderInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -4920,11 +5748,10 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
     }
     constructor() :
         this(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_builder_new(
-        _status)
-}
-    )
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_builder_new(_status)
+            },
+        )
 
     protected val pointer: Pointer?
     protected val cleanable: UniffiCleaner.Cleanable
@@ -4959,7 +5786,7 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -4973,7 +5800,9 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -4983,310 +5812,363 @@ open class Builder: Disposable, AutoCloseable, BuilderInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_builder(pointer!!, status)
+        }
+
+    @Throws(BuildException::class)
+    override fun `build`(`nodeEntropy`: NodeEntropy): Node =
+        FfiConverterTypeNode.lift(
+            callWithPointer {
+                uniffiRustCallWithError(BuildException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build(
+                        it,
+                        FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(BuildException::class)
+    override fun `buildWithFsStore`(`nodeEntropy`: NodeEntropy): Node =
+        FfiConverterTypeNode.lift(
+            callWithPointer {
+                uniffiRustCallWithError(BuildException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_fs_store(
+                        it,
+                        FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(BuildException::class)
+    override fun `buildWithVssStore`(
+        `nodeEntropy`: NodeEntropy,
+        `vssUrl`: kotlin.String,
+        `storeId`: kotlin.String,
+        `lnurlAuthServerUrl`: kotlin.String,
+        `fixedHeaders`: Map<kotlin.String, kotlin.String>,
+    ): Node =
+        FfiConverterTypeNode.lift(
+            callWithPointer {
+                uniffiRustCallWithError(BuildException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store(
+                        it,
+                        FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),
+                        FfiConverterString.lower(`vssUrl`),
+                        FfiConverterString.lower(`storeId`),
+                        FfiConverterString.lower(`lnurlAuthServerUrl`),
+                        FfiConverterMapStringString.lower(`fixedHeaders`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(BuildException::class)
+    override fun `buildWithVssStoreAndFixedHeaders`(
+        `nodeEntropy`: NodeEntropy,
+        `vssUrl`: kotlin.String,
+        `storeId`: kotlin.String,
+        `fixedHeaders`: Map<kotlin.String, kotlin.String>,
+    ): Node =
+        FfiConverterTypeNode.lift(
+            callWithPointer {
+                uniffiRustCallWithError(BuildException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_fixed_headers(
+                        it,
+                        FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),
+                        FfiConverterString.lower(`vssUrl`),
+                        FfiConverterString.lower(`storeId`),
+                        FfiConverterMapStringString.lower(`fixedHeaders`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(BuildException::class)
+    override fun `buildWithVssStoreAndHeaderProvider`(
+        `nodeEntropy`: NodeEntropy,
+        `vssUrl`: kotlin.String,
+        `storeId`: kotlin.String,
+        `headerProvider`: VssHeaderProvider,
+    ): Node =
+        FfiConverterTypeNode.lift(
+            callWithPointer {
+                uniffiRustCallWithError(BuildException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(
+                        it,
+                        FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),
+                        FfiConverterString.lower(`vssUrl`),
+                        FfiConverterString.lower(`storeId`),
+                        FfiConverterTypeVssHeaderProvider.lower(`headerProvider`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(BuildException::class)
+    override fun `setAnnouncementAddresses`(`announcementAddresses`: List<SocketAddress>) =
+        callWithPointer {
+            uniffiRustCallWithError(BuildException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_announcement_addresses(
+                    it,
+                    FfiConverterSequenceTypeSocketAddress.lower(`announcementAddresses`),
+                    _status,
+                )
+            }
+        }
+
+    @Throws(BuildException::class)
+    override fun `setAsyncPaymentsRole`(`role`: AsyncPaymentsRole?) =
+        callWithPointer {
+            uniffiRustCallWithError(BuildException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_async_payments_role(
+                    it,
+                    FfiConverterOptionalTypeAsyncPaymentsRole.lower(`role`),
+                    _status,
+                )
+            }
+        }
+
+    override fun `setChainSourceBitcoindRest`(
+        `restHost`: kotlin.String,
+        `restPort`: kotlin.UShort,
+        `rpcHost`: kotlin.String,
+        `rpcPort`: kotlin.UShort,
+        `rpcUser`: kotlin.String,
+        `rpcPassword`: kotlin.String,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rest(
+                it,
+                FfiConverterString.lower(`restHost`),
+                FfiConverterUShort.lower(`restPort`),
+                FfiConverterString.lower(`rpcHost`),
+                FfiConverterUShort.lower(`rpcPort`),
+                FfiConverterString.lower(`rpcUser`),
+                FfiConverterString.lower(`rpcPassword`),
+                _status,
+            )
         }
     }
 
-    
-    @Throws(BuildException::class)override fun `build`(`nodeEntropy`: NodeEntropy): Node {
-            return FfiConverterTypeNode.lift(
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build(
-        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),_status)
-}
+    override fun `setChainSourceBitcoindRpc`(
+        `rpcHost`: kotlin.String,
+        `rpcPort`: kotlin.UShort,
+        `rpcUser`: kotlin.String,
+        `rpcPassword`: kotlin.String,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(
+                it,
+                FfiConverterString.lower(`rpcHost`),
+                FfiConverterUShort.lower(`rpcPort`),
+                FfiConverterString.lower(`rpcUser`),
+                FfiConverterString.lower(`rpcPassword`),
+                _status,
+            )
+        }
     }
-    )
-    }
-    
 
-    
-    @Throws(BuildException::class)override fun `buildWithFsStore`(`nodeEntropy`: NodeEntropy): Node {
-            return FfiConverterTypeNode.lift(
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_fs_store(
-        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),_status)
-}
+    override fun `setChainSourceElectrum`(
+        `serverUrl`: kotlin.String,
+        `config`: ElectrumSyncConfig?,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(
+                it,
+                FfiConverterString.lower(`serverUrl`),
+                FfiConverterOptionalTypeElectrumSyncConfig.lower(`config`),
+                _status,
+            )
+        }
     }
-    )
-    }
-    
 
-    
-    @Throws(BuildException::class)override fun `buildWithVssStore`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `lnurlAuthServerUrl`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node {
-            return FfiConverterTypeNode.lift(
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store(
-        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterString.lower(`lnurlAuthServerUrl`),FfiConverterMapStringString.lower(`fixedHeaders`),_status)
-}
+    override fun `setChainSourceEsplora`(
+        `serverUrl`: kotlin.String,
+        `config`: EsploraSyncConfig?,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(
+                it,
+                FfiConverterString.lower(`serverUrl`),
+                FfiConverterOptionalTypeEsploraSyncConfig.lower(`config`),
+                _status,
+            )
+        }
     }
-    )
-    }
-    
 
-    
-    @Throws(BuildException::class)override fun `buildWithVssStoreAndFixedHeaders`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `fixedHeaders`: Map<kotlin.String, kotlin.String>): Node {
-            return FfiConverterTypeNode.lift(
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_fixed_headers(
-        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterMapStringString.lower(`fixedHeaders`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `setCustomLogger`(`logWriter`: LogWriter) =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_custom_logger(
+                    it,
+                    FfiConverterTypeLogWriter.lower(`logWriter`),
+                    _status,
+                )
+            }
+        }
 
-    
-    @Throws(BuildException::class)override fun `buildWithVssStoreAndHeaderProvider`(`nodeEntropy`: NodeEntropy, `vssUrl`: kotlin.String, `storeId`: kotlin.String, `headerProvider`: VssHeaderProvider): Node {
-            return FfiConverterTypeNode.lift(
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_build_with_vss_store_and_header_provider(
-        it, FfiConverterTypeNodeEntropy.lower(`nodeEntropy`),FfiConverterString.lower(`vssUrl`),FfiConverterString.lower(`storeId`),FfiConverterTypeVssHeaderProvider.lower(`headerProvider`),_status)
-}
+    override fun `setFilesystemLogger`(
+        `logFilePath`: kotlin.String?,
+        `maxLogLevel`: LogLevel?,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_filesystem_logger(
+                it,
+                FfiConverterOptionalString.lower(`logFilePath`),
+                FfiConverterOptionalTypeLogLevel.lower(`maxLogLevel`),
+                _status,
+            )
+        }
     }
-    )
+
+    override fun `setGossipSourceP2p`() =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_gossip_source_p2p(it, _status)
+            }
+        }
+
+    override fun `setGossipSourceRgs`(`rgsServerUrl`: kotlin.String) =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs(
+                    it,
+                    FfiConverterString.lower(`rgsServerUrl`),
+                    _status,
+                )
+            }
+        }
+
+    override fun `setLiquiditySourceLsps1`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `token`: kotlin.String?,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps1(
+                it,
+                FfiConverterTypePublicKey.lower(`nodeId`),
+                FfiConverterTypeSocketAddress.lower(`address`),
+                FfiConverterOptionalString.lower(`token`),
+                _status,
+            )
+        }
     }
-    
 
-    
-    @Throws(BuildException::class)override fun `setAnnouncementAddresses`(`announcementAddresses`: List<SocketAddress>)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_announcement_addresses(
-        it, FfiConverterSequenceTypeSocketAddress.lower(`announcementAddresses`),_status)
-}
+    override fun `setLiquiditySourceLsps2`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `token`: kotlin.String?,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps2(
+                it,
+                FfiConverterTypePublicKey.lower(`nodeId`),
+                FfiConverterTypeSocketAddress.lower(`address`),
+                FfiConverterOptionalString.lower(`token`),
+                _status,
+            )
+        }
     }
-    
-    
 
-    
-    @Throws(BuildException::class)override fun `setAsyncPaymentsRole`(`role`: AsyncPaymentsRole?)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_async_payments_role(
-        it, FfiConverterOptionalTypeAsyncPaymentsRole.lower(`role`),_status)
-}
+    override fun `setLiquiditySourceLsps7`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `token`: kotlin.String?,
+    ) = callWithPointer {
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps7(
+                it,
+                FfiConverterTypePublicKey.lower(`nodeId`),
+                FfiConverterTypeSocketAddress.lower(`address`),
+                FfiConverterOptionalString.lower(`token`),
+                _status,
+            )
+        }
     }
-    
-    
 
-    override fun `setChainSourceBitcoindRest`(`restHost`: kotlin.String, `restPort`: kotlin.UShort, `rpcHost`: kotlin.String, `rpcPort`: kotlin.UShort, `rpcUser`: kotlin.String, `rpcPassword`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rest(
-        it, FfiConverterString.lower(`restHost`),FfiConverterUShort.lower(`restPort`),FfiConverterString.lower(`rpcHost`),FfiConverterUShort.lower(`rpcPort`),FfiConverterString.lower(`rpcUser`),FfiConverterString.lower(`rpcPassword`),_status)
-}
-    }
-    
-    
+    @Throws(BuildException::class)
+    override fun `setListeningAddresses`(`listeningAddresses`: List<SocketAddress>) =
+        callWithPointer {
+            uniffiRustCallWithError(BuildException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_listening_addresses(
+                    it,
+                    FfiConverterSequenceTypeSocketAddress.lower(`listeningAddresses`),
+                    _status,
+                )
+            }
+        }
 
-    override fun `setChainSourceBitcoindRpc`(`rpcHost`: kotlin.String, `rpcPort`: kotlin.UShort, `rpcUser`: kotlin.String, `rpcPassword`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_bitcoind_rpc(
-        it, FfiConverterString.lower(`rpcHost`),FfiConverterUShort.lower(`rpcPort`),FfiConverterString.lower(`rpcUser`),FfiConverterString.lower(`rpcPassword`),_status)
-}
-    }
-    
-    
+    override fun `setLogFacadeLogger`() =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_log_facade_logger(it, _status)
+            }
+        }
 
-    override fun `setChainSourceElectrum`(`serverUrl`: kotlin.String, `config`: ElectrumSyncConfig?)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_electrum(
-        it, FfiConverterString.lower(`serverUrl`),FfiConverterOptionalTypeElectrumSyncConfig.lower(`config`),_status)
-}
-    }
-    
-    
+    override fun `setNetwork`(`network`: Network) =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_network(it, FfiConverterTypeNetwork.lower(`network`), _status)
+            }
+        }
 
-    override fun `setChainSourceEsplora`(`serverUrl`: kotlin.String, `config`: EsploraSyncConfig?)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_chain_source_esplora(
-        it, FfiConverterString.lower(`serverUrl`),FfiConverterOptionalTypeEsploraSyncConfig.lower(`config`),_status)
-}
-    }
-    
-    
+    @Throws(BuildException::class)
+    override fun `setNodeAlias`(`nodeAlias`: kotlin.String) =
+        callWithPointer {
+            uniffiRustCallWithError(BuildException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_node_alias(it, FfiConverterString.lower(`nodeAlias`), _status)
+            }
+        }
 
-    override fun `setCustomLogger`(`logWriter`: LogWriter)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_custom_logger(
-        it, FfiConverterTypeLogWriter.lower(`logWriter`),_status)
-}
-    }
-    
-    
+    override fun `setPathfindingScoresSource`(`url`: kotlin.String) =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_pathfinding_scores_source(
+                    it,
+                    FfiConverterString.lower(`url`),
+                    _status,
+                )
+            }
+        }
 
-    override fun `setFilesystemLogger`(`logFilePath`: kotlin.String?, `maxLogLevel`: LogLevel?)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_filesystem_logger(
-        it, FfiConverterOptionalString.lower(`logFilePath`),FfiConverterOptionalTypeLogLevel.lower(`maxLogLevel`),_status)
-}
-    }
-    
-    
+    override fun `setStorageDirPath`(`storageDirPath`: kotlin.String) =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_storage_dir_path(
+                    it,
+                    FfiConverterString.lower(`storageDirPath`),
+                    _status,
+                )
+            }
+        }
 
-    override fun `setGossipSourceP2p`()
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_gossip_source_p2p(
-        it, _status)
-}
-    }
-    
-    
-
-    override fun `setGossipSourceRgs`(`rgsServerUrl`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_gossip_source_rgs(
-        it, FfiConverterString.lower(`rgsServerUrl`),_status)
-}
-    }
-    
-    
-
-    override fun `setLiquiditySourceLsps1`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps1(
-        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterOptionalString.lower(`token`),_status)
-}
-    }
-    
-    
-
-    override fun `setLiquiditySourceLsps2`(`nodeId`: PublicKey, `address`: SocketAddress, `token`: kotlin.String?)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_liquidity_source_lsps2(
-        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterOptionalString.lower(`token`),_status)
-}
-    }
-    
-    
-
-    
-    @Throws(BuildException::class)override fun `setListeningAddresses`(`listeningAddresses`: List<SocketAddress>)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_listening_addresses(
-        it, FfiConverterSequenceTypeSocketAddress.lower(`listeningAddresses`),_status)
-}
-    }
-    
-    
-
-    override fun `setLogFacadeLogger`()
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_log_facade_logger(
-        it, _status)
-}
-    }
-    
-    
-
-    override fun `setNetwork`(`network`: Network)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_network(
-        it, FfiConverterTypeNetwork.lower(`network`),_status)
-}
-    }
-    
-    
-
-    
-    @Throws(BuildException::class)override fun `setNodeAlias`(`nodeAlias`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(BuildException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_node_alias(
-        it, FfiConverterString.lower(`nodeAlias`),_status)
-}
-    }
-    
-    
-
-    override fun `setPathfindingScoresSource`(`url`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_pathfinding_scores_source(
-        it, FfiConverterString.lower(`url`),_status)
-}
-    }
-    
-    
-
-    override fun `setStorageDirPath`(`storageDirPath`: kotlin.String)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_builder_set_storage_dir_path(
-        it, FfiConverterString.lower(`storageDirPath`),_status)
-}
-    }
-    
-    
-
-    
-
-    
     companion object {
-         fun `fromConfig`(`config`: Config): Builder {
-            return FfiConverterTypeBuilder.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_builder_from_config(
-        FfiConverterTypeConfig.lower(`config`),_status)
-}
-    )
+        fun `fromConfig`(`config`: Config): Builder =
+            FfiConverterTypeBuilder.lift(
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_builder_from_config(FfiConverterTypeConfig.lower(`config`), _status)
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBuilder: FfiConverter<Builder, Pointer> {
+public object FfiConverterTypeBuilder : FfiConverter<Builder, Pointer> {
+    override fun lower(value: Builder): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Builder): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Builder {
-        return Builder(value)
-    }
+    override fun lift(value: Pointer): Builder = Builder(value)
 
     override fun read(buf: ByteBuffer): Builder {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -5296,13 +6178,15 @@ public object FfiConverterTypeBuilder: FfiConverter<Builder, Pointer> {
 
     override fun allocationSize(value: Builder) = 8UL
 
-    override fun write(value: Builder, buf: ByteBuffer) {
+    override fun write(
+        value: Builder,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -5401,20 +6285,20 @@ public object FfiConverterTypeBuilder: FfiConverter<Builder, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface FeeRateInterface {
-    
     fun `toSatPerKwu`(): kotlin.ULong
-    
+
     fun `toSatPerVbCeil`(): kotlin.ULong
-    
+
     fun `toSatPerVbFloor`(): kotlin.ULong
-    
+
     companion object
 }
 
-open class FeeRate: Disposable, AutoCloseable, FeeRateInterface {
-
+open class FeeRate :
+    Disposable,
+    AutoCloseable,
+    FeeRateInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -5464,7 +6348,7 @@ open class FeeRate: Disposable, AutoCloseable, FeeRateInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -5478,7 +6362,9 @@ open class FeeRate: Disposable, AutoCloseable, FeeRateInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -5488,89 +6374,65 @@ open class FeeRate: Disposable, AutoCloseable, FeeRateInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_feerate(pointer!!, status)
         }
-    }
 
-    override fun `toSatPerKwu`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_feerate_to_sat_per_kwu(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `toSatPerKwu`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_feerate_to_sat_per_kwu(it, _status)
+                }
+            },
+        )
 
-    override fun `toSatPerVbCeil`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_ceil(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `toSatPerVbCeil`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_ceil(it, _status)
+                }
+            },
+        )
 
-    override fun `toSatPerVbFloor`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_floor(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `toSatPerVbFloor`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_feerate_to_sat_per_vb_floor(it, _status)
+                }
+            },
+        )
 
-    
-
-    
     companion object {
-         fun `fromSatPerKwu`(`satKwu`: kotlin.ULong): FeeRate {
-            return FfiConverterTypeFeeRate.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_feerate_from_sat_per_kwu(
-        FfiConverterULong.lower(`satKwu`),_status)
-}
-    )
-    }
-    
+        fun `fromSatPerKwu`(`satKwu`: kotlin.ULong): FeeRate =
+            FfiConverterTypeFeeRate.lift(
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_feerate_from_sat_per_kwu(FfiConverterULong.lower(`satKwu`), _status)
+                },
+            )
 
-         fun `fromSatPerVbUnchecked`(`satVb`: kotlin.ULong): FeeRate {
-            return FfiConverterTypeFeeRate.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_feerate_from_sat_per_vb_unchecked(
-        FfiConverterULong.lower(`satVb`),_status)
-}
-    )
+        fun `fromSatPerVbUnchecked`(`satVb`: kotlin.ULong): FeeRate =
+            FfiConverterTypeFeeRate.lift(
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_feerate_from_sat_per_vb_unchecked(
+                        FfiConverterULong.lower(`satVb`),
+                        _status,
+                    )
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeFeeRate: FfiConverter<FeeRate, Pointer> {
+public object FfiConverterTypeFeeRate : FfiConverter<FeeRate, Pointer> {
+    override fun lower(value: FeeRate): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: FeeRate): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): FeeRate {
-        return FeeRate(value)
-    }
+    override fun lift(value: Pointer): FeeRate = FeeRate(value)
 
     override fun read(buf: ByteBuffer): FeeRate {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -5580,13 +6442,15 @@ public object FfiConverterTypeFeeRate: FfiConverter<FeeRate, Pointer> {
 
     override fun allocationSize(value: FeeRate) = 8UL
 
-    override fun write(value: FeeRate, buf: ByteBuffer) {
+    override fun write(
+        value: FeeRate,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -5685,18 +6549,23 @@ public object FfiConverterTypeFeeRate: FfiConverter<FeeRate, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface Lsps1LiquidityInterface {
-    
     fun `checkOrderStatus`(`orderId`: Lsps1OrderId): Lsps1OrderStatus
-    
-    fun `requestChannel`(`lspBalanceSat`: kotlin.ULong, `clientBalanceSat`: kotlin.ULong, `channelExpiryBlocks`: kotlin.UInt, `announceChannel`: kotlin.Boolean): Lsps1OrderStatus
-    
+
+    fun `requestChannel`(
+        `lspBalanceSat`: kotlin.ULong,
+        `clientBalanceSat`: kotlin.ULong,
+        `channelExpiryBlocks`: kotlin.UInt,
+        `announceChannel`: kotlin.Boolean,
+    ): Lsps1OrderStatus
+
     companion object
 }
 
-open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
-
+open class Lsps1Liquidity :
+    Disposable,
+    AutoCloseable,
+    Lsps1LiquidityInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -5746,7 +6615,7 @@ open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -5760,7 +6629,9 @@ open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -5770,58 +6641,57 @@ open class Lsps1Liquidity: Disposable, AutoCloseable, Lsps1LiquidityInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_lsps1liquidity(pointer!!, status)
         }
-    }
 
-    
-    @Throws(NodeException::class)override fun `checkOrderStatus`(`orderId`: Lsps1OrderId): Lsps1OrderStatus {
-            return FfiConverterTypeLSPS1OrderStatus.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps1liquidity_check_order_status(
-        it, FfiConverterTypeLSPS1OrderId.lower(`orderId`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `checkOrderStatus`(`orderId`: Lsps1OrderId): Lsps1OrderStatus =
+        FfiConverterTypeLSPS1OrderStatus.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps1liquidity_check_order_status(
+                        it,
+                        FfiConverterTypeLSPS1OrderId.lower(`orderId`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `requestChannel`(`lspBalanceSat`: kotlin.ULong, `clientBalanceSat`: kotlin.ULong, `channelExpiryBlocks`: kotlin.UInt, `announceChannel`: kotlin.Boolean): Lsps1OrderStatus {
-            return FfiConverterTypeLSPS1OrderStatus.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps1liquidity_request_channel(
-        it, FfiConverterULong.lower(`lspBalanceSat`),FfiConverterULong.lower(`clientBalanceSat`),FfiConverterUInt.lower(`channelExpiryBlocks`),FfiConverterBoolean.lower(`announceChannel`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `requestChannel`(
+        `lspBalanceSat`: kotlin.ULong,
+        `clientBalanceSat`: kotlin.ULong,
+        `channelExpiryBlocks`: kotlin.UInt,
+        `announceChannel`: kotlin.Boolean,
+    ): Lsps1OrderStatus =
+        FfiConverterTypeLSPS1OrderStatus.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps1liquidity_request_channel(
+                        it,
+                        FfiConverterULong.lower(`lspBalanceSat`),
+                        FfiConverterULong.lower(`clientBalanceSat`),
+                        FfiConverterUInt.lower(`channelExpiryBlocks`),
+                        FfiConverterBoolean.lower(`announceChannel`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1Liquidity: FfiConverter<Lsps1Liquidity, Pointer> {
+public object FfiConverterTypeLSPS1Liquidity : FfiConverter<Lsps1Liquidity, Pointer> {
+    override fun lower(value: Lsps1Liquidity): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Lsps1Liquidity): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Lsps1Liquidity {
-        return Lsps1Liquidity(value)
-    }
+    override fun lift(value: Pointer): Lsps1Liquidity = Lsps1Liquidity(value)
 
     override fun read(buf: ByteBuffer): Lsps1Liquidity {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -5831,13 +6701,15 @@ public object FfiConverterTypeLSPS1Liquidity: FfiConverter<Lsps1Liquidity, Point
 
     override fun allocationSize(value: Lsps1Liquidity) = 8UL
 
-    override fun write(value: Lsps1Liquidity, buf: ByteBuffer) {
+    override fun write(
+        value: Lsps1Liquidity,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -5936,16 +6808,25 @@ public object FfiConverterTypeLSPS1Liquidity: FfiConverter<Lsps1Liquidity, Point
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
+public interface Lsps7LiquidityInterface {
+    fun `checkOrderStatus`(`orderId`: kotlin.String): Lsps7OrderResponse
 
-public interface LogWriter {
-    
-    fun `log`(`record`: LogRecord)
-    
+    fun `createOrder`(
+        `shortChannelId`: kotlin.String,
+        `channelExtensionExpiryBlocks`: kotlin.UInt,
+        `token`: kotlin.String?,
+        `refundOnchainAddress`: kotlin.String?,
+    ): Lsps7OrderResponse
+
+    fun `getExtendableChannels`(): List<Lsps7ExtendableChannel>
+
     companion object
 }
 
-open class LogWriterImpl: Disposable, AutoCloseable, LogWriter {
-
+open class Lsps7Liquidity :
+    Disposable,
+    AutoCloseable,
+    Lsps7LiquidityInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -5995,7 +6876,7 @@ open class LogWriterImpl: Disposable, AutoCloseable, LogWriter {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -6009,7 +6890,271 @@ open class LogWriterImpl: Disposable, AutoCloseable, LogWriter {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
+        override fun run() {
+            pointer?.let { ptr ->
+                uniffiRustCall { status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_free_lsps7liquidity(ptr, status)
+                }
+            }
+        }
+    }
+
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_lsps7liquidity(pointer!!, status)
+        }
+
+    @Throws(NodeException::class)
+    override fun `checkOrderStatus`(`orderId`: kotlin.String): Lsps7OrderResponse =
+        FfiConverterTypeLSPS7OrderResponse.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps7liquidity_check_order_status(
+                        it,
+                        FfiConverterString.lower(`orderId`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `createOrder`(
+        `shortChannelId`: kotlin.String,
+        `channelExtensionExpiryBlocks`: kotlin.UInt,
+        `token`: kotlin.String?,
+        `refundOnchainAddress`: kotlin.String?,
+    ): Lsps7OrderResponse =
+        FfiConverterTypeLSPS7OrderResponse.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps7liquidity_create_order(
+                        it,
+                        FfiConverterString.lower(`shortChannelId`),
+                        FfiConverterUInt.lower(`channelExtensionExpiryBlocks`),
+                        FfiConverterOptionalString.lower(`token`),
+                        FfiConverterOptionalString.lower(`refundOnchainAddress`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `getExtendableChannels`(): List<Lsps7ExtendableChannel> =
+        FfiConverterSequenceTypeLSPS7ExtendableChannel.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_lsps7liquidity_get_extendable_channels(it, _status)
+                }
+            },
+        )
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLSPS7Liquidity : FfiConverter<Lsps7Liquidity, Pointer> {
+    override fun lower(value: Lsps7Liquidity): Pointer = value.uniffiClonePointer()
+
+    override fun lift(value: Pointer): Lsps7Liquidity = Lsps7Liquidity(value)
+
+    override fun read(buf: ByteBuffer): Lsps7Liquidity {
+        // The Rust code always writes pointers as 8 bytes, and will
+        // fail to compile if they don't fit.
+        return lift(Pointer(buf.getLong()))
+    }
+
+    override fun allocationSize(value: Lsps7Liquidity) = 8UL
+
+    override fun write(
+        value: Lsps7Liquidity,
+        buf: ByteBuffer,
+    ) {
+        // The Rust code always expects pointers written as 8 bytes,
+        // and will fail to compile if they don't fit.
+        buf.putLong(Pointer.nativeValue(lower(value)))
+    }
+}
+
+// This template implements a class for working with a Rust struct via a Pointer/Arc<T>
+// to the live Rust struct on the other side of the FFI.
+//
+// Each instance implements core operations for working with the Rust `Arc<T>` and the
+// Kotlin Pointer to work with the live Rust struct on the other side of the FFI.
+//
+// There's some subtlety here, because we have to be careful not to operate on a Rust
+// struct after it has been dropped, and because we must expose a public API for freeing
+// theq Kotlin wrapper object in lieu of reliable finalizers. The core requirements are:
+//
+//   * Each instance holds an opaque pointer to the underlying Rust struct.
+//     Method calls need to read this pointer from the object's state and pass it in to
+//     the Rust FFI.
+//
+//   * When an instance is no longer needed, its pointer should be passed to a
+//     special destructor function provided by the Rust FFI, which will drop the
+//     underlying Rust struct.
+//
+//   * Given an instance, calling code is expected to call the special
+//     `destroy` method in order to free it after use, either by calling it explicitly
+//     or by using a higher-level helper like the `use` method. Failing to do so risks
+//     leaking the underlying Rust struct.
+//
+//   * We can't assume that calling code will do the right thing, and must be prepared
+//     to handle Kotlin method calls executing concurrently with or even after a call to
+//     `destroy`, and to handle multiple (possibly concurrent!) calls to `destroy`.
+//
+//   * We must never allow Rust code to operate on the underlying Rust struct after
+//     the destructor has been called, and must never call the destructor more than once.
+//     Doing so may trigger memory unsafety.
+//
+//   * To mitigate many of the risks of leaking memory and use-after-free unsafety, a `Cleaner`
+//     is implemented to call the destructor when the Kotlin object becomes unreachable.
+//     This is done in a background thread. This is not a panacea, and client code should be aware that
+//      1. the thread may starve if some there are objects that have poorly performing
+//     `drop` methods or do significant work in their `drop` methods.
+//      2. the thread is shared across the whole library. This can be tuned by using `android_cleaner = true`,
+//         or `android = true` in the [`kotlin` section of the `uniffi.toml` file](https://mozilla.github.io/uniffi-rs/kotlin/configuration.html).
+//
+// If we try to implement this with mutual exclusion on access to the pointer, there is the
+// possibility of a race between a method call and a concurrent call to `destroy`:
+//
+//    * Thread A starts a method call, reads the value of the pointer, but is interrupted
+//      before it can pass the pointer over the FFI to Rust.
+//    * Thread B calls `destroy` and frees the underlying Rust struct.
+//    * Thread A resumes, passing the already-read pointer value to Rust and triggering
+//      a use-after-free.
+//
+// One possible solution would be to use a `ReadWriteLock`, with each method call taking
+// a read lock (and thus allowed to run concurrently) and the special `destroy` method
+// taking a write lock (and thus blocking on live method calls). However, we aim not to
+// generate methods with any hidden blocking semantics, and a `destroy` method that might
+// block if called incorrectly seems to meet that bar.
+//
+// So, we achieve our goals by giving each instance an associated `AtomicLong` counter to track
+// the number of in-flight method calls, and an `AtomicBoolean` flag to indicate whether `destroy`
+// has been called. These are updated according to the following rules:
+//
+//    * The initial value of the counter is 1, indicating a live object with no in-flight calls.
+//      The initial value for the flag is false.
+//
+//    * At the start of each method call, we atomically check the counter.
+//      If it is 0 then the underlying Rust struct has already been destroyed and the call is aborted.
+//      If it is nonzero them we atomically increment it by 1 and proceed with the method call.
+//
+//    * At the end of each method call, we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+//    * When `destroy` is called, we atomically flip the flag from false to true.
+//      If the flag was already true we silently fail.
+//      Otherwise we atomically decrement and check the counter.
+//      If it has reached zero then we destroy the underlying Rust struct.
+//
+// Astute readers may observe that this all sounds very similar to the way that Rust's `Arc<T>` works,
+// and indeed it is, with the addition of a flag to guard against multiple calls to `destroy`.
+//
+// The overall effect is that the underlying Rust struct is destroyed only when `destroy` has been
+// called *and* all in-flight method calls have completed, avoiding violating any of the expectations
+// of the underlying Rust code.
+//
+// This makes a cleaner a better alternative to _not_ calling `destroy()` as
+// and when the object is finished with, but the abstraction is not perfect: if the Rust object's `drop`
+// method is slow, and/or there are many objects to cleanup, and it's on a low end Android device, then the cleaner
+// thread may be starved, and the app will leak memory.
+//
+// In this case, `destroy`ing manually may be a better solution.
+//
+// The cleaner can live side by side with the manual calling of `destroy`. In the order of responsiveness, uniffi objects
+// with Rust peers are reclaimed:
+//
+// 1. By calling the `destroy` method of the object, which calls `rustObject.free()`. If that doesn't happen:
+// 2. When the object becomes unreachable, AND the Cleaner thread gets to call `rustObject.free()`. If the thread is starved then:
+// 3. The memory is reclaimed when the process terminates.
+//
+// [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
+//
+
+public interface LogWriter {
+    fun `log`(`record`: LogRecord)
+
+    companion object
+}
+
+open class LogWriterImpl :
+    Disposable,
+    AutoCloseable,
+    LogWriter {
+    constructor(pointer: Pointer) {
+        this.pointer = pointer
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    /**
+     * This constructor can be used to instantiate a fake object. Only used for tests. Any
+     * attempt to actually use an object constructed this way will fail as there is no
+     * connected Rust object.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    constructor(noPointer: NoPointer) {
+        this.pointer = null
+        this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
+    }
+
+    protected val pointer: Pointer?
+    protected val cleanable: UniffiCleaner.Cleanable
+
+    private val wasDestroyed = AtomicBoolean(false)
+    private val callCounter = AtomicLong(1)
+
+    override fun destroy() {
+        // Only allow a single call to this method.
+        // TODO: maybe we should log a warning if called more than once?
+        if (this.wasDestroyed.compareAndSet(false, true)) {
+            // This decrement always matches the initial count of 1 given at creation time.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    @Synchronized
+    override fun close() {
+        this.destroy()
+    }
+
+    internal inline fun <R> callWithPointer(block: (ptr: Pointer) -> R): R {
+        // Check and increment the call counter, to keep the object alive.
+        // This needs a compare-and-set retry loop in case of concurrent updates.
+        do {
+            val c = this.callCounter.get()
+            if (c == 0L) {
+                throw IllegalStateException("${this.javaClass.simpleName} object has already been destroyed")
+            }
+            if (c == Long.MAX_VALUE) {
+                throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
+            }
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
+        // Now we can safely do the method call without the pointer being freed concurrently.
+        try {
+            return block(this.uniffiClonePointer())
+        } finally {
+            // This decrement always matches the increment we performed above.
+            if (this.callCounter.decrementAndGet() == 0L) {
+                cleanable.clean()
+            }
+        }
+    }
+
+    // Use a static inner class instead of a closure so as not to accidentally
+    // capture `this` as part of the cleanable's action.
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -6019,33 +7164,25 @@ open class LogWriterImpl: Disposable, AutoCloseable, LogWriter {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_logwriter(pointer!!, status)
         }
-    }
 
-    override fun `log`(`record`: LogRecord)
-        = 
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_logwriter_log(
-        it, FfiConverterTypeLogRecord.lower(`record`),_status)
-}
-    }
-    
-    
+    override fun `log`(`record`: LogRecord) =
+        callWithPointer {
+            uniffiRustCall { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_logwriter_log(it, FfiConverterTypeLogRecord.lower(`record`), _status)
+            }
+        }
 
-    
-
-    
-    
     companion object
-    
 }
+
 // Magic number for the Rust proxy to call using the same mechanism as every other method,
 // to free the callback once it's dropped by Rust.
 internal const val IDX_CALLBACK_FREE = 0
+
 // Callback return codes
 internal const val UNIFFI_CALLBACK_SUCCESS = 0
 internal const val UNIFFI_CALLBACK_ERROR = 1
@@ -6054,16 +7191,14 @@ internal const val UNIFFI_CALLBACK_UNEXPECTED_ERROR = 2
 /**
  * @suppress
  */
-public abstract class FfiConverterCallbackInterface<CallbackInterface: Any>: FfiConverter<CallbackInterface, Long> {
+public abstract class FfiConverterCallbackInterface<CallbackInterface : Any> : FfiConverter<CallbackInterface, Long> {
     internal val handleMap = UniffiHandleMap<CallbackInterface>()
 
     internal fun drop(handle: Long) {
         handleMap.remove(handle)
     }
 
-    override fun lift(value: Long): CallbackInterface {
-        return handleMap.get(value)
-    }
+    override fun lift(value: Long): CallbackInterface = handleMap.get(value)
 
     override fun read(buf: ByteBuffer) = lift(buf.getLong())
 
@@ -6071,36 +7206,44 @@ public abstract class FfiConverterCallbackInterface<CallbackInterface: Any>: Ffi
 
     override fun allocationSize(value: CallbackInterface) = 8UL
 
-    override fun write(value: CallbackInterface, buf: ByteBuffer) {
+    override fun write(
+        value: CallbackInterface,
+        buf: ByteBuffer,
+    ) {
         buf.putLong(lower(value))
     }
 }
 
 // Put the implementation in an object so we don't pollute the top-level namespace
 internal object uniffiCallbackInterfaceLogWriter {
-    internal object `log`: UniffiCallbackInterfaceLogWriterMethod0 {
-        override fun callback(`uniffiHandle`: Long,`record`: RustBuffer.ByValue,`uniffiOutReturn`: Pointer,uniffiCallStatus: UniffiRustCallStatus,) {
+    internal object `log` : UniffiCallbackInterfaceLogWriterMethod0 {
+        override fun callback(
+            `uniffiHandle`: Long,
+            `record`: RustBuffer.ByValue,
+            `uniffiOutReturn`: Pointer,
+            uniffiCallStatus: UniffiRustCallStatus,
+        ) {
             val uniffiObj = FfiConverterTypeLogWriter.handleMap.get(uniffiHandle)
-            val makeCall = { ->
-                uniffiObj.`log`(
-                    FfiConverterTypeLogRecord.lift(`record`),
-                )
+            val makeCall = {  uniffiObj.`log`(
+                FfiConverterTypeLogRecord.lift(`record`),
+            )
             }
             val writeReturn = { _: Unit -> Unit }
             uniffiTraitInterfaceCall(uniffiCallStatus, makeCall, writeReturn)
         }
     }
 
-    internal object uniffiFree: UniffiCallbackInterfaceFree {
+    internal object uniffiFree : UniffiCallbackInterfaceFree {
         override fun callback(handle: Long) {
             FfiConverterTypeLogWriter.handleMap.remove(handle)
         }
     }
 
-    internal var vtable = UniffiVTableCallbackInterfaceLogWriter.UniffiByValue(
-        `log`,
-        uniffiFree,
-    )
+    internal var vtable =
+        UniffiVTableCallbackInterfaceLogWriter.UniffiByValue(
+            `log`,
+            uniffiFree,
+        )
 
     // Registers the foreign callback with the Rust side.
     // This method is generated for each callback interface.
@@ -6112,16 +7255,12 @@ internal object uniffiCallbackInterfaceLogWriter {
 /**
  * @suppress
  */
-public object FfiConverterTypeLogWriter: FfiConverter<LogWriter, Pointer> {
+public object FfiConverterTypeLogWriter : FfiConverter<LogWriter, Pointer> {
     internal val handleMap = UniffiHandleMap<LogWriter>()
 
-    override fun lower(value: LogWriter): Pointer {
-        return Pointer(handleMap.insert(value))
-    }
+    override fun lower(value: LogWriter): Pointer = Pointer(handleMap.insert(value))
 
-    override fun lift(value: Pointer): LogWriter {
-        return LogWriterImpl(value)
-    }
+    override fun lift(value: Pointer): LogWriter = LogWriterImpl(value)
 
     override fun read(buf: ByteBuffer): LogWriter {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -6131,13 +7270,15 @@ public object FfiConverterTypeLogWriter: FfiConverter<LogWriter, Pointer> {
 
     override fun allocationSize(value: LogWriter) = 8UL
 
-    override fun write(value: LogWriter, buf: ByteBuffer) {
+    override fun write(
+        value: LogWriter,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -6236,22 +7377,22 @@ public object FfiConverterTypeLogWriter: FfiConverter<LogWriter, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface NetworkGraphInterface {
-    
     fun `channel`(`shortChannelId`: kotlin.ULong): ChannelInfo?
-    
+
     fun `listChannels`(): List<kotlin.ULong>
-    
+
     fun `listNodes`(): List<NodeId>
-    
+
     fun `node`(`nodeId`: NodeId): NodeInfo?
-    
+
     companion object
 }
 
-open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
-
+open class NetworkGraph :
+    Disposable,
+    AutoCloseable,
+    NetworkGraphInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -6301,7 +7442,7 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -6315,7 +7456,9 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -6325,80 +7468,61 @@ open class NetworkGraph: Disposable, AutoCloseable, NetworkGraphInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_networkgraph(pointer!!, status)
         }
-    }
 
-    override fun `channel`(`shortChannelId`: kotlin.ULong): ChannelInfo? {
-            return FfiConverterOptionalTypeChannelInfo.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_channel(
-        it, FfiConverterULong.lower(`shortChannelId`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `channel`(`shortChannelId`: kotlin.ULong): ChannelInfo? =
+        FfiConverterOptionalTypeChannelInfo.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_channel(
+                        it,
+                        FfiConverterULong.lower(`shortChannelId`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    override fun `listChannels`(): List<kotlin.ULong> {
-            return FfiConverterSequenceULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_list_channels(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `listChannels`(): List<kotlin.ULong> =
+        FfiConverterSequenceULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_list_channels(it, _status)
+                }
+            },
+        )
 
-    override fun `listNodes`(): List<NodeId> {
-            return FfiConverterSequenceTypeNodeId.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_list_nodes(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `listNodes`(): List<NodeId> =
+        FfiConverterSequenceTypeNodeId.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_list_nodes(it, _status)
+                }
+            },
+        )
 
-    override fun `node`(`nodeId`: NodeId): NodeInfo? {
-            return FfiConverterOptionalTypeNodeInfo.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_node(
-        it, FfiConverterTypeNodeId.lower(`nodeId`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `node`(`nodeId`: NodeId): NodeInfo? =
+        FfiConverterOptionalTypeNodeInfo.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_networkgraph_node(it, FfiConverterTypeNodeId.lower(`nodeId`), _status)
+                }
+            },
+        )
 
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNetworkGraph: FfiConverter<NetworkGraph, Pointer> {
+public object FfiConverterTypeNetworkGraph : FfiConverter<NetworkGraph, Pointer> {
+    override fun lower(value: NetworkGraph): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: NetworkGraph): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): NetworkGraph {
-        return NetworkGraph(value)
-    }
+    override fun lift(value: Pointer): NetworkGraph = NetworkGraph(value)
 
     override fun read(buf: ByteBuffer): NetworkGraph {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -6408,13 +7532,15 @@ public object FfiConverterTypeNetworkGraph: FfiConverter<NetworkGraph, Pointer> 
 
     override fun allocationSize(value: NetworkGraph) = 8UL
 
-    override fun write(value: NetworkGraph, buf: ByteBuffer) {
+    override fun write(
+        value: NetworkGraph,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -6513,90 +7639,136 @@ public object FfiConverterTypeNetworkGraph: FfiConverter<NetworkGraph, Pointer> 
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface NodeInterface {
-    
     fun `announcementAddresses`(): List<SocketAddress>?
-    
+
     fun `bolt11Payment`(): Bolt11Payment
-    
+
     fun `bolt12Payment`(): Bolt12Payment
-    
-    fun `closeChannel`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey)
-    
+
+    fun `closeChannel`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+    )
+
     fun `config`(): Config
-    
-    fun `connect`(`nodeId`: PublicKey, `address`: SocketAddress, `persist`: kotlin.Boolean)
-    
+
+    fun `connect`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `persist`: kotlin.Boolean,
+    )
+
     fun `disconnect`(`nodeId`: PublicKey)
-    
+
     fun `eventHandled`()
-    
+
     fun `exportPathfindingScores`(): kotlin.ByteArray
-    
-    fun `forceCloseChannel`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `reason`: kotlin.String?)
-    
+
+    fun `forceCloseChannel`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `reason`: kotlin.String?,
+    )
+
     fun `listBalances`(): BalanceDetails
-    
+
     fun `listChannels`(): List<ChannelDetails>
-    
+
     fun `listPayments`(): List<PaymentDetails>
-    
+
     fun `listPeers`(): List<PeerDetails>
-    
+
     fun `listeningAddresses`(): List<SocketAddress>?
-    
+
     fun `lsps1Liquidity`(): Lsps1Liquidity
-    
+
+    fun `lsps7Liquidity`(): Lsps7Liquidity
+
     fun `networkGraph`(): NetworkGraph
-    
+
     fun `nextEvent`(): Event?
-    
+
     suspend fun `nextEventAsync`(): Event
-    
+
     fun `nodeAlias`(): NodeAlias?
-    
+
     fun `nodeId`(): PublicKey
-    
+
     fun `onchainPayment`(): OnchainPayment
-    
-    fun `openAnnouncedChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId
-    
-    fun `openChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId
-    
+
+    fun `openAnnouncedChannel`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `channelAmountSats`: kotlin.ULong,
+        `pushToCounterpartyMsat`: kotlin.ULong?,
+        `channelConfig`: ChannelConfig?,
+    ): UserChannelId
+
+    fun `openChannel`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `channelAmountSats`: kotlin.ULong,
+        `pushToCounterpartyMsat`: kotlin.ULong?,
+        `channelConfig`: ChannelConfig?,
+    ): UserChannelId
+
     fun `payment`(`paymentId`: PaymentId): PaymentDetails?
-    
+
     fun `removePayment`(`paymentId`: PaymentId)
-    
+
+    fun `resetNetworkGraph`()
+
     fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String
-    
-    fun `spliceIn`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `spliceAmountSats`: kotlin.ULong)
-    
-    fun `spliceOut`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `address`: Address, `spliceAmountSats`: kotlin.ULong)
-    
+
+    fun `spliceIn`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `spliceAmountSats`: kotlin.ULong,
+    )
+
+    fun `spliceOut`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `address`: Address,
+        `spliceAmountSats`: kotlin.ULong,
+    )
+
     fun `spontaneousPayment`(): SpontaneousPayment
-    
+
     fun `start`()
-    
+
     fun `status`(): NodeStatus
-    
+
     fun `stop`()
-    
+
     fun `syncWallets`()
-    
+
     fun `unifiedQrPayment`(): UnifiedQrPayment
-    
-    fun `updateChannelConfig`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `channelConfig`: ChannelConfig)
-    
-    fun `verifySignature`(`msg`: List<kotlin.UByte>, `sig`: kotlin.String, `pkey`: PublicKey): kotlin.Boolean
-    
+
+    fun `updateChannelConfig`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `channelConfig`: ChannelConfig,
+    )
+
+    fun `updateRgsSnapshot`(): kotlin.UInt
+
+    fun `verifySignature`(
+        `msg`: List<kotlin.UByte>,
+        `sig`: kotlin.String,
+        `pkey`: PublicKey,
+    ): kotlin.Boolean
+
     fun `waitNextEvent`(): Event
-    
+
     companion object
 }
 
-open class Node: Disposable, AutoCloseable, NodeInterface {
-
+open class Node :
+    Disposable,
+    AutoCloseable,
+    NodeInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -6646,7 +7818,7 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -6660,7 +7832,9 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -6670,499 +7844,487 @@ open class Node: Disposable, AutoCloseable, NodeInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_node(pointer!!, status)
+        }
+
+    override fun `announcementAddresses`(): List<SocketAddress>? =
+        FfiConverterOptionalSequenceTypeSocketAddress.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_announcement_addresses(it, _status)
+                }
+            },
+        )
+
+    override fun `bolt11Payment`(): Bolt11Payment =
+        FfiConverterTypeBolt11Payment.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_bolt11_payment(it, _status)
+                }
+            },
+        )
+
+    override fun `bolt12Payment`(): Bolt12Payment =
+        FfiConverterTypeBolt12Payment.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_bolt12_payment(it, _status)
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `closeChannel`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_close_channel(
+                it,
+                FfiConverterTypeUserChannelId.lower(`userChannelId`),
+                FfiConverterTypePublicKey.lower(`counterpartyNodeId`),
+                _status,
+            )
         }
     }
 
-    override fun `announcementAddresses`(): List<SocketAddress>? {
-            return FfiConverterOptionalSequenceTypeSocketAddress.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_announcement_addresses(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `config`(): Config =
+        FfiConverterTypeConfig.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_config(it, _status)
+                }
+            },
+        )
 
-    override fun `bolt11Payment`(): Bolt11Payment {
-            return FfiConverterTypeBolt11Payment.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_bolt11_payment(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `bolt12Payment`(): Bolt12Payment {
-            return FfiConverterTypeBolt12Payment.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_bolt12_payment(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Throws(NodeException::class)override fun `closeChannel`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_close_channel(
-        it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),_status)
-}
-    }
-    
-    
-
-    override fun `config`(): Config {
-            return FfiConverterTypeConfig.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_config(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Throws(NodeException::class)override fun `connect`(`nodeId`: PublicKey, `address`: SocketAddress, `persist`: kotlin.Boolean)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_connect(
-        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterBoolean.lower(`persist`),_status)
-}
-    }
-    
-    
-
-    
-    @Throws(NodeException::class)override fun `disconnect`(`nodeId`: PublicKey)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_disconnect(
-        it, FfiConverterTypePublicKey.lower(`nodeId`),_status)
-}
-    }
-    
-    
-
-    
-    @Throws(NodeException::class)override fun `eventHandled`()
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_event_handled(
-        it, _status)
-}
-    }
-    
-    
-
-    
-    @Throws(NodeException::class)override fun `exportPathfindingScores`(): kotlin.ByteArray {
-            return FfiConverterByteArray.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_export_pathfinding_scores(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Throws(NodeException::class)override fun `forceCloseChannel`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `reason`: kotlin.String?)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_force_close_channel(
-        it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),FfiConverterOptionalString.lower(`reason`),_status)
-}
-    }
-    
-    
-
-    override fun `listBalances`(): BalanceDetails {
-            return FfiConverterTypeBalanceDetails.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_balances(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `listChannels`(): List<ChannelDetails> {
-            return FfiConverterSequenceTypeChannelDetails.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_channels(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `listPayments`(): List<PaymentDetails> {
-            return FfiConverterSequenceTypePaymentDetails.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_payments(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `listPeers`(): List<PeerDetails> {
-            return FfiConverterSequenceTypePeerDetails.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_peers(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `listeningAddresses`(): List<SocketAddress>? {
-            return FfiConverterOptionalSequenceTypeSocketAddress.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_listening_addresses(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `lsps1Liquidity`(): Lsps1Liquidity {
-            return FfiConverterTypeLSPS1Liquidity.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_lsps1_liquidity(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `networkGraph`(): NetworkGraph {
-            return FfiConverterTypeNetworkGraph.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_network_graph(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    override fun `nextEvent`(): Event? {
-            return FfiConverterOptionalTypeEvent.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_next_event(
-        it, _status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `nextEventAsync`() : Event {
-        return uniffiRustCallAsync(
-        callWithPointer { thisPtr ->
-            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_next_event_async(
-                thisPtr,
-                
+    @Throws(NodeException::class)
+    override fun `connect`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `persist`: kotlin.Boolean,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_connect(
+                it,
+                FfiConverterTypePublicKey.lower(`nodeId`),
+                FfiConverterTypeSocketAddress.lower(`address`),
+                FfiConverterBoolean.lower(`persist`),
+                _status,
             )
-        },
-        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_poll_rust_buffer(future, callback, continuation) },
-        { future, continuation -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_complete_rust_buffer(future, continuation) },
-        { future -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_free_rust_buffer(future) },
-        // lift function
-        { FfiConverterTypeEvent.lift(it) },
-        // Error FFI converter
-        UniffiNullRustCallStatusErrorHandler,
-    )
+        }
     }
 
-    override fun `nodeAlias`(): NodeAlias? {
-            return FfiConverterOptionalTypeNodeAlias.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_node_alias(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `disconnect`(`nodeId`: PublicKey) =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_disconnect(it, FfiConverterTypePublicKey.lower(`nodeId`), _status)
+            }
+        }
 
-    override fun `nodeId`(): PublicKey {
-            return FfiConverterTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_node_id(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `eventHandled`() =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_event_handled(it, _status)
+            }
+        }
 
-    override fun `onchainPayment`(): OnchainPayment {
-            return FfiConverterTypeOnchainPayment.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_onchain_payment(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `exportPathfindingScores`(): kotlin.ByteArray =
+        FfiConverterByteArray.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_export_pathfinding_scores(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `openAnnouncedChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId {
-            return FfiConverterTypeUserChannelId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_announced_channel(
-        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterULong.lower(`channelAmountSats`),FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),_status)
-}
+    @Throws(NodeException::class)
+    override fun `forceCloseChannel`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `reason`: kotlin.String?,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_force_close_channel(
+                it,
+                FfiConverterTypeUserChannelId.lower(`userChannelId`),
+                FfiConverterTypePublicKey.lower(`counterpartyNodeId`),
+                FfiConverterOptionalString.lower(`reason`),
+                _status,
+            )
+        }
     }
-    )
-    }
-    
 
-    
-    @Throws(NodeException::class)override fun `openChannel`(`nodeId`: PublicKey, `address`: SocketAddress, `channelAmountSats`: kotlin.ULong, `pushToCounterpartyMsat`: kotlin.ULong?, `channelConfig`: ChannelConfig?): UserChannelId {
-            return FfiConverterTypeUserChannelId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_channel(
-        it, FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypeSocketAddress.lower(`address`),FfiConverterULong.lower(`channelAmountSats`),FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `listBalances`(): BalanceDetails =
+        FfiConverterTypeBalanceDetails.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_balances(it, _status)
+                }
+            },
+        )
 
-    override fun `payment`(`paymentId`: PaymentId): PaymentDetails? {
-            return FfiConverterOptionalTypePaymentDetails.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_payment(
-        it, FfiConverterTypePaymentId.lower(`paymentId`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `listChannels`(): List<ChannelDetails> =
+        FfiConverterSequenceTypeChannelDetails.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_channels(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `removePayment`(`paymentId`: PaymentId)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_remove_payment(
-        it, FfiConverterTypePaymentId.lower(`paymentId`),_status)
-}
-    }
-    
-    
+    override fun `listPayments`(): List<PaymentDetails> =
+        FfiConverterSequenceTypePaymentDetails.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_payments(it, _status)
+                }
+            },
+        )
 
-    override fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String {
-            return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_sign_message(
-        it, FfiConverterSequenceUByte.lower(`msg`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `listPeers`(): List<PeerDetails> =
+        FfiConverterSequenceTypePeerDetails.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_list_peers(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `spliceIn`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `spliceAmountSats`: kotlin.ULong)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_splice_in(
-        it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),FfiConverterULong.lower(`spliceAmountSats`),_status)
-}
-    }
-    
-    
+    override fun `listeningAddresses`(): List<SocketAddress>? =
+        FfiConverterOptionalSequenceTypeSocketAddress.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_listening_addresses(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `spliceOut`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `address`: Address, `spliceAmountSats`: kotlin.ULong)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_splice_out(
-        it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),FfiConverterTypeAddress.lower(`address`),FfiConverterULong.lower(`spliceAmountSats`),_status)
-}
-    }
-    
-    
+    override fun `lsps1Liquidity`(): Lsps1Liquidity =
+        FfiConverterTypeLSPS1Liquidity.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_lsps1_liquidity(it, _status)
+                }
+            },
+        )
 
-    override fun `spontaneousPayment`(): SpontaneousPayment {
-            return FfiConverterTypeSpontaneousPayment.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_spontaneous_payment(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `lsps7Liquidity`(): Lsps7Liquidity =
+        FfiConverterTypeLSPS7Liquidity.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_lsps7_liquidity(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `start`()
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_start(
-        it, _status)
-}
-    }
-    
-    
+    override fun `networkGraph`(): NetworkGraph =
+        FfiConverterTypeNetworkGraph.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_network_graph(it, _status)
+                }
+            },
+        )
 
-    override fun `status`(): NodeStatus {
-            return FfiConverterTypeNodeStatus.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_status(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `nextEvent`(): Event? =
+        FfiConverterOptionalTypeEvent.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_next_event(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `stop`()
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_stop(
-        it, _status)
-}
-    }
-    
-    
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
+    override suspend fun `nextEventAsync`(): Event =
+        uniffiRustCallAsync(
+            callWithPointer { thisPtr ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_next_event_async(
+                    thisPtr,
+                )
+            },
+            {
+                future,
+                callback,
+                continuation,
+                ->
+                UniffiLib.INSTANCE.ffi_ldk_node_rust_future_poll_rust_buffer(future, callback, continuation)
+            },
+            { future, continuation -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_complete_rust_buffer(future, continuation) },
+            { future -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_free_rust_buffer(future) },
+            // lift function
+            { FfiConverterTypeEvent.lift(it) },
+            // Error FFI converter
+            UniffiNullRustCallStatusErrorHandler,
+        )
 
-    
-    @Throws(NodeException::class)override fun `syncWallets`()
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_sync_wallets(
-        it, _status)
-}
-    }
-    
-    
+    override fun `nodeAlias`(): NodeAlias? =
+        FfiConverterOptionalTypeNodeAlias.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_node_alias(it, _status)
+                }
+            },
+        )
 
-    override fun `unifiedQrPayment`(): UnifiedQrPayment {
-            return FfiConverterTypeUnifiedQrPayment.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_unified_qr_payment(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `nodeId`(): PublicKey =
+        FfiConverterTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_node_id(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `updateChannelConfig`(`userChannelId`: UserChannelId, `counterpartyNodeId`: PublicKey, `channelConfig`: ChannelConfig)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_update_channel_config(
-        it, FfiConverterTypeUserChannelId.lower(`userChannelId`),FfiConverterTypePublicKey.lower(`counterpartyNodeId`),FfiConverterTypeChannelConfig.lower(`channelConfig`),_status)
-}
-    }
-    
-    
+    override fun `onchainPayment`(): OnchainPayment =
+        FfiConverterTypeOnchainPayment.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_onchain_payment(it, _status)
+                }
+            },
+        )
 
-    override fun `verifySignature`(`msg`: List<kotlin.UByte>, `sig`: kotlin.String, `pkey`: PublicKey): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_verify_signature(
-        it, FfiConverterSequenceUByte.lower(`msg`),FfiConverterString.lower(`sig`),FfiConverterTypePublicKey.lower(`pkey`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `openAnnouncedChannel`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `channelAmountSats`: kotlin.ULong,
+        `pushToCounterpartyMsat`: kotlin.ULong?,
+        `channelConfig`: ChannelConfig?,
+    ): UserChannelId =
+        FfiConverterTypeUserChannelId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_announced_channel(
+                        it,
+                        FfiConverterTypePublicKey.lower(`nodeId`),
+                        FfiConverterTypeSocketAddress.lower(`address`),
+                        FfiConverterULong.lower(`channelAmountSats`),
+                        FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
+                        FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    override fun `waitNextEvent`(): Event {
-            return FfiConverterTypeEvent.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_wait_next_event(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `openChannel`(
+        `nodeId`: PublicKey,
+        `address`: SocketAddress,
+        `channelAmountSats`: kotlin.ULong,
+        `pushToCounterpartyMsat`: kotlin.ULong?,
+        `channelConfig`: ChannelConfig?,
+    ): UserChannelId =
+        FfiConverterTypeUserChannelId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_open_channel(
+                        it,
+                        FfiConverterTypePublicKey.lower(`nodeId`),
+                        FfiConverterTypeSocketAddress.lower(`address`),
+                        FfiConverterULong.lower(`channelAmountSats`),
+                        FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
+                        FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
+    override fun `payment`(`paymentId`: PaymentId): PaymentDetails? =
+        FfiConverterOptionalTypePaymentDetails.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_payment(it, FfiConverterTypePaymentId.lower(`paymentId`), _status)
+                }
+            },
+        )
 
-    
-    
+    @Throws(NodeException::class)
+    override fun `removePayment`(`paymentId`: PaymentId) =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_remove_payment(it, FfiConverterTypePaymentId.lower(`paymentId`), _status)
+            }
+        }
+
+    @Throws(NodeException::class)
+    override fun `resetNetworkGraph`() =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_reset_network_graph(it, _status)
+            }
+        }
+
+    override fun `signMessage`(`msg`: List<kotlin.UByte>): kotlin.String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_sign_message(it, FfiConverterSequenceUByte.lower(`msg`), _status)
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `spliceIn`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `spliceAmountSats`: kotlin.ULong,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_splice_in(
+                it,
+                FfiConverterTypeUserChannelId.lower(`userChannelId`),
+                FfiConverterTypePublicKey.lower(`counterpartyNodeId`),
+                FfiConverterULong.lower(`spliceAmountSats`),
+                _status,
+            )
+        }
+    }
+
+    @Throws(NodeException::class)
+    override fun `spliceOut`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `address`: Address,
+        `spliceAmountSats`: kotlin.ULong,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_splice_out(
+                it,
+                FfiConverterTypeUserChannelId.lower(`userChannelId`),
+                FfiConverterTypePublicKey.lower(`counterpartyNodeId`),
+                FfiConverterTypeAddress.lower(`address`),
+                FfiConverterULong.lower(`spliceAmountSats`),
+                _status,
+            )
+        }
+    }
+
+    override fun `spontaneousPayment`(): SpontaneousPayment =
+        FfiConverterTypeSpontaneousPayment.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_spontaneous_payment(it, _status)
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `start`() =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_start(it, _status)
+            }
+        }
+
+    override fun `status`(): NodeStatus =
+        FfiConverterTypeNodeStatus.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_status(it, _status)
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `stop`() =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_stop(it, _status)
+            }
+        }
+
+    @Throws(NodeException::class)
+    override fun `syncWallets`() =
+        callWithPointer {
+            uniffiRustCallWithError(NodeException) { _status ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_sync_wallets(it, _status)
+            }
+        }
+
+    override fun `unifiedQrPayment`(): UnifiedQrPayment =
+        FfiConverterTypeUnifiedQrPayment.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_unified_qr_payment(it, _status)
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `updateChannelConfig`(
+        `userChannelId`: UserChannelId,
+        `counterpartyNodeId`: PublicKey,
+        `channelConfig`: ChannelConfig,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_update_channel_config(
+                it,
+                FfiConverterTypeUserChannelId.lower(`userChannelId`),
+                FfiConverterTypePublicKey.lower(`counterpartyNodeId`),
+                FfiConverterTypeChannelConfig.lower(`channelConfig`),
+                _status,
+            )
+        }
+    }
+
+    @Throws(NodeException::class)
+    override fun `updateRgsSnapshot`(): kotlin.UInt =
+        FfiConverterUInt.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_update_rgs_snapshot(it, _status)
+                }
+            },
+        )
+
+    override fun `verifySignature`(
+        `msg`: List<kotlin.UByte>,
+        `sig`: kotlin.String,
+        `pkey`: PublicKey,
+    ): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_verify_signature(
+                        it,
+                        FfiConverterSequenceUByte.lower(`msg`),
+                        FfiConverterString.lower(`sig`),
+                        FfiConverterTypePublicKey.lower(`pkey`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    override fun `waitNextEvent`(): Event =
+        FfiConverterTypeEvent.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_node_wait_next_event(it, _status)
+                }
+            },
+        )
+
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNode: FfiConverter<Node, Pointer> {
+public object FfiConverterTypeNode : FfiConverter<Node, Pointer> {
+    override fun lower(value: Node): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Node): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Node {
-        return Node(value)
-    }
+    override fun lift(value: Pointer): Node = Node(value)
 
     override fun read(buf: ByteBuffer): Node {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -7172,13 +8334,15 @@ public object FfiConverterTypeNode: FfiConverter<Node, Pointer> {
 
     override fun allocationSize(value: Node) = 8UL
 
-    override fun write(value: Node, buf: ByteBuffer) {
+    override fun write(
+        value: Node,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -7277,14 +8441,14 @@ public object FfiConverterTypeNode: FfiConverter<Node, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface NodeEntropyInterface {
-    
     companion object
 }
 
-open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
-
+open class NodeEntropy :
+    Disposable,
+    AutoCloseable,
+    NodeEntropyInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -7334,7 +8498,7 @@ open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -7348,7 +8512,9 @@ open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -7358,65 +8524,57 @@ open class NodeEntropy: Disposable, AutoCloseable, NodeEntropyInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_nodeentropy(pointer!!, status)
         }
-    }
 
-    
-
-    
     companion object {
-         fun `fromBip39Mnemonic`(`mnemonic`: Mnemonic, `passphrase`: kotlin.String?): NodeEntropy {
-            return FfiConverterTypeNodeEntropy.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(
-        FfiConverterTypeMnemonic.lower(`mnemonic`),FfiConverterOptionalString.lower(`passphrase`),_status)
-}
-    )
-    }
-    
+        fun `fromBip39Mnemonic`(
+            `mnemonic`: Mnemonic,
+            `passphrase`: kotlin.String?,
+        ): NodeEntropy =
+            FfiConverterTypeNodeEntropy.lift(
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_bip39_mnemonic(
+                        FfiConverterTypeMnemonic.lower(`mnemonic`),
+                        FfiConverterOptionalString.lower(`passphrase`),
+                        _status,
+                    )
+                },
+            )
 
-        
-    @Throws(EntropyException::class) fun `fromSeedBytes`(`seedBytes`: kotlin.ByteArray): NodeEntropy {
-            return FfiConverterTypeNodeEntropy.lift(
-    uniffiRustCallWithError(EntropyException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_bytes(
-        FfiConverterByteArray.lower(`seedBytes`),_status)
-}
-    )
-    }
-    
+        @Throws(EntropyException::class)
+        fun `fromSeedBytes`(`seedBytes`: kotlin.ByteArray): NodeEntropy =
+            FfiConverterTypeNodeEntropy.lift(
+                uniffiRustCallWithError(EntropyException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_bytes(
+                        FfiConverterByteArray.lower(`seedBytes`),
+                        _status,
+                    )
+                },
+            )
 
-        
-    @Throws(EntropyException::class) fun `fromSeedPath`(`seedPath`: kotlin.String): NodeEntropy {
-            return FfiConverterTypeNodeEntropy.lift(
-    uniffiRustCallWithError(EntropyException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_path(
-        FfiConverterString.lower(`seedPath`),_status)
-}
-    )
+        @Throws(EntropyException::class)
+        fun `fromSeedPath`(`seedPath`: kotlin.String): NodeEntropy =
+            FfiConverterTypeNodeEntropy.lift(
+                uniffiRustCallWithError(EntropyException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_nodeentropy_from_seed_path(
+                        FfiConverterString.lower(`seedPath`),
+                        _status,
+                    )
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNodeEntropy: FfiConverter<NodeEntropy, Pointer> {
+public object FfiConverterTypeNodeEntropy : FfiConverter<NodeEntropy, Pointer> {
+    override fun lower(value: NodeEntropy): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: NodeEntropy): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): NodeEntropy {
-        return NodeEntropy(value)
-    }
+    override fun lift(value: Pointer): NodeEntropy = NodeEntropy(value)
 
     override fun read(buf: ByteBuffer): NodeEntropy {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -7426,13 +8584,15 @@ public object FfiConverterTypeNodeEntropy: FfiConverter<NodeEntropy, Pointer> {
 
     override fun allocationSize(value: NodeEntropy) = 8UL
 
-    override fun write(value: NodeEntropy, buf: ByteBuffer) {
+    override fun write(
+        value: NodeEntropy,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -7531,38 +8691,38 @@ public object FfiConverterTypeNodeEntropy: FfiConverter<NodeEntropy, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface OfferInterface {
-    
     fun `absoluteExpirySeconds`(): kotlin.ULong?
-    
+
     fun `amount`(): OfferAmount?
-    
+
     fun `chains`(): List<Network>
-    
+
     fun `expectsQuantity`(): kotlin.Boolean
-    
+
     fun `id`(): OfferId
-    
+
     fun `isExpired`(): kotlin.Boolean
-    
+
     fun `isValidQuantity`(`quantity`: kotlin.ULong): kotlin.Boolean
-    
+
     fun `issuer`(): kotlin.String?
-    
+
     fun `issuerSigningPubkey`(): PublicKey?
-    
+
     fun `metadata`(): List<kotlin.UByte>?
-    
+
     fun `offerDescription`(): kotlin.String?
-    
+
     fun `supportsChain`(`chain`: Network): kotlin.Boolean
-    
+
     companion object
 }
 
-open class Offer: Disposable, AutoCloseable, OfferInterface {
-
+open class Offer :
+    Disposable,
+    AutoCloseable,
+    OfferInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -7612,7 +8772,7 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -7626,7 +8786,9 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -7636,213 +8798,158 @@ open class Offer: Disposable, AutoCloseable, OfferInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_offer(pointer!!, status)
         }
-    }
 
-    override fun `absoluteExpirySeconds`(): kotlin.ULong? {
-            return FfiConverterOptionalULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_absolute_expiry_seconds(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `absoluteExpirySeconds`(): kotlin.ULong? =
+        FfiConverterOptionalULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_absolute_expiry_seconds(it, _status)
+                }
+            },
+        )
 
-    override fun `amount`(): OfferAmount? {
-            return FfiConverterOptionalTypeOfferAmount.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_amount(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `amount`(): OfferAmount? =
+        FfiConverterOptionalTypeOfferAmount.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_amount(it, _status)
+                }
+            },
+        )
 
-    override fun `chains`(): List<Network> {
-            return FfiConverterSequenceTypeNetwork.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_chains(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `chains`(): List<Network> =
+        FfiConverterSequenceTypeNetwork.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_chains(it, _status)
+                }
+            },
+        )
 
-    override fun `expectsQuantity`(): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_expects_quantity(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `expectsQuantity`(): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_expects_quantity(it, _status)
+                }
+            },
+        )
 
-    override fun `id`(): OfferId {
-            return FfiConverterTypeOfferId.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_id(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `id`(): OfferId =
+        FfiConverterTypeOfferId.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_id(it, _status)
+                }
+            },
+        )
 
-    override fun `isExpired`(): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_is_expired(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `isExpired`(): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_is_expired(it, _status)
+                }
+            },
+        )
 
-    override fun `isValidQuantity`(`quantity`: kotlin.ULong): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_is_valid_quantity(
-        it, FfiConverterULong.lower(`quantity`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `isValidQuantity`(`quantity`: kotlin.ULong): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_is_valid_quantity(it, FfiConverterULong.lower(`quantity`), _status)
+                }
+            },
+        )
 
-    override fun `issuer`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_issuer(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `issuer`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_issuer(it, _status)
+                }
+            },
+        )
 
-    override fun `issuerSigningPubkey`(): PublicKey? {
-            return FfiConverterOptionalTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_issuer_signing_pubkey(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `issuerSigningPubkey`(): PublicKey? =
+        FfiConverterOptionalTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_issuer_signing_pubkey(it, _status)
+                }
+            },
+        )
 
-    override fun `metadata`(): List<kotlin.UByte>? {
-            return FfiConverterOptionalSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_metadata(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `metadata`(): List<kotlin.UByte>? =
+        FfiConverterOptionalSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_metadata(it, _status)
+                }
+            },
+        )
 
-    override fun `offerDescription`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_offer_description(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `offerDescription`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_offer_description(it, _status)
+                }
+            },
+        )
 
-    override fun `supportsChain`(`chain`: Network): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_supports_chain(
-        it, FfiConverterTypeNetwork.lower(`chain`),_status)
-}
-    }
-    )
-    }
-    
+    override fun `supportsChain`(`chain`: Network): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_supports_chain(it, FfiConverterTypeNetwork.lower(`chain`), _status)
+                }
+            },
+        )
 
-    
-    override fun toString(): String {
-        return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_uniffi_trait_display(
-        it, _status)
-}
-    }
-    )
-    }
-    
-    
+    override fun toString(): String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_uniffi_trait_display(it, _status)
+                }
+            },
+        )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Offer) return false
         return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_eq(
-        it, FfiConverterTypeOffer.lower(`other`),_status)
-}
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_offer_uniffi_trait_eq_eq(it, FfiConverterTypeOffer.lower(`other`), _status)
+                }
+            },
+        )
     }
-    )
-    }
-    
 
-    
     companion object {
-        
-    @Throws(NodeException::class) fun `fromStr`(`offerStr`: kotlin.String): Offer {
-            return FfiConverterTypeOffer.lift(
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_offer_from_str(
-        FfiConverterString.lower(`offerStr`),_status)
-}
-    )
+        @Throws(NodeException::class)
+        fun `fromStr`(`offerStr`: kotlin.String): Offer =
+            FfiConverterTypeOffer.lift(
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_offer_from_str(FfiConverterString.lower(`offerStr`), _status)
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeOffer: FfiConverter<Offer, Pointer> {
+public object FfiConverterTypeOffer : FfiConverter<Offer, Pointer> {
+    override fun lower(value: Offer): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Offer): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Offer {
-        return Offer(value)
-    }
+    override fun lift(value: Pointer): Offer = Offer(value)
 
     override fun read(buf: ByteBuffer): Offer {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -7852,13 +8959,15 @@ public object FfiConverterTypeOffer: FfiConverter<Offer, Pointer> {
 
     override fun allocationSize(value: Offer) = 8UL
 
-    override fun write(value: Offer, buf: ByteBuffer) {
+    override fun write(
+        value: Offer,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -7957,20 +9066,28 @@ public object FfiConverterTypeOffer: FfiConverter<Offer, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface OnchainPaymentInterface {
-    
     fun `newAddress`(): Address
-    
-    fun `sendAllToAddress`(`address`: Address, `retainReserve`: kotlin.Boolean, `feeRate`: FeeRate?): Txid
-    
-    fun `sendToAddress`(`address`: Address, `amountSats`: kotlin.ULong, `feeRate`: FeeRate?): Txid
-    
+
+    fun `sendAllToAddress`(
+        `address`: Address,
+        `retainReserve`: kotlin.Boolean,
+        `feeRate`: FeeRate?,
+    ): Txid
+
+    fun `sendToAddress`(
+        `address`: Address,
+        `amountSats`: kotlin.ULong,
+        `feeRate`: FeeRate?,
+    ): Txid
+
     companion object
 }
 
-open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
-
+open class OnchainPayment :
+    Disposable,
+    AutoCloseable,
+    OnchainPaymentInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -8020,7 +9137,7 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -8034,7 +9151,9 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -8044,71 +9163,71 @@ open class OnchainPayment: Disposable, AutoCloseable, OnchainPaymentInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_onchainpayment(pointer!!, status)
         }
-    }
 
-    
-    @Throws(NodeException::class)override fun `newAddress`(): Address {
-            return FfiConverterTypeAddress.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_new_address(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `newAddress`(): Address =
+        FfiConverterTypeAddress.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_new_address(it, _status)
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendAllToAddress`(`address`: Address, `retainReserve`: kotlin.Boolean, `feeRate`: FeeRate?): Txid {
-            return FfiConverterTypeTxid.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(
-        it, FfiConverterTypeAddress.lower(`address`),FfiConverterBoolean.lower(`retainReserve`),FfiConverterOptionalTypeFeeRate.lower(`feeRate`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `sendAllToAddress`(
+        `address`: Address,
+        `retainReserve`: kotlin.Boolean,
+        `feeRate`: FeeRate?,
+    ): Txid =
+        FfiConverterTypeTxid.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address(
+                        it,
+                        FfiConverterTypeAddress.lower(`address`),
+                        FfiConverterBoolean.lower(`retainReserve`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendToAddress`(`address`: Address, `amountSats`: kotlin.ULong, `feeRate`: FeeRate?): Txid {
-            return FfiConverterTypeTxid.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_send_to_address(
-        it, FfiConverterTypeAddress.lower(`address`),FfiConverterULong.lower(`amountSats`),FfiConverterOptionalTypeFeeRate.lower(`feeRate`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `sendToAddress`(
+        `address`: Address,
+        `amountSats`: kotlin.ULong,
+        `feeRate`: FeeRate?,
+    ): Txid =
+        FfiConverterTypeTxid.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_onchainpayment_send_to_address(
+                        it,
+                        FfiConverterTypeAddress.lower(`address`),
+                        FfiConverterULong.lower(`amountSats`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeOnchainPayment: FfiConverter<OnchainPayment, Pointer> {
+public object FfiConverterTypeOnchainPayment : FfiConverter<OnchainPayment, Pointer> {
+    override fun lower(value: OnchainPayment): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: OnchainPayment): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): OnchainPayment {
-        return OnchainPayment(value)
-    }
+    override fun lift(value: Pointer): OnchainPayment = OnchainPayment(value)
 
     override fun read(buf: ByteBuffer): OnchainPayment {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -8118,13 +9237,15 @@ public object FfiConverterTypeOnchainPayment: FfiConverter<OnchainPayment, Point
 
     override fun allocationSize(value: OnchainPayment) = 8UL
 
-    override fun write(value: OnchainPayment, buf: ByteBuffer) {
+    override fun write(
+        value: OnchainPayment,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -8223,34 +9344,34 @@ public object FfiConverterTypeOnchainPayment: FfiConverter<OnchainPayment, Point
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface RefundInterface {
-    
     fun `absoluteExpirySeconds`(): kotlin.ULong?
-    
+
     fun `amountMsats`(): kotlin.ULong
-    
+
     fun `chain`(): Network?
-    
+
     fun `isExpired`(): kotlin.Boolean
-    
+
     fun `issuer`(): kotlin.String?
-    
+
     fun `payerMetadata`(): List<kotlin.UByte>
-    
+
     fun `payerNote`(): kotlin.String?
-    
+
     fun `payerSigningPubkey`(): PublicKey
-    
+
     fun `quantity`(): kotlin.ULong?
-    
+
     fun `refundDescription`(): kotlin.String
-    
+
     companion object
 }
 
-open class Refund: Disposable, AutoCloseable, RefundInterface {
-
+open class Refund :
+    Disposable,
+    AutoCloseable,
+    RefundInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -8300,7 +9421,7 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -8314,7 +9435,9 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -8324,189 +9447,144 @@ open class Refund: Disposable, AutoCloseable, RefundInterface {
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_refund(pointer!!, status)
         }
-    }
 
-    override fun `absoluteExpirySeconds`(): kotlin.ULong? {
-            return FfiConverterOptionalULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_absolute_expiry_seconds(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `absoluteExpirySeconds`(): kotlin.ULong? =
+        FfiConverterOptionalULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_absolute_expiry_seconds(it, _status)
+                }
+            },
+        )
 
-    override fun `amountMsats`(): kotlin.ULong {
-            return FfiConverterULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_amount_msats(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `amountMsats`(): kotlin.ULong =
+        FfiConverterULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_amount_msats(it, _status)
+                }
+            },
+        )
 
-    override fun `chain`(): Network? {
-            return FfiConverterOptionalTypeNetwork.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_chain(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `chain`(): Network? =
+        FfiConverterOptionalTypeNetwork.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_chain(it, _status)
+                }
+            },
+        )
 
-    override fun `isExpired`(): kotlin.Boolean {
-            return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_is_expired(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `isExpired`(): kotlin.Boolean =
+        FfiConverterBoolean.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_is_expired(it, _status)
+                }
+            },
+        )
 
-    override fun `issuer`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_issuer(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `issuer`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_issuer(it, _status)
+                }
+            },
+        )
 
-    override fun `payerMetadata`(): List<kotlin.UByte> {
-            return FfiConverterSequenceUByte.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_metadata(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `payerMetadata`(): List<kotlin.UByte> =
+        FfiConverterSequenceUByte.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_metadata(it, _status)
+                }
+            },
+        )
 
-    override fun `payerNote`(): kotlin.String? {
-            return FfiConverterOptionalString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_note(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `payerNote`(): kotlin.String? =
+        FfiConverterOptionalString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_note(it, _status)
+                }
+            },
+        )
 
-    override fun `payerSigningPubkey`(): PublicKey {
-            return FfiConverterTypePublicKey.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_signing_pubkey(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `payerSigningPubkey`(): PublicKey =
+        FfiConverterTypePublicKey.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_payer_signing_pubkey(it, _status)
+                }
+            },
+        )
 
-    override fun `quantity`(): kotlin.ULong? {
-            return FfiConverterOptionalULong.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_quantity(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `quantity`(): kotlin.ULong? =
+        FfiConverterOptionalULong.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_quantity(it, _status)
+                }
+            },
+        )
 
-    override fun `refundDescription`(): kotlin.String {
-            return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_refund_description(
-        it, _status)
-}
-    }
-    )
-    }
-    
+    override fun `refundDescription`(): kotlin.String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_refund_description(it, _status)
+                }
+            },
+        )
 
-    
-    override fun toString(): String {
-        return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_uniffi_trait_display(
-        it, _status)
-}
-    }
-    )
-    }
-    
-    
+    override fun toString(): String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_uniffi_trait_display(it, _status)
+                }
+            },
+        )
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Refund) return false
         return FfiConverterBoolean.lift(
-    callWithPointer {
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_eq(
-        it, FfiConverterTypeRefund.lower(`other`),_status)
-}
+            callWithPointer {
+                uniffiRustCall { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_refund_uniffi_trait_eq_eq(
+                        it,
+                        FfiConverterTypeRefund.lower(`other`),
+                        _status,
+                    )
+                }
+            },
+        )
     }
-    )
-    }
-    
 
-    
     companion object {
-        
-    @Throws(NodeException::class) fun `fromStr`(`refundStr`: kotlin.String): Refund {
-            return FfiConverterTypeRefund.lift(
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_refund_from_str(
-        FfiConverterString.lower(`refundStr`),_status)
-}
-    )
+        @Throws(NodeException::class)
+        fun `fromStr`(`refundStr`: kotlin.String): Refund =
+            FfiConverterTypeRefund.lift(
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_constructor_refund_from_str(FfiConverterString.lower(`refundStr`), _status)
+                },
+            )
     }
-    
-
-        
-    }
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeRefund: FfiConverter<Refund, Pointer> {
+public object FfiConverterTypeRefund : FfiConverter<Refund, Pointer> {
+    override fun lower(value: Refund): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: Refund): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): Refund {
-        return Refund(value)
-    }
+    override fun lift(value: Pointer): Refund = Refund(value)
 
     override fun read(buf: ByteBuffer): Refund {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -8516,13 +9594,15 @@ public object FfiConverterTypeRefund: FfiConverter<Refund, Pointer> {
 
     override fun allocationSize(value: Refund) = 8UL
 
-    override fun write(value: Refund, buf: ByteBuffer) {
+    override fun write(
+        value: Refund,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -8621,24 +9701,47 @@ public object FfiConverterTypeRefund: FfiConverter<Refund, Pointer> {
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface SpontaneousPaymentInterface {
-    
-    fun `send`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?): PaymentId
-    
-    fun `sendProbes`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey)
-    
-    fun `sendWithCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?, `customTlvs`: List<CustomTlvRecord>): PaymentId
-    
-    fun `sendWithPreimage`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId
-    
-    fun `sendWithPreimageAndCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `customTlvs`: List<CustomTlvRecord>, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId
-    
+    fun `send`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
+    fun `sendProbes`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+    )
+
+    fun `sendWithCustomTlvs`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `routeParameters`: RouteParametersConfig?,
+        `customTlvs`: List<CustomTlvRecord>,
+    ): PaymentId
+
+    fun `sendWithPreimage`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `preimage`: PaymentPreimage,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
+    fun `sendWithPreimageAndCustomTlvs`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `customTlvs`: List<CustomTlvRecord>,
+        `preimage`: PaymentPreimage,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId
+
     companion object
 }
 
-open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInterface {
-
+open class SpontaneousPayment :
+    Disposable,
+    AutoCloseable,
+    SpontaneousPaymentInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -8688,7 +9791,7 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -8702,7 +9805,9 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -8712,96 +9817,124 @@ open class SpontaneousPayment: Disposable, AutoCloseable, SpontaneousPaymentInte
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_spontaneouspayment(pointer!!, status)
+        }
+
+    @Throws(NodeException::class)
+    override fun `send`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypePublicKey.lower(`nodeId`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
+
+    @Throws(NodeException::class)
+    override fun `sendProbes`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+    ) = callWithPointer {
+        uniffiRustCallWithError(NodeException) { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_probes(
+                it,
+                FfiConverterULong.lower(`amountMsat`),
+                FfiConverterTypePublicKey.lower(`nodeId`),
+                _status,
+            )
         }
     }
 
-    
-    @Throws(NodeException::class)override fun `send`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `sendWithCustomTlvs`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `routeParameters`: RouteParametersConfig?,
+        `customTlvs`: List<CustomTlvRecord>,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypePublicKey.lower(`nodeId`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        FfiConverterSequenceTypeCustomTlvRecord.lower(`customTlvs`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendProbes`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey)
-        = 
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_probes(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypePublicKey.lower(`nodeId`),_status)
-}
-    }
-    
-    
+    @Throws(NodeException::class)
+    override fun `sendWithPreimage`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `preimage`: PaymentPreimage,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypePublicKey.lower(`nodeId`),
+                        FfiConverterTypePaymentPreimage.lower(`preimage`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendWithCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `routeParameters`: RouteParametersConfig?, `customTlvs`: List<CustomTlvRecord>): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_with_custom_tlvs(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),FfiConverterSequenceTypeCustomTlvRecord.lower(`customTlvs`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `sendWithPreimageAndCustomTlvs`(
+        `amountMsat`: kotlin.ULong,
+        `nodeId`: PublicKey,
+        `customTlvs`: List<CustomTlvRecord>,
+        `preimage`: PaymentPreimage,
+        `routeParameters`: RouteParametersConfig?,
+    ): PaymentId =
+        FfiConverterTypePaymentId.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(
+                        it,
+                        FfiConverterULong.lower(`amountMsat`),
+                        FfiConverterTypePublicKey.lower(`nodeId`),
+                        FfiConverterSequenceTypeCustomTlvRecord.lower(`customTlvs`),
+                        FfiConverterTypePaymentPreimage.lower(`preimage`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `sendWithPreimage`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterTypePaymentPreimage.lower(`preimage`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
-
-    
-    @Throws(NodeException::class)override fun `sendWithPreimageAndCustomTlvs`(`amountMsat`: kotlin.ULong, `nodeId`: PublicKey, `customTlvs`: List<CustomTlvRecord>, `preimage`: PaymentPreimage, `routeParameters`: RouteParametersConfig?): PaymentId {
-            return FfiConverterTypePaymentId.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_spontaneouspayment_send_with_preimage_and_custom_tlvs(
-        it, FfiConverterULong.lower(`amountMsat`),FfiConverterTypePublicKey.lower(`nodeId`),FfiConverterSequenceTypeCustomTlvRecord.lower(`customTlvs`),FfiConverterTypePaymentPreimage.lower(`preimage`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
-
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeSpontaneousPayment: FfiConverter<SpontaneousPayment, Pointer> {
+public object FfiConverterTypeSpontaneousPayment : FfiConverter<SpontaneousPayment, Pointer> {
+    override fun lower(value: SpontaneousPayment): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: SpontaneousPayment): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): SpontaneousPayment {
-        return SpontaneousPayment(value)
-    }
+    override fun lift(value: Pointer): SpontaneousPayment = SpontaneousPayment(value)
 
     override fun read(buf: ByteBuffer): SpontaneousPayment {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -8811,13 +9944,15 @@ public object FfiConverterTypeSpontaneousPayment: FfiConverter<SpontaneousPaymen
 
     override fun allocationSize(value: SpontaneousPayment) = 8UL
 
-    override fun write(value: SpontaneousPayment, buf: ByteBuffer) {
+    override fun write(
+        value: SpontaneousPayment,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -8916,18 +10051,25 @@ public object FfiConverterTypeSpontaneousPayment: FfiConverter<SpontaneousPaymen
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface UnifiedQrPaymentInterface {
-    
-    fun `receive`(`amountSats`: kotlin.ULong, `message`: kotlin.String, `expirySec`: kotlin.UInt): kotlin.String
-    
-    fun `send`(`uriStr`: kotlin.String, `routeParameters`: RouteParametersConfig?): QrPaymentResult
-    
+    fun `receive`(
+        `amountSats`: kotlin.ULong,
+        `message`: kotlin.String,
+        `expirySec`: kotlin.UInt,
+    ): kotlin.String
+
+    fun `send`(
+        `uriStr`: kotlin.String,
+        `routeParameters`: RouteParametersConfig?,
+    ): QrPaymentResult
+
     companion object
 }
 
-open class UnifiedQrPayment: Disposable, AutoCloseable, UnifiedQrPaymentInterface {
-
+open class UnifiedQrPayment :
+    Disposable,
+    AutoCloseable,
+    UnifiedQrPaymentInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -8977,7 +10119,7 @@ open class UnifiedQrPayment: Disposable, AutoCloseable, UnifiedQrPaymentInterfac
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -8991,7 +10133,9 @@ open class UnifiedQrPayment: Disposable, AutoCloseable, UnifiedQrPaymentInterfac
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -9001,58 +10145,59 @@ open class UnifiedQrPayment: Disposable, AutoCloseable, UnifiedQrPaymentInterfac
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_unifiedqrpayment(pointer!!, status)
         }
-    }
 
-    
-    @Throws(NodeException::class)override fun `receive`(`amountSats`: kotlin.ULong, `message`: kotlin.String, `expirySec`: kotlin.UInt): kotlin.String {
-            return FfiConverterString.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_unifiedqrpayment_receive(
-        it, FfiConverterULong.lower(`amountSats`),FfiConverterString.lower(`message`),FfiConverterUInt.lower(`expirySec`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `receive`(
+        `amountSats`: kotlin.ULong,
+        `message`: kotlin.String,
+        `expirySec`: kotlin.UInt,
+    ): kotlin.String =
+        FfiConverterString.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_unifiedqrpayment_receive(
+                        it,
+                        FfiConverterULong.lower(`amountSats`),
+                        FfiConverterString.lower(`message`),
+                        FfiConverterUInt.lower(`expirySec`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-    @Throws(NodeException::class)override fun `send`(`uriStr`: kotlin.String, `routeParameters`: RouteParametersConfig?): QrPaymentResult {
-            return FfiConverterTypeQrPaymentResult.lift(
-    callWithPointer {
-    uniffiRustCallWithError(NodeException) { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_unifiedqrpayment_send(
-        it, FfiConverterString.lower(`uriStr`),FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),_status)
-}
-    }
-    )
-    }
-    
+    @Throws(NodeException::class)
+    override fun `send`(
+        `uriStr`: kotlin.String,
+        `routeParameters`: RouteParametersConfig?,
+    ): QrPaymentResult =
+        FfiConverterTypeQrPaymentResult.lift(
+            callWithPointer {
+                uniffiRustCallWithError(NodeException) { _status ->
+                    UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_unifiedqrpayment_send(
+                        it,
+                        FfiConverterString.lower(`uriStr`),
+                        FfiConverterOptionalTypeRouteParametersConfig.lower(`routeParameters`),
+                        _status,
+                    )
+                }
+            },
+        )
 
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeUnifiedQrPayment: FfiConverter<UnifiedQrPayment, Pointer> {
+public object FfiConverterTypeUnifiedQrPayment : FfiConverter<UnifiedQrPayment, Pointer> {
+    override fun lower(value: UnifiedQrPayment): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: UnifiedQrPayment): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): UnifiedQrPayment {
-        return UnifiedQrPayment(value)
-    }
+    override fun lift(value: Pointer): UnifiedQrPayment = UnifiedQrPayment(value)
 
     override fun read(buf: ByteBuffer): UnifiedQrPayment {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -9062,13 +10207,15 @@ public object FfiConverterTypeUnifiedQrPayment: FfiConverter<UnifiedQrPayment, P
 
     override fun allocationSize(value: UnifiedQrPayment) = 8UL
 
-    override fun write(value: UnifiedQrPayment, buf: ByteBuffer) {
+    override fun write(
+        value: UnifiedQrPayment,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 // This template implements a class for working with a Rust struct via a Pointer/Arc<T>
 // to the live Rust struct on the other side of the FFI.
@@ -9167,16 +10314,16 @@ public object FfiConverterTypeUnifiedQrPayment: FfiConverter<UnifiedQrPayment, P
 // [1] https://stackoverflow.com/questions/24376768/can-java-finalize-an-object-when-it-is-still-in-scope/24380219
 //
 
-
 public interface VssHeaderProviderInterface {
-    
     suspend fun `getHeaders`(`request`: List<kotlin.UByte>): Map<kotlin.String, kotlin.String>
-    
+
     companion object
 }
 
-open class VssHeaderProvider: Disposable, AutoCloseable, VssHeaderProviderInterface {
-
+open class VssHeaderProvider :
+    Disposable,
+    AutoCloseable,
+    VssHeaderProviderInterface {
     constructor(pointer: Pointer) {
         this.pointer = pointer
         this.cleanable = UniffiLib.CLEANER.register(this, UniffiCleanAction(pointer))
@@ -9226,7 +10373,7 @@ open class VssHeaderProvider: Disposable, AutoCloseable, VssHeaderProviderInterf
             if (c == Long.MAX_VALUE) {
                 throw IllegalStateException("${this.javaClass.simpleName} call counter would overflow")
             }
-        } while (! this.callCounter.compareAndSet(c, c + 1L))
+        } while (!this.callCounter.compareAndSet(c, c + 1L))
         // Now we can safely do the method call without the pointer being freed concurrently.
         try {
             return block(this.uniffiClonePointer())
@@ -9240,7 +10387,9 @@ open class VssHeaderProvider: Disposable, AutoCloseable, VssHeaderProviderInterf
 
     // Use a static inner class instead of a closure so as not to accidentally
     // capture `this` as part of the cleanable's action.
-    private class UniffiCleanAction(private val pointer: Pointer?) : Runnable {
+    private class UniffiCleanAction(
+        private val pointer: Pointer?,
+    ) : Runnable {
         override fun run() {
             pointer?.let { ptr ->
                 uniffiRustCall { status ->
@@ -9250,53 +10399,46 @@ open class VssHeaderProvider: Disposable, AutoCloseable, VssHeaderProviderInterf
         }
     }
 
-    fun uniffiClonePointer(): Pointer {
-        return uniffiRustCall() { status ->
+    fun uniffiClonePointer(): Pointer =
+        uniffiRustCall { status ->
             UniffiLib.INSTANCE.uniffi_ldk_node_fn_clone_vssheaderprovider(pointer!!, status)
         }
-    }
 
-    
     @Throws(VssHeaderProviderException::class)
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
-    override suspend fun `getHeaders`(`request`: List<kotlin.UByte>) : Map<kotlin.String, kotlin.String> {
-        return uniffiRustCallAsync(
-        callWithPointer { thisPtr ->
-            UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_vssheaderprovider_get_headers(
-                thisPtr,
-                FfiConverterSequenceUByte.lower(`request`),
-            )
-        },
-        { future, callback, continuation -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_poll_rust_buffer(future, callback, continuation) },
-        { future, continuation -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_complete_rust_buffer(future, continuation) },
-        { future -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_free_rust_buffer(future) },
-        // lift function
-        { FfiConverterMapStringString.lift(it) },
-        // Error FFI converter
-        VssHeaderProviderException.ErrorHandler,
-    )
-    }
+    override suspend fun `getHeaders`(`request`: List<kotlin.UByte>): Map<kotlin.String, kotlin.String> =
+        uniffiRustCallAsync(
+            callWithPointer { thisPtr ->
+                UniffiLib.INSTANCE.uniffi_ldk_node_fn_method_vssheaderprovider_get_headers(
+                    thisPtr,
+                    FfiConverterSequenceUByte.lower(`request`),
+                )
+            },
+            {
+                future,
+                callback,
+                continuation,
+                ->
+                UniffiLib.INSTANCE.ffi_ldk_node_rust_future_poll_rust_buffer(future, callback, continuation)
+            },
+            { future, continuation -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_complete_rust_buffer(future, continuation) },
+            { future -> UniffiLib.INSTANCE.ffi_ldk_node_rust_future_free_rust_buffer(future) },
+            // lift function
+            { FfiConverterMapStringString.lift(it) },
+            // Error FFI converter
+            VssHeaderProviderException.ErrorHandler,
+        )
 
-    
-
-    
-    
     companion object
-    
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeVssHeaderProvider: FfiConverter<VssHeaderProvider, Pointer> {
+public object FfiConverterTypeVssHeaderProvider : FfiConverter<VssHeaderProvider, Pointer> {
+    override fun lower(value: VssHeaderProvider): Pointer = value.uniffiClonePointer()
 
-    override fun lower(value: VssHeaderProvider): Pointer {
-        return value.uniffiClonePointer()
-    }
-
-    override fun lift(value: Pointer): VssHeaderProvider {
-        return VssHeaderProvider(value)
-    }
+    override fun lift(value: Pointer): VssHeaderProvider = VssHeaderProvider(value)
 
     override fun read(buf: ByteBuffer): VssHeaderProvider {
         // The Rust code always writes pointers as 8 bytes, and will
@@ -9306,101 +10448,101 @@ public object FfiConverterTypeVssHeaderProvider: FfiConverter<VssHeaderProvider,
 
     override fun allocationSize(value: VssHeaderProvider) = 8UL
 
-    override fun write(value: VssHeaderProvider, buf: ByteBuffer) {
+    override fun write(
+        value: VssHeaderProvider,
+        buf: ByteBuffer,
+    ) {
         // The Rust code always expects pointers written as 8 bytes,
         // and will fail to compile if they don't fit.
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
 
-
-
-data class AnchorChannelsConfig (
-    var `trustedPeersNoReserve`: List<PublicKey>, 
-    var `perChannelReserveSats`: kotlin.ULong
+data class AnchorChannelsConfig(
+    var `trustedPeersNoReserve`: List<PublicKey>,
+    var `perChannelReserveSats`: kotlin.ULong,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeAnchorChannelsConfig: FfiConverterRustBuffer<AnchorChannelsConfig> {
-    override fun read(buf: ByteBuffer): AnchorChannelsConfig {
-        return AnchorChannelsConfig(
+public object FfiConverterTypeAnchorChannelsConfig : FfiConverterRustBuffer<AnchorChannelsConfig> {
+    override fun read(buf: ByteBuffer): AnchorChannelsConfig =
+        AnchorChannelsConfig(
             FfiConverterSequenceTypePublicKey.read(buf),
             FfiConverterULong.read(buf),
         )
-    }
 
-    override fun allocationSize(value: AnchorChannelsConfig) = (
+    override fun allocationSize(value: AnchorChannelsConfig) =
+        (
             FfiConverterSequenceTypePublicKey.allocationSize(value.`trustedPeersNoReserve`) +
-            FfiConverterULong.allocationSize(value.`perChannelReserveSats`)
-    )
+                FfiConverterULong.allocationSize(value.`perChannelReserveSats`)
+        )
 
-    override fun write(value: AnchorChannelsConfig, buf: ByteBuffer) {
-            FfiConverterSequenceTypePublicKey.write(value.`trustedPeersNoReserve`, buf)
-            FfiConverterULong.write(value.`perChannelReserveSats`, buf)
+    override fun write(
+        value: AnchorChannelsConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterSequenceTypePublicKey.write(value.`trustedPeersNoReserve`, buf)
+        FfiConverterULong.write(value.`perChannelReserveSats`, buf)
     }
 }
 
-
-
-data class BackgroundSyncConfig (
-    var `onchainWalletSyncIntervalSecs`: kotlin.ULong, 
-    var `lightningWalletSyncIntervalSecs`: kotlin.ULong, 
-    var `feeRateCacheUpdateIntervalSecs`: kotlin.ULong
+data class BackgroundSyncConfig(
+    var `onchainWalletSyncIntervalSecs`: kotlin.ULong,
+    var `lightningWalletSyncIntervalSecs`: kotlin.ULong,
+    var `feeRateCacheUpdateIntervalSecs`: kotlin.ULong,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBackgroundSyncConfig: FfiConverterRustBuffer<BackgroundSyncConfig> {
-    override fun read(buf: ByteBuffer): BackgroundSyncConfig {
-        return BackgroundSyncConfig(
+public object FfiConverterTypeBackgroundSyncConfig : FfiConverterRustBuffer<BackgroundSyncConfig> {
+    override fun read(buf: ByteBuffer): BackgroundSyncConfig =
+        BackgroundSyncConfig(
             FfiConverterULong.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterULong.read(buf),
         )
-    }
 
-    override fun allocationSize(value: BackgroundSyncConfig) = (
+    override fun allocationSize(value: BackgroundSyncConfig) =
+        (
             FfiConverterULong.allocationSize(value.`onchainWalletSyncIntervalSecs`) +
-            FfiConverterULong.allocationSize(value.`lightningWalletSyncIntervalSecs`) +
-            FfiConverterULong.allocationSize(value.`feeRateCacheUpdateIntervalSecs`)
-    )
+                FfiConverterULong.allocationSize(value.`lightningWalletSyncIntervalSecs`) +
+                FfiConverterULong.allocationSize(value.`feeRateCacheUpdateIntervalSecs`)
+        )
 
-    override fun write(value: BackgroundSyncConfig, buf: ByteBuffer) {
-            FfiConverterULong.write(value.`onchainWalletSyncIntervalSecs`, buf)
-            FfiConverterULong.write(value.`lightningWalletSyncIntervalSecs`, buf)
-            FfiConverterULong.write(value.`feeRateCacheUpdateIntervalSecs`, buf)
+    override fun write(
+        value: BackgroundSyncConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterULong.write(value.`onchainWalletSyncIntervalSecs`, buf)
+        FfiConverterULong.write(value.`lightningWalletSyncIntervalSecs`, buf)
+        FfiConverterULong.write(value.`feeRateCacheUpdateIntervalSecs`, buf)
     }
 }
 
-
-
-data class BalanceDetails (
-    var `totalOnchainBalanceSats`: kotlin.ULong, 
-    var `spendableOnchainBalanceSats`: kotlin.ULong, 
-    var `totalAnchorChannelsReserveSats`: kotlin.ULong, 
-    var `totalLightningBalanceSats`: kotlin.ULong, 
-    var `lightningBalances`: List<LightningBalance>, 
-    var `pendingBalancesFromChannelClosures`: List<PendingSweepBalance>
+data class BalanceDetails(
+    var `totalOnchainBalanceSats`: kotlin.ULong,
+    var `spendableOnchainBalanceSats`: kotlin.ULong,
+    var `totalAnchorChannelsReserveSats`: kotlin.ULong,
+    var `totalLightningBalanceSats`: kotlin.ULong,
+    var `lightningBalances`: List<LightningBalance>,
+    var `pendingBalancesFromChannelClosures`: List<PendingSweepBalance>,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBalanceDetails: FfiConverterRustBuffer<BalanceDetails> {
-    override fun read(buf: ByteBuffer): BalanceDetails {
-        return BalanceDetails(
+public object FfiConverterTypeBalanceDetails : FfiConverterRustBuffer<BalanceDetails> {
+    override fun read(buf: ByteBuffer): BalanceDetails =
+        BalanceDetails(
             FfiConverterULong.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterULong.read(buf),
@@ -9408,79 +10550,79 @@ public object FfiConverterTypeBalanceDetails: FfiConverterRustBuffer<BalanceDeta
             FfiConverterSequenceTypeLightningBalance.read(buf),
             FfiConverterSequenceTypePendingSweepBalance.read(buf),
         )
-    }
 
-    override fun allocationSize(value: BalanceDetails) = (
+    override fun allocationSize(value: BalanceDetails) =
+        (
             FfiConverterULong.allocationSize(value.`totalOnchainBalanceSats`) +
-            FfiConverterULong.allocationSize(value.`spendableOnchainBalanceSats`) +
-            FfiConverterULong.allocationSize(value.`totalAnchorChannelsReserveSats`) +
-            FfiConverterULong.allocationSize(value.`totalLightningBalanceSats`) +
-            FfiConverterSequenceTypeLightningBalance.allocationSize(value.`lightningBalances`) +
-            FfiConverterSequenceTypePendingSweepBalance.allocationSize(value.`pendingBalancesFromChannelClosures`)
-    )
+                FfiConverterULong.allocationSize(value.`spendableOnchainBalanceSats`) +
+                FfiConverterULong.allocationSize(value.`totalAnchorChannelsReserveSats`) +
+                FfiConverterULong.allocationSize(value.`totalLightningBalanceSats`) +
+                FfiConverterSequenceTypeLightningBalance.allocationSize(value.`lightningBalances`) +
+                FfiConverterSequenceTypePendingSweepBalance.allocationSize(value.`pendingBalancesFromChannelClosures`)
+        )
 
-    override fun write(value: BalanceDetails, buf: ByteBuffer) {
-            FfiConverterULong.write(value.`totalOnchainBalanceSats`, buf)
-            FfiConverterULong.write(value.`spendableOnchainBalanceSats`, buf)
-            FfiConverterULong.write(value.`totalAnchorChannelsReserveSats`, buf)
-            FfiConverterULong.write(value.`totalLightningBalanceSats`, buf)
-            FfiConverterSequenceTypeLightningBalance.write(value.`lightningBalances`, buf)
-            FfiConverterSequenceTypePendingSweepBalance.write(value.`pendingBalancesFromChannelClosures`, buf)
+    override fun write(
+        value: BalanceDetails,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterULong.write(value.`totalOnchainBalanceSats`, buf)
+        FfiConverterULong.write(value.`spendableOnchainBalanceSats`, buf)
+        FfiConverterULong.write(value.`totalAnchorChannelsReserveSats`, buf)
+        FfiConverterULong.write(value.`totalLightningBalanceSats`, buf)
+        FfiConverterSequenceTypeLightningBalance.write(value.`lightningBalances`, buf)
+        FfiConverterSequenceTypePendingSweepBalance.write(value.`pendingBalancesFromChannelClosures`, buf)
     }
 }
 
-
-
-data class BestBlock (
-    var `blockHash`: BlockHash, 
-    var `height`: kotlin.UInt
+data class BestBlock(
+    var `blockHash`: BlockHash,
+    var `height`: kotlin.UInt,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBestBlock: FfiConverterRustBuffer<BestBlock> {
-    override fun read(buf: ByteBuffer): BestBlock {
-        return BestBlock(
+public object FfiConverterTypeBestBlock : FfiConverterRustBuffer<BestBlock> {
+    override fun read(buf: ByteBuffer): BestBlock =
+        BestBlock(
             FfiConverterTypeBlockHash.read(buf),
             FfiConverterUInt.read(buf),
         )
-    }
 
-    override fun allocationSize(value: BestBlock) = (
+    override fun allocationSize(value: BestBlock) =
+        (
             FfiConverterTypeBlockHash.allocationSize(value.`blockHash`) +
-            FfiConverterUInt.allocationSize(value.`height`)
-    )
+                FfiConverterUInt.allocationSize(value.`height`)
+        )
 
-    override fun write(value: BestBlock, buf: ByteBuffer) {
-            FfiConverterTypeBlockHash.write(value.`blockHash`, buf)
-            FfiConverterUInt.write(value.`height`, buf)
+    override fun write(
+        value: BestBlock,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeBlockHash.write(value.`blockHash`, buf)
+        FfiConverterUInt.write(value.`height`, buf)
     }
 }
 
-
-
-data class ChannelConfig (
-    var `forwardingFeeProportionalMillionths`: kotlin.UInt, 
-    var `forwardingFeeBaseMsat`: kotlin.UInt, 
-    var `cltvExpiryDelta`: kotlin.UShort, 
-    var `maxDustHtlcExposure`: MaxDustHtlcExposure, 
-    var `forceCloseAvoidanceMaxFeeSatoshis`: kotlin.ULong, 
-    var `acceptUnderpayingHtlcs`: kotlin.Boolean
+data class ChannelConfig(
+    var `forwardingFeeProportionalMillionths`: kotlin.UInt,
+    var `forwardingFeeBaseMsat`: kotlin.UInt,
+    var `cltvExpiryDelta`: kotlin.UShort,
+    var `maxDustHtlcExposure`: MaxDustHtlcExposure,
+    var `forceCloseAvoidanceMaxFeeSatoshis`: kotlin.ULong,
+    var `acceptUnderpayingHtlcs`: kotlin.Boolean,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeChannelConfig: FfiConverterRustBuffer<ChannelConfig> {
-    override fun read(buf: ByteBuffer): ChannelConfig {
-        return ChannelConfig(
+public object FfiConverterTypeChannelConfig : FfiConverterRustBuffer<ChannelConfig> {
+    override fun read(buf: ByteBuffer): ChannelConfig =
+        ChannelConfig(
             FfiConverterUInt.read(buf),
             FfiConverterUInt.read(buf),
             FfiConverterUShort.read(buf),
@@ -9488,73 +10630,73 @@ public object FfiConverterTypeChannelConfig: FfiConverterRustBuffer<ChannelConfi
             FfiConverterULong.read(buf),
             FfiConverterBoolean.read(buf),
         )
-    }
 
-    override fun allocationSize(value: ChannelConfig) = (
+    override fun allocationSize(value: ChannelConfig) =
+        (
             FfiConverterUInt.allocationSize(value.`forwardingFeeProportionalMillionths`) +
-            FfiConverterUInt.allocationSize(value.`forwardingFeeBaseMsat`) +
-            FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
-            FfiConverterTypeMaxDustHTLCExposure.allocationSize(value.`maxDustHtlcExposure`) +
-            FfiConverterULong.allocationSize(value.`forceCloseAvoidanceMaxFeeSatoshis`) +
-            FfiConverterBoolean.allocationSize(value.`acceptUnderpayingHtlcs`)
-    )
+                FfiConverterUInt.allocationSize(value.`forwardingFeeBaseMsat`) +
+                FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
+                FfiConverterTypeMaxDustHTLCExposure.allocationSize(value.`maxDustHtlcExposure`) +
+                FfiConverterULong.allocationSize(value.`forceCloseAvoidanceMaxFeeSatoshis`) +
+                FfiConverterBoolean.allocationSize(value.`acceptUnderpayingHtlcs`)
+        )
 
-    override fun write(value: ChannelConfig, buf: ByteBuffer) {
-            FfiConverterUInt.write(value.`forwardingFeeProportionalMillionths`, buf)
-            FfiConverterUInt.write(value.`forwardingFeeBaseMsat`, buf)
-            FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
-            FfiConverterTypeMaxDustHTLCExposure.write(value.`maxDustHtlcExposure`, buf)
-            FfiConverterULong.write(value.`forceCloseAvoidanceMaxFeeSatoshis`, buf)
-            FfiConverterBoolean.write(value.`acceptUnderpayingHtlcs`, buf)
+    override fun write(
+        value: ChannelConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterUInt.write(value.`forwardingFeeProportionalMillionths`, buf)
+        FfiConverterUInt.write(value.`forwardingFeeBaseMsat`, buf)
+        FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
+        FfiConverterTypeMaxDustHTLCExposure.write(value.`maxDustHtlcExposure`, buf)
+        FfiConverterULong.write(value.`forceCloseAvoidanceMaxFeeSatoshis`, buf)
+        FfiConverterBoolean.write(value.`acceptUnderpayingHtlcs`, buf)
     }
 }
 
-
-
-data class ChannelDetails (
-    var `channelId`: ChannelId, 
-    var `counterpartyNodeId`: PublicKey, 
-    var `fundingTxo`: OutPoint?, 
-    var `fundingRedeemScript`: ScriptBuf?, 
-    var `shortChannelId`: kotlin.ULong?, 
-    var `outboundScidAlias`: kotlin.ULong?, 
-    var `inboundScidAlias`: kotlin.ULong?, 
-    var `channelValueSats`: kotlin.ULong, 
-    var `unspendablePunishmentReserve`: kotlin.ULong?, 
-    var `userChannelId`: UserChannelId, 
-    var `feerateSatPer1000Weight`: kotlin.UInt, 
-    var `outboundCapacityMsat`: kotlin.ULong, 
-    var `inboundCapacityMsat`: kotlin.ULong, 
-    var `confirmationsRequired`: kotlin.UInt?, 
-    var `confirmations`: kotlin.UInt?, 
-    var `isOutbound`: kotlin.Boolean, 
-    var `isChannelReady`: kotlin.Boolean, 
-    var `isUsable`: kotlin.Boolean, 
-    var `isAnnounced`: kotlin.Boolean, 
-    var `cltvExpiryDelta`: kotlin.UShort?, 
-    var `counterpartyUnspendablePunishmentReserve`: kotlin.ULong, 
-    var `counterpartyOutboundHtlcMinimumMsat`: kotlin.ULong?, 
-    var `counterpartyOutboundHtlcMaximumMsat`: kotlin.ULong?, 
-    var `counterpartyForwardingInfoFeeBaseMsat`: kotlin.UInt?, 
-    var `counterpartyForwardingInfoFeeProportionalMillionths`: kotlin.UInt?, 
-    var `counterpartyForwardingInfoCltvExpiryDelta`: kotlin.UShort?, 
-    var `nextOutboundHtlcLimitMsat`: kotlin.ULong, 
-    var `nextOutboundHtlcMinimumMsat`: kotlin.ULong, 
-    var `forceCloseSpendDelay`: kotlin.UShort?, 
-    var `inboundHtlcMinimumMsat`: kotlin.ULong, 
-    var `inboundHtlcMaximumMsat`: kotlin.ULong?, 
-    var `config`: ChannelConfig
+data class ChannelDetails(
+    var `channelId`: ChannelId,
+    var `counterpartyNodeId`: PublicKey,
+    var `fundingTxo`: OutPoint?,
+    var `fundingRedeemScript`: ScriptBuf?,
+    var `shortChannelId`: kotlin.ULong?,
+    var `outboundScidAlias`: kotlin.ULong?,
+    var `inboundScidAlias`: kotlin.ULong?,
+    var `channelValueSats`: kotlin.ULong,
+    var `unspendablePunishmentReserve`: kotlin.ULong?,
+    var `userChannelId`: UserChannelId,
+    var `feerateSatPer1000Weight`: kotlin.UInt,
+    var `outboundCapacityMsat`: kotlin.ULong,
+    var `inboundCapacityMsat`: kotlin.ULong,
+    var `confirmationsRequired`: kotlin.UInt?,
+    var `confirmations`: kotlin.UInt?,
+    var `isOutbound`: kotlin.Boolean,
+    var `isChannelReady`: kotlin.Boolean,
+    var `isUsable`: kotlin.Boolean,
+    var `isAnnounced`: kotlin.Boolean,
+    var `cltvExpiryDelta`: kotlin.UShort?,
+    var `counterpartyUnspendablePunishmentReserve`: kotlin.ULong,
+    var `counterpartyOutboundHtlcMinimumMsat`: kotlin.ULong?,
+    var `counterpartyOutboundHtlcMaximumMsat`: kotlin.ULong?,
+    var `counterpartyForwardingInfoFeeBaseMsat`: kotlin.UInt?,
+    var `counterpartyForwardingInfoFeeProportionalMillionths`: kotlin.UInt?,
+    var `counterpartyForwardingInfoCltvExpiryDelta`: kotlin.UShort?,
+    var `nextOutboundHtlcLimitMsat`: kotlin.ULong,
+    var `nextOutboundHtlcMinimumMsat`: kotlin.ULong,
+    var `forceCloseSpendDelay`: kotlin.UShort?,
+    var `inboundHtlcMinimumMsat`: kotlin.ULong,
+    var `inboundHtlcMaximumMsat`: kotlin.ULong?,
+    var `config`: ChannelConfig,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeChannelDetails: FfiConverterRustBuffer<ChannelDetails> {
-    override fun read(buf: ByteBuffer): ChannelDetails {
-        return ChannelDetails(
+public object FfiConverterTypeChannelDetails : FfiConverterRustBuffer<ChannelDetails> {
+    override fun read(buf: ByteBuffer): ChannelDetails =
+        ChannelDetails(
             FfiConverterTypeChannelId.read(buf),
             FfiConverterTypePublicKey.read(buf),
             FfiConverterOptionalTypeOutPoint.read(buf),
@@ -9588,143 +10730,143 @@ public object FfiConverterTypeChannelDetails: FfiConverterRustBuffer<ChannelDeta
             FfiConverterOptionalULong.read(buf),
             FfiConverterTypeChannelConfig.read(buf),
         )
-    }
 
-    override fun allocationSize(value: ChannelDetails) = (
+    override fun allocationSize(value: ChannelDetails) =
+        (
             FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
-            FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
-            FfiConverterOptionalTypeOutPoint.allocationSize(value.`fundingTxo`) +
-            FfiConverterOptionalTypeScriptBuf.allocationSize(value.`fundingRedeemScript`) +
-            FfiConverterOptionalULong.allocationSize(value.`shortChannelId`) +
-            FfiConverterOptionalULong.allocationSize(value.`outboundScidAlias`) +
-            FfiConverterOptionalULong.allocationSize(value.`inboundScidAlias`) +
-            FfiConverterULong.allocationSize(value.`channelValueSats`) +
-            FfiConverterOptionalULong.allocationSize(value.`unspendablePunishmentReserve`) +
-            FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
-            FfiConverterUInt.allocationSize(value.`feerateSatPer1000Weight`) +
-            FfiConverterULong.allocationSize(value.`outboundCapacityMsat`) +
-            FfiConverterULong.allocationSize(value.`inboundCapacityMsat`) +
-            FfiConverterOptionalUInt.allocationSize(value.`confirmationsRequired`) +
-            FfiConverterOptionalUInt.allocationSize(value.`confirmations`) +
-            FfiConverterBoolean.allocationSize(value.`isOutbound`) +
-            FfiConverterBoolean.allocationSize(value.`isChannelReady`) +
-            FfiConverterBoolean.allocationSize(value.`isUsable`) +
-            FfiConverterBoolean.allocationSize(value.`isAnnounced`) +
-            FfiConverterOptionalUShort.allocationSize(value.`cltvExpiryDelta`) +
-            FfiConverterULong.allocationSize(value.`counterpartyUnspendablePunishmentReserve`) +
-            FfiConverterOptionalULong.allocationSize(value.`counterpartyOutboundHtlcMinimumMsat`) +
-            FfiConverterOptionalULong.allocationSize(value.`counterpartyOutboundHtlcMaximumMsat`) +
-            FfiConverterOptionalUInt.allocationSize(value.`counterpartyForwardingInfoFeeBaseMsat`) +
-            FfiConverterOptionalUInt.allocationSize(value.`counterpartyForwardingInfoFeeProportionalMillionths`) +
-            FfiConverterOptionalUShort.allocationSize(value.`counterpartyForwardingInfoCltvExpiryDelta`) +
-            FfiConverterULong.allocationSize(value.`nextOutboundHtlcLimitMsat`) +
-            FfiConverterULong.allocationSize(value.`nextOutboundHtlcMinimumMsat`) +
-            FfiConverterOptionalUShort.allocationSize(value.`forceCloseSpendDelay`) +
-            FfiConverterULong.allocationSize(value.`inboundHtlcMinimumMsat`) +
-            FfiConverterOptionalULong.allocationSize(value.`inboundHtlcMaximumMsat`) +
-            FfiConverterTypeChannelConfig.allocationSize(value.`config`)
-    )
+                FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                FfiConverterOptionalTypeOutPoint.allocationSize(value.`fundingTxo`) +
+                FfiConverterOptionalTypeScriptBuf.allocationSize(value.`fundingRedeemScript`) +
+                FfiConverterOptionalULong.allocationSize(value.`shortChannelId`) +
+                FfiConverterOptionalULong.allocationSize(value.`outboundScidAlias`) +
+                FfiConverterOptionalULong.allocationSize(value.`inboundScidAlias`) +
+                FfiConverterULong.allocationSize(value.`channelValueSats`) +
+                FfiConverterOptionalULong.allocationSize(value.`unspendablePunishmentReserve`) +
+                FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
+                FfiConverterUInt.allocationSize(value.`feerateSatPer1000Weight`) +
+                FfiConverterULong.allocationSize(value.`outboundCapacityMsat`) +
+                FfiConverterULong.allocationSize(value.`inboundCapacityMsat`) +
+                FfiConverterOptionalUInt.allocationSize(value.`confirmationsRequired`) +
+                FfiConverterOptionalUInt.allocationSize(value.`confirmations`) +
+                FfiConverterBoolean.allocationSize(value.`isOutbound`) +
+                FfiConverterBoolean.allocationSize(value.`isChannelReady`) +
+                FfiConverterBoolean.allocationSize(value.`isUsable`) +
+                FfiConverterBoolean.allocationSize(value.`isAnnounced`) +
+                FfiConverterOptionalUShort.allocationSize(value.`cltvExpiryDelta`) +
+                FfiConverterULong.allocationSize(value.`counterpartyUnspendablePunishmentReserve`) +
+                FfiConverterOptionalULong.allocationSize(value.`counterpartyOutboundHtlcMinimumMsat`) +
+                FfiConverterOptionalULong.allocationSize(value.`counterpartyOutboundHtlcMaximumMsat`) +
+                FfiConverterOptionalUInt.allocationSize(value.`counterpartyForwardingInfoFeeBaseMsat`) +
+                FfiConverterOptionalUInt.allocationSize(value.`counterpartyForwardingInfoFeeProportionalMillionths`) +
+                FfiConverterOptionalUShort.allocationSize(value.`counterpartyForwardingInfoCltvExpiryDelta`) +
+                FfiConverterULong.allocationSize(value.`nextOutboundHtlcLimitMsat`) +
+                FfiConverterULong.allocationSize(value.`nextOutboundHtlcMinimumMsat`) +
+                FfiConverterOptionalUShort.allocationSize(value.`forceCloseSpendDelay`) +
+                FfiConverterULong.allocationSize(value.`inboundHtlcMinimumMsat`) +
+                FfiConverterOptionalULong.allocationSize(value.`inboundHtlcMaximumMsat`) +
+                FfiConverterTypeChannelConfig.allocationSize(value.`config`)
+        )
 
-    override fun write(value: ChannelDetails, buf: ByteBuffer) {
-            FfiConverterTypeChannelId.write(value.`channelId`, buf)
-            FfiConverterTypePublicKey.write(value.`counterpartyNodeId`, buf)
-            FfiConverterOptionalTypeOutPoint.write(value.`fundingTxo`, buf)
-            FfiConverterOptionalTypeScriptBuf.write(value.`fundingRedeemScript`, buf)
-            FfiConverterOptionalULong.write(value.`shortChannelId`, buf)
-            FfiConverterOptionalULong.write(value.`outboundScidAlias`, buf)
-            FfiConverterOptionalULong.write(value.`inboundScidAlias`, buf)
-            FfiConverterULong.write(value.`channelValueSats`, buf)
-            FfiConverterOptionalULong.write(value.`unspendablePunishmentReserve`, buf)
-            FfiConverterTypeUserChannelId.write(value.`userChannelId`, buf)
-            FfiConverterUInt.write(value.`feerateSatPer1000Weight`, buf)
-            FfiConverterULong.write(value.`outboundCapacityMsat`, buf)
-            FfiConverterULong.write(value.`inboundCapacityMsat`, buf)
-            FfiConverterOptionalUInt.write(value.`confirmationsRequired`, buf)
-            FfiConverterOptionalUInt.write(value.`confirmations`, buf)
-            FfiConverterBoolean.write(value.`isOutbound`, buf)
-            FfiConverterBoolean.write(value.`isChannelReady`, buf)
-            FfiConverterBoolean.write(value.`isUsable`, buf)
-            FfiConverterBoolean.write(value.`isAnnounced`, buf)
-            FfiConverterOptionalUShort.write(value.`cltvExpiryDelta`, buf)
-            FfiConverterULong.write(value.`counterpartyUnspendablePunishmentReserve`, buf)
-            FfiConverterOptionalULong.write(value.`counterpartyOutboundHtlcMinimumMsat`, buf)
-            FfiConverterOptionalULong.write(value.`counterpartyOutboundHtlcMaximumMsat`, buf)
-            FfiConverterOptionalUInt.write(value.`counterpartyForwardingInfoFeeBaseMsat`, buf)
-            FfiConverterOptionalUInt.write(value.`counterpartyForwardingInfoFeeProportionalMillionths`, buf)
-            FfiConverterOptionalUShort.write(value.`counterpartyForwardingInfoCltvExpiryDelta`, buf)
-            FfiConverterULong.write(value.`nextOutboundHtlcLimitMsat`, buf)
-            FfiConverterULong.write(value.`nextOutboundHtlcMinimumMsat`, buf)
-            FfiConverterOptionalUShort.write(value.`forceCloseSpendDelay`, buf)
-            FfiConverterULong.write(value.`inboundHtlcMinimumMsat`, buf)
-            FfiConverterOptionalULong.write(value.`inboundHtlcMaximumMsat`, buf)
-            FfiConverterTypeChannelConfig.write(value.`config`, buf)
+    override fun write(
+        value: ChannelDetails,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeChannelId.write(value.`channelId`, buf)
+        FfiConverterTypePublicKey.write(value.`counterpartyNodeId`, buf)
+        FfiConverterOptionalTypeOutPoint.write(value.`fundingTxo`, buf)
+        FfiConverterOptionalTypeScriptBuf.write(value.`fundingRedeemScript`, buf)
+        FfiConverterOptionalULong.write(value.`shortChannelId`, buf)
+        FfiConverterOptionalULong.write(value.`outboundScidAlias`, buf)
+        FfiConverterOptionalULong.write(value.`inboundScidAlias`, buf)
+        FfiConverterULong.write(value.`channelValueSats`, buf)
+        FfiConverterOptionalULong.write(value.`unspendablePunishmentReserve`, buf)
+        FfiConverterTypeUserChannelId.write(value.`userChannelId`, buf)
+        FfiConverterUInt.write(value.`feerateSatPer1000Weight`, buf)
+        FfiConverterULong.write(value.`outboundCapacityMsat`, buf)
+        FfiConverterULong.write(value.`inboundCapacityMsat`, buf)
+        FfiConverterOptionalUInt.write(value.`confirmationsRequired`, buf)
+        FfiConverterOptionalUInt.write(value.`confirmations`, buf)
+        FfiConverterBoolean.write(value.`isOutbound`, buf)
+        FfiConverterBoolean.write(value.`isChannelReady`, buf)
+        FfiConverterBoolean.write(value.`isUsable`, buf)
+        FfiConverterBoolean.write(value.`isAnnounced`, buf)
+        FfiConverterOptionalUShort.write(value.`cltvExpiryDelta`, buf)
+        FfiConverterULong.write(value.`counterpartyUnspendablePunishmentReserve`, buf)
+        FfiConverterOptionalULong.write(value.`counterpartyOutboundHtlcMinimumMsat`, buf)
+        FfiConverterOptionalULong.write(value.`counterpartyOutboundHtlcMaximumMsat`, buf)
+        FfiConverterOptionalUInt.write(value.`counterpartyForwardingInfoFeeBaseMsat`, buf)
+        FfiConverterOptionalUInt.write(value.`counterpartyForwardingInfoFeeProportionalMillionths`, buf)
+        FfiConverterOptionalUShort.write(value.`counterpartyForwardingInfoCltvExpiryDelta`, buf)
+        FfiConverterULong.write(value.`nextOutboundHtlcLimitMsat`, buf)
+        FfiConverterULong.write(value.`nextOutboundHtlcMinimumMsat`, buf)
+        FfiConverterOptionalUShort.write(value.`forceCloseSpendDelay`, buf)
+        FfiConverterULong.write(value.`inboundHtlcMinimumMsat`, buf)
+        FfiConverterOptionalULong.write(value.`inboundHtlcMaximumMsat`, buf)
+        FfiConverterTypeChannelConfig.write(value.`config`, buf)
     }
 }
 
-
-
-data class ChannelInfo (
-    var `nodeOne`: NodeId, 
-    var `oneToTwo`: ChannelUpdateInfo?, 
-    var `nodeTwo`: NodeId, 
-    var `twoToOne`: ChannelUpdateInfo?, 
-    var `capacitySats`: kotlin.ULong?
+data class ChannelInfo(
+    var `nodeOne`: NodeId,
+    var `oneToTwo`: ChannelUpdateInfo?,
+    var `nodeTwo`: NodeId,
+    var `twoToOne`: ChannelUpdateInfo?,
+    var `capacitySats`: kotlin.ULong?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeChannelInfo: FfiConverterRustBuffer<ChannelInfo> {
-    override fun read(buf: ByteBuffer): ChannelInfo {
-        return ChannelInfo(
+public object FfiConverterTypeChannelInfo : FfiConverterRustBuffer<ChannelInfo> {
+    override fun read(buf: ByteBuffer): ChannelInfo =
+        ChannelInfo(
             FfiConverterTypeNodeId.read(buf),
             FfiConverterOptionalTypeChannelUpdateInfo.read(buf),
             FfiConverterTypeNodeId.read(buf),
             FfiConverterOptionalTypeChannelUpdateInfo.read(buf),
             FfiConverterOptionalULong.read(buf),
         )
-    }
 
-    override fun allocationSize(value: ChannelInfo) = (
+    override fun allocationSize(value: ChannelInfo) =
+        (
             FfiConverterTypeNodeId.allocationSize(value.`nodeOne`) +
-            FfiConverterOptionalTypeChannelUpdateInfo.allocationSize(value.`oneToTwo`) +
-            FfiConverterTypeNodeId.allocationSize(value.`nodeTwo`) +
-            FfiConverterOptionalTypeChannelUpdateInfo.allocationSize(value.`twoToOne`) +
-            FfiConverterOptionalULong.allocationSize(value.`capacitySats`)
-    )
+                FfiConverterOptionalTypeChannelUpdateInfo.allocationSize(value.`oneToTwo`) +
+                FfiConverterTypeNodeId.allocationSize(value.`nodeTwo`) +
+                FfiConverterOptionalTypeChannelUpdateInfo.allocationSize(value.`twoToOne`) +
+                FfiConverterOptionalULong.allocationSize(value.`capacitySats`)
+        )
 
-    override fun write(value: ChannelInfo, buf: ByteBuffer) {
-            FfiConverterTypeNodeId.write(value.`nodeOne`, buf)
-            FfiConverterOptionalTypeChannelUpdateInfo.write(value.`oneToTwo`, buf)
-            FfiConverterTypeNodeId.write(value.`nodeTwo`, buf)
-            FfiConverterOptionalTypeChannelUpdateInfo.write(value.`twoToOne`, buf)
-            FfiConverterOptionalULong.write(value.`capacitySats`, buf)
+    override fun write(
+        value: ChannelInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeNodeId.write(value.`nodeOne`, buf)
+        FfiConverterOptionalTypeChannelUpdateInfo.write(value.`oneToTwo`, buf)
+        FfiConverterTypeNodeId.write(value.`nodeTwo`, buf)
+        FfiConverterOptionalTypeChannelUpdateInfo.write(value.`twoToOne`, buf)
+        FfiConverterOptionalULong.write(value.`capacitySats`, buf)
     }
 }
 
-
-
-data class ChannelUpdateInfo (
-    var `lastUpdate`: kotlin.UInt, 
-    var `enabled`: kotlin.Boolean, 
-    var `cltvExpiryDelta`: kotlin.UShort, 
-    var `htlcMinimumMsat`: kotlin.ULong, 
-    var `htlcMaximumMsat`: kotlin.ULong, 
-    var `fees`: RoutingFees
+data class ChannelUpdateInfo(
+    var `lastUpdate`: kotlin.UInt,
+    var `enabled`: kotlin.Boolean,
+    var `cltvExpiryDelta`: kotlin.UShort,
+    var `htlcMinimumMsat`: kotlin.ULong,
+    var `htlcMaximumMsat`: kotlin.ULong,
+    var `fees`: RoutingFees,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeChannelUpdateInfo: FfiConverterRustBuffer<ChannelUpdateInfo> {
-    override fun read(buf: ByteBuffer): ChannelUpdateInfo {
-        return ChannelUpdateInfo(
+public object FfiConverterTypeChannelUpdateInfo : FfiConverterRustBuffer<ChannelUpdateInfo> {
+    override fun read(buf: ByteBuffer): ChannelUpdateInfo =
+        ChannelUpdateInfo(
             FfiConverterUInt.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterUShort.read(buf),
@@ -9732,50 +10874,50 @@ public object FfiConverterTypeChannelUpdateInfo: FfiConverterRustBuffer<ChannelU
             FfiConverterULong.read(buf),
             FfiConverterTypeRoutingFees.read(buf),
         )
-    }
 
-    override fun allocationSize(value: ChannelUpdateInfo) = (
+    override fun allocationSize(value: ChannelUpdateInfo) =
+        (
             FfiConverterUInt.allocationSize(value.`lastUpdate`) +
-            FfiConverterBoolean.allocationSize(value.`enabled`) +
-            FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
-            FfiConverterULong.allocationSize(value.`htlcMinimumMsat`) +
-            FfiConverterULong.allocationSize(value.`htlcMaximumMsat`) +
-            FfiConverterTypeRoutingFees.allocationSize(value.`fees`)
-    )
+                FfiConverterBoolean.allocationSize(value.`enabled`) +
+                FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
+                FfiConverterULong.allocationSize(value.`htlcMinimumMsat`) +
+                FfiConverterULong.allocationSize(value.`htlcMaximumMsat`) +
+                FfiConverterTypeRoutingFees.allocationSize(value.`fees`)
+        )
 
-    override fun write(value: ChannelUpdateInfo, buf: ByteBuffer) {
-            FfiConverterUInt.write(value.`lastUpdate`, buf)
-            FfiConverterBoolean.write(value.`enabled`, buf)
-            FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
-            FfiConverterULong.write(value.`htlcMinimumMsat`, buf)
-            FfiConverterULong.write(value.`htlcMaximumMsat`, buf)
-            FfiConverterTypeRoutingFees.write(value.`fees`, buf)
+    override fun write(
+        value: ChannelUpdateInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterUInt.write(value.`lastUpdate`, buf)
+        FfiConverterBoolean.write(value.`enabled`, buf)
+        FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
+        FfiConverterULong.write(value.`htlcMinimumMsat`, buf)
+        FfiConverterULong.write(value.`htlcMaximumMsat`, buf)
+        FfiConverterTypeRoutingFees.write(value.`fees`, buf)
     }
 }
 
-
-
-data class Config (
-    var `storageDirPath`: kotlin.String, 
-    var `network`: Network, 
-    var `listeningAddresses`: List<SocketAddress>?, 
-    var `announcementAddresses`: List<SocketAddress>?, 
-    var `nodeAlias`: NodeAlias?, 
-    var `trustedPeers0conf`: List<PublicKey>, 
-    var `probingLiquidityLimitMultiplier`: kotlin.ULong, 
-    var `anchorChannelsConfig`: AnchorChannelsConfig?, 
-    var `routeParameters`: RouteParametersConfig?
+data class Config(
+    var `storageDirPath`: kotlin.String,
+    var `network`: Network,
+    var `listeningAddresses`: List<SocketAddress>?,
+    var `announcementAddresses`: List<SocketAddress>?,
+    var `nodeAlias`: NodeAlias?,
+    var `trustedPeers0conf`: List<PublicKey>,
+    var `probingLiquidityLimitMultiplier`: kotlin.ULong,
+    var `anchorChannelsConfig`: AnchorChannelsConfig?,
+    var `routeParameters`: RouteParametersConfig?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeConfig: FfiConverterRustBuffer<Config> {
-    override fun read(buf: ByteBuffer): Config {
-        return Config(
+public object FfiConverterTypeConfig : FfiConverterRustBuffer<Config> {
+    override fun read(buf: ByteBuffer): Config =
+        Config(
             FfiConverterString.read(buf),
             FfiConverterTypeNetwork.read(buf),
             FfiConverterOptionalSequenceTypeSocketAddress.read(buf),
@@ -9786,291 +10928,287 @@ public object FfiConverterTypeConfig: FfiConverterRustBuffer<Config> {
             FfiConverterOptionalTypeAnchorChannelsConfig.read(buf),
             FfiConverterOptionalTypeRouteParametersConfig.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Config) = (
+    override fun allocationSize(value: Config) =
+        (
             FfiConverterString.allocationSize(value.`storageDirPath`) +
-            FfiConverterTypeNetwork.allocationSize(value.`network`) +
-            FfiConverterOptionalSequenceTypeSocketAddress.allocationSize(value.`listeningAddresses`) +
-            FfiConverterOptionalSequenceTypeSocketAddress.allocationSize(value.`announcementAddresses`) +
-            FfiConverterOptionalTypeNodeAlias.allocationSize(value.`nodeAlias`) +
-            FfiConverterSequenceTypePublicKey.allocationSize(value.`trustedPeers0conf`) +
-            FfiConverterULong.allocationSize(value.`probingLiquidityLimitMultiplier`) +
-            FfiConverterOptionalTypeAnchorChannelsConfig.allocationSize(value.`anchorChannelsConfig`) +
-            FfiConverterOptionalTypeRouteParametersConfig.allocationSize(value.`routeParameters`)
-    )
+                FfiConverterTypeNetwork.allocationSize(value.`network`) +
+                FfiConverterOptionalSequenceTypeSocketAddress.allocationSize(value.`listeningAddresses`) +
+                FfiConverterOptionalSequenceTypeSocketAddress.allocationSize(value.`announcementAddresses`) +
+                FfiConverterOptionalTypeNodeAlias.allocationSize(value.`nodeAlias`) +
+                FfiConverterSequenceTypePublicKey.allocationSize(value.`trustedPeers0conf`) +
+                FfiConverterULong.allocationSize(value.`probingLiquidityLimitMultiplier`) +
+                FfiConverterOptionalTypeAnchorChannelsConfig.allocationSize(value.`anchorChannelsConfig`) +
+                FfiConverterOptionalTypeRouteParametersConfig.allocationSize(value.`routeParameters`)
+        )
 
-    override fun write(value: Config, buf: ByteBuffer) {
-            FfiConverterString.write(value.`storageDirPath`, buf)
-            FfiConverterTypeNetwork.write(value.`network`, buf)
-            FfiConverterOptionalSequenceTypeSocketAddress.write(value.`listeningAddresses`, buf)
-            FfiConverterOptionalSequenceTypeSocketAddress.write(value.`announcementAddresses`, buf)
-            FfiConverterOptionalTypeNodeAlias.write(value.`nodeAlias`, buf)
-            FfiConverterSequenceTypePublicKey.write(value.`trustedPeers0conf`, buf)
-            FfiConverterULong.write(value.`probingLiquidityLimitMultiplier`, buf)
-            FfiConverterOptionalTypeAnchorChannelsConfig.write(value.`anchorChannelsConfig`, buf)
-            FfiConverterOptionalTypeRouteParametersConfig.write(value.`routeParameters`, buf)
+    override fun write(
+        value: Config,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterString.write(value.`storageDirPath`, buf)
+        FfiConverterTypeNetwork.write(value.`network`, buf)
+        FfiConverterOptionalSequenceTypeSocketAddress.write(value.`listeningAddresses`, buf)
+        FfiConverterOptionalSequenceTypeSocketAddress.write(value.`announcementAddresses`, buf)
+        FfiConverterOptionalTypeNodeAlias.write(value.`nodeAlias`, buf)
+        FfiConverterSequenceTypePublicKey.write(value.`trustedPeers0conf`, buf)
+        FfiConverterULong.write(value.`probingLiquidityLimitMultiplier`, buf)
+        FfiConverterOptionalTypeAnchorChannelsConfig.write(value.`anchorChannelsConfig`, buf)
+        FfiConverterOptionalTypeRouteParametersConfig.write(value.`routeParameters`, buf)
     }
 }
 
-
-
-data class CustomTlvRecord (
-    var `typeNum`: kotlin.ULong, 
-    var `value`: List<kotlin.UByte>
+data class CustomTlvRecord(
+    var `typeNum`: kotlin.ULong,
+    var `value`: List<kotlin.UByte>,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeCustomTlvRecord: FfiConverterRustBuffer<CustomTlvRecord> {
-    override fun read(buf: ByteBuffer): CustomTlvRecord {
-        return CustomTlvRecord(
+public object FfiConverterTypeCustomTlvRecord : FfiConverterRustBuffer<CustomTlvRecord> {
+    override fun read(buf: ByteBuffer): CustomTlvRecord =
+        CustomTlvRecord(
             FfiConverterULong.read(buf),
             FfiConverterSequenceUByte.read(buf),
         )
-    }
 
-    override fun allocationSize(value: CustomTlvRecord) = (
+    override fun allocationSize(value: CustomTlvRecord) =
+        (
             FfiConverterULong.allocationSize(value.`typeNum`) +
-            FfiConverterSequenceUByte.allocationSize(value.`value`)
-    )
+                FfiConverterSequenceUByte.allocationSize(value.`value`)
+        )
 
-    override fun write(value: CustomTlvRecord, buf: ByteBuffer) {
-            FfiConverterULong.write(value.`typeNum`, buf)
-            FfiConverterSequenceUByte.write(value.`value`, buf)
+    override fun write(
+        value: CustomTlvRecord,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterULong.write(value.`typeNum`, buf)
+        FfiConverterSequenceUByte.write(value.`value`, buf)
     }
 }
 
-
-
-data class ElectrumSyncConfig (
-    var `backgroundSyncConfig`: BackgroundSyncConfig?
+data class ElectrumSyncConfig(
+    var `backgroundSyncConfig`: BackgroundSyncConfig?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeElectrumSyncConfig: FfiConverterRustBuffer<ElectrumSyncConfig> {
-    override fun read(buf: ByteBuffer): ElectrumSyncConfig {
-        return ElectrumSyncConfig(
+public object FfiConverterTypeElectrumSyncConfig : FfiConverterRustBuffer<ElectrumSyncConfig> {
+    override fun read(buf: ByteBuffer): ElectrumSyncConfig =
+        ElectrumSyncConfig(
             FfiConverterOptionalTypeBackgroundSyncConfig.read(buf),
         )
-    }
 
-    override fun allocationSize(value: ElectrumSyncConfig) = (
+    override fun allocationSize(value: ElectrumSyncConfig) =
+        (
             FfiConverterOptionalTypeBackgroundSyncConfig.allocationSize(value.`backgroundSyncConfig`)
-    )
+        )
 
-    override fun write(value: ElectrumSyncConfig, buf: ByteBuffer) {
-            FfiConverterOptionalTypeBackgroundSyncConfig.write(value.`backgroundSyncConfig`, buf)
+    override fun write(
+        value: ElectrumSyncConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalTypeBackgroundSyncConfig.write(value.`backgroundSyncConfig`, buf)
     }
 }
 
-
-
-data class EsploraSyncConfig (
-    var `backgroundSyncConfig`: BackgroundSyncConfig?
+data class EsploraSyncConfig(
+    var `backgroundSyncConfig`: BackgroundSyncConfig?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeEsploraSyncConfig: FfiConverterRustBuffer<EsploraSyncConfig> {
-    override fun read(buf: ByteBuffer): EsploraSyncConfig {
-        return EsploraSyncConfig(
+public object FfiConverterTypeEsploraSyncConfig : FfiConverterRustBuffer<EsploraSyncConfig> {
+    override fun read(buf: ByteBuffer): EsploraSyncConfig =
+        EsploraSyncConfig(
             FfiConverterOptionalTypeBackgroundSyncConfig.read(buf),
         )
-    }
 
-    override fun allocationSize(value: EsploraSyncConfig) = (
+    override fun allocationSize(value: EsploraSyncConfig) =
+        (
             FfiConverterOptionalTypeBackgroundSyncConfig.allocationSize(value.`backgroundSyncConfig`)
-    )
+        )
 
-    override fun write(value: EsploraSyncConfig, buf: ByteBuffer) {
-            FfiConverterOptionalTypeBackgroundSyncConfig.write(value.`backgroundSyncConfig`, buf)
+    override fun write(
+        value: EsploraSyncConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalTypeBackgroundSyncConfig.write(value.`backgroundSyncConfig`, buf)
     }
 }
 
-
-
-data class LspFeeLimits (
-    var `maxTotalOpeningFeeMsat`: kotlin.ULong?, 
-    var `maxProportionalOpeningFeePpmMsat`: kotlin.ULong?
+data class LspFeeLimits(
+    var `maxTotalOpeningFeeMsat`: kotlin.ULong?,
+    var `maxProportionalOpeningFeePpmMsat`: kotlin.ULong?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPFeeLimits: FfiConverterRustBuffer<LspFeeLimits> {
-    override fun read(buf: ByteBuffer): LspFeeLimits {
-        return LspFeeLimits(
+public object FfiConverterTypeLSPFeeLimits : FfiConverterRustBuffer<LspFeeLimits> {
+    override fun read(buf: ByteBuffer): LspFeeLimits =
+        LspFeeLimits(
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalULong.read(buf),
         )
-    }
 
-    override fun allocationSize(value: LspFeeLimits) = (
+    override fun allocationSize(value: LspFeeLimits) =
+        (
             FfiConverterOptionalULong.allocationSize(value.`maxTotalOpeningFeeMsat`) +
-            FfiConverterOptionalULong.allocationSize(value.`maxProportionalOpeningFeePpmMsat`)
-    )
+                FfiConverterOptionalULong.allocationSize(value.`maxProportionalOpeningFeePpmMsat`)
+        )
 
-    override fun write(value: LspFeeLimits, buf: ByteBuffer) {
-            FfiConverterOptionalULong.write(value.`maxTotalOpeningFeeMsat`, buf)
-            FfiConverterOptionalULong.write(value.`maxProportionalOpeningFeePpmMsat`, buf)
+    override fun write(
+        value: LspFeeLimits,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalULong.write(value.`maxTotalOpeningFeeMsat`, buf)
+        FfiConverterOptionalULong.write(value.`maxProportionalOpeningFeePpmMsat`, buf)
     }
 }
 
-
-
-data class Lsps1Bolt11PaymentInfo (
-    var `state`: Lsps1PaymentState, 
-    var `expiresAt`: LspsDateTime, 
-    var `feeTotalSat`: kotlin.ULong, 
-    var `orderTotalSat`: kotlin.ULong, 
-    var `invoice`: Bolt11Invoice
+data class Lsps1Bolt11PaymentInfo(
+    var `state`: Lsps1PaymentState,
+    var `expiresAt`: LspsDateTime,
+    var `feeTotalSat`: kotlin.ULong,
+    var `orderTotalSat`: kotlin.ULong,
+    var `invoice`: Bolt11Invoice,
 ) : Disposable {
-    
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
-        
         Disposable.destroy(this.`state`)
-    
+
         Disposable.destroy(this.`expiresAt`)
-    
+
         Disposable.destroy(this.`feeTotalSat`)
-    
+
         Disposable.destroy(this.`orderTotalSat`)
-    
+
         Disposable.destroy(this.`invoice`)
-    
     }
-    
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1Bolt11PaymentInfo: FfiConverterRustBuffer<Lsps1Bolt11PaymentInfo> {
-    override fun read(buf: ByteBuffer): Lsps1Bolt11PaymentInfo {
-        return Lsps1Bolt11PaymentInfo(
+public object FfiConverterTypeLSPS1Bolt11PaymentInfo : FfiConverterRustBuffer<Lsps1Bolt11PaymentInfo> {
+    override fun read(buf: ByteBuffer): Lsps1Bolt11PaymentInfo =
+        Lsps1Bolt11PaymentInfo(
             FfiConverterTypeLSPS1PaymentState.read(buf),
             FfiConverterTypeLSPSDateTime.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterTypeBolt11Invoice.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps1Bolt11PaymentInfo) = (
+    override fun allocationSize(value: Lsps1Bolt11PaymentInfo) =
+        (
             FfiConverterTypeLSPS1PaymentState.allocationSize(value.`state`) +
-            FfiConverterTypeLSPSDateTime.allocationSize(value.`expiresAt`) +
-            FfiConverterULong.allocationSize(value.`feeTotalSat`) +
-            FfiConverterULong.allocationSize(value.`orderTotalSat`) +
-            FfiConverterTypeBolt11Invoice.allocationSize(value.`invoice`)
-    )
+                FfiConverterTypeLSPSDateTime.allocationSize(value.`expiresAt`) +
+                FfiConverterULong.allocationSize(value.`feeTotalSat`) +
+                FfiConverterULong.allocationSize(value.`orderTotalSat`) +
+                FfiConverterTypeBolt11Invoice.allocationSize(value.`invoice`)
+        )
 
-    override fun write(value: Lsps1Bolt11PaymentInfo, buf: ByteBuffer) {
-            FfiConverterTypeLSPS1PaymentState.write(value.`state`, buf)
-            FfiConverterTypeLSPSDateTime.write(value.`expiresAt`, buf)
-            FfiConverterULong.write(value.`feeTotalSat`, buf)
-            FfiConverterULong.write(value.`orderTotalSat`, buf)
-            FfiConverterTypeBolt11Invoice.write(value.`invoice`, buf)
+    override fun write(
+        value: Lsps1Bolt11PaymentInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeLSPS1PaymentState.write(value.`state`, buf)
+        FfiConverterTypeLSPSDateTime.write(value.`expiresAt`, buf)
+        FfiConverterULong.write(value.`feeTotalSat`, buf)
+        FfiConverterULong.write(value.`orderTotalSat`, buf)
+        FfiConverterTypeBolt11Invoice.write(value.`invoice`, buf)
     }
 }
 
-
-
-data class Lsps1ChannelInfo (
-    var `fundedAt`: LspsDateTime, 
-    var `fundingOutpoint`: OutPoint, 
-    var `expiresAt`: LspsDateTime
+data class Lsps1ChannelInfo(
+    var `fundedAt`: LspsDateTime,
+    var `fundingOutpoint`: OutPoint,
+    var `expiresAt`: LspsDateTime,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1ChannelInfo: FfiConverterRustBuffer<Lsps1ChannelInfo> {
-    override fun read(buf: ByteBuffer): Lsps1ChannelInfo {
-        return Lsps1ChannelInfo(
+public object FfiConverterTypeLSPS1ChannelInfo : FfiConverterRustBuffer<Lsps1ChannelInfo> {
+    override fun read(buf: ByteBuffer): Lsps1ChannelInfo =
+        Lsps1ChannelInfo(
             FfiConverterTypeLSPSDateTime.read(buf),
             FfiConverterTypeOutPoint.read(buf),
             FfiConverterTypeLSPSDateTime.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps1ChannelInfo) = (
+    override fun allocationSize(value: Lsps1ChannelInfo) =
+        (
             FfiConverterTypeLSPSDateTime.allocationSize(value.`fundedAt`) +
-            FfiConverterTypeOutPoint.allocationSize(value.`fundingOutpoint`) +
-            FfiConverterTypeLSPSDateTime.allocationSize(value.`expiresAt`)
-    )
+                FfiConverterTypeOutPoint.allocationSize(value.`fundingOutpoint`) +
+                FfiConverterTypeLSPSDateTime.allocationSize(value.`expiresAt`)
+        )
 
-    override fun write(value: Lsps1ChannelInfo, buf: ByteBuffer) {
-            FfiConverterTypeLSPSDateTime.write(value.`fundedAt`, buf)
-            FfiConverterTypeOutPoint.write(value.`fundingOutpoint`, buf)
-            FfiConverterTypeLSPSDateTime.write(value.`expiresAt`, buf)
+    override fun write(
+        value: Lsps1ChannelInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeLSPSDateTime.write(value.`fundedAt`, buf)
+        FfiConverterTypeOutPoint.write(value.`fundingOutpoint`, buf)
+        FfiConverterTypeLSPSDateTime.write(value.`expiresAt`, buf)
     }
 }
 
-
-
-data class Lsps1OnchainPaymentInfo (
-    var `state`: Lsps1PaymentState, 
-    var `expiresAt`: LspsDateTime, 
-    var `feeTotalSat`: kotlin.ULong, 
-    var `orderTotalSat`: kotlin.ULong, 
-    var `address`: Address, 
-    var `minOnchainPaymentConfirmations`: kotlin.UShort?, 
-    var `minFeeFor0conf`: FeeRate, 
-    var `refundOnchainAddress`: Address?
+data class Lsps1OnchainPaymentInfo(
+    var `state`: Lsps1PaymentState,
+    var `expiresAt`: LspsDateTime,
+    var `feeTotalSat`: kotlin.ULong,
+    var `orderTotalSat`: kotlin.ULong,
+    var `address`: Address,
+    var `minOnchainPaymentConfirmations`: kotlin.UShort?,
+    var `minFeeFor0conf`: FeeRate,
+    var `refundOnchainAddress`: Address?,
 ) : Disposable {
-    
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
-        
         Disposable.destroy(this.`state`)
-    
+
         Disposable.destroy(this.`expiresAt`)
-    
+
         Disposable.destroy(this.`feeTotalSat`)
-    
+
         Disposable.destroy(this.`orderTotalSat`)
-    
+
         Disposable.destroy(this.`address`)
-    
+
         Disposable.destroy(this.`minOnchainPaymentConfirmations`)
-    
+
         Disposable.destroy(this.`minFeeFor0conf`)
-    
+
         Disposable.destroy(this.`refundOnchainAddress`)
-    
     }
-    
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1OnchainPaymentInfo: FfiConverterRustBuffer<Lsps1OnchainPaymentInfo> {
-    override fun read(buf: ByteBuffer): Lsps1OnchainPaymentInfo {
-        return Lsps1OnchainPaymentInfo(
+public object FfiConverterTypeLSPS1OnchainPaymentInfo : FfiConverterRustBuffer<Lsps1OnchainPaymentInfo> {
+    override fun read(buf: ByteBuffer): Lsps1OnchainPaymentInfo =
+        Lsps1OnchainPaymentInfo(
             FfiConverterTypeLSPS1PaymentState.read(buf),
             FfiConverterTypeLSPSDateTime.read(buf),
             FfiConverterULong.read(buf),
@@ -10080,52 +11218,52 @@ public object FfiConverterTypeLSPS1OnchainPaymentInfo: FfiConverterRustBuffer<Ls
             FfiConverterTypeFeeRate.read(buf),
             FfiConverterOptionalTypeAddress.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps1OnchainPaymentInfo) = (
+    override fun allocationSize(value: Lsps1OnchainPaymentInfo) =
+        (
             FfiConverterTypeLSPS1PaymentState.allocationSize(value.`state`) +
-            FfiConverterTypeLSPSDateTime.allocationSize(value.`expiresAt`) +
-            FfiConverterULong.allocationSize(value.`feeTotalSat`) +
-            FfiConverterULong.allocationSize(value.`orderTotalSat`) +
-            FfiConverterTypeAddress.allocationSize(value.`address`) +
-            FfiConverterOptionalUShort.allocationSize(value.`minOnchainPaymentConfirmations`) +
-            FfiConverterTypeFeeRate.allocationSize(value.`minFeeFor0conf`) +
-            FfiConverterOptionalTypeAddress.allocationSize(value.`refundOnchainAddress`)
-    )
+                FfiConverterTypeLSPSDateTime.allocationSize(value.`expiresAt`) +
+                FfiConverterULong.allocationSize(value.`feeTotalSat`) +
+                FfiConverterULong.allocationSize(value.`orderTotalSat`) +
+                FfiConverterTypeAddress.allocationSize(value.`address`) +
+                FfiConverterOptionalUShort.allocationSize(value.`minOnchainPaymentConfirmations`) +
+                FfiConverterTypeFeeRate.allocationSize(value.`minFeeFor0conf`) +
+                FfiConverterOptionalTypeAddress.allocationSize(value.`refundOnchainAddress`)
+        )
 
-    override fun write(value: Lsps1OnchainPaymentInfo, buf: ByteBuffer) {
-            FfiConverterTypeLSPS1PaymentState.write(value.`state`, buf)
-            FfiConverterTypeLSPSDateTime.write(value.`expiresAt`, buf)
-            FfiConverterULong.write(value.`feeTotalSat`, buf)
-            FfiConverterULong.write(value.`orderTotalSat`, buf)
-            FfiConverterTypeAddress.write(value.`address`, buf)
-            FfiConverterOptionalUShort.write(value.`minOnchainPaymentConfirmations`, buf)
-            FfiConverterTypeFeeRate.write(value.`minFeeFor0conf`, buf)
-            FfiConverterOptionalTypeAddress.write(value.`refundOnchainAddress`, buf)
+    override fun write(
+        value: Lsps1OnchainPaymentInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeLSPS1PaymentState.write(value.`state`, buf)
+        FfiConverterTypeLSPSDateTime.write(value.`expiresAt`, buf)
+        FfiConverterULong.write(value.`feeTotalSat`, buf)
+        FfiConverterULong.write(value.`orderTotalSat`, buf)
+        FfiConverterTypeAddress.write(value.`address`, buf)
+        FfiConverterOptionalUShort.write(value.`minOnchainPaymentConfirmations`, buf)
+        FfiConverterTypeFeeRate.write(value.`minFeeFor0conf`, buf)
+        FfiConverterOptionalTypeAddress.write(value.`refundOnchainAddress`, buf)
     }
 }
 
-
-
-data class Lsps1OrderParams (
-    var `lspBalanceSat`: kotlin.ULong, 
-    var `clientBalanceSat`: kotlin.ULong, 
-    var `requiredChannelConfirmations`: kotlin.UShort, 
-    var `fundingConfirmsWithinBlocks`: kotlin.UShort, 
-    var `channelExpiryBlocks`: kotlin.UInt, 
-    var `token`: kotlin.String?, 
-    var `announceChannel`: kotlin.Boolean
+data class Lsps1OrderParams(
+    var `lspBalanceSat`: kotlin.ULong,
+    var `clientBalanceSat`: kotlin.ULong,
+    var `requiredChannelConfirmations`: kotlin.UShort,
+    var `fundingConfirmsWithinBlocks`: kotlin.UShort,
+    var `channelExpiryBlocks`: kotlin.UInt,
+    var `token`: kotlin.String?,
+    var `announceChannel`: kotlin.Boolean,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1OrderParams: FfiConverterRustBuffer<Lsps1OrderParams> {
-    override fun read(buf: ByteBuffer): Lsps1OrderParams {
-        return Lsps1OrderParams(
+public object FfiConverterTypeLSPS1OrderParams : FfiConverterRustBuffer<Lsps1OrderParams> {
+    override fun read(buf: ByteBuffer): Lsps1OrderParams =
+        Lsps1OrderParams(
             FfiConverterULong.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterUShort.read(buf),
@@ -10134,147 +11272,143 @@ public object FfiConverterTypeLSPS1OrderParams: FfiConverterRustBuffer<Lsps1Orde
             FfiConverterOptionalString.read(buf),
             FfiConverterBoolean.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps1OrderParams) = (
+    override fun allocationSize(value: Lsps1OrderParams) =
+        (
             FfiConverterULong.allocationSize(value.`lspBalanceSat`) +
-            FfiConverterULong.allocationSize(value.`clientBalanceSat`) +
-            FfiConverterUShort.allocationSize(value.`requiredChannelConfirmations`) +
-            FfiConverterUShort.allocationSize(value.`fundingConfirmsWithinBlocks`) +
-            FfiConverterUInt.allocationSize(value.`channelExpiryBlocks`) +
-            FfiConverterOptionalString.allocationSize(value.`token`) +
-            FfiConverterBoolean.allocationSize(value.`announceChannel`)
-    )
+                FfiConverterULong.allocationSize(value.`clientBalanceSat`) +
+                FfiConverterUShort.allocationSize(value.`requiredChannelConfirmations`) +
+                FfiConverterUShort.allocationSize(value.`fundingConfirmsWithinBlocks`) +
+                FfiConverterUInt.allocationSize(value.`channelExpiryBlocks`) +
+                FfiConverterOptionalString.allocationSize(value.`token`) +
+                FfiConverterBoolean.allocationSize(value.`announceChannel`)
+        )
 
-    override fun write(value: Lsps1OrderParams, buf: ByteBuffer) {
-            FfiConverterULong.write(value.`lspBalanceSat`, buf)
-            FfiConverterULong.write(value.`clientBalanceSat`, buf)
-            FfiConverterUShort.write(value.`requiredChannelConfirmations`, buf)
-            FfiConverterUShort.write(value.`fundingConfirmsWithinBlocks`, buf)
-            FfiConverterUInt.write(value.`channelExpiryBlocks`, buf)
-            FfiConverterOptionalString.write(value.`token`, buf)
-            FfiConverterBoolean.write(value.`announceChannel`, buf)
+    override fun write(
+        value: Lsps1OrderParams,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterULong.write(value.`lspBalanceSat`, buf)
+        FfiConverterULong.write(value.`clientBalanceSat`, buf)
+        FfiConverterUShort.write(value.`requiredChannelConfirmations`, buf)
+        FfiConverterUShort.write(value.`fundingConfirmsWithinBlocks`, buf)
+        FfiConverterUInt.write(value.`channelExpiryBlocks`, buf)
+        FfiConverterOptionalString.write(value.`token`, buf)
+        FfiConverterBoolean.write(value.`announceChannel`, buf)
     }
 }
 
-
-
-data class Lsps1OrderStatus (
-    var `orderId`: Lsps1OrderId, 
-    var `orderParams`: Lsps1OrderParams, 
-    var `paymentOptions`: Lsps1PaymentInfo, 
-    var `channelState`: Lsps1ChannelInfo?
+data class Lsps1OrderStatus(
+    var `orderId`: Lsps1OrderId,
+    var `orderParams`: Lsps1OrderParams,
+    var `paymentOptions`: Lsps1PaymentInfo,
+    var `channelState`: Lsps1ChannelInfo?,
 ) : Disposable {
-    
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
-        
         Disposable.destroy(this.`orderId`)
-    
+
         Disposable.destroy(this.`orderParams`)
-    
+
         Disposable.destroy(this.`paymentOptions`)
-    
+
         Disposable.destroy(this.`channelState`)
-    
     }
-    
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1OrderStatus: FfiConverterRustBuffer<Lsps1OrderStatus> {
-    override fun read(buf: ByteBuffer): Lsps1OrderStatus {
-        return Lsps1OrderStatus(
+public object FfiConverterTypeLSPS1OrderStatus : FfiConverterRustBuffer<Lsps1OrderStatus> {
+    override fun read(buf: ByteBuffer): Lsps1OrderStatus =
+        Lsps1OrderStatus(
             FfiConverterTypeLSPS1OrderId.read(buf),
             FfiConverterTypeLSPS1OrderParams.read(buf),
             FfiConverterTypeLSPS1PaymentInfo.read(buf),
             FfiConverterOptionalTypeLSPS1ChannelInfo.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps1OrderStatus) = (
+    override fun allocationSize(value: Lsps1OrderStatus) =
+        (
             FfiConverterTypeLSPS1OrderId.allocationSize(value.`orderId`) +
-            FfiConverterTypeLSPS1OrderParams.allocationSize(value.`orderParams`) +
-            FfiConverterTypeLSPS1PaymentInfo.allocationSize(value.`paymentOptions`) +
-            FfiConverterOptionalTypeLSPS1ChannelInfo.allocationSize(value.`channelState`)
-    )
+                FfiConverterTypeLSPS1OrderParams.allocationSize(value.`orderParams`) +
+                FfiConverterTypeLSPS1PaymentInfo.allocationSize(value.`paymentOptions`) +
+                FfiConverterOptionalTypeLSPS1ChannelInfo.allocationSize(value.`channelState`)
+        )
 
-    override fun write(value: Lsps1OrderStatus, buf: ByteBuffer) {
-            FfiConverterTypeLSPS1OrderId.write(value.`orderId`, buf)
-            FfiConverterTypeLSPS1OrderParams.write(value.`orderParams`, buf)
-            FfiConverterTypeLSPS1PaymentInfo.write(value.`paymentOptions`, buf)
-            FfiConverterOptionalTypeLSPS1ChannelInfo.write(value.`channelState`, buf)
+    override fun write(
+        value: Lsps1OrderStatus,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeLSPS1OrderId.write(value.`orderId`, buf)
+        FfiConverterTypeLSPS1OrderParams.write(value.`orderParams`, buf)
+        FfiConverterTypeLSPS1PaymentInfo.write(value.`paymentOptions`, buf)
+        FfiConverterOptionalTypeLSPS1ChannelInfo.write(value.`channelState`, buf)
     }
 }
 
-
-
-data class Lsps1PaymentInfo (
-    var `bolt11`: Lsps1Bolt11PaymentInfo?, 
-    var `onchain`: Lsps1OnchainPaymentInfo?
+data class Lsps1PaymentInfo(
+    var `bolt11`: Lsps1Bolt11PaymentInfo?,
+    var `onchain`: Lsps1OnchainPaymentInfo?,
 ) : Disposable {
-    
     @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
     override fun destroy() {
-        
         Disposable.destroy(this.`bolt11`)
-    
+
         Disposable.destroy(this.`onchain`)
-    
     }
-    
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1PaymentInfo: FfiConverterRustBuffer<Lsps1PaymentInfo> {
-    override fun read(buf: ByteBuffer): Lsps1PaymentInfo {
-        return Lsps1PaymentInfo(
+public object FfiConverterTypeLSPS1PaymentInfo : FfiConverterRustBuffer<Lsps1PaymentInfo> {
+    override fun read(buf: ByteBuffer): Lsps1PaymentInfo =
+        Lsps1PaymentInfo(
             FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo.read(buf),
             FfiConverterOptionalTypeLSPS1OnchainPaymentInfo.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps1PaymentInfo) = (
+    override fun allocationSize(value: Lsps1PaymentInfo) =
+        (
             FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo.allocationSize(value.`bolt11`) +
-            FfiConverterOptionalTypeLSPS1OnchainPaymentInfo.allocationSize(value.`onchain`)
-    )
+                FfiConverterOptionalTypeLSPS1OnchainPaymentInfo.allocationSize(value.`onchain`)
+        )
 
-    override fun write(value: Lsps1PaymentInfo, buf: ByteBuffer) {
-            FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo.write(value.`bolt11`, buf)
-            FfiConverterOptionalTypeLSPS1OnchainPaymentInfo.write(value.`onchain`, buf)
+    override fun write(
+        value: Lsps1PaymentInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo.write(value.`bolt11`, buf)
+        FfiConverterOptionalTypeLSPS1OnchainPaymentInfo.write(value.`onchain`, buf)
     }
 }
 
-
-
-data class Lsps2ServiceConfig (
-    var `requireToken`: kotlin.String?, 
-    var `advertiseService`: kotlin.Boolean, 
-    var `channelOpeningFeePpm`: kotlin.UInt, 
-    var `channelOverProvisioningPpm`: kotlin.UInt, 
-    var `minChannelOpeningFeeMsat`: kotlin.ULong, 
-    var `minChannelLifetime`: kotlin.UInt, 
-    var `maxClientToSelfDelay`: kotlin.UInt, 
-    var `minPaymentSizeMsat`: kotlin.ULong, 
-    var `maxPaymentSizeMsat`: kotlin.ULong, 
-    var `clientTrustsLsp`: kotlin.Boolean
+data class Lsps2ServiceConfig(
+    var `requireToken`: kotlin.String?,
+    var `advertiseService`: kotlin.Boolean,
+    var `channelOpeningFeePpm`: kotlin.UInt,
+    var `channelOverProvisioningPpm`: kotlin.UInt,
+    var `minChannelOpeningFeeMsat`: kotlin.ULong,
+    var `minChannelLifetime`: kotlin.UInt,
+    var `maxClientToSelfDelay`: kotlin.UInt,
+    var `minPaymentSizeMsat`: kotlin.ULong,
+    var `maxPaymentSizeMsat`: kotlin.ULong,
+    var `clientTrustsLsp`: kotlin.Boolean,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS2ServiceConfig: FfiConverterRustBuffer<Lsps2ServiceConfig> {
-    override fun read(buf: ByteBuffer): Lsps2ServiceConfig {
-        return Lsps2ServiceConfig(
+public object FfiConverterTypeLSPS2ServiceConfig : FfiConverterRustBuffer<Lsps2ServiceConfig> {
+    override fun read(buf: ByteBuffer): Lsps2ServiceConfig =
+        Lsps2ServiceConfig(
             FfiConverterOptionalString.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterUInt.read(buf),
@@ -10286,166 +11420,305 @@ public object FfiConverterTypeLSPS2ServiceConfig: FfiConverterRustBuffer<Lsps2Se
             FfiConverterULong.read(buf),
             FfiConverterBoolean.read(buf),
         )
-    }
 
-    override fun allocationSize(value: Lsps2ServiceConfig) = (
+    override fun allocationSize(value: Lsps2ServiceConfig) =
+        (
             FfiConverterOptionalString.allocationSize(value.`requireToken`) +
-            FfiConverterBoolean.allocationSize(value.`advertiseService`) +
-            FfiConverterUInt.allocationSize(value.`channelOpeningFeePpm`) +
-            FfiConverterUInt.allocationSize(value.`channelOverProvisioningPpm`) +
-            FfiConverterULong.allocationSize(value.`minChannelOpeningFeeMsat`) +
-            FfiConverterUInt.allocationSize(value.`minChannelLifetime`) +
-            FfiConverterUInt.allocationSize(value.`maxClientToSelfDelay`) +
-            FfiConverterULong.allocationSize(value.`minPaymentSizeMsat`) +
-            FfiConverterULong.allocationSize(value.`maxPaymentSizeMsat`) +
-            FfiConverterBoolean.allocationSize(value.`clientTrustsLsp`)
-    )
+                FfiConverterBoolean.allocationSize(value.`advertiseService`) +
+                FfiConverterUInt.allocationSize(value.`channelOpeningFeePpm`) +
+                FfiConverterUInt.allocationSize(value.`channelOverProvisioningPpm`) +
+                FfiConverterULong.allocationSize(value.`minChannelOpeningFeeMsat`) +
+                FfiConverterUInt.allocationSize(value.`minChannelLifetime`) +
+                FfiConverterUInt.allocationSize(value.`maxClientToSelfDelay`) +
+                FfiConverterULong.allocationSize(value.`minPaymentSizeMsat`) +
+                FfiConverterULong.allocationSize(value.`maxPaymentSizeMsat`) +
+                FfiConverterBoolean.allocationSize(value.`clientTrustsLsp`)
+        )
 
-    override fun write(value: Lsps2ServiceConfig, buf: ByteBuffer) {
-            FfiConverterOptionalString.write(value.`requireToken`, buf)
-            FfiConverterBoolean.write(value.`advertiseService`, buf)
-            FfiConverterUInt.write(value.`channelOpeningFeePpm`, buf)
-            FfiConverterUInt.write(value.`channelOverProvisioningPpm`, buf)
-            FfiConverterULong.write(value.`minChannelOpeningFeeMsat`, buf)
-            FfiConverterUInt.write(value.`minChannelLifetime`, buf)
-            FfiConverterUInt.write(value.`maxClientToSelfDelay`, buf)
-            FfiConverterULong.write(value.`minPaymentSizeMsat`, buf)
-            FfiConverterULong.write(value.`maxPaymentSizeMsat`, buf)
-            FfiConverterBoolean.write(value.`clientTrustsLsp`, buf)
+    override fun write(
+        value: Lsps2ServiceConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalString.write(value.`requireToken`, buf)
+        FfiConverterBoolean.write(value.`advertiseService`, buf)
+        FfiConverterUInt.write(value.`channelOpeningFeePpm`, buf)
+        FfiConverterUInt.write(value.`channelOverProvisioningPpm`, buf)
+        FfiConverterULong.write(value.`minChannelOpeningFeeMsat`, buf)
+        FfiConverterUInt.write(value.`minChannelLifetime`, buf)
+        FfiConverterUInt.write(value.`maxClientToSelfDelay`, buf)
+        FfiConverterULong.write(value.`minPaymentSizeMsat`, buf)
+        FfiConverterULong.write(value.`maxPaymentSizeMsat`, buf)
+        FfiConverterBoolean.write(value.`clientTrustsLsp`, buf)
     }
 }
 
-
-
-data class LogRecord (
-    var `level`: LogLevel, 
-    var `args`: kotlin.String, 
-    var `modulePath`: kotlin.String, 
-    var `line`: kotlin.UInt
+data class Lsps7ExtendableChannel(
+    var `originalOrder`: Lsps7OriginalOrder?,
+    var `extensionOrderIds`: List<kotlin.String>?,
+    var `shortChannelId`: kotlin.String,
+    var `maxChannelExtensionExpiryBlocks`: kotlin.UInt,
+    var `expirationBlock`: kotlin.UInt,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLogRecord: FfiConverterRustBuffer<LogRecord> {
-    override fun read(buf: ByteBuffer): LogRecord {
-        return LogRecord(
+public object FfiConverterTypeLSPS7ExtendableChannel : FfiConverterRustBuffer<Lsps7ExtendableChannel> {
+    override fun read(buf: ByteBuffer): Lsps7ExtendableChannel =
+        Lsps7ExtendableChannel(
+            FfiConverterOptionalTypeLSPS7OriginalOrder.read(buf),
+            FfiConverterOptionalSequenceString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+
+    override fun allocationSize(value: Lsps7ExtendableChannel) =
+        (
+            FfiConverterOptionalTypeLSPS7OriginalOrder.allocationSize(value.`originalOrder`) +
+                FfiConverterOptionalSequenceString.allocationSize(value.`extensionOrderIds`) +
+                FfiConverterString.allocationSize(value.`shortChannelId`) +
+                FfiConverterUInt.allocationSize(value.`maxChannelExtensionExpiryBlocks`) +
+                FfiConverterUInt.allocationSize(value.`expirationBlock`)
+        )
+
+    override fun write(
+        value: Lsps7ExtendableChannel,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalTypeLSPS7OriginalOrder.write(value.`originalOrder`, buf)
+        FfiConverterOptionalSequenceString.write(value.`extensionOrderIds`, buf)
+        FfiConverterString.write(value.`shortChannelId`, buf)
+        FfiConverterUInt.write(value.`maxChannelExtensionExpiryBlocks`, buf)
+        FfiConverterUInt.write(value.`expirationBlock`, buf)
+    }
+}
+
+data class Lsps7OrderResponse(
+    var `orderId`: Lsps7OrderId,
+    var `orderState`: Lsps7OrderState,
+    var `channelExtensionExpiryBlocks`: kotlin.UInt,
+    var `newChannelExpiryBlock`: kotlin.UInt,
+    var `payment`: Lsps1PaymentInfo,
+    var `channel`: Lsps7ExtendableChannel,
+) : Disposable {
+    @Suppress("UNNECESSARY_SAFE_CALL") // codegen is much simpler if we unconditionally emit safe calls here
+    override fun destroy() {
+        Disposable.destroy(this.`orderId`)
+
+        Disposable.destroy(this.`orderState`)
+
+        Disposable.destroy(this.`channelExtensionExpiryBlocks`)
+
+        Disposable.destroy(this.`newChannelExpiryBlock`)
+
+        Disposable.destroy(this.`payment`)
+
+        Disposable.destroy(this.`channel`)
+    }
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLSPS7OrderResponse : FfiConverterRustBuffer<Lsps7OrderResponse> {
+    override fun read(buf: ByteBuffer): Lsps7OrderResponse =
+        Lsps7OrderResponse(
+            FfiConverterTypeLSPS7OrderId.read(buf),
+            FfiConverterTypeLSPS7OrderState.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterTypeLSPS1PaymentInfo.read(buf),
+            FfiConverterTypeLSPS7ExtendableChannel.read(buf),
+        )
+
+    override fun allocationSize(value: Lsps7OrderResponse) =
+        (
+            FfiConverterTypeLSPS7OrderId.allocationSize(value.`orderId`) +
+                FfiConverterTypeLSPS7OrderState.allocationSize(value.`orderState`) +
+                FfiConverterUInt.allocationSize(value.`channelExtensionExpiryBlocks`) +
+                FfiConverterUInt.allocationSize(value.`newChannelExpiryBlock`) +
+                FfiConverterTypeLSPS1PaymentInfo.allocationSize(value.`payment`) +
+                FfiConverterTypeLSPS7ExtendableChannel.allocationSize(value.`channel`)
+        )
+
+    override fun write(
+        value: Lsps7OrderResponse,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeLSPS7OrderId.write(value.`orderId`, buf)
+        FfiConverterTypeLSPS7OrderState.write(value.`orderState`, buf)
+        FfiConverterUInt.write(value.`channelExtensionExpiryBlocks`, buf)
+        FfiConverterUInt.write(value.`newChannelExpiryBlock`, buf)
+        FfiConverterTypeLSPS1PaymentInfo.write(value.`payment`, buf)
+        FfiConverterTypeLSPS7ExtendableChannel.write(value.`channel`, buf)
+    }
+}
+
+data class Lsps7OriginalOrder(
+    var `id`: kotlin.String,
+    var `service`: kotlin.String,
+) {
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLSPS7OriginalOrder : FfiConverterRustBuffer<Lsps7OriginalOrder> {
+    override fun read(buf: ByteBuffer): Lsps7OriginalOrder =
+        Lsps7OriginalOrder(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+
+    override fun allocationSize(value: Lsps7OriginalOrder) =
+        (
+            FfiConverterString.allocationSize(value.`id`) +
+                FfiConverterString.allocationSize(value.`service`)
+        )
+
+    override fun write(
+        value: Lsps7OriginalOrder,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterString.write(value.`id`, buf)
+        FfiConverterString.write(value.`service`, buf)
+    }
+}
+
+data class LogRecord(
+    var `level`: LogLevel,
+    var `args`: kotlin.String,
+    var `modulePath`: kotlin.String,
+    var `line`: kotlin.UInt,
+) {
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLogRecord : FfiConverterRustBuffer<LogRecord> {
+    override fun read(buf: ByteBuffer): LogRecord =
+        LogRecord(
             FfiConverterTypeLogLevel.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterUInt.read(buf),
         )
-    }
 
-    override fun allocationSize(value: LogRecord) = (
+    override fun allocationSize(value: LogRecord) =
+        (
             FfiConverterTypeLogLevel.allocationSize(value.`level`) +
-            FfiConverterString.allocationSize(value.`args`) +
-            FfiConverterString.allocationSize(value.`modulePath`) +
-            FfiConverterUInt.allocationSize(value.`line`)
-    )
+                FfiConverterString.allocationSize(value.`args`) +
+                FfiConverterString.allocationSize(value.`modulePath`) +
+                FfiConverterUInt.allocationSize(value.`line`)
+        )
 
-    override fun write(value: LogRecord, buf: ByteBuffer) {
-            FfiConverterTypeLogLevel.write(value.`level`, buf)
-            FfiConverterString.write(value.`args`, buf)
-            FfiConverterString.write(value.`modulePath`, buf)
-            FfiConverterUInt.write(value.`line`, buf)
+    override fun write(
+        value: LogRecord,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeLogLevel.write(value.`level`, buf)
+        FfiConverterString.write(value.`args`, buf)
+        FfiConverterString.write(value.`modulePath`, buf)
+        FfiConverterUInt.write(value.`line`, buf)
     }
 }
 
-
-
-data class NodeAnnouncementInfo (
-    var `lastUpdate`: kotlin.UInt, 
-    var `alias`: kotlin.String, 
-    var `addresses`: List<SocketAddress>
+data class NodeAnnouncementInfo(
+    var `lastUpdate`: kotlin.UInt,
+    var `alias`: kotlin.String,
+    var `addresses`: List<SocketAddress>,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNodeAnnouncementInfo: FfiConverterRustBuffer<NodeAnnouncementInfo> {
-    override fun read(buf: ByteBuffer): NodeAnnouncementInfo {
-        return NodeAnnouncementInfo(
+public object FfiConverterTypeNodeAnnouncementInfo : FfiConverterRustBuffer<NodeAnnouncementInfo> {
+    override fun read(buf: ByteBuffer): NodeAnnouncementInfo =
+        NodeAnnouncementInfo(
             FfiConverterUInt.read(buf),
             FfiConverterString.read(buf),
             FfiConverterSequenceTypeSocketAddress.read(buf),
         )
-    }
 
-    override fun allocationSize(value: NodeAnnouncementInfo) = (
+    override fun allocationSize(value: NodeAnnouncementInfo) =
+        (
             FfiConverterUInt.allocationSize(value.`lastUpdate`) +
-            FfiConverterString.allocationSize(value.`alias`) +
-            FfiConverterSequenceTypeSocketAddress.allocationSize(value.`addresses`)
-    )
+                FfiConverterString.allocationSize(value.`alias`) +
+                FfiConverterSequenceTypeSocketAddress.allocationSize(value.`addresses`)
+        )
 
-    override fun write(value: NodeAnnouncementInfo, buf: ByteBuffer) {
-            FfiConverterUInt.write(value.`lastUpdate`, buf)
-            FfiConverterString.write(value.`alias`, buf)
-            FfiConverterSequenceTypeSocketAddress.write(value.`addresses`, buf)
+    override fun write(
+        value: NodeAnnouncementInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterUInt.write(value.`lastUpdate`, buf)
+        FfiConverterString.write(value.`alias`, buf)
+        FfiConverterSequenceTypeSocketAddress.write(value.`addresses`, buf)
     }
 }
 
-
-
-data class NodeInfo (
-    var `channels`: List<kotlin.ULong>, 
-    var `announcementInfo`: NodeAnnouncementInfo?
+data class NodeInfo(
+    var `channels`: List<kotlin.ULong>,
+    var `announcementInfo`: NodeAnnouncementInfo?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNodeInfo: FfiConverterRustBuffer<NodeInfo> {
-    override fun read(buf: ByteBuffer): NodeInfo {
-        return NodeInfo(
+public object FfiConverterTypeNodeInfo : FfiConverterRustBuffer<NodeInfo> {
+    override fun read(buf: ByteBuffer): NodeInfo =
+        NodeInfo(
             FfiConverterSequenceULong.read(buf),
             FfiConverterOptionalTypeNodeAnnouncementInfo.read(buf),
         )
-    }
 
-    override fun allocationSize(value: NodeInfo) = (
+    override fun allocationSize(value: NodeInfo) =
+        (
             FfiConverterSequenceULong.allocationSize(value.`channels`) +
-            FfiConverterOptionalTypeNodeAnnouncementInfo.allocationSize(value.`announcementInfo`)
-    )
+                FfiConverterOptionalTypeNodeAnnouncementInfo.allocationSize(value.`announcementInfo`)
+        )
 
-    override fun write(value: NodeInfo, buf: ByteBuffer) {
-            FfiConverterSequenceULong.write(value.`channels`, buf)
-            FfiConverterOptionalTypeNodeAnnouncementInfo.write(value.`announcementInfo`, buf)
+    override fun write(
+        value: NodeInfo,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterSequenceULong.write(value.`channels`, buf)
+        FfiConverterOptionalTypeNodeAnnouncementInfo.write(value.`announcementInfo`, buf)
     }
 }
 
-
-
-data class NodeStatus (
-    var `isRunning`: kotlin.Boolean, 
-    var `currentBestBlock`: BestBlock, 
-    var `latestLightningWalletSyncTimestamp`: kotlin.ULong?, 
-    var `latestOnchainWalletSyncTimestamp`: kotlin.ULong?, 
-    var `latestFeeRateCacheUpdateTimestamp`: kotlin.ULong?, 
-    var `latestRgsSnapshotTimestamp`: kotlin.ULong?, 
-    var `latestPathfindingScoresSyncTimestamp`: kotlin.ULong?, 
-    var `latestNodeAnnouncementBroadcastTimestamp`: kotlin.ULong?, 
-    var `latestChannelMonitorArchivalHeight`: kotlin.UInt?
+data class NodeStatus(
+    var `isRunning`: kotlin.Boolean,
+    var `currentBestBlock`: BestBlock,
+    var `latestLightningWalletSyncTimestamp`: kotlin.ULong?,
+    var `latestOnchainWalletSyncTimestamp`: kotlin.ULong?,
+    var `latestFeeRateCacheUpdateTimestamp`: kotlin.ULong?,
+    var `latestRgsSnapshotTimestamp`: kotlin.ULong?,
+    var `latestPathfindingScoresSyncTimestamp`: kotlin.ULong?,
+    var `latestNodeAnnouncementBroadcastTimestamp`: kotlin.ULong?,
+    var `latestChannelMonitorArchivalHeight`: kotlin.UInt?,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNodeStatus: FfiConverterRustBuffer<NodeStatus> {
-    override fun read(buf: ByteBuffer): NodeStatus {
-        return NodeStatus(
+public object FfiConverterTypeNodeStatus : FfiConverterRustBuffer<NodeStatus> {
+    override fun read(buf: ByteBuffer): NodeStatus =
+        NodeStatus(
             FfiConverterBoolean.read(buf),
             FfiConverterTypeBestBlock.read(buf),
             FfiConverterOptionalULong.read(buf),
@@ -10456,86 +11729,86 @@ public object FfiConverterTypeNodeStatus: FfiConverterRustBuffer<NodeStatus> {
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalUInt.read(buf),
         )
-    }
 
-    override fun allocationSize(value: NodeStatus) = (
+    override fun allocationSize(value: NodeStatus) =
+        (
             FfiConverterBoolean.allocationSize(value.`isRunning`) +
-            FfiConverterTypeBestBlock.allocationSize(value.`currentBestBlock`) +
-            FfiConverterOptionalULong.allocationSize(value.`latestLightningWalletSyncTimestamp`) +
-            FfiConverterOptionalULong.allocationSize(value.`latestOnchainWalletSyncTimestamp`) +
-            FfiConverterOptionalULong.allocationSize(value.`latestFeeRateCacheUpdateTimestamp`) +
-            FfiConverterOptionalULong.allocationSize(value.`latestRgsSnapshotTimestamp`) +
-            FfiConverterOptionalULong.allocationSize(value.`latestPathfindingScoresSyncTimestamp`) +
-            FfiConverterOptionalULong.allocationSize(value.`latestNodeAnnouncementBroadcastTimestamp`) +
-            FfiConverterOptionalUInt.allocationSize(value.`latestChannelMonitorArchivalHeight`)
-    )
+                FfiConverterTypeBestBlock.allocationSize(value.`currentBestBlock`) +
+                FfiConverterOptionalULong.allocationSize(value.`latestLightningWalletSyncTimestamp`) +
+                FfiConverterOptionalULong.allocationSize(value.`latestOnchainWalletSyncTimestamp`) +
+                FfiConverterOptionalULong.allocationSize(value.`latestFeeRateCacheUpdateTimestamp`) +
+                FfiConverterOptionalULong.allocationSize(value.`latestRgsSnapshotTimestamp`) +
+                FfiConverterOptionalULong.allocationSize(value.`latestPathfindingScoresSyncTimestamp`) +
+                FfiConverterOptionalULong.allocationSize(value.`latestNodeAnnouncementBroadcastTimestamp`) +
+                FfiConverterOptionalUInt.allocationSize(value.`latestChannelMonitorArchivalHeight`)
+        )
 
-    override fun write(value: NodeStatus, buf: ByteBuffer) {
-            FfiConverterBoolean.write(value.`isRunning`, buf)
-            FfiConverterTypeBestBlock.write(value.`currentBestBlock`, buf)
-            FfiConverterOptionalULong.write(value.`latestLightningWalletSyncTimestamp`, buf)
-            FfiConverterOptionalULong.write(value.`latestOnchainWalletSyncTimestamp`, buf)
-            FfiConverterOptionalULong.write(value.`latestFeeRateCacheUpdateTimestamp`, buf)
-            FfiConverterOptionalULong.write(value.`latestRgsSnapshotTimestamp`, buf)
-            FfiConverterOptionalULong.write(value.`latestPathfindingScoresSyncTimestamp`, buf)
-            FfiConverterOptionalULong.write(value.`latestNodeAnnouncementBroadcastTimestamp`, buf)
-            FfiConverterOptionalUInt.write(value.`latestChannelMonitorArchivalHeight`, buf)
+    override fun write(
+        value: NodeStatus,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterBoolean.write(value.`isRunning`, buf)
+        FfiConverterTypeBestBlock.write(value.`currentBestBlock`, buf)
+        FfiConverterOptionalULong.write(value.`latestLightningWalletSyncTimestamp`, buf)
+        FfiConverterOptionalULong.write(value.`latestOnchainWalletSyncTimestamp`, buf)
+        FfiConverterOptionalULong.write(value.`latestFeeRateCacheUpdateTimestamp`, buf)
+        FfiConverterOptionalULong.write(value.`latestRgsSnapshotTimestamp`, buf)
+        FfiConverterOptionalULong.write(value.`latestPathfindingScoresSyncTimestamp`, buf)
+        FfiConverterOptionalULong.write(value.`latestNodeAnnouncementBroadcastTimestamp`, buf)
+        FfiConverterOptionalUInt.write(value.`latestChannelMonitorArchivalHeight`, buf)
     }
 }
 
-
-
-data class OutPoint (
-    var `txid`: Txid, 
-    var `vout`: kotlin.UInt
+data class OutPoint(
+    var `txid`: Txid,
+    var `vout`: kotlin.UInt,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeOutPoint: FfiConverterRustBuffer<OutPoint> {
-    override fun read(buf: ByteBuffer): OutPoint {
-        return OutPoint(
+public object FfiConverterTypeOutPoint : FfiConverterRustBuffer<OutPoint> {
+    override fun read(buf: ByteBuffer): OutPoint =
+        OutPoint(
             FfiConverterTypeTxid.read(buf),
             FfiConverterUInt.read(buf),
         )
-    }
 
-    override fun allocationSize(value: OutPoint) = (
+    override fun allocationSize(value: OutPoint) =
+        (
             FfiConverterTypeTxid.allocationSize(value.`txid`) +
-            FfiConverterUInt.allocationSize(value.`vout`)
-    )
+                FfiConverterUInt.allocationSize(value.`vout`)
+        )
 
-    override fun write(value: OutPoint, buf: ByteBuffer) {
-            FfiConverterTypeTxid.write(value.`txid`, buf)
-            FfiConverterUInt.write(value.`vout`, buf)
+    override fun write(
+        value: OutPoint,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypeTxid.write(value.`txid`, buf)
+        FfiConverterUInt.write(value.`vout`, buf)
     }
 }
 
-
-
-data class PaymentDetails (
-    var `id`: PaymentId, 
-    var `kind`: PaymentKind, 
-    var `amountMsat`: kotlin.ULong?, 
-    var `feePaidMsat`: kotlin.ULong?, 
-    var `direction`: PaymentDirection, 
-    var `status`: PaymentStatus, 
-    var `latestUpdateTimestamp`: kotlin.ULong
+data class PaymentDetails(
+    var `id`: PaymentId,
+    var `kind`: PaymentKind,
+    var `amountMsat`: kotlin.ULong?,
+    var `feePaidMsat`: kotlin.ULong?,
+    var `direction`: PaymentDirection,
+    var `status`: PaymentStatus,
+    var `latestUpdateTimestamp`: kotlin.ULong,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypePaymentDetails: FfiConverterRustBuffer<PaymentDetails> {
-    override fun read(buf: ByteBuffer): PaymentDetails {
-        return PaymentDetails(
+public object FfiConverterTypePaymentDetails : FfiConverterRustBuffer<PaymentDetails> {
+    override fun read(buf: ByteBuffer): PaymentDetails =
+        PaymentDetails(
             FfiConverterTypePaymentId.read(buf),
             FfiConverterTypePaymentKind.read(buf),
             FfiConverterOptionalULong.read(buf),
@@ -10544,89 +11817,89 @@ public object FfiConverterTypePaymentDetails: FfiConverterRustBuffer<PaymentDeta
             FfiConverterTypePaymentStatus.read(buf),
             FfiConverterULong.read(buf),
         )
-    }
 
-    override fun allocationSize(value: PaymentDetails) = (
+    override fun allocationSize(value: PaymentDetails) =
+        (
             FfiConverterTypePaymentId.allocationSize(value.`id`) +
-            FfiConverterTypePaymentKind.allocationSize(value.`kind`) +
-            FfiConverterOptionalULong.allocationSize(value.`amountMsat`) +
-            FfiConverterOptionalULong.allocationSize(value.`feePaidMsat`) +
-            FfiConverterTypePaymentDirection.allocationSize(value.`direction`) +
-            FfiConverterTypePaymentStatus.allocationSize(value.`status`) +
-            FfiConverterULong.allocationSize(value.`latestUpdateTimestamp`)
-    )
+                FfiConverterTypePaymentKind.allocationSize(value.`kind`) +
+                FfiConverterOptionalULong.allocationSize(value.`amountMsat`) +
+                FfiConverterOptionalULong.allocationSize(value.`feePaidMsat`) +
+                FfiConverterTypePaymentDirection.allocationSize(value.`direction`) +
+                FfiConverterTypePaymentStatus.allocationSize(value.`status`) +
+                FfiConverterULong.allocationSize(value.`latestUpdateTimestamp`)
+        )
 
-    override fun write(value: PaymentDetails, buf: ByteBuffer) {
-            FfiConverterTypePaymentId.write(value.`id`, buf)
-            FfiConverterTypePaymentKind.write(value.`kind`, buf)
-            FfiConverterOptionalULong.write(value.`amountMsat`, buf)
-            FfiConverterOptionalULong.write(value.`feePaidMsat`, buf)
-            FfiConverterTypePaymentDirection.write(value.`direction`, buf)
-            FfiConverterTypePaymentStatus.write(value.`status`, buf)
-            FfiConverterULong.write(value.`latestUpdateTimestamp`, buf)
+    override fun write(
+        value: PaymentDetails,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypePaymentId.write(value.`id`, buf)
+        FfiConverterTypePaymentKind.write(value.`kind`, buf)
+        FfiConverterOptionalULong.write(value.`amountMsat`, buf)
+        FfiConverterOptionalULong.write(value.`feePaidMsat`, buf)
+        FfiConverterTypePaymentDirection.write(value.`direction`, buf)
+        FfiConverterTypePaymentStatus.write(value.`status`, buf)
+        FfiConverterULong.write(value.`latestUpdateTimestamp`, buf)
     }
 }
 
-
-
-data class PeerDetails (
-    var `nodeId`: PublicKey, 
-    var `address`: SocketAddress, 
-    var `isPersisted`: kotlin.Boolean, 
-    var `isConnected`: kotlin.Boolean
+data class PeerDetails(
+    var `nodeId`: PublicKey,
+    var `address`: SocketAddress,
+    var `isPersisted`: kotlin.Boolean,
+    var `isConnected`: kotlin.Boolean,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypePeerDetails: FfiConverterRustBuffer<PeerDetails> {
-    override fun read(buf: ByteBuffer): PeerDetails {
-        return PeerDetails(
+public object FfiConverterTypePeerDetails : FfiConverterRustBuffer<PeerDetails> {
+    override fun read(buf: ByteBuffer): PeerDetails =
+        PeerDetails(
             FfiConverterTypePublicKey.read(buf),
             FfiConverterTypeSocketAddress.read(buf),
             FfiConverterBoolean.read(buf),
             FfiConverterBoolean.read(buf),
         )
-    }
 
-    override fun allocationSize(value: PeerDetails) = (
+    override fun allocationSize(value: PeerDetails) =
+        (
             FfiConverterTypePublicKey.allocationSize(value.`nodeId`) +
-            FfiConverterTypeSocketAddress.allocationSize(value.`address`) +
-            FfiConverterBoolean.allocationSize(value.`isPersisted`) +
-            FfiConverterBoolean.allocationSize(value.`isConnected`)
-    )
+                FfiConverterTypeSocketAddress.allocationSize(value.`address`) +
+                FfiConverterBoolean.allocationSize(value.`isPersisted`) +
+                FfiConverterBoolean.allocationSize(value.`isConnected`)
+        )
 
-    override fun write(value: PeerDetails, buf: ByteBuffer) {
-            FfiConverterTypePublicKey.write(value.`nodeId`, buf)
-            FfiConverterTypeSocketAddress.write(value.`address`, buf)
-            FfiConverterBoolean.write(value.`isPersisted`, buf)
-            FfiConverterBoolean.write(value.`isConnected`, buf)
+    override fun write(
+        value: PeerDetails,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypePublicKey.write(value.`nodeId`, buf)
+        FfiConverterTypeSocketAddress.write(value.`address`, buf)
+        FfiConverterBoolean.write(value.`isPersisted`, buf)
+        FfiConverterBoolean.write(value.`isConnected`, buf)
     }
 }
 
-
-
-data class RouteHintHop (
-    var `srcNodeId`: PublicKey, 
-    var `shortChannelId`: kotlin.ULong, 
-    var `cltvExpiryDelta`: kotlin.UShort, 
-    var `htlcMinimumMsat`: kotlin.ULong?, 
-    var `htlcMaximumMsat`: kotlin.ULong?, 
-    var `fees`: RoutingFees
+data class RouteHintHop(
+    var `srcNodeId`: PublicKey,
+    var `shortChannelId`: kotlin.ULong,
+    var `cltvExpiryDelta`: kotlin.UShort,
+    var `htlcMinimumMsat`: kotlin.ULong?,
+    var `htlcMaximumMsat`: kotlin.ULong?,
+    var `fees`: RoutingFees,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeRouteHintHop: FfiConverterRustBuffer<RouteHintHop> {
-    override fun read(buf: ByteBuffer): RouteHintHop {
-        return RouteHintHop(
+public object FfiConverterTypeRouteHintHop : FfiConverterRustBuffer<RouteHintHop> {
+    override fun read(buf: ByteBuffer): RouteHintHop =
+        RouteHintHop(
             FfiConverterTypePublicKey.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterUShort.read(buf),
@@ -10634,220 +11907,231 @@ public object FfiConverterTypeRouteHintHop: FfiConverterRustBuffer<RouteHintHop>
             FfiConverterOptionalULong.read(buf),
             FfiConverterTypeRoutingFees.read(buf),
         )
-    }
 
-    override fun allocationSize(value: RouteHintHop) = (
+    override fun allocationSize(value: RouteHintHop) =
+        (
             FfiConverterTypePublicKey.allocationSize(value.`srcNodeId`) +
-            FfiConverterULong.allocationSize(value.`shortChannelId`) +
-            FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
-            FfiConverterOptionalULong.allocationSize(value.`htlcMinimumMsat`) +
-            FfiConverterOptionalULong.allocationSize(value.`htlcMaximumMsat`) +
-            FfiConverterTypeRoutingFees.allocationSize(value.`fees`)
-    )
+                FfiConverterULong.allocationSize(value.`shortChannelId`) +
+                FfiConverterUShort.allocationSize(value.`cltvExpiryDelta`) +
+                FfiConverterOptionalULong.allocationSize(value.`htlcMinimumMsat`) +
+                FfiConverterOptionalULong.allocationSize(value.`htlcMaximumMsat`) +
+                FfiConverterTypeRoutingFees.allocationSize(value.`fees`)
+        )
 
-    override fun write(value: RouteHintHop, buf: ByteBuffer) {
-            FfiConverterTypePublicKey.write(value.`srcNodeId`, buf)
-            FfiConverterULong.write(value.`shortChannelId`, buf)
-            FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
-            FfiConverterOptionalULong.write(value.`htlcMinimumMsat`, buf)
-            FfiConverterOptionalULong.write(value.`htlcMaximumMsat`, buf)
-            FfiConverterTypeRoutingFees.write(value.`fees`, buf)
+    override fun write(
+        value: RouteHintHop,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterTypePublicKey.write(value.`srcNodeId`, buf)
+        FfiConverterULong.write(value.`shortChannelId`, buf)
+        FfiConverterUShort.write(value.`cltvExpiryDelta`, buf)
+        FfiConverterOptionalULong.write(value.`htlcMinimumMsat`, buf)
+        FfiConverterOptionalULong.write(value.`htlcMaximumMsat`, buf)
+        FfiConverterTypeRoutingFees.write(value.`fees`, buf)
     }
 }
 
-
-
-data class RouteParametersConfig (
-    var `maxTotalRoutingFeeMsat`: kotlin.ULong?, 
-    var `maxTotalCltvExpiryDelta`: kotlin.UInt, 
-    var `maxPathCount`: kotlin.UByte, 
-    var `maxChannelSaturationPowerOfHalf`: kotlin.UByte
+data class RouteParametersConfig(
+    var `maxTotalRoutingFeeMsat`: kotlin.ULong?,
+    var `maxTotalCltvExpiryDelta`: kotlin.UInt,
+    var `maxPathCount`: kotlin.UByte,
+    var `maxChannelSaturationPowerOfHalf`: kotlin.UByte,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeRouteParametersConfig: FfiConverterRustBuffer<RouteParametersConfig> {
-    override fun read(buf: ByteBuffer): RouteParametersConfig {
-        return RouteParametersConfig(
+public object FfiConverterTypeRouteParametersConfig : FfiConverterRustBuffer<RouteParametersConfig> {
+    override fun read(buf: ByteBuffer): RouteParametersConfig =
+        RouteParametersConfig(
             FfiConverterOptionalULong.read(buf),
             FfiConverterUInt.read(buf),
             FfiConverterUByte.read(buf),
             FfiConverterUByte.read(buf),
         )
-    }
 
-    override fun allocationSize(value: RouteParametersConfig) = (
+    override fun allocationSize(value: RouteParametersConfig) =
+        (
             FfiConverterOptionalULong.allocationSize(value.`maxTotalRoutingFeeMsat`) +
-            FfiConverterUInt.allocationSize(value.`maxTotalCltvExpiryDelta`) +
-            FfiConverterUByte.allocationSize(value.`maxPathCount`) +
-            FfiConverterUByte.allocationSize(value.`maxChannelSaturationPowerOfHalf`)
-    )
+                FfiConverterUInt.allocationSize(value.`maxTotalCltvExpiryDelta`) +
+                FfiConverterUByte.allocationSize(value.`maxPathCount`) +
+                FfiConverterUByte.allocationSize(value.`maxChannelSaturationPowerOfHalf`)
+        )
 
-    override fun write(value: RouteParametersConfig, buf: ByteBuffer) {
-            FfiConverterOptionalULong.write(value.`maxTotalRoutingFeeMsat`, buf)
-            FfiConverterUInt.write(value.`maxTotalCltvExpiryDelta`, buf)
-            FfiConverterUByte.write(value.`maxPathCount`, buf)
-            FfiConverterUByte.write(value.`maxChannelSaturationPowerOfHalf`, buf)
+    override fun write(
+        value: RouteParametersConfig,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterOptionalULong.write(value.`maxTotalRoutingFeeMsat`, buf)
+        FfiConverterUInt.write(value.`maxTotalCltvExpiryDelta`, buf)
+        FfiConverterUByte.write(value.`maxPathCount`, buf)
+        FfiConverterUByte.write(value.`maxChannelSaturationPowerOfHalf`, buf)
     }
 }
 
-
-
-data class RoutingFees (
-    var `baseMsat`: kotlin.UInt, 
-    var `proportionalMillionths`: kotlin.UInt
+data class RoutingFees(
+    var `baseMsat`: kotlin.UInt,
+    var `proportionalMillionths`: kotlin.UInt,
 ) {
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeRoutingFees: FfiConverterRustBuffer<RoutingFees> {
-    override fun read(buf: ByteBuffer): RoutingFees {
-        return RoutingFees(
+public object FfiConverterTypeRoutingFees : FfiConverterRustBuffer<RoutingFees> {
+    override fun read(buf: ByteBuffer): RoutingFees =
+        RoutingFees(
             FfiConverterUInt.read(buf),
             FfiConverterUInt.read(buf),
         )
-    }
 
-    override fun allocationSize(value: RoutingFees) = (
+    override fun allocationSize(value: RoutingFees) =
+        (
             FfiConverterUInt.allocationSize(value.`baseMsat`) +
-            FfiConverterUInt.allocationSize(value.`proportionalMillionths`)
-    )
+                FfiConverterUInt.allocationSize(value.`proportionalMillionths`)
+        )
 
-    override fun write(value: RoutingFees, buf: ByteBuffer) {
-            FfiConverterUInt.write(value.`baseMsat`, buf)
-            FfiConverterUInt.write(value.`proportionalMillionths`, buf)
+    override fun write(
+        value: RoutingFees,
+        buf: ByteBuffer,
+    ) {
+        FfiConverterUInt.write(value.`baseMsat`, buf)
+        FfiConverterUInt.write(value.`proportionalMillionths`, buf)
     }
 }
-
-
-
 
 enum class AsyncPaymentsRole {
-    
     CLIENT,
-    SERVER;
+    SERVER,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeAsyncPaymentsRole: FfiConverterRustBuffer<AsyncPaymentsRole> {
-    override fun read(buf: ByteBuffer) = try {
-        AsyncPaymentsRole.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeAsyncPaymentsRole : FfiConverterRustBuffer<AsyncPaymentsRole> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            AsyncPaymentsRole.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: AsyncPaymentsRole) = 4UL
 
-    override fun write(value: AsyncPaymentsRole, buf: ByteBuffer) {
+    override fun write(
+        value: AsyncPaymentsRole,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
-
 enum class BalanceSource {
-    
     HOLDER_FORCE_CLOSED,
     COUNTERPARTY_FORCE_CLOSED,
     COOP_CLOSE,
-    HTLC;
+    HTLC,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBalanceSource: FfiConverterRustBuffer<BalanceSource> {
-    override fun read(buf: ByteBuffer) = try {
-        BalanceSource.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeBalanceSource : FfiConverterRustBuffer<BalanceSource> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            BalanceSource.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: BalanceSource) = 4UL
 
-    override fun write(value: BalanceSource, buf: ByteBuffer) {
+    override fun write(
+        value: BalanceSource,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
 sealed class Bolt11InvoiceDescription {
-    
     data class Hash(
-        val `hash`: kotlin.String) : Bolt11InvoiceDescription() {
+        val `hash`: kotlin.String,
+    ) : Bolt11InvoiceDescription() {
         companion object
     }
-    
-    data class Direct(
-        val `description`: kotlin.String) : Bolt11InvoiceDescription() {
-        companion object
-    }
-    
 
-    
+    data class Direct(
+        val `description`: kotlin.String,
+    ) : Bolt11InvoiceDescription() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<Bolt11InvoiceDescription>{
-    override fun read(buf: ByteBuffer): Bolt11InvoiceDescription {
-        return when(buf.getInt()) {
-            1 -> Bolt11InvoiceDescription.Hash(
-                FfiConverterString.read(buf),
+public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<Bolt11InvoiceDescription> {
+    override fun read(buf: ByteBuffer): Bolt11InvoiceDescription =
+        when (buf.getInt()) {
+            1 -> {
+                Bolt11InvoiceDescription.Hash(
+                    FfiConverterString.read(buf),
                 )
-            2 -> Bolt11InvoiceDescription.Direct(
-                FfiConverterString.read(buf),
+            }
+
+            2 -> {
+                Bolt11InvoiceDescription.Direct(
+                    FfiConverterString.read(buf),
                 )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: Bolt11InvoiceDescription) = when(value) {
-        is Bolt11InvoiceDescription.Hash -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterString.allocationSize(value.`hash`)
-            )
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
         }
-        is Bolt11InvoiceDescription.Direct -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterString.allocationSize(value.`description`)
-            )
-        }
-    }
 
-    override fun write(value: Bolt11InvoiceDescription, buf: ByteBuffer) {
-        when(value) {
+    override fun allocationSize(value: Bolt11InvoiceDescription) =
+        when (value) {
+            is Bolt11InvoiceDescription.Hash -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterString.allocationSize(value.`hash`)
+                )
+            }
+
+            is Bolt11InvoiceDescription.Direct -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterString.allocationSize(value.`description`)
+                )
+            }
+        }
+
+    override fun write(
+        value: Bolt11InvoiceDescription,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is Bolt11InvoiceDescription.Hash -> {
                 buf.putInt(1)
                 FfiConverterString.write(value.`hash`, buf)
                 Unit
             }
+
             is Bolt11InvoiceDescription.Direct -> {
                 buf.putInt(2)
                 FfiConverterString.write(value.`description`, buf)
@@ -10857,42 +12141,64 @@ public object FfiConverterTypeBolt11InvoiceDescription : FfiConverterRustBuffer<
     }
 }
 
+sealed class BuildException(
+    message: String,
+) : kotlin.Exception(message) {
+    class InvalidSystemTime(
+        message: String,
+    ) : BuildException(message)
 
+    class InvalidChannelMonitor(
+        message: String,
+    ) : BuildException(message)
 
+    class InvalidListeningAddresses(
+        message: String,
+    ) : BuildException(message)
 
+    class InvalidAnnouncementAddresses(
+        message: String,
+    ) : BuildException(message)
 
+    class InvalidNodeAlias(
+        message: String,
+    ) : BuildException(message)
 
+    class RuntimeSetupFailed(
+        message: String,
+    ) : BuildException(message)
 
-sealed class BuildException(message: String): kotlin.Exception(message) {
-        
-        class InvalidSystemTime(message: String) : BuildException(message)
-        
-        class InvalidChannelMonitor(message: String) : BuildException(message)
-        
-        class InvalidListeningAddresses(message: String) : BuildException(message)
-        
-        class InvalidAnnouncementAddresses(message: String) : BuildException(message)
-        
-        class InvalidNodeAlias(message: String) : BuildException(message)
-        
-        class RuntimeSetupFailed(message: String) : BuildException(message)
-        
-        class ReadFailed(message: String) : BuildException(message)
-        
-        class WriteFailed(message: String) : BuildException(message)
-        
-        class StoragePathAccessFailed(message: String) : BuildException(message)
-        
-        class KvStoreSetupFailed(message: String) : BuildException(message)
-        
-        class WalletSetupFailed(message: String) : BuildException(message)
-        
-        class LoggerSetupFailed(message: String) : BuildException(message)
-        
-        class NetworkMismatch(message: String) : BuildException(message)
-        
-        class AsyncPaymentsConfigMismatch(message: String) : BuildException(message)
-        
+    class ReadFailed(
+        message: String,
+    ) : BuildException(message)
+
+    class WriteFailed(
+        message: String,
+    ) : BuildException(message)
+
+    class StoragePathAccessFailed(
+        message: String,
+    ) : BuildException(message)
+
+    class KvStoreSetupFailed(
+        message: String,
+    ) : BuildException(message)
+
+    class WalletSetupFailed(
+        message: String,
+    ) : BuildException(message)
+
+    class LoggerSetupFailed(
+        message: String,
+    ) : BuildException(message)
+
+    class NetworkMismatch(
+        message: String,
+    ) : BuildException(message)
+
+    class AsyncPaymentsConfigMismatch(
+        message: String,
+    ) : BuildException(message)
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<BuildException> {
         override fun lift(error_buf: RustBuffer.ByValue): BuildException = FfiConverterTypeBuildError.lift(error_buf)
@@ -10903,9 +12209,8 @@ sealed class BuildException(message: String): kotlin.Exception(message) {
  * @suppress
  */
 public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException> {
-    override fun read(buf: ByteBuffer): BuildException {
-        
-            return when(buf.getInt()) {
+    override fun read(buf: ByteBuffer): BuildException =
+        when (buf.getInt()) {
             1 -> BuildException.InvalidSystemTime(FfiConverterString.read(buf))
             2 -> BuildException.InvalidChannelMonitor(FfiConverterString.read(buf))
             3 -> BuildException.InvalidListeningAddresses(FfiConverterString.read(buf))
@@ -10922,342 +12227,421 @@ public object FfiConverterTypeBuildError : FfiConverterRustBuffer<BuildException
             14 -> BuildException.AsyncPaymentsConfigMismatch(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
-    }
 
-    override fun allocationSize(value: BuildException): ULong {
-        return 4UL
-    }
+    override fun allocationSize(value: BuildException): ULong = 4UL
 
-    override fun write(value: BuildException, buf: ByteBuffer) {
-        when(value) {
+    override fun write(
+        value: BuildException,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is BuildException.InvalidSystemTime -> {
                 buf.putInt(1)
                 Unit
             }
+
             is BuildException.InvalidChannelMonitor -> {
                 buf.putInt(2)
                 Unit
             }
+
             is BuildException.InvalidListeningAddresses -> {
                 buf.putInt(3)
                 Unit
             }
+
             is BuildException.InvalidAnnouncementAddresses -> {
                 buf.putInt(4)
                 Unit
             }
+
             is BuildException.InvalidNodeAlias -> {
                 buf.putInt(5)
                 Unit
             }
+
             is BuildException.RuntimeSetupFailed -> {
                 buf.putInt(6)
                 Unit
             }
+
             is BuildException.ReadFailed -> {
                 buf.putInt(7)
                 Unit
             }
+
             is BuildException.WriteFailed -> {
                 buf.putInt(8)
                 Unit
             }
+
             is BuildException.StoragePathAccessFailed -> {
                 buf.putInt(9)
                 Unit
             }
+
             is BuildException.KvStoreSetupFailed -> {
                 buf.putInt(10)
                 Unit
             }
+
             is BuildException.WalletSetupFailed -> {
                 buf.putInt(11)
                 Unit
             }
+
             is BuildException.LoggerSetupFailed -> {
                 buf.putInt(12)
                 Unit
             }
+
             is BuildException.NetworkMismatch -> {
                 buf.putInt(13)
                 Unit
             }
+
             is BuildException.AsyncPaymentsConfigMismatch -> {
                 buf.putInt(14)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
-
 }
 
-
-
 sealed class ClosureReason {
-    
     data class CounterpartyForceClosed(
-        val `peerMsg`: UntrustedString) : ClosureReason() {
+        val `peerMsg`: UntrustedString,
+    ) : ClosureReason() {
         companion object
     }
-    
-    data class HolderForceClosed(
-        val `broadcastedLatestTxn`: kotlin.Boolean?, 
-        val `message`: kotlin.String) : ClosureReason() {
-        companion object
-    }
-    
-    object LegacyCooperativeClosure : ClosureReason()
-    
-    
-    object CounterpartyInitiatedCooperativeClosure : ClosureReason()
-    
-    
-    object LocallyInitiatedCooperativeClosure : ClosureReason()
-    
-    
-    object CommitmentTxConfirmed : ClosureReason()
-    
-    
-    object FundingTimedOut : ClosureReason()
-    
-    
-    data class ProcessingError(
-        val `err`: kotlin.String) : ClosureReason() {
-        companion object
-    }
-    
-    object DisconnectedPeer : ClosureReason()
-    
-    
-    object OutdatedChannelManager : ClosureReason()
-    
-    
-    object CounterpartyCoopClosedUnfundedChannel : ClosureReason()
-    
-    
-    object LocallyCoopClosedUnfundedChannel : ClosureReason()
-    
-    
-    object FundingBatchClosure : ClosureReason()
-    
-    
-    data class HtlCsTimedOut(
-        val `paymentHash`: PaymentHash?) : ClosureReason() {
-        companion object
-    }
-    
-    data class PeerFeerateTooLow(
-        val `peerFeerateSatPerKw`: kotlin.UInt, 
-        val `requiredFeerateSatPerKw`: kotlin.UInt) : ClosureReason() {
-        companion object
-    }
-    
 
-    
+    data class HolderForceClosed(
+        val `broadcastedLatestTxn`: kotlin.Boolean?,
+        val `message`: kotlin.String,
+    ) : ClosureReason() {
+        companion object
+    }
+
+    object LegacyCooperativeClosure : ClosureReason()
+
+    object CounterpartyInitiatedCooperativeClosure : ClosureReason()
+
+    object LocallyInitiatedCooperativeClosure : ClosureReason()
+
+    object CommitmentTxConfirmed : ClosureReason()
+
+    object FundingTimedOut : ClosureReason()
+
+    data class ProcessingError(
+        val `err`: kotlin.String,
+    ) : ClosureReason() {
+        companion object
+    }
+
+    object DisconnectedPeer : ClosureReason()
+
+    object OutdatedChannelManager : ClosureReason()
+
+    object CounterpartyCoopClosedUnfundedChannel : ClosureReason()
+
+    object LocallyCoopClosedUnfundedChannel : ClosureReason()
+
+    object FundingBatchClosure : ClosureReason()
+
+    data class HtlCsTimedOut(
+        val `paymentHash`: PaymentHash?,
+    ) : ClosureReason() {
+        companion object
+    }
+
+    data class PeerFeerateTooLow(
+        val `peerFeerateSatPerKw`: kotlin.UInt,
+        val `requiredFeerateSatPerKw`: kotlin.UInt,
+    ) : ClosureReason() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeClosureReason : FfiConverterRustBuffer<ClosureReason>{
-    override fun read(buf: ByteBuffer): ClosureReason {
-        return when(buf.getInt()) {
-            1 -> ClosureReason.CounterpartyForceClosed(
-                FfiConverterTypeUntrustedString.read(buf),
+public object FfiConverterTypeClosureReason : FfiConverterRustBuffer<ClosureReason> {
+    override fun read(buf: ByteBuffer): ClosureReason =
+        when (buf.getInt()) {
+            1 -> {
+                ClosureReason.CounterpartyForceClosed(
+                    FfiConverterTypeUntrustedString.read(buf),
                 )
-            2 -> ClosureReason.HolderForceClosed(
-                FfiConverterOptionalBoolean.read(buf),
-                FfiConverterString.read(buf),
-                )
-            3 -> ClosureReason.LegacyCooperativeClosure
-            4 -> ClosureReason.CounterpartyInitiatedCooperativeClosure
-            5 -> ClosureReason.LocallyInitiatedCooperativeClosure
-            6 -> ClosureReason.CommitmentTxConfirmed
-            7 -> ClosureReason.FundingTimedOut
-            8 -> ClosureReason.ProcessingError(
-                FfiConverterString.read(buf),
-                )
-            9 -> ClosureReason.DisconnectedPeer
-            10 -> ClosureReason.OutdatedChannelManager
-            11 -> ClosureReason.CounterpartyCoopClosedUnfundedChannel
-            12 -> ClosureReason.LocallyCoopClosedUnfundedChannel
-            13 -> ClosureReason.FundingBatchClosure
-            14 -> ClosureReason.HtlCsTimedOut(
-                FfiConverterOptionalTypePaymentHash.read(buf),
-                )
-            15 -> ClosureReason.PeerFeerateTooLow(
-                FfiConverterUInt.read(buf),
-                FfiConverterUInt.read(buf),
-                )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: ClosureReason) = when(value) {
-        is ClosureReason.CounterpartyForceClosed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeUntrustedString.allocationSize(value.`peerMsg`)
-            )
-        }
-        is ClosureReason.HolderForceClosed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalBoolean.allocationSize(value.`broadcastedLatestTxn`)
-                + FfiConverterString.allocationSize(value.`message`)
-            )
-        }
-        is ClosureReason.LegacyCooperativeClosure -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.CounterpartyInitiatedCooperativeClosure -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.LocallyInitiatedCooperativeClosure -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.CommitmentTxConfirmed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.FundingTimedOut -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.ProcessingError -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterString.allocationSize(value.`err`)
-            )
-        }
-        is ClosureReason.DisconnectedPeer -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.OutdatedChannelManager -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.CounterpartyCoopClosedUnfundedChannel -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.LocallyCoopClosedUnfundedChannel -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.FundingBatchClosure -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-        is ClosureReason.HtlCsTimedOut -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypePaymentHash.allocationSize(value.`paymentHash`)
-            )
-        }
-        is ClosureReason.PeerFeerateTooLow -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterUInt.allocationSize(value.`peerFeerateSatPerKw`)
-                + FfiConverterUInt.allocationSize(value.`requiredFeerateSatPerKw`)
-            )
-        }
-    }
+            2 -> {
+                ClosureReason.HolderForceClosed(
+                    FfiConverterOptionalBoolean.read(buf),
+                    FfiConverterString.read(buf),
+                )
+            }
 
-    override fun write(value: ClosureReason, buf: ByteBuffer) {
-        when(value) {
+            3 -> {
+                ClosureReason.LegacyCooperativeClosure
+            }
+
+            4 -> {
+                ClosureReason.CounterpartyInitiatedCooperativeClosure
+            }
+
+            5 -> {
+                ClosureReason.LocallyInitiatedCooperativeClosure
+            }
+
+            6 -> {
+                ClosureReason.CommitmentTxConfirmed
+            }
+
+            7 -> {
+                ClosureReason.FundingTimedOut
+            }
+
+            8 -> {
+                ClosureReason.ProcessingError(
+                    FfiConverterString.read(buf),
+                )
+            }
+
+            9 -> {
+                ClosureReason.DisconnectedPeer
+            }
+
+            10 -> {
+                ClosureReason.OutdatedChannelManager
+            }
+
+            11 -> {
+                ClosureReason.CounterpartyCoopClosedUnfundedChannel
+            }
+
+            12 -> {
+                ClosureReason.LocallyCoopClosedUnfundedChannel
+            }
+
+            13 -> {
+                ClosureReason.FundingBatchClosure
+            }
+
+            14 -> {
+                ClosureReason.HtlCsTimedOut(
+                    FfiConverterOptionalTypePaymentHash.read(buf),
+                )
+            }
+
+            15 -> {
+                ClosureReason.PeerFeerateTooLow(
+                    FfiConverterUInt.read(buf),
+                    FfiConverterUInt.read(buf),
+                )
+            }
+
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: ClosureReason) =
+        when (value) {
+            is ClosureReason.CounterpartyForceClosed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeUntrustedString.allocationSize(value.`peerMsg`)
+                )
+            }
+
+            is ClosureReason.HolderForceClosed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalBoolean.allocationSize(value.`broadcastedLatestTxn`) +
+                        FfiConverterString.allocationSize(value.`message`)
+                )
+            }
+
+            is ClosureReason.LegacyCooperativeClosure -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.CounterpartyInitiatedCooperativeClosure -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.LocallyInitiatedCooperativeClosure -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.CommitmentTxConfirmed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.FundingTimedOut -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.ProcessingError -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterString.allocationSize(value.`err`)
+                )
+            }
+
+            is ClosureReason.DisconnectedPeer -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.OutdatedChannelManager -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.CounterpartyCoopClosedUnfundedChannel -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.LocallyCoopClosedUnfundedChannel -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.FundingBatchClosure -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+
+            is ClosureReason.HtlCsTimedOut -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypePaymentHash.allocationSize(value.`paymentHash`)
+                )
+            }
+
+            is ClosureReason.PeerFeerateTooLow -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterUInt.allocationSize(value.`peerFeerateSatPerKw`) +
+                        FfiConverterUInt.allocationSize(value.`requiredFeerateSatPerKw`)
+                )
+            }
+        }
+
+    override fun write(
+        value: ClosureReason,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is ClosureReason.CounterpartyForceClosed -> {
                 buf.putInt(1)
                 FfiConverterTypeUntrustedString.write(value.`peerMsg`, buf)
                 Unit
             }
+
             is ClosureReason.HolderForceClosed -> {
                 buf.putInt(2)
                 FfiConverterOptionalBoolean.write(value.`broadcastedLatestTxn`, buf)
                 FfiConverterString.write(value.`message`, buf)
                 Unit
             }
+
             is ClosureReason.LegacyCooperativeClosure -> {
                 buf.putInt(3)
                 Unit
             }
+
             is ClosureReason.CounterpartyInitiatedCooperativeClosure -> {
                 buf.putInt(4)
                 Unit
             }
+
             is ClosureReason.LocallyInitiatedCooperativeClosure -> {
                 buf.putInt(5)
                 Unit
             }
+
             is ClosureReason.CommitmentTxConfirmed -> {
                 buf.putInt(6)
                 Unit
             }
+
             is ClosureReason.FundingTimedOut -> {
                 buf.putInt(7)
                 Unit
             }
+
             is ClosureReason.ProcessingError -> {
                 buf.putInt(8)
                 FfiConverterString.write(value.`err`, buf)
                 Unit
             }
+
             is ClosureReason.DisconnectedPeer -> {
                 buf.putInt(9)
                 Unit
             }
+
             is ClosureReason.OutdatedChannelManager -> {
                 buf.putInt(10)
                 Unit
             }
+
             is ClosureReason.CounterpartyCoopClosedUnfundedChannel -> {
                 buf.putInt(11)
                 Unit
             }
+
             is ClosureReason.LocallyCoopClosedUnfundedChannel -> {
                 buf.putInt(12)
                 Unit
             }
+
             is ClosureReason.FundingBatchClosure -> {
                 buf.putInt(13)
                 Unit
             }
+
             is ClosureReason.HtlCsTimedOut -> {
                 buf.putInt(14)
                 FfiConverterOptionalTypePaymentHash.write(value.`paymentHash`, buf)
                 Unit
             }
+
             is ClosureReason.PeerFeerateTooLow -> {
                 buf.putInt(15)
                 FfiConverterUInt.write(value.`peerFeerateSatPerKw`, buf)
@@ -11268,63 +12652,68 @@ public object FfiConverterTypeClosureReason : FfiConverterRustBuffer<ClosureReas
     }
 }
 
-
-
-
-
 sealed class ConfirmationStatus {
-    
     data class Confirmed(
-        val `blockHash`: BlockHash, 
-        val `height`: kotlin.UInt, 
-        val `timestamp`: kotlin.ULong) : ConfirmationStatus() {
+        val `blockHash`: BlockHash,
+        val `height`: kotlin.UInt,
+        val `timestamp`: kotlin.ULong,
+    ) : ConfirmationStatus() {
         companion object
     }
-    
-    object Unconfirmed : ConfirmationStatus()
-    
-    
 
-    
+    object Unconfirmed : ConfirmationStatus()
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeConfirmationStatus : FfiConverterRustBuffer<ConfirmationStatus>{
-    override fun read(buf: ByteBuffer): ConfirmationStatus {
-        return when(buf.getInt()) {
-            1 -> ConfirmationStatus.Confirmed(
-                FfiConverterTypeBlockHash.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterULong.read(buf),
+public object FfiConverterTypeConfirmationStatus : FfiConverterRustBuffer<ConfirmationStatus> {
+    override fun read(buf: ByteBuffer): ConfirmationStatus =
+        when (buf.getInt()) {
+            1 -> {
+                ConfirmationStatus.Confirmed(
+                    FfiConverterTypeBlockHash.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterULong.read(buf),
                 )
-            2 -> ConfirmationStatus.Unconfirmed
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: ConfirmationStatus) = when(value) {
-        is ConfirmationStatus.Confirmed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeBlockHash.allocationSize(value.`blockHash`)
-                + FfiConverterUInt.allocationSize(value.`height`)
-                + FfiConverterULong.allocationSize(value.`timestamp`)
-            )
-        }
-        is ConfirmationStatus.Unconfirmed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-            )
-        }
-    }
+            2 -> {
+                ConfirmationStatus.Unconfirmed
+            }
 
-    override fun write(value: ConfirmationStatus, buf: ByteBuffer) {
-        when(value) {
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: ConfirmationStatus) =
+        when (value) {
+            is ConfirmationStatus.Confirmed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeBlockHash.allocationSize(value.`blockHash`) +
+                        FfiConverterUInt.allocationSize(value.`height`) +
+                        FfiConverterULong.allocationSize(value.`timestamp`)
+                )
+            }
+
+            is ConfirmationStatus.Unconfirmed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL
+                )
+            }
+        }
+
+    override fun write(
+        value: ConfirmationStatus,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is ConfirmationStatus.Confirmed -> {
                 buf.putInt(1)
                 FfiConverterTypeBlockHash.write(value.`blockHash`, buf)
@@ -11332,6 +12721,7 @@ public object FfiConverterTypeConfirmationStatus : FfiConverterRustBuffer<Confir
                 FfiConverterULong.write(value.`timestamp`, buf)
                 Unit
             }
+
             is ConfirmationStatus.Unconfirmed -> {
                 buf.putInt(2)
                 Unit
@@ -11340,51 +12730,48 @@ public object FfiConverterTypeConfirmationStatus : FfiConverterRustBuffer<Confir
     }
 }
 
-
-
-
-
-
 enum class Currency {
-    
     BITCOIN,
     BITCOIN_TESTNET,
     REGTEST,
     SIMNET,
-    SIGNET;
+    SIGNET,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeCurrency: FfiConverterRustBuffer<Currency> {
-    override fun read(buf: ByteBuffer) = try {
-        Currency.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeCurrency : FfiConverterRustBuffer<Currency> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            Currency.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: Currency) = 4UL
 
-    override fun write(value: Currency, buf: ByteBuffer) {
+    override fun write(
+        value: Currency,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
+sealed class EntropyException(
+    message: String,
+) : kotlin.Exception(message) {
+    class InvalidSeedBytes(
+        message: String,
+    ) : EntropyException(message)
 
-
-
-
-
-
-sealed class EntropyException(message: String): kotlin.Exception(message) {
-        
-        class InvalidSeedBytes(message: String) : EntropyException(message)
-        
-        class InvalidSeedFile(message: String) : EntropyException(message)
-        
+    class InvalidSeedFile(
+        message: String,
+    ) : EntropyException(message)
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<EntropyException> {
         override fun lift(error_buf: RustBuffer.ByValue): EntropyException = FfiConverterTypeEntropyError.lift(error_buf)
@@ -11395,320 +12782,367 @@ sealed class EntropyException(message: String): kotlin.Exception(message) {
  * @suppress
  */
 public object FfiConverterTypeEntropyError : FfiConverterRustBuffer<EntropyException> {
-    override fun read(buf: ByteBuffer): EntropyException {
-        
-            return when(buf.getInt()) {
+    override fun read(buf: ByteBuffer): EntropyException =
+        when (buf.getInt()) {
             1 -> EntropyException.InvalidSeedBytes(FfiConverterString.read(buf))
             2 -> EntropyException.InvalidSeedFile(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
-    }
 
-    override fun allocationSize(value: EntropyException): ULong {
-        return 4UL
-    }
+    override fun allocationSize(value: EntropyException): ULong = 4UL
 
-    override fun write(value: EntropyException, buf: ByteBuffer) {
-        when(value) {
+    override fun write(
+        value: EntropyException,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is EntropyException.InvalidSeedBytes -> {
                 buf.putInt(1)
                 Unit
             }
+
             is EntropyException.InvalidSeedFile -> {
                 buf.putInt(2)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
-
 }
 
-
-
 sealed class Event {
-    
     data class PaymentSuccessful(
-        val `paymentId`: PaymentId?, 
-        val `paymentHash`: PaymentHash, 
-        val `paymentPreimage`: PaymentPreimage?, 
-        val `feePaidMsat`: kotlin.ULong?) : Event() {
+        val `paymentId`: PaymentId?,
+        val `paymentHash`: PaymentHash,
+        val `paymentPreimage`: PaymentPreimage?,
+        val `feePaidMsat`: kotlin.ULong?,
+    ) : Event() {
         companion object
     }
-    
-    data class PaymentFailed(
-        val `paymentId`: PaymentId?, 
-        val `paymentHash`: PaymentHash?, 
-        val `reason`: PaymentFailureReason?) : Event() {
-        companion object
-    }
-    
-    data class PaymentReceived(
-        val `paymentId`: PaymentId?, 
-        val `paymentHash`: PaymentHash, 
-        val `amountMsat`: kotlin.ULong, 
-        val `customRecords`: List<CustomTlvRecord>) : Event() {
-        companion object
-    }
-    
-    data class PaymentClaimable(
-        val `paymentId`: PaymentId, 
-        val `paymentHash`: PaymentHash, 
-        val `claimableAmountMsat`: kotlin.ULong, 
-        val `claimDeadline`: kotlin.UInt?, 
-        val `customRecords`: List<CustomTlvRecord>) : Event() {
-        companion object
-    }
-    
-    data class PaymentForwarded(
-        val `prevChannelId`: ChannelId, 
-        val `nextChannelId`: ChannelId, 
-        val `prevUserChannelId`: UserChannelId?, 
-        val `nextUserChannelId`: UserChannelId?, 
-        val `prevNodeId`: PublicKey?, 
-        val `nextNodeId`: PublicKey?, 
-        val `totalFeeEarnedMsat`: kotlin.ULong?, 
-        val `skimmedFeeMsat`: kotlin.ULong?, 
-        val `claimFromOnchainTx`: kotlin.Boolean, 
-        val `outboundAmountForwardedMsat`: kotlin.ULong?) : Event() {
-        companion object
-    }
-    
-    data class ChannelPending(
-        val `channelId`: ChannelId, 
-        val `userChannelId`: UserChannelId, 
-        val `formerTemporaryChannelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `fundingTxo`: OutPoint) : Event() {
-        companion object
-    }
-    
-    data class ChannelReady(
-        val `channelId`: ChannelId, 
-        val `userChannelId`: UserChannelId, 
-        val `counterpartyNodeId`: PublicKey?, 
-        val `fundingTxo`: OutPoint?) : Event() {
-        companion object
-    }
-    
-    data class ChannelClosed(
-        val `channelId`: ChannelId, 
-        val `userChannelId`: UserChannelId, 
-        val `counterpartyNodeId`: PublicKey?, 
-        val `reason`: ClosureReason?) : Event() {
-        companion object
-    }
-    
-    data class SplicePending(
-        val `channelId`: ChannelId, 
-        val `userChannelId`: UserChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `newFundingTxo`: OutPoint) : Event() {
-        companion object
-    }
-    
-    data class SpliceFailed(
-        val `channelId`: ChannelId, 
-        val `userChannelId`: UserChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `abandonedFundingTxo`: OutPoint?) : Event() {
-        companion object
-    }
-    
 
-    
+    data class PaymentFailed(
+        val `paymentId`: PaymentId?,
+        val `paymentHash`: PaymentHash?,
+        val `reason`: PaymentFailureReason?,
+    ) : Event() {
+        companion object
+    }
+
+    data class PaymentReceived(
+        val `paymentId`: PaymentId?,
+        val `paymentHash`: PaymentHash,
+        val `amountMsat`: kotlin.ULong,
+        val `customRecords`: List<CustomTlvRecord>,
+    ) : Event() {
+        companion object
+    }
+
+    data class PaymentClaimable(
+        val `paymentId`: PaymentId,
+        val `paymentHash`: PaymentHash,
+        val `claimableAmountMsat`: kotlin.ULong,
+        val `claimDeadline`: kotlin.UInt?,
+        val `customRecords`: List<CustomTlvRecord>,
+    ) : Event() {
+        companion object
+    }
+
+    data class PaymentForwarded(
+        val `prevChannelId`: ChannelId,
+        val `nextChannelId`: ChannelId,
+        val `prevUserChannelId`: UserChannelId?,
+        val `nextUserChannelId`: UserChannelId?,
+        val `prevNodeId`: PublicKey?,
+        val `nextNodeId`: PublicKey?,
+        val `totalFeeEarnedMsat`: kotlin.ULong?,
+        val `skimmedFeeMsat`: kotlin.ULong?,
+        val `claimFromOnchainTx`: kotlin.Boolean,
+        val `outboundAmountForwardedMsat`: kotlin.ULong?,
+    ) : Event() {
+        companion object
+    }
+
+    data class ChannelPending(
+        val `channelId`: ChannelId,
+        val `userChannelId`: UserChannelId,
+        val `formerTemporaryChannelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `fundingTxo`: OutPoint,
+    ) : Event() {
+        companion object
+    }
+
+    data class ChannelReady(
+        val `channelId`: ChannelId,
+        val `userChannelId`: UserChannelId,
+        val `counterpartyNodeId`: PublicKey?,
+        val `fundingTxo`: OutPoint?,
+    ) : Event() {
+        companion object
+    }
+
+    data class ChannelClosed(
+        val `channelId`: ChannelId,
+        val `userChannelId`: UserChannelId,
+        val `counterpartyNodeId`: PublicKey?,
+        val `reason`: ClosureReason?,
+    ) : Event() {
+        companion object
+    }
+
+    data class SplicePending(
+        val `channelId`: ChannelId,
+        val `userChannelId`: UserChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `newFundingTxo`: OutPoint,
+    ) : Event() {
+        companion object
+    }
+
+    data class SpliceFailed(
+        val `channelId`: ChannelId,
+        val `userChannelId`: UserChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `abandonedFundingTxo`: OutPoint?,
+    ) : Event() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
-    override fun read(buf: ByteBuffer): Event {
-        return when(buf.getInt()) {
-            1 -> Event.PaymentSuccessful(
-                FfiConverterOptionalTypePaymentId.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentPreimage.read(buf),
-                FfiConverterOptionalULong.read(buf),
+public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event> {
+    override fun read(buf: ByteBuffer): Event =
+        when (buf.getInt()) {
+            1 -> {
+                Event.PaymentSuccessful(
+                    FfiConverterOptionalTypePaymentId.read(buf),
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentPreimage.read(buf),
+                    FfiConverterOptionalULong.read(buf),
                 )
-            2 -> Event.PaymentFailed(
-                FfiConverterOptionalTypePaymentId.read(buf),
-                FfiConverterOptionalTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentFailureReason.read(buf),
-                )
-            3 -> Event.PaymentReceived(
-                FfiConverterOptionalTypePaymentId.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterSequenceTypeCustomTlvRecord.read(buf),
-                )
-            4 -> Event.PaymentClaimable(
-                FfiConverterTypePaymentId.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterOptionalUInt.read(buf),
-                FfiConverterSequenceTypeCustomTlvRecord.read(buf),
-                )
-            5 -> Event.PaymentForwarded(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterOptionalTypeUserChannelId.read(buf),
-                FfiConverterOptionalTypeUserChannelId.read(buf),
-                FfiConverterOptionalTypePublicKey.read(buf),
-                FfiConverterOptionalTypePublicKey.read(buf),
-                FfiConverterOptionalULong.read(buf),
-                FfiConverterOptionalULong.read(buf),
-                FfiConverterBoolean.read(buf),
-                FfiConverterOptionalULong.read(buf),
-                )
-            6 -> Event.ChannelPending(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypeUserChannelId.read(buf),
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterTypeOutPoint.read(buf),
-                )
-            7 -> Event.ChannelReady(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypeUserChannelId.read(buf),
-                FfiConverterOptionalTypePublicKey.read(buf),
-                FfiConverterOptionalTypeOutPoint.read(buf),
-                )
-            8 -> Event.ChannelClosed(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypeUserChannelId.read(buf),
-                FfiConverterOptionalTypePublicKey.read(buf),
-                FfiConverterOptionalTypeClosureReason.read(buf),
-                )
-            9 -> Event.SplicePending(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypeUserChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterTypeOutPoint.read(buf),
-                )
-            10 -> Event.SpliceFailed(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypeUserChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterOptionalTypeOutPoint.read(buf),
-                )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: Event) = when(value) {
-        is Event.PaymentSuccessful -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypePaymentId.allocationSize(value.`paymentId`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`paymentPreimage`)
-                + FfiConverterOptionalULong.allocationSize(value.`feePaidMsat`)
-            )
-        }
-        is Event.PaymentFailed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypePaymentId.allocationSize(value.`paymentId`)
-                + FfiConverterOptionalTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterOptionalTypePaymentFailureReason.allocationSize(value.`reason`)
-            )
-        }
-        is Event.PaymentReceived -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypePaymentId.allocationSize(value.`paymentId`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterULong.allocationSize(value.`amountMsat`)
-                + FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
-            )
-        }
-        is Event.PaymentClaimable -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterULong.allocationSize(value.`claimableAmountMsat`)
-                + FfiConverterOptionalUInt.allocationSize(value.`claimDeadline`)
-                + FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
-            )
-        }
-        is Event.PaymentForwarded -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`prevChannelId`)
-                + FfiConverterTypeChannelId.allocationSize(value.`nextChannelId`)
-                + FfiConverterOptionalTypeUserChannelId.allocationSize(value.`prevUserChannelId`)
-                + FfiConverterOptionalTypeUserChannelId.allocationSize(value.`nextUserChannelId`)
-                + FfiConverterOptionalTypePublicKey.allocationSize(value.`prevNodeId`)
-                + FfiConverterOptionalTypePublicKey.allocationSize(value.`nextNodeId`)
-                + FfiConverterOptionalULong.allocationSize(value.`totalFeeEarnedMsat`)
-                + FfiConverterOptionalULong.allocationSize(value.`skimmedFeeMsat`)
-                + FfiConverterBoolean.allocationSize(value.`claimFromOnchainTx`)
-                + FfiConverterOptionalULong.allocationSize(value.`outboundAmountForwardedMsat`)
-            )
-        }
-        is Event.ChannelPending -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`)
-                + FfiConverterTypeChannelId.allocationSize(value.`formerTemporaryChannelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterTypeOutPoint.allocationSize(value.`fundingTxo`)
-            )
-        }
-        is Event.ChannelReady -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`)
-                + FfiConverterOptionalTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterOptionalTypeOutPoint.allocationSize(value.`fundingTxo`)
-            )
-        }
-        is Event.ChannelClosed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`)
-                + FfiConverterOptionalTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterOptionalTypeClosureReason.allocationSize(value.`reason`)
-            )
-        }
-        is Event.SplicePending -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterTypeOutPoint.allocationSize(value.`newFundingTxo`)
-            )
-        }
-        is Event.SpliceFailed -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterOptionalTypeOutPoint.allocationSize(value.`abandonedFundingTxo`)
-            )
-        }
-    }
+            2 -> {
+                Event.PaymentFailed(
+                    FfiConverterOptionalTypePaymentId.read(buf),
+                    FfiConverterOptionalTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentFailureReason.read(buf),
+                )
+            }
 
-    override fun write(value: Event, buf: ByteBuffer) {
-        when(value) {
+            3 -> {
+                Event.PaymentReceived(
+                    FfiConverterOptionalTypePaymentId.read(buf),
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterSequenceTypeCustomTlvRecord.read(buf),
+                )
+            }
+
+            4 -> {
+                Event.PaymentClaimable(
+                    FfiConverterTypePaymentId.read(buf),
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterOptionalUInt.read(buf),
+                    FfiConverterSequenceTypeCustomTlvRecord.read(buf),
+                )
+            }
+
+            5 -> {
+                Event.PaymentForwarded(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterOptionalTypeUserChannelId.read(buf),
+                    FfiConverterOptionalTypeUserChannelId.read(buf),
+                    FfiConverterOptionalTypePublicKey.read(buf),
+                    FfiConverterOptionalTypePublicKey.read(buf),
+                    FfiConverterOptionalULong.read(buf),
+                    FfiConverterOptionalULong.read(buf),
+                    FfiConverterBoolean.read(buf),
+                    FfiConverterOptionalULong.read(buf),
+                )
+            }
+
+            6 -> {
+                Event.ChannelPending(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypeUserChannelId.read(buf),
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterTypeOutPoint.read(buf),
+                )
+            }
+
+            7 -> {
+                Event.ChannelReady(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypeUserChannelId.read(buf),
+                    FfiConverterOptionalTypePublicKey.read(buf),
+                    FfiConverterOptionalTypeOutPoint.read(buf),
+                )
+            }
+
+            8 -> {
+                Event.ChannelClosed(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypeUserChannelId.read(buf),
+                    FfiConverterOptionalTypePublicKey.read(buf),
+                    FfiConverterOptionalTypeClosureReason.read(buf),
+                )
+            }
+
+            9 -> {
+                Event.SplicePending(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypeUserChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterTypeOutPoint.read(buf),
+                )
+            }
+
+            10 -> {
+                Event.SpliceFailed(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypeUserChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterOptionalTypeOutPoint.read(buf),
+                )
+            }
+
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: Event) =
+        when (value) {
+            is Event.PaymentSuccessful -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypePaymentId.allocationSize(value.`paymentId`) +
+                        FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`) +
+                        FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`paymentPreimage`) +
+                        FfiConverterOptionalULong.allocationSize(value.`feePaidMsat`)
+                )
+            }
+
+            is Event.PaymentFailed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypePaymentId.allocationSize(value.`paymentId`) +
+                        FfiConverterOptionalTypePaymentHash.allocationSize(value.`paymentHash`) +
+                        FfiConverterOptionalTypePaymentFailureReason.allocationSize(value.`reason`)
+                )
+            }
+
+            is Event.PaymentReceived -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypePaymentId.allocationSize(value.`paymentId`) +
+                        FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`) +
+                        FfiConverterULong.allocationSize(value.`amountMsat`) +
+                        FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
+                )
+            }
+
+            is Event.PaymentClaimable -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypePaymentId.allocationSize(value.`paymentId`) +
+                        FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`) +
+                        FfiConverterULong.allocationSize(value.`claimableAmountMsat`) +
+                        FfiConverterOptionalUInt.allocationSize(value.`claimDeadline`) +
+                        FfiConverterSequenceTypeCustomTlvRecord.allocationSize(value.`customRecords`)
+                )
+            }
+
+            is Event.PaymentForwarded -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`prevChannelId`) +
+                        FfiConverterTypeChannelId.allocationSize(value.`nextChannelId`) +
+                        FfiConverterOptionalTypeUserChannelId.allocationSize(value.`prevUserChannelId`) +
+                        FfiConverterOptionalTypeUserChannelId.allocationSize(value.`nextUserChannelId`) +
+                        FfiConverterOptionalTypePublicKey.allocationSize(value.`prevNodeId`) +
+                        FfiConverterOptionalTypePublicKey.allocationSize(value.`nextNodeId`) +
+                        FfiConverterOptionalULong.allocationSize(value.`totalFeeEarnedMsat`) +
+                        FfiConverterOptionalULong.allocationSize(value.`skimmedFeeMsat`) +
+                        FfiConverterBoolean.allocationSize(value.`claimFromOnchainTx`) +
+                        FfiConverterOptionalULong.allocationSize(value.`outboundAmountForwardedMsat`)
+                )
+            }
+
+            is Event.ChannelPending -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
+                        FfiConverterTypeChannelId.allocationSize(value.`formerTemporaryChannelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterTypeOutPoint.allocationSize(value.`fundingTxo`)
+                )
+            }
+
+            is Event.ChannelReady -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
+                        FfiConverterOptionalTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterOptionalTypeOutPoint.allocationSize(value.`fundingTxo`)
+                )
+            }
+
+            is Event.ChannelClosed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
+                        FfiConverterOptionalTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterOptionalTypeClosureReason.allocationSize(value.`reason`)
+                )
+            }
+
+            is Event.SplicePending -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterTypeOutPoint.allocationSize(value.`newFundingTxo`)
+                )
+            }
+
+            is Event.SpliceFailed -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypeUserChannelId.allocationSize(value.`userChannelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterOptionalTypeOutPoint.allocationSize(value.`abandonedFundingTxo`)
+                )
+            }
+        }
+
+    override fun write(
+        value: Event,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is Event.PaymentSuccessful -> {
                 buf.putInt(1)
                 FfiConverterOptionalTypePaymentId.write(value.`paymentId`, buf)
@@ -11717,6 +13151,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalULong.write(value.`feePaidMsat`, buf)
                 Unit
             }
+
             is Event.PaymentFailed -> {
                 buf.putInt(2)
                 FfiConverterOptionalTypePaymentId.write(value.`paymentId`, buf)
@@ -11724,6 +13159,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalTypePaymentFailureReason.write(value.`reason`, buf)
                 Unit
             }
+
             is Event.PaymentReceived -> {
                 buf.putInt(3)
                 FfiConverterOptionalTypePaymentId.write(value.`paymentId`, buf)
@@ -11732,6 +13168,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterSequenceTypeCustomTlvRecord.write(value.`customRecords`, buf)
                 Unit
             }
+
             is Event.PaymentClaimable -> {
                 buf.putInt(4)
                 FfiConverterTypePaymentId.write(value.`paymentId`, buf)
@@ -11741,6 +13178,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterSequenceTypeCustomTlvRecord.write(value.`customRecords`, buf)
                 Unit
             }
+
             is Event.PaymentForwarded -> {
                 buf.putInt(5)
                 FfiConverterTypeChannelId.write(value.`prevChannelId`, buf)
@@ -11755,6 +13193,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalULong.write(value.`outboundAmountForwardedMsat`, buf)
                 Unit
             }
+
             is Event.ChannelPending -> {
                 buf.putInt(6)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -11764,6 +13203,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterTypeOutPoint.write(value.`fundingTxo`, buf)
                 Unit
             }
+
             is Event.ChannelReady -> {
                 buf.putInt(7)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -11772,6 +13212,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalTypeOutPoint.write(value.`fundingTxo`, buf)
                 Unit
             }
+
             is Event.ChannelClosed -> {
                 buf.putInt(8)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -11780,6 +13221,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterOptionalTypeClosureReason.write(value.`reason`, buf)
                 Unit
             }
+
             is Event.SplicePending -> {
                 buf.putInt(9)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -11788,6 +13230,7 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
                 FfiConverterTypeOutPoint.write(value.`newFundingTxo`, buf)
                 Unit
             }
+
             is Event.SpliceFailed -> {
                 buf.putInt(10)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -11800,234 +13243,290 @@ public object FfiConverterTypeEvent : FfiConverterRustBuffer<Event>{
     }
 }
 
-
-
-
-
-
 enum class Lsps1PaymentState {
-    
     EXPECT_PAYMENT,
     PAID,
-    REFUNDED;
+    REFUNDED,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLSPS1PaymentState: FfiConverterRustBuffer<Lsps1PaymentState> {
-    override fun read(buf: ByteBuffer) = try {
-        Lsps1PaymentState.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeLSPS1PaymentState : FfiConverterRustBuffer<Lsps1PaymentState> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            Lsps1PaymentState.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: Lsps1PaymentState) = 4UL
 
-    override fun write(value: Lsps1PaymentState, buf: ByteBuffer) {
+    override fun write(
+        value: Lsps1PaymentState,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
+enum class Lsps7OrderState {
+    CREATED,
+    COMPLETED,
+    FAILED,
+    ;
 
-
-
-
-sealed class LightningBalance {
-    
-    data class ClaimableOnChannelClose(
-        val `channelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `amountSatoshis`: kotlin.ULong, 
-        val `transactionFeeSatoshis`: kotlin.ULong, 
-        val `outboundPaymentHtlcRoundedMsat`: kotlin.ULong, 
-        val `outboundForwardedHtlcRoundedMsat`: kotlin.ULong, 
-        val `inboundClaimingHtlcRoundedMsat`: kotlin.ULong, 
-        val `inboundHtlcRoundedMsat`: kotlin.ULong) : LightningBalance() {
-        companion object
-    }
-    
-    data class ClaimableAwaitingConfirmations(
-        val `channelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `amountSatoshis`: kotlin.ULong, 
-        val `confirmationHeight`: kotlin.UInt, 
-        val `source`: BalanceSource) : LightningBalance() {
-        companion object
-    }
-    
-    data class ContentiousClaimable(
-        val `channelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `amountSatoshis`: kotlin.ULong, 
-        val `timeoutHeight`: kotlin.UInt, 
-        val `paymentHash`: PaymentHash, 
-        val `paymentPreimage`: PaymentPreimage) : LightningBalance() {
-        companion object
-    }
-    
-    data class MaybeTimeoutClaimableHtlc(
-        val `channelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `amountSatoshis`: kotlin.ULong, 
-        val `claimableHeight`: kotlin.UInt, 
-        val `paymentHash`: PaymentHash, 
-        val `outboundPayment`: kotlin.Boolean) : LightningBalance() {
-        companion object
-    }
-    
-    data class MaybePreimageClaimableHtlc(
-        val `channelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `amountSatoshis`: kotlin.ULong, 
-        val `expiryHeight`: kotlin.UInt, 
-        val `paymentHash`: PaymentHash) : LightningBalance() {
-        companion object
-    }
-    
-    data class CounterpartyRevokedOutputClaimable(
-        val `channelId`: ChannelId, 
-        val `counterpartyNodeId`: PublicKey, 
-        val `amountSatoshis`: kotlin.ULong) : LightningBalance() {
-        companion object
-    }
-    
-
-    
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<LightningBalance>{
-    override fun read(buf: ByteBuffer): LightningBalance {
-        return when(buf.getInt()) {
-            1 -> LightningBalance.ClaimableOnChannelClose(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterULong.read(buf),
-                )
-            2 -> LightningBalance.ClaimableAwaitingConfirmations(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterTypeBalanceSource.read(buf),
-                )
-            3 -> LightningBalance.ContentiousClaimable(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterTypePaymentPreimage.read(buf),
-                )
-            4 -> LightningBalance.MaybeTimeoutClaimableHtlc(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterBoolean.read(buf),
-                )
-            5 -> LightningBalance.MaybePreimageClaimableHtlc(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterULong.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterTypePaymentHash.read(buf),
-                )
-            6 -> LightningBalance.CounterpartyRevokedOutputClaimable(
-                FfiConverterTypeChannelId.read(buf),
-                FfiConverterTypePublicKey.read(buf),
-                FfiConverterULong.read(buf),
-                )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+public object FfiConverterTypeLSPS7OrderState : FfiConverterRustBuffer<Lsps7OrderState> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            Lsps7OrderState.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
         }
+
+    override fun allocationSize(value: Lsps7OrderState) = 4UL
+
+    override fun write(
+        value: Lsps7OrderState,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+sealed class LightningBalance {
+    data class ClaimableOnChannelClose(
+        val `channelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `amountSatoshis`: kotlin.ULong,
+        val `transactionFeeSatoshis`: kotlin.ULong,
+        val `outboundPaymentHtlcRoundedMsat`: kotlin.ULong,
+        val `outboundForwardedHtlcRoundedMsat`: kotlin.ULong,
+        val `inboundClaimingHtlcRoundedMsat`: kotlin.ULong,
+        val `inboundHtlcRoundedMsat`: kotlin.ULong,
+    ) : LightningBalance() {
+        companion object
     }
 
-    override fun allocationSize(value: LightningBalance) = when(value) {
-        is LightningBalance.ClaimableOnChannelClose -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-                + FfiConverterULong.allocationSize(value.`transactionFeeSatoshis`)
-                + FfiConverterULong.allocationSize(value.`outboundPaymentHtlcRoundedMsat`)
-                + FfiConverterULong.allocationSize(value.`outboundForwardedHtlcRoundedMsat`)
-                + FfiConverterULong.allocationSize(value.`inboundClaimingHtlcRoundedMsat`)
-                + FfiConverterULong.allocationSize(value.`inboundHtlcRoundedMsat`)
-            )
-        }
-        is LightningBalance.ClaimableAwaitingConfirmations -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-                + FfiConverterUInt.allocationSize(value.`confirmationHeight`)
-                + FfiConverterTypeBalanceSource.allocationSize(value.`source`)
-            )
-        }
-        is LightningBalance.ContentiousClaimable -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-                + FfiConverterUInt.allocationSize(value.`timeoutHeight`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterTypePaymentPreimage.allocationSize(value.`paymentPreimage`)
-            )
-        }
-        is LightningBalance.MaybeTimeoutClaimableHtlc -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-                + FfiConverterUInt.allocationSize(value.`claimableHeight`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-                + FfiConverterBoolean.allocationSize(value.`outboundPayment`)
-            )
-        }
-        is LightningBalance.MaybePreimageClaimableHtlc -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-                + FfiConverterUInt.allocationSize(value.`expiryHeight`)
-                + FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
-            )
-        }
-        is LightningBalance.CounterpartyRevokedOutputClaimable -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-            )
-        }
+    data class ClaimableAwaitingConfirmations(
+        val `channelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `amountSatoshis`: kotlin.ULong,
+        val `confirmationHeight`: kotlin.UInt,
+        val `source`: BalanceSource,
+    ) : LightningBalance() {
+        companion object
     }
 
-    override fun write(value: LightningBalance, buf: ByteBuffer) {
-        when(value) {
+    data class ContentiousClaimable(
+        val `channelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `amountSatoshis`: kotlin.ULong,
+        val `timeoutHeight`: kotlin.UInt,
+        val `paymentHash`: PaymentHash,
+        val `paymentPreimage`: PaymentPreimage,
+    ) : LightningBalance() {
+        companion object
+    }
+
+    data class MaybeTimeoutClaimableHtlc(
+        val `channelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `amountSatoshis`: kotlin.ULong,
+        val `claimableHeight`: kotlin.UInt,
+        val `paymentHash`: PaymentHash,
+        val `outboundPayment`: kotlin.Boolean,
+    ) : LightningBalance() {
+        companion object
+    }
+
+    data class MaybePreimageClaimableHtlc(
+        val `channelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `amountSatoshis`: kotlin.ULong,
+        val `expiryHeight`: kotlin.UInt,
+        val `paymentHash`: PaymentHash,
+    ) : LightningBalance() {
+        companion object
+    }
+
+    data class CounterpartyRevokedOutputClaimable(
+        val `channelId`: ChannelId,
+        val `counterpartyNodeId`: PublicKey,
+        val `amountSatoshis`: kotlin.ULong,
+    ) : LightningBalance() {
+        companion object
+    }
+
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<LightningBalance> {
+    override fun read(buf: ByteBuffer): LightningBalance =
+        when (buf.getInt()) {
+            1 -> {
+                LightningBalance.ClaimableOnChannelClose(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterULong.read(buf),
+                )
+            }
+
+            2 -> {
+                LightningBalance.ClaimableAwaitingConfirmations(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterTypeBalanceSource.read(buf),
+                )
+            }
+
+            3 -> {
+                LightningBalance.ContentiousClaimable(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterTypePaymentPreimage.read(buf),
+                )
+            }
+
+            4 -> {
+                LightningBalance.MaybeTimeoutClaimableHtlc(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterBoolean.read(buf),
+                )
+            }
+
+            5 -> {
+                LightningBalance.MaybePreimageClaimableHtlc(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterULong.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterTypePaymentHash.read(buf),
+                )
+            }
+
+            6 -> {
+                LightningBalance.CounterpartyRevokedOutputClaimable(
+                    FfiConverterTypeChannelId.read(buf),
+                    FfiConverterTypePublicKey.read(buf),
+                    FfiConverterULong.read(buf),
+                )
+            }
+
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: LightningBalance) =
+        when (value) {
+            is LightningBalance.ClaimableOnChannelClose -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`) +
+                        FfiConverterULong.allocationSize(value.`transactionFeeSatoshis`) +
+                        FfiConverterULong.allocationSize(value.`outboundPaymentHtlcRoundedMsat`) +
+                        FfiConverterULong.allocationSize(value.`outboundForwardedHtlcRoundedMsat`) +
+                        FfiConverterULong.allocationSize(value.`inboundClaimingHtlcRoundedMsat`) +
+                        FfiConverterULong.allocationSize(value.`inboundHtlcRoundedMsat`)
+                )
+            }
+
+            is LightningBalance.ClaimableAwaitingConfirmations -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`) +
+                        FfiConverterUInt.allocationSize(value.`confirmationHeight`) +
+                        FfiConverterTypeBalanceSource.allocationSize(value.`source`)
+                )
+            }
+
+            is LightningBalance.ContentiousClaimable -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`) +
+                        FfiConverterUInt.allocationSize(value.`timeoutHeight`) +
+                        FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`) +
+                        FfiConverterTypePaymentPreimage.allocationSize(value.`paymentPreimage`)
+                )
+            }
+
+            is LightningBalance.MaybeTimeoutClaimableHtlc -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`) +
+                        FfiConverterUInt.allocationSize(value.`claimableHeight`) +
+                        FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`) +
+                        FfiConverterBoolean.allocationSize(value.`outboundPayment`)
+                )
+            }
+
+            is LightningBalance.MaybePreimageClaimableHtlc -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`) +
+                        FfiConverterUInt.allocationSize(value.`expiryHeight`) +
+                        FfiConverterTypePaymentHash.allocationSize(value.`paymentHash`)
+                )
+            }
+
+            is LightningBalance.CounterpartyRevokedOutputClaimable -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypePublicKey.allocationSize(value.`counterpartyNodeId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`)
+                )
+            }
+        }
+
+    override fun write(
+        value: LightningBalance,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is LightningBalance.ClaimableOnChannelClose -> {
                 buf.putInt(1)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -12040,6 +13539,7 @@ public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<Lightnin
                 FfiConverterULong.write(value.`inboundHtlcRoundedMsat`, buf)
                 Unit
             }
+
             is LightningBalance.ClaimableAwaitingConfirmations -> {
                 buf.putInt(2)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -12049,6 +13549,7 @@ public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<Lightnin
                 FfiConverterTypeBalanceSource.write(value.`source`, buf)
                 Unit
             }
+
             is LightningBalance.ContentiousClaimable -> {
                 buf.putInt(3)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -12059,6 +13560,7 @@ public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<Lightnin
                 FfiConverterTypePaymentPreimage.write(value.`paymentPreimage`, buf)
                 Unit
             }
+
             is LightningBalance.MaybeTimeoutClaimableHtlc -> {
                 buf.putInt(4)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -12069,6 +13571,7 @@ public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<Lightnin
                 FfiConverterBoolean.write(value.`outboundPayment`, buf)
                 Unit
             }
+
             is LightningBalance.MaybePreimageClaimableHtlc -> {
                 buf.putInt(5)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -12078,6 +13581,7 @@ public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<Lightnin
                 FfiConverterTypePaymentHash.write(value.`paymentHash`, buf)
                 Unit
             }
+
             is LightningBalance.CounterpartyRevokedOutputClaimable -> {
                 buf.putInt(6)
                 FfiConverterTypeChannelId.write(value.`channelId`, buf)
@@ -12089,101 +13593,108 @@ public object FfiConverterTypeLightningBalance : FfiConverterRustBuffer<Lightnin
     }
 }
 
-
-
-
-
-
 enum class LogLevel {
-    
     GOSSIP,
     TRACE,
     DEBUG,
     INFO,
     WARN,
-    ERROR;
+    ERROR,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeLogLevel: FfiConverterRustBuffer<LogLevel> {
-    override fun read(buf: ByteBuffer) = try {
-        LogLevel.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeLogLevel : FfiConverterRustBuffer<LogLevel> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            LogLevel.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: LogLevel) = 4UL
 
-    override fun write(value: LogLevel, buf: ByteBuffer) {
+    override fun write(
+        value: LogLevel,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
 sealed class MaxDustHtlcExposure {
-    
     data class FixedLimit(
-        val `limitMsat`: kotlin.ULong) : MaxDustHtlcExposure() {
+        val `limitMsat`: kotlin.ULong,
+    ) : MaxDustHtlcExposure() {
         companion object
     }
-    
-    data class FeeRateMultiplier(
-        val `multiplier`: kotlin.ULong) : MaxDustHtlcExposure() {
-        companion object
-    }
-    
 
-    
+    data class FeeRateMultiplier(
+        val `multiplier`: kotlin.ULong,
+    ) : MaxDustHtlcExposure() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeMaxDustHTLCExposure : FfiConverterRustBuffer<MaxDustHtlcExposure>{
-    override fun read(buf: ByteBuffer): MaxDustHtlcExposure {
-        return when(buf.getInt()) {
-            1 -> MaxDustHtlcExposure.FixedLimit(
-                FfiConverterULong.read(buf),
+public object FfiConverterTypeMaxDustHTLCExposure : FfiConverterRustBuffer<MaxDustHtlcExposure> {
+    override fun read(buf: ByteBuffer): MaxDustHtlcExposure =
+        when (buf.getInt()) {
+            1 -> {
+                MaxDustHtlcExposure.FixedLimit(
+                    FfiConverterULong.read(buf),
                 )
-            2 -> MaxDustHtlcExposure.FeeRateMultiplier(
-                FfiConverterULong.read(buf),
+            }
+
+            2 -> {
+                MaxDustHtlcExposure.FeeRateMultiplier(
+                    FfiConverterULong.read(buf),
                 )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: MaxDustHtlcExposure) = when(value) {
-        is MaxDustHtlcExposure.FixedLimit -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterULong.allocationSize(value.`limitMsat`)
-            )
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
         }
-        is MaxDustHtlcExposure.FeeRateMultiplier -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterULong.allocationSize(value.`multiplier`)
-            )
-        }
-    }
 
-    override fun write(value: MaxDustHtlcExposure, buf: ByteBuffer) {
-        when(value) {
+    override fun allocationSize(value: MaxDustHtlcExposure) =
+        when (value) {
+            is MaxDustHtlcExposure.FixedLimit -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterULong.allocationSize(value.`limitMsat`)
+                )
+            }
+
+            is MaxDustHtlcExposure.FeeRateMultiplier -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterULong.allocationSize(value.`multiplier`)
+                )
+            }
+        }
+
+    override fun write(
+        value: MaxDustHtlcExposure,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is MaxDustHtlcExposure.FixedLimit -> {
                 buf.putInt(1)
                 FfiConverterULong.write(value.`limitMsat`, buf)
                 Unit
             }
+
             is MaxDustHtlcExposure.FeeRateMultiplier -> {
                 buf.putInt(2)
                 FfiConverterULong.write(value.`multiplier`, buf)
@@ -12193,158 +13704,263 @@ public object FfiConverterTypeMaxDustHTLCExposure : FfiConverterRustBuffer<MaxDu
     }
 }
 
-
-
-
-
-
 enum class Network {
-    
     BITCOIN,
     TESTNET,
     SIGNET,
-    REGTEST;
+    REGTEST,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeNetwork: FfiConverterRustBuffer<Network> {
-    override fun read(buf: ByteBuffer) = try {
-        Network.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeNetwork : FfiConverterRustBuffer<Network> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            Network.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: Network) = 4UL
 
-    override fun write(value: Network, buf: ByteBuffer) {
+    override fun write(
+        value: Network,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
+sealed class NodeException(
+    message: String,
+) : kotlin.Exception(message) {
+    class AlreadyRunning(
+        message: String,
+    ) : NodeException(message)
 
+    class NotRunning(
+        message: String,
+    ) : NodeException(message)
 
+    class OnchainTxCreationFailed(
+        message: String,
+    ) : NodeException(message)
 
+    class ConnectionFailed(
+        message: String,
+    ) : NodeException(message)
 
+    class InvoiceCreationFailed(
+        message: String,
+    ) : NodeException(message)
 
+    class InvoiceRequestCreationFailed(
+        message: String,
+    ) : NodeException(message)
 
-sealed class NodeException(message: String): kotlin.Exception(message) {
-        
-        class AlreadyRunning(message: String) : NodeException(message)
-        
-        class NotRunning(message: String) : NodeException(message)
-        
-        class OnchainTxCreationFailed(message: String) : NodeException(message)
-        
-        class ConnectionFailed(message: String) : NodeException(message)
-        
-        class InvoiceCreationFailed(message: String) : NodeException(message)
-        
-        class InvoiceRequestCreationFailed(message: String) : NodeException(message)
-        
-        class OfferCreationFailed(message: String) : NodeException(message)
-        
-        class RefundCreationFailed(message: String) : NodeException(message)
-        
-        class PaymentSendingFailed(message: String) : NodeException(message)
-        
-        class InvalidCustomTlvs(message: String) : NodeException(message)
-        
-        class ProbeSendingFailed(message: String) : NodeException(message)
-        
-        class ChannelCreationFailed(message: String) : NodeException(message)
-        
-        class ChannelClosingFailed(message: String) : NodeException(message)
-        
-        class ChannelSplicingFailed(message: String) : NodeException(message)
-        
-        class ChannelConfigUpdateFailed(message: String) : NodeException(message)
-        
-        class PersistenceFailed(message: String) : NodeException(message)
-        
-        class FeerateEstimationUpdateFailed(message: String) : NodeException(message)
-        
-        class FeerateEstimationUpdateTimeout(message: String) : NodeException(message)
-        
-        class WalletOperationFailed(message: String) : NodeException(message)
-        
-        class WalletOperationTimeout(message: String) : NodeException(message)
-        
-        class OnchainTxSigningFailed(message: String) : NodeException(message)
-        
-        class TxSyncFailed(message: String) : NodeException(message)
-        
-        class TxSyncTimeout(message: String) : NodeException(message)
-        
-        class GossipUpdateFailed(message: String) : NodeException(message)
-        
-        class GossipUpdateTimeout(message: String) : NodeException(message)
-        
-        class LiquidityRequestFailed(message: String) : NodeException(message)
-        
-        class UriParameterParsingFailed(message: String) : NodeException(message)
-        
-        class InvalidAddress(message: String) : NodeException(message)
-        
-        class InvalidSocketAddress(message: String) : NodeException(message)
-        
-        class InvalidPublicKey(message: String) : NodeException(message)
-        
-        class InvalidSecretKey(message: String) : NodeException(message)
-        
-        class InvalidOfferId(message: String) : NodeException(message)
-        
-        class InvalidNodeId(message: String) : NodeException(message)
-        
-        class InvalidPaymentId(message: String) : NodeException(message)
-        
-        class InvalidPaymentHash(message: String) : NodeException(message)
-        
-        class InvalidPaymentPreimage(message: String) : NodeException(message)
-        
-        class InvalidPaymentSecret(message: String) : NodeException(message)
-        
-        class InvalidAmount(message: String) : NodeException(message)
-        
-        class InvalidInvoice(message: String) : NodeException(message)
-        
-        class InvalidOffer(message: String) : NodeException(message)
-        
-        class InvalidRefund(message: String) : NodeException(message)
-        
-        class InvalidChannelId(message: String) : NodeException(message)
-        
-        class InvalidNetwork(message: String) : NodeException(message)
-        
-        class InvalidUri(message: String) : NodeException(message)
-        
-        class InvalidQuantity(message: String) : NodeException(message)
-        
-        class InvalidNodeAlias(message: String) : NodeException(message)
-        
-        class InvalidDateTime(message: String) : NodeException(message)
-        
-        class InvalidFeeRate(message: String) : NodeException(message)
-        
-        class InvalidScriptPubKey(message: String) : NodeException(message)
-        
-        class DuplicatePayment(message: String) : NodeException(message)
-        
-        class UnsupportedCurrency(message: String) : NodeException(message)
-        
-        class InsufficientFunds(message: String) : NodeException(message)
-        
-        class LiquiditySourceUnavailable(message: String) : NodeException(message)
-        
-        class LiquidityFeeTooHigh(message: String) : NodeException(message)
-        
-        class InvalidBlindedPaths(message: String) : NodeException(message)
-        
-        class AsyncPaymentServicesDisabled(message: String) : NodeException(message)
-        
+    class OfferCreationFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class RefundCreationFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class PaymentSendingFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidCustomTlvs(
+        message: String,
+    ) : NodeException(message)
+
+    class ProbeSendingFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class ChannelCreationFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class ChannelClosingFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class ChannelSplicingFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class ChannelConfigUpdateFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class PersistenceFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class FeerateEstimationUpdateFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class FeerateEstimationUpdateTimeout(
+        message: String,
+    ) : NodeException(message)
+
+    class WalletOperationFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class WalletOperationTimeout(
+        message: String,
+    ) : NodeException(message)
+
+    class OnchainTxSigningFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class TxSyncFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class TxSyncTimeout(
+        message: String,
+    ) : NodeException(message)
+
+    class GossipUpdateFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class GossipUpdateTimeout(
+        message: String,
+    ) : NodeException(message)
+
+    class LiquidityRequestFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class UriParameterParsingFailed(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidAddress(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidSocketAddress(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidPublicKey(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidSecretKey(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidOfferId(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidNodeId(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidPaymentId(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidPaymentHash(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidPaymentPreimage(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidPaymentSecret(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidAmount(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidInvoice(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidOffer(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidRefund(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidChannelId(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidNetwork(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidUri(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidQuantity(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidNodeAlias(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidDateTime(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidFeeRate(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidScriptPubKey(
+        message: String,
+    ) : NodeException(message)
+
+    class DuplicatePayment(
+        message: String,
+    ) : NodeException(message)
+
+    class UnsupportedCurrency(
+        message: String,
+    ) : NodeException(message)
+
+    class InsufficientFunds(
+        message: String,
+    ) : NodeException(message)
+
+    class LiquiditySourceUnavailable(
+        message: String,
+    ) : NodeException(message)
+
+    class LiquidityFeeTooHigh(
+        message: String,
+    ) : NodeException(message)
+
+    class InvalidBlindedPaths(
+        message: String,
+    ) : NodeException(message)
+
+    class AsyncPaymentServicesDisabled(
+        message: String,
+    ) : NodeException(message)
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<NodeException> {
         override fun lift(error_buf: RustBuffer.ByValue): NodeException = FfiConverterTypeNodeError.lift(error_buf)
@@ -12355,9 +13971,8 @@ sealed class NodeException(message: String): kotlin.Exception(message) {
  * @suppress
  */
 public object FfiConverterTypeNodeError : FfiConverterRustBuffer<NodeException> {
-    override fun read(buf: ByteBuffer): NodeException {
-        
-            return when(buf.getInt()) {
+    override fun read(buf: ByteBuffer): NodeException =
+        when (buf.getInt()) {
             1 -> NodeException.AlreadyRunning(FfiConverterString.read(buf))
             2 -> NodeException.NotRunning(FfiConverterString.read(buf))
             3 -> NodeException.OnchainTxCreationFailed(FfiConverterString.read(buf))
@@ -12416,306 +14031,369 @@ public object FfiConverterTypeNodeError : FfiConverterRustBuffer<NodeException> 
             56 -> NodeException.AsyncPaymentServicesDisabled(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
-    }
 
-    override fun allocationSize(value: NodeException): ULong {
-        return 4UL
-    }
+    override fun allocationSize(value: NodeException): ULong = 4UL
 
-    override fun write(value: NodeException, buf: ByteBuffer) {
-        when(value) {
+    override fun write(
+        value: NodeException,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is NodeException.AlreadyRunning -> {
                 buf.putInt(1)
                 Unit
             }
+
             is NodeException.NotRunning -> {
                 buf.putInt(2)
                 Unit
             }
+
             is NodeException.OnchainTxCreationFailed -> {
                 buf.putInt(3)
                 Unit
             }
+
             is NodeException.ConnectionFailed -> {
                 buf.putInt(4)
                 Unit
             }
+
             is NodeException.InvoiceCreationFailed -> {
                 buf.putInt(5)
                 Unit
             }
+
             is NodeException.InvoiceRequestCreationFailed -> {
                 buf.putInt(6)
                 Unit
             }
+
             is NodeException.OfferCreationFailed -> {
                 buf.putInt(7)
                 Unit
             }
+
             is NodeException.RefundCreationFailed -> {
                 buf.putInt(8)
                 Unit
             }
+
             is NodeException.PaymentSendingFailed -> {
                 buf.putInt(9)
                 Unit
             }
+
             is NodeException.InvalidCustomTlvs -> {
                 buf.putInt(10)
                 Unit
             }
+
             is NodeException.ProbeSendingFailed -> {
                 buf.putInt(11)
                 Unit
             }
+
             is NodeException.ChannelCreationFailed -> {
                 buf.putInt(12)
                 Unit
             }
+
             is NodeException.ChannelClosingFailed -> {
                 buf.putInt(13)
                 Unit
             }
+
             is NodeException.ChannelSplicingFailed -> {
                 buf.putInt(14)
                 Unit
             }
+
             is NodeException.ChannelConfigUpdateFailed -> {
                 buf.putInt(15)
                 Unit
             }
+
             is NodeException.PersistenceFailed -> {
                 buf.putInt(16)
                 Unit
             }
+
             is NodeException.FeerateEstimationUpdateFailed -> {
                 buf.putInt(17)
                 Unit
             }
+
             is NodeException.FeerateEstimationUpdateTimeout -> {
                 buf.putInt(18)
                 Unit
             }
+
             is NodeException.WalletOperationFailed -> {
                 buf.putInt(19)
                 Unit
             }
+
             is NodeException.WalletOperationTimeout -> {
                 buf.putInt(20)
                 Unit
             }
+
             is NodeException.OnchainTxSigningFailed -> {
                 buf.putInt(21)
                 Unit
             }
+
             is NodeException.TxSyncFailed -> {
                 buf.putInt(22)
                 Unit
             }
+
             is NodeException.TxSyncTimeout -> {
                 buf.putInt(23)
                 Unit
             }
+
             is NodeException.GossipUpdateFailed -> {
                 buf.putInt(24)
                 Unit
             }
+
             is NodeException.GossipUpdateTimeout -> {
                 buf.putInt(25)
                 Unit
             }
+
             is NodeException.LiquidityRequestFailed -> {
                 buf.putInt(26)
                 Unit
             }
+
             is NodeException.UriParameterParsingFailed -> {
                 buf.putInt(27)
                 Unit
             }
+
             is NodeException.InvalidAddress -> {
                 buf.putInt(28)
                 Unit
             }
+
             is NodeException.InvalidSocketAddress -> {
                 buf.putInt(29)
                 Unit
             }
+
             is NodeException.InvalidPublicKey -> {
                 buf.putInt(30)
                 Unit
             }
+
             is NodeException.InvalidSecretKey -> {
                 buf.putInt(31)
                 Unit
             }
+
             is NodeException.InvalidOfferId -> {
                 buf.putInt(32)
                 Unit
             }
+
             is NodeException.InvalidNodeId -> {
                 buf.putInt(33)
                 Unit
             }
+
             is NodeException.InvalidPaymentId -> {
                 buf.putInt(34)
                 Unit
             }
+
             is NodeException.InvalidPaymentHash -> {
                 buf.putInt(35)
                 Unit
             }
+
             is NodeException.InvalidPaymentPreimage -> {
                 buf.putInt(36)
                 Unit
             }
+
             is NodeException.InvalidPaymentSecret -> {
                 buf.putInt(37)
                 Unit
             }
+
             is NodeException.InvalidAmount -> {
                 buf.putInt(38)
                 Unit
             }
+
             is NodeException.InvalidInvoice -> {
                 buf.putInt(39)
                 Unit
             }
+
             is NodeException.InvalidOffer -> {
                 buf.putInt(40)
                 Unit
             }
+
             is NodeException.InvalidRefund -> {
                 buf.putInt(41)
                 Unit
             }
+
             is NodeException.InvalidChannelId -> {
                 buf.putInt(42)
                 Unit
             }
+
             is NodeException.InvalidNetwork -> {
                 buf.putInt(43)
                 Unit
             }
+
             is NodeException.InvalidUri -> {
                 buf.putInt(44)
                 Unit
             }
+
             is NodeException.InvalidQuantity -> {
                 buf.putInt(45)
                 Unit
             }
+
             is NodeException.InvalidNodeAlias -> {
                 buf.putInt(46)
                 Unit
             }
+
             is NodeException.InvalidDateTime -> {
                 buf.putInt(47)
                 Unit
             }
+
             is NodeException.InvalidFeeRate -> {
                 buf.putInt(48)
                 Unit
             }
+
             is NodeException.InvalidScriptPubKey -> {
                 buf.putInt(49)
                 Unit
             }
+
             is NodeException.DuplicatePayment -> {
                 buf.putInt(50)
                 Unit
             }
+
             is NodeException.UnsupportedCurrency -> {
                 buf.putInt(51)
                 Unit
             }
+
             is NodeException.InsufficientFunds -> {
                 buf.putInt(52)
                 Unit
             }
+
             is NodeException.LiquiditySourceUnavailable -> {
                 buf.putInt(53)
                 Unit
             }
+
             is NodeException.LiquidityFeeTooHigh -> {
                 buf.putInt(54)
                 Unit
             }
+
             is NodeException.InvalidBlindedPaths -> {
                 buf.putInt(55)
                 Unit
             }
+
             is NodeException.AsyncPaymentServicesDisabled -> {
                 buf.putInt(56)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
-
 }
 
-
-
 sealed class OfferAmount {
-    
     data class Bitcoin(
-        val `amountMsats`: kotlin.ULong) : OfferAmount() {
+        val `amountMsats`: kotlin.ULong,
+    ) : OfferAmount() {
         companion object
     }
-    
-    data class Currency(
-        val `iso4217Code`: kotlin.String, 
-        val `amount`: kotlin.ULong) : OfferAmount() {
-        companion object
-    }
-    
 
-    
+    data class Currency(
+        val `iso4217Code`: kotlin.String,
+        val `amount`: kotlin.ULong,
+    ) : OfferAmount() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeOfferAmount : FfiConverterRustBuffer<OfferAmount>{
-    override fun read(buf: ByteBuffer): OfferAmount {
-        return when(buf.getInt()) {
-            1 -> OfferAmount.Bitcoin(
-                FfiConverterULong.read(buf),
+public object FfiConverterTypeOfferAmount : FfiConverterRustBuffer<OfferAmount> {
+    override fun read(buf: ByteBuffer): OfferAmount =
+        when (buf.getInt()) {
+            1 -> {
+                OfferAmount.Bitcoin(
+                    FfiConverterULong.read(buf),
                 )
-            2 -> OfferAmount.Currency(
-                FfiConverterString.read(buf),
-                FfiConverterULong.read(buf),
+            }
+
+            2 -> {
+                OfferAmount.Currency(
+                    FfiConverterString.read(buf),
+                    FfiConverterULong.read(buf),
                 )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: OfferAmount) = when(value) {
-        is OfferAmount.Bitcoin -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterULong.allocationSize(value.`amountMsats`)
-            )
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
         }
-        is OfferAmount.Currency -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterString.allocationSize(value.`iso4217Code`)
-                + FfiConverterULong.allocationSize(value.`amount`)
-            )
-        }
-    }
 
-    override fun write(value: OfferAmount, buf: ByteBuffer) {
-        when(value) {
+    override fun allocationSize(value: OfferAmount) =
+        when (value) {
+            is OfferAmount.Bitcoin -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterULong.allocationSize(value.`amountMsats`)
+                )
+            }
+
+            is OfferAmount.Currency -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterString.allocationSize(value.`iso4217Code`) +
+                        FfiConverterULong.allocationSize(value.`amount`)
+                )
+            }
+        }
+
+    override fun write(
+        value: OfferAmount,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is OfferAmount.Bitcoin -> {
                 buf.putInt(1)
                 FfiConverterULong.write(value.`amountMsats`, buf)
                 Unit
             }
+
             is OfferAmount.Currency -> {
                 buf.putInt(2)
                 FfiConverterString.write(value.`iso4217Code`, buf)
@@ -12726,43 +14404,36 @@ public object FfiConverterTypeOfferAmount : FfiConverterRustBuffer<OfferAmount>{
     }
 }
 
-
-
-
-
-
 enum class PaymentDirection {
-    
     INBOUND,
-    OUTBOUND;
+    OUTBOUND,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypePaymentDirection: FfiConverterRustBuffer<PaymentDirection> {
-    override fun read(buf: ByteBuffer) = try {
-        PaymentDirection.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypePaymentDirection : FfiConverterRustBuffer<PaymentDirection> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            PaymentDirection.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: PaymentDirection) = 4UL
 
-    override fun write(value: PaymentDirection, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentDirection,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
-
 enum class PaymentFailureReason {
-    
     RECIPIENT_REJECTED,
     USER_ABANDONED,
     RETRIES_EXHAUSTED,
@@ -12772,201 +14443,234 @@ enum class PaymentFailureReason {
     UNKNOWN_REQUIRED_FEATURES,
     INVOICE_REQUEST_EXPIRED,
     INVOICE_REQUEST_REJECTED,
-    BLINDED_PATH_CREATION_FAILED;
+    BLINDED_PATH_CREATION_FAILED,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypePaymentFailureReason: FfiConverterRustBuffer<PaymentFailureReason> {
-    override fun read(buf: ByteBuffer) = try {
-        PaymentFailureReason.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypePaymentFailureReason : FfiConverterRustBuffer<PaymentFailureReason> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            PaymentFailureReason.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: PaymentFailureReason) = 4UL
 
-    override fun write(value: PaymentFailureReason, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentFailureReason,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
 sealed class PaymentKind {
-    
     data class Onchain(
-        val `txid`: Txid, 
-        val `status`: ConfirmationStatus) : PaymentKind() {
+        val `txid`: Txid,
+        val `status`: ConfirmationStatus,
+    ) : PaymentKind() {
         companion object
     }
-    
-    data class Bolt11(
-        val `hash`: PaymentHash, 
-        val `preimage`: PaymentPreimage?, 
-        val `secret`: PaymentSecret?) : PaymentKind() {
-        companion object
-    }
-    
-    data class Bolt11Jit(
-        val `hash`: PaymentHash, 
-        val `preimage`: PaymentPreimage?, 
-        val `secret`: PaymentSecret?, 
-        val `counterpartySkimmedFeeMsat`: kotlin.ULong?, 
-        val `lspFeeLimits`: LspFeeLimits) : PaymentKind() {
-        companion object
-    }
-    
-    data class Bolt12Offer(
-        val `hash`: PaymentHash?, 
-        val `preimage`: PaymentPreimage?, 
-        val `secret`: PaymentSecret?, 
-        val `offerId`: OfferId, 
-        val `payerNote`: UntrustedString?, 
-        val `quantity`: kotlin.ULong?) : PaymentKind() {
-        companion object
-    }
-    
-    data class Bolt12Refund(
-        val `hash`: PaymentHash?, 
-        val `preimage`: PaymentPreimage?, 
-        val `secret`: PaymentSecret?, 
-        val `payerNote`: UntrustedString?, 
-        val `quantity`: kotlin.ULong?) : PaymentKind() {
-        companion object
-    }
-    
-    data class Spontaneous(
-        val `hash`: PaymentHash, 
-        val `preimage`: PaymentPreimage?) : PaymentKind() {
-        companion object
-    }
-    
 
-    
+    data class Bolt11(
+        val `hash`: PaymentHash,
+        val `preimage`: PaymentPreimage?,
+        val `secret`: PaymentSecret?,
+    ) : PaymentKind() {
+        companion object
+    }
+
+    data class Bolt11Jit(
+        val `hash`: PaymentHash,
+        val `preimage`: PaymentPreimage?,
+        val `secret`: PaymentSecret?,
+        val `counterpartySkimmedFeeMsat`: kotlin.ULong?,
+        val `lspFeeLimits`: LspFeeLimits,
+    ) : PaymentKind() {
+        companion object
+    }
+
+    data class Bolt12Offer(
+        val `hash`: PaymentHash?,
+        val `preimage`: PaymentPreimage?,
+        val `secret`: PaymentSecret?,
+        val `offerId`: OfferId,
+        val `payerNote`: UntrustedString?,
+        val `quantity`: kotlin.ULong?,
+    ) : PaymentKind() {
+        companion object
+    }
+
+    data class Bolt12Refund(
+        val `hash`: PaymentHash?,
+        val `preimage`: PaymentPreimage?,
+        val `secret`: PaymentSecret?,
+        val `payerNote`: UntrustedString?,
+        val `quantity`: kotlin.ULong?,
+    ) : PaymentKind() {
+        companion object
+    }
+
+    data class Spontaneous(
+        val `hash`: PaymentHash,
+        val `preimage`: PaymentPreimage?,
+    ) : PaymentKind() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind>{
-    override fun read(buf: ByteBuffer): PaymentKind {
-        return when(buf.getInt()) {
-            1 -> PaymentKind.Onchain(
-                FfiConverterTypeTxid.read(buf),
-                FfiConverterTypeConfirmationStatus.read(buf),
+public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind> {
+    override fun read(buf: ByteBuffer): PaymentKind =
+        when (buf.getInt()) {
+            1 -> {
+                PaymentKind.Onchain(
+                    FfiConverterTypeTxid.read(buf),
+                    FfiConverterTypeConfirmationStatus.read(buf),
                 )
-            2 -> PaymentKind.Bolt11(
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentPreimage.read(buf),
-                FfiConverterOptionalTypePaymentSecret.read(buf),
-                )
-            3 -> PaymentKind.Bolt11Jit(
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentPreimage.read(buf),
-                FfiConverterOptionalTypePaymentSecret.read(buf),
-                FfiConverterOptionalULong.read(buf),
-                FfiConverterTypeLSPFeeLimits.read(buf),
-                )
-            4 -> PaymentKind.Bolt12Offer(
-                FfiConverterOptionalTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentPreimage.read(buf),
-                FfiConverterOptionalTypePaymentSecret.read(buf),
-                FfiConverterTypeOfferId.read(buf),
-                FfiConverterOptionalTypeUntrustedString.read(buf),
-                FfiConverterOptionalULong.read(buf),
-                )
-            5 -> PaymentKind.Bolt12Refund(
-                FfiConverterOptionalTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentPreimage.read(buf),
-                FfiConverterOptionalTypePaymentSecret.read(buf),
-                FfiConverterOptionalTypeUntrustedString.read(buf),
-                FfiConverterOptionalULong.read(buf),
-                )
-            6 -> PaymentKind.Spontaneous(
-                FfiConverterTypePaymentHash.read(buf),
-                FfiConverterOptionalTypePaymentPreimage.read(buf),
-                )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: PaymentKind) = when(value) {
-        is PaymentKind.Onchain -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeTxid.allocationSize(value.`txid`)
-                + FfiConverterTypeConfirmationStatus.allocationSize(value.`status`)
-            )
-        }
-        is PaymentKind.Bolt11 -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentHash.allocationSize(value.`hash`)
-                + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`)
-                + FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`)
-            )
-        }
-        is PaymentKind.Bolt11Jit -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentHash.allocationSize(value.`hash`)
-                + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`)
-                + FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`)
-                + FfiConverterOptionalULong.allocationSize(value.`counterpartySkimmedFeeMsat`)
-                + FfiConverterTypeLSPFeeLimits.allocationSize(value.`lspFeeLimits`)
-            )
-        }
-        is PaymentKind.Bolt12Offer -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypePaymentHash.allocationSize(value.`hash`)
-                + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`)
-                + FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`)
-                + FfiConverterTypeOfferId.allocationSize(value.`offerId`)
-                + FfiConverterOptionalTypeUntrustedString.allocationSize(value.`payerNote`)
-                + FfiConverterOptionalULong.allocationSize(value.`quantity`)
-            )
-        }
-        is PaymentKind.Bolt12Refund -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypePaymentHash.allocationSize(value.`hash`)
-                + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`)
-                + FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`)
-                + FfiConverterOptionalTypeUntrustedString.allocationSize(value.`payerNote`)
-                + FfiConverterOptionalULong.allocationSize(value.`quantity`)
-            )
-        }
-        is PaymentKind.Spontaneous -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentHash.allocationSize(value.`hash`)
-                + FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`)
-            )
-        }
-    }
+            2 -> {
+                PaymentKind.Bolt11(
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentPreimage.read(buf),
+                    FfiConverterOptionalTypePaymentSecret.read(buf),
+                )
+            }
 
-    override fun write(value: PaymentKind, buf: ByteBuffer) {
-        when(value) {
+            3 -> {
+                PaymentKind.Bolt11Jit(
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentPreimage.read(buf),
+                    FfiConverterOptionalTypePaymentSecret.read(buf),
+                    FfiConverterOptionalULong.read(buf),
+                    FfiConverterTypeLSPFeeLimits.read(buf),
+                )
+            }
+
+            4 -> {
+                PaymentKind.Bolt12Offer(
+                    FfiConverterOptionalTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentPreimage.read(buf),
+                    FfiConverterOptionalTypePaymentSecret.read(buf),
+                    FfiConverterTypeOfferId.read(buf),
+                    FfiConverterOptionalTypeUntrustedString.read(buf),
+                    FfiConverterOptionalULong.read(buf),
+                )
+            }
+
+            5 -> {
+                PaymentKind.Bolt12Refund(
+                    FfiConverterOptionalTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentPreimage.read(buf),
+                    FfiConverterOptionalTypePaymentSecret.read(buf),
+                    FfiConverterOptionalTypeUntrustedString.read(buf),
+                    FfiConverterOptionalULong.read(buf),
+                )
+            }
+
+            6 -> {
+                PaymentKind.Spontaneous(
+                    FfiConverterTypePaymentHash.read(buf),
+                    FfiConverterOptionalTypePaymentPreimage.read(buf),
+                )
+            }
+
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: PaymentKind) =
+        when (value) {
+            is PaymentKind.Onchain -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeTxid.allocationSize(value.`txid`) +
+                        FfiConverterTypeConfirmationStatus.allocationSize(value.`status`)
+                )
+            }
+
+            is PaymentKind.Bolt11 -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypePaymentHash.allocationSize(value.`hash`) +
+                        FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`) +
+                        FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`)
+                )
+            }
+
+            is PaymentKind.Bolt11Jit -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypePaymentHash.allocationSize(value.`hash`) +
+                        FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`) +
+                        FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`) +
+                        FfiConverterOptionalULong.allocationSize(value.`counterpartySkimmedFeeMsat`) +
+                        FfiConverterTypeLSPFeeLimits.allocationSize(value.`lspFeeLimits`)
+                )
+            }
+
+            is PaymentKind.Bolt12Offer -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypePaymentHash.allocationSize(value.`hash`) +
+                        FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`) +
+                        FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`) +
+                        FfiConverterTypeOfferId.allocationSize(value.`offerId`) +
+                        FfiConverterOptionalTypeUntrustedString.allocationSize(value.`payerNote`) +
+                        FfiConverterOptionalULong.allocationSize(value.`quantity`)
+                )
+            }
+
+            is PaymentKind.Bolt12Refund -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypePaymentHash.allocationSize(value.`hash`) +
+                        FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`) +
+                        FfiConverterOptionalTypePaymentSecret.allocationSize(value.`secret`) +
+                        FfiConverterOptionalTypeUntrustedString.allocationSize(value.`payerNote`) +
+                        FfiConverterOptionalULong.allocationSize(value.`quantity`)
+                )
+            }
+
+            is PaymentKind.Spontaneous -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypePaymentHash.allocationSize(value.`hash`) +
+                        FfiConverterOptionalTypePaymentPreimage.allocationSize(value.`preimage`)
+                )
+            }
+        }
+
+    override fun write(
+        value: PaymentKind,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is PaymentKind.Onchain -> {
                 buf.putInt(1)
                 FfiConverterTypeTxid.write(value.`txid`, buf)
                 FfiConverterTypeConfirmationStatus.write(value.`status`, buf)
                 Unit
             }
+
             is PaymentKind.Bolt11 -> {
                 buf.putInt(2)
                 FfiConverterTypePaymentHash.write(value.`hash`, buf)
@@ -12974,6 +14678,7 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind>{
                 FfiConverterOptionalTypePaymentSecret.write(value.`secret`, buf)
                 Unit
             }
+
             is PaymentKind.Bolt11Jit -> {
                 buf.putInt(3)
                 FfiConverterTypePaymentHash.write(value.`hash`, buf)
@@ -12983,6 +14688,7 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind>{
                 FfiConverterTypeLSPFeeLimits.write(value.`lspFeeLimits`, buf)
                 Unit
             }
+
             is PaymentKind.Bolt12Offer -> {
                 buf.putInt(4)
                 FfiConverterOptionalTypePaymentHash.write(value.`hash`, buf)
@@ -12993,6 +14699,7 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind>{
                 FfiConverterOptionalULong.write(value.`quantity`, buf)
                 Unit
             }
+
             is PaymentKind.Bolt12Refund -> {
                 buf.putInt(5)
                 FfiConverterOptionalTypePaymentHash.write(value.`hash`, buf)
@@ -13002,6 +14709,7 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind>{
                 FfiConverterOptionalULong.write(value.`quantity`, buf)
                 Unit
             }
+
             is PaymentKind.Spontaneous -> {
                 buf.putInt(6)
                 FfiConverterTypePaymentHash.write(value.`hash`, buf)
@@ -13012,138 +14720,150 @@ public object FfiConverterTypePaymentKind : FfiConverterRustBuffer<PaymentKind>{
     }
 }
 
-
-
-
-
-
 enum class PaymentStatus {
-    
     PENDING,
     SUCCEEDED,
-    FAILED;
+    FAILED,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypePaymentStatus: FfiConverterRustBuffer<PaymentStatus> {
-    override fun read(buf: ByteBuffer) = try {
-        PaymentStatus.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypePaymentStatus : FfiConverterRustBuffer<PaymentStatus> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            PaymentStatus.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: PaymentStatus) = 4UL
 
-    override fun write(value: PaymentStatus, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentStatus,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
 sealed class PendingSweepBalance {
-    
     data class PendingBroadcast(
-        val `channelId`: ChannelId?, 
-        val `amountSatoshis`: kotlin.ULong) : PendingSweepBalance() {
+        val `channelId`: ChannelId?,
+        val `amountSatoshis`: kotlin.ULong,
+    ) : PendingSweepBalance() {
         companion object
     }
-    
-    data class BroadcastAwaitingConfirmation(
-        val `channelId`: ChannelId?, 
-        val `latestBroadcastHeight`: kotlin.UInt, 
-        val `latestSpendingTxid`: Txid, 
-        val `amountSatoshis`: kotlin.ULong) : PendingSweepBalance() {
-        companion object
-    }
-    
-    data class AwaitingThresholdConfirmations(
-        val `channelId`: ChannelId?, 
-        val `latestSpendingTxid`: Txid, 
-        val `confirmationHash`: BlockHash, 
-        val `confirmationHeight`: kotlin.UInt, 
-        val `amountSatoshis`: kotlin.ULong) : PendingSweepBalance() {
-        companion object
-    }
-    
 
-    
+    data class BroadcastAwaitingConfirmation(
+        val `channelId`: ChannelId?,
+        val `latestBroadcastHeight`: kotlin.UInt,
+        val `latestSpendingTxid`: Txid,
+        val `amountSatoshis`: kotlin.ULong,
+    ) : PendingSweepBalance() {
+        companion object
+    }
+
+    data class AwaitingThresholdConfirmations(
+        val `channelId`: ChannelId?,
+        val `latestSpendingTxid`: Txid,
+        val `confirmationHash`: BlockHash,
+        val `confirmationHeight`: kotlin.UInt,
+        val `amountSatoshis`: kotlin.ULong,
+    ) : PendingSweepBalance() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypePendingSweepBalance : FfiConverterRustBuffer<PendingSweepBalance>{
-    override fun read(buf: ByteBuffer): PendingSweepBalance {
-        return when(buf.getInt()) {
-            1 -> PendingSweepBalance.PendingBroadcast(
-                FfiConverterOptionalTypeChannelId.read(buf),
-                FfiConverterULong.read(buf),
+public object FfiConverterTypePendingSweepBalance : FfiConverterRustBuffer<PendingSweepBalance> {
+    override fun read(buf: ByteBuffer): PendingSweepBalance =
+        when (buf.getInt()) {
+            1 -> {
+                PendingSweepBalance.PendingBroadcast(
+                    FfiConverterOptionalTypeChannelId.read(buf),
+                    FfiConverterULong.read(buf),
                 )
-            2 -> PendingSweepBalance.BroadcastAwaitingConfirmation(
-                FfiConverterOptionalTypeChannelId.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterTypeTxid.read(buf),
-                FfiConverterULong.read(buf),
-                )
-            3 -> PendingSweepBalance.AwaitingThresholdConfirmations(
-                FfiConverterOptionalTypeChannelId.read(buf),
-                FfiConverterTypeTxid.read(buf),
-                FfiConverterTypeBlockHash.read(buf),
-                FfiConverterUInt.read(buf),
-                FfiConverterULong.read(buf),
-                )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: PendingSweepBalance) = when(value) {
-        is PendingSweepBalance.PendingBroadcast -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-            )
-        }
-        is PendingSweepBalance.BroadcastAwaitingConfirmation -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterUInt.allocationSize(value.`latestBroadcastHeight`)
-                + FfiConverterTypeTxid.allocationSize(value.`latestSpendingTxid`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-            )
-        }
-        is PendingSweepBalance.AwaitingThresholdConfirmations -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterOptionalTypeChannelId.allocationSize(value.`channelId`)
-                + FfiConverterTypeTxid.allocationSize(value.`latestSpendingTxid`)
-                + FfiConverterTypeBlockHash.allocationSize(value.`confirmationHash`)
-                + FfiConverterUInt.allocationSize(value.`confirmationHeight`)
-                + FfiConverterULong.allocationSize(value.`amountSatoshis`)
-            )
-        }
-    }
+            2 -> {
+                PendingSweepBalance.BroadcastAwaitingConfirmation(
+                    FfiConverterOptionalTypeChannelId.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterTypeTxid.read(buf),
+                    FfiConverterULong.read(buf),
+                )
+            }
 
-    override fun write(value: PendingSweepBalance, buf: ByteBuffer) {
-        when(value) {
+            3 -> {
+                PendingSweepBalance.AwaitingThresholdConfirmations(
+                    FfiConverterOptionalTypeChannelId.read(buf),
+                    FfiConverterTypeTxid.read(buf),
+                    FfiConverterTypeBlockHash.read(buf),
+                    FfiConverterUInt.read(buf),
+                    FfiConverterULong.read(buf),
+                )
+            }
+
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: PendingSweepBalance) =
+        when (value) {
+            is PendingSweepBalance.PendingBroadcast -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`)
+                )
+            }
+
+            is PendingSweepBalance.BroadcastAwaitingConfirmation -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterUInt.allocationSize(value.`latestBroadcastHeight`) +
+                        FfiConverterTypeTxid.allocationSize(value.`latestSpendingTxid`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`)
+                )
+            }
+
+            is PendingSweepBalance.AwaitingThresholdConfirmations -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterOptionalTypeChannelId.allocationSize(value.`channelId`) +
+                        FfiConverterTypeTxid.allocationSize(value.`latestSpendingTxid`) +
+                        FfiConverterTypeBlockHash.allocationSize(value.`confirmationHash`) +
+                        FfiConverterUInt.allocationSize(value.`confirmationHeight`) +
+                        FfiConverterULong.allocationSize(value.`amountSatoshis`)
+                )
+            }
+        }
+
+    override fun write(
+        value: PendingSweepBalance,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is PendingSweepBalance.PendingBroadcast -> {
                 buf.putInt(1)
                 FfiConverterOptionalTypeChannelId.write(value.`channelId`, buf)
                 FfiConverterULong.write(value.`amountSatoshis`, buf)
                 Unit
             }
+
             is PendingSweepBalance.BroadcastAwaitingConfirmation -> {
                 buf.putInt(2)
                 FfiConverterOptionalTypeChannelId.write(value.`channelId`, buf)
@@ -13152,6 +14872,7 @@ public object FfiConverterTypePendingSweepBalance : FfiConverterRustBuffer<Pendi
                 FfiConverterULong.write(value.`amountSatoshis`, buf)
                 Unit
             }
+
             is PendingSweepBalance.AwaitingThresholdConfirmations -> {
                 buf.putInt(3)
                 FfiConverterOptionalTypeChannelId.write(value.`channelId`, buf)
@@ -13165,87 +14886,101 @@ public object FfiConverterTypePendingSweepBalance : FfiConverterRustBuffer<Pendi
     }
 }
 
-
-
-
-
 sealed class QrPaymentResult {
-    
     data class Onchain(
-        val `txid`: Txid) : QrPaymentResult() {
+        val `txid`: Txid,
+    ) : QrPaymentResult() {
         companion object
     }
-    
-    data class Bolt11(
-        val `paymentId`: PaymentId) : QrPaymentResult() {
-        companion object
-    }
-    
-    data class Bolt12(
-        val `paymentId`: PaymentId) : QrPaymentResult() {
-        companion object
-    }
-    
 
-    
+    data class Bolt11(
+        val `paymentId`: PaymentId,
+    ) : QrPaymentResult() {
+        companion object
+    }
+
+    data class Bolt12(
+        val `paymentId`: PaymentId,
+    ) : QrPaymentResult() {
+        companion object
+    }
+
     companion object
 }
 
 /**
  * @suppress
  */
-public object FfiConverterTypeQrPaymentResult : FfiConverterRustBuffer<QrPaymentResult>{
-    override fun read(buf: ByteBuffer): QrPaymentResult {
-        return when(buf.getInt()) {
-            1 -> QrPaymentResult.Onchain(
-                FfiConverterTypeTxid.read(buf),
+public object FfiConverterTypeQrPaymentResult : FfiConverterRustBuffer<QrPaymentResult> {
+    override fun read(buf: ByteBuffer): QrPaymentResult =
+        when (buf.getInt()) {
+            1 -> {
+                QrPaymentResult.Onchain(
+                    FfiConverterTypeTxid.read(buf),
                 )
-            2 -> QrPaymentResult.Bolt11(
-                FfiConverterTypePaymentId.read(buf),
-                )
-            3 -> QrPaymentResult.Bolt12(
-                FfiConverterTypePaymentId.read(buf),
-                )
-            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
-        }
-    }
+            }
 
-    override fun allocationSize(value: QrPaymentResult) = when(value) {
-        is QrPaymentResult.Onchain -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypeTxid.allocationSize(value.`txid`)
-            )
-        }
-        is QrPaymentResult.Bolt11 -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
-            )
-        }
-        is QrPaymentResult.Bolt12 -> {
-            // Add the size for the Int that specifies the variant plus the size needed for all fields
-            (
-                4UL
-                + FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
-            )
-        }
-    }
+            2 -> {
+                QrPaymentResult.Bolt11(
+                    FfiConverterTypePaymentId.read(buf),
+                )
+            }
 
-    override fun write(value: QrPaymentResult, buf: ByteBuffer) {
-        when(value) {
+            3 -> {
+                QrPaymentResult.Bolt12(
+                    FfiConverterTypePaymentId.read(buf),
+                )
+            }
+
+            else -> {
+                throw RuntimeException("invalid enum value, something is very wrong!!")
+            }
+        }
+
+    override fun allocationSize(value: QrPaymentResult) =
+        when (value) {
+            is QrPaymentResult.Onchain -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypeTxid.allocationSize(value.`txid`)
+                )
+            }
+
+            is QrPaymentResult.Bolt11 -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
+                )
+            }
+
+            is QrPaymentResult.Bolt12 -> {
+                // Add the size for the Int that specifies the variant plus the size needed for all fields
+                (
+                    4UL +
+                        FfiConverterTypePaymentId.allocationSize(value.`paymentId`)
+                )
+            }
+        }
+
+    override fun write(
+        value: QrPaymentResult,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is QrPaymentResult.Onchain -> {
                 buf.putInt(1)
                 FfiConverterTypeTxid.write(value.`txid`, buf)
                 Unit
             }
+
             is QrPaymentResult.Bolt11 -> {
                 buf.putInt(2)
                 FfiConverterTypePaymentId.write(value.`paymentId`, buf)
                 Unit
             }
+
             is QrPaymentResult.Bolt12 -> {
                 buf.putInt(3)
                 FfiConverterTypePaymentId.write(value.`paymentId`, buf)
@@ -13255,25 +14990,28 @@ public object FfiConverterTypeQrPaymentResult : FfiConverterRustBuffer<QrPayment
     }
 }
 
+sealed class VssHeaderProviderException(
+    message: String,
+) : kotlin.Exception(message) {
+    class InvalidData(
+        message: String,
+    ) : VssHeaderProviderException(message)
 
+    class RequestException(
+        message: String,
+    ) : VssHeaderProviderException(message)
 
+    class AuthorizationException(
+        message: String,
+    ) : VssHeaderProviderException(message)
 
-
-
-
-sealed class VssHeaderProviderException(message: String): kotlin.Exception(message) {
-        
-        class InvalidData(message: String) : VssHeaderProviderException(message)
-        
-        class RequestException(message: String) : VssHeaderProviderException(message)
-        
-        class AuthorizationException(message: String) : VssHeaderProviderException(message)
-        
-        class InternalException(message: String) : VssHeaderProviderException(message)
-        
+    class InternalException(
+        message: String,
+    ) : VssHeaderProviderException(message)
 
     companion object ErrorHandler : UniffiRustCallStatusErrorHandler<VssHeaderProviderException> {
-        override fun lift(error_buf: RustBuffer.ByValue): VssHeaderProviderException = FfiConverterTypeVssHeaderProviderError.lift(error_buf)
+        override fun lift(error_buf: RustBuffer.ByValue): VssHeaderProviderException =
+            FfiConverterTypeVssHeaderProviderError.lift(error_buf)
     }
 }
 
@@ -13281,85 +15019,81 @@ sealed class VssHeaderProviderException(message: String): kotlin.Exception(messa
  * @suppress
  */
 public object FfiConverterTypeVssHeaderProviderError : FfiConverterRustBuffer<VssHeaderProviderException> {
-    override fun read(buf: ByteBuffer): VssHeaderProviderException {
-        
-            return when(buf.getInt()) {
+    override fun read(buf: ByteBuffer): VssHeaderProviderException =
+        when (buf.getInt()) {
             1 -> VssHeaderProviderException.InvalidData(FfiConverterString.read(buf))
             2 -> VssHeaderProviderException.RequestException(FfiConverterString.read(buf))
             3 -> VssHeaderProviderException.AuthorizationException(FfiConverterString.read(buf))
             4 -> VssHeaderProviderException.InternalException(FfiConverterString.read(buf))
             else -> throw RuntimeException("invalid error enum value, something is very wrong!!")
         }
-        
-    }
 
-    override fun allocationSize(value: VssHeaderProviderException): ULong {
-        return 4UL
-    }
+    override fun allocationSize(value: VssHeaderProviderException): ULong = 4UL
 
-    override fun write(value: VssHeaderProviderException, buf: ByteBuffer) {
-        when(value) {
+    override fun write(
+        value: VssHeaderProviderException,
+        buf: ByteBuffer,
+    ) {
+        when (value) {
             is VssHeaderProviderException.InvalidData -> {
                 buf.putInt(1)
                 Unit
             }
+
             is VssHeaderProviderException.RequestException -> {
                 buf.putInt(2)
                 Unit
             }
+
             is VssHeaderProviderException.AuthorizationException -> {
                 buf.putInt(3)
                 Unit
             }
+
             is VssHeaderProviderException.InternalException -> {
                 buf.putInt(4)
                 Unit
             }
         }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
     }
-
 }
 
-
-
-
 enum class WordCount {
-    
     WORDS12,
     WORDS15,
     WORDS18,
     WORDS21,
-    WORDS24;
+    WORDS24,
+    ;
+
     companion object
 }
-
 
 /**
  * @suppress
  */
-public object FfiConverterTypeWordCount: FfiConverterRustBuffer<WordCount> {
-    override fun read(buf: ByteBuffer) = try {
-        WordCount.values()[buf.getInt() - 1]
-    } catch (e: IndexOutOfBoundsException) {
-        throw RuntimeException("invalid enum value, something is very wrong!!", e)
-    }
+public object FfiConverterTypeWordCount : FfiConverterRustBuffer<WordCount> {
+    override fun read(buf: ByteBuffer) =
+        try {
+            WordCount.values()[buf.getInt() - 1]
+        } catch (e: IndexOutOfBoundsException) {
+            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+        }
 
     override fun allocationSize(value: WordCount) = 4UL
 
-    override fun write(value: WordCount, buf: ByteBuffer) {
+    override fun write(
+        value: WordCount,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.ordinal + 1)
     }
 }
 
-
-
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalUShort: FfiConverterRustBuffer<kotlin.UShort?> {
+public object FfiConverterOptionalUShort : FfiConverterRustBuffer<kotlin.UShort?> {
     override fun read(buf: ByteBuffer): kotlin.UShort? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13375,7 +15109,10 @@ public object FfiConverterOptionalUShort: FfiConverterRustBuffer<kotlin.UShort?>
         }
     }
 
-    override fun write(value: kotlin.UShort?, buf: ByteBuffer) {
+    override fun write(
+        value: kotlin.UShort?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13385,13 +15122,10 @@ public object FfiConverterOptionalUShort: FfiConverterRustBuffer<kotlin.UShort?>
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
+public object FfiConverterOptionalUInt : FfiConverterRustBuffer<kotlin.UInt?> {
     override fun read(buf: ByteBuffer): kotlin.UInt? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13407,7 +15141,10 @@ public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
         }
     }
 
-    override fun write(value: kotlin.UInt?, buf: ByteBuffer) {
+    override fun write(
+        value: kotlin.UInt?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13417,13 +15154,10 @@ public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
+public object FfiConverterOptionalULong : FfiConverterRustBuffer<kotlin.ULong?> {
     override fun read(buf: ByteBuffer): kotlin.ULong? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13439,7 +15173,10 @@ public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
         }
     }
 
-    override fun write(value: kotlin.ULong?, buf: ByteBuffer) {
+    override fun write(
+        value: kotlin.ULong?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13449,13 +15186,10 @@ public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalBoolean: FfiConverterRustBuffer<kotlin.Boolean?> {
+public object FfiConverterOptionalBoolean : FfiConverterRustBuffer<kotlin.Boolean?> {
     override fun read(buf: ByteBuffer): kotlin.Boolean? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13471,7 +15205,10 @@ public object FfiConverterOptionalBoolean: FfiConverterRustBuffer<kotlin.Boolean
         }
     }
 
-    override fun write(value: kotlin.Boolean?, buf: ByteBuffer) {
+    override fun write(
+        value: kotlin.Boolean?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13481,13 +15218,10 @@ public object FfiConverterOptionalBoolean: FfiConverterRustBuffer<kotlin.Boolean
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+public object FfiConverterOptionalString : FfiConverterRustBuffer<kotlin.String?> {
     override fun read(buf: ByteBuffer): kotlin.String? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13503,7 +15237,10 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         }
     }
 
-    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+    override fun write(
+        value: kotlin.String?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13513,13 +15250,10 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeFeeRate: FfiConverterRustBuffer<FeeRate?> {
+public object FfiConverterOptionalTypeFeeRate : FfiConverterRustBuffer<FeeRate?> {
     override fun read(buf: ByteBuffer): FeeRate? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13535,7 +15269,10 @@ public object FfiConverterOptionalTypeFeeRate: FfiConverterRustBuffer<FeeRate?> 
         }
     }
 
-    override fun write(value: FeeRate?, buf: ByteBuffer) {
+    override fun write(
+        value: FeeRate?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13545,13 +15282,10 @@ public object FfiConverterOptionalTypeFeeRate: FfiConverterRustBuffer<FeeRate?> 
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeAnchorChannelsConfig: FfiConverterRustBuffer<AnchorChannelsConfig?> {
+public object FfiConverterOptionalTypeAnchorChannelsConfig : FfiConverterRustBuffer<AnchorChannelsConfig?> {
     override fun read(buf: ByteBuffer): AnchorChannelsConfig? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13567,7 +15301,10 @@ public object FfiConverterOptionalTypeAnchorChannelsConfig: FfiConverterRustBuff
         }
     }
 
-    override fun write(value: AnchorChannelsConfig?, buf: ByteBuffer) {
+    override fun write(
+        value: AnchorChannelsConfig?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13577,13 +15314,10 @@ public object FfiConverterOptionalTypeAnchorChannelsConfig: FfiConverterRustBuff
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeBackgroundSyncConfig: FfiConverterRustBuffer<BackgroundSyncConfig?> {
+public object FfiConverterOptionalTypeBackgroundSyncConfig : FfiConverterRustBuffer<BackgroundSyncConfig?> {
     override fun read(buf: ByteBuffer): BackgroundSyncConfig? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13599,7 +15333,10 @@ public object FfiConverterOptionalTypeBackgroundSyncConfig: FfiConverterRustBuff
         }
     }
 
-    override fun write(value: BackgroundSyncConfig?, buf: ByteBuffer) {
+    override fun write(
+        value: BackgroundSyncConfig?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13609,13 +15346,10 @@ public object FfiConverterOptionalTypeBackgroundSyncConfig: FfiConverterRustBuff
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeChannelConfig: FfiConverterRustBuffer<ChannelConfig?> {
+public object FfiConverterOptionalTypeChannelConfig : FfiConverterRustBuffer<ChannelConfig?> {
     override fun read(buf: ByteBuffer): ChannelConfig? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13631,7 +15365,10 @@ public object FfiConverterOptionalTypeChannelConfig: FfiConverterRustBuffer<Chan
         }
     }
 
-    override fun write(value: ChannelConfig?, buf: ByteBuffer) {
+    override fun write(
+        value: ChannelConfig?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13641,13 +15378,10 @@ public object FfiConverterOptionalTypeChannelConfig: FfiConverterRustBuffer<Chan
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeChannelInfo: FfiConverterRustBuffer<ChannelInfo?> {
+public object FfiConverterOptionalTypeChannelInfo : FfiConverterRustBuffer<ChannelInfo?> {
     override fun read(buf: ByteBuffer): ChannelInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13663,7 +15397,10 @@ public object FfiConverterOptionalTypeChannelInfo: FfiConverterRustBuffer<Channe
         }
     }
 
-    override fun write(value: ChannelInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: ChannelInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13673,13 +15410,10 @@ public object FfiConverterOptionalTypeChannelInfo: FfiConverterRustBuffer<Channe
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeChannelUpdateInfo: FfiConverterRustBuffer<ChannelUpdateInfo?> {
+public object FfiConverterOptionalTypeChannelUpdateInfo : FfiConverterRustBuffer<ChannelUpdateInfo?> {
     override fun read(buf: ByteBuffer): ChannelUpdateInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13695,7 +15429,10 @@ public object FfiConverterOptionalTypeChannelUpdateInfo: FfiConverterRustBuffer<
         }
     }
 
-    override fun write(value: ChannelUpdateInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: ChannelUpdateInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13705,13 +15442,10 @@ public object FfiConverterOptionalTypeChannelUpdateInfo: FfiConverterRustBuffer<
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeElectrumSyncConfig: FfiConverterRustBuffer<ElectrumSyncConfig?> {
+public object FfiConverterOptionalTypeElectrumSyncConfig : FfiConverterRustBuffer<ElectrumSyncConfig?> {
     override fun read(buf: ByteBuffer): ElectrumSyncConfig? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13727,7 +15461,10 @@ public object FfiConverterOptionalTypeElectrumSyncConfig: FfiConverterRustBuffer
         }
     }
 
-    override fun write(value: ElectrumSyncConfig?, buf: ByteBuffer) {
+    override fun write(
+        value: ElectrumSyncConfig?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13737,13 +15474,10 @@ public object FfiConverterOptionalTypeElectrumSyncConfig: FfiConverterRustBuffer
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeEsploraSyncConfig: FfiConverterRustBuffer<EsploraSyncConfig?> {
+public object FfiConverterOptionalTypeEsploraSyncConfig : FfiConverterRustBuffer<EsploraSyncConfig?> {
     override fun read(buf: ByteBuffer): EsploraSyncConfig? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13759,7 +15493,10 @@ public object FfiConverterOptionalTypeEsploraSyncConfig: FfiConverterRustBuffer<
         }
     }
 
-    override fun write(value: EsploraSyncConfig?, buf: ByteBuffer) {
+    override fun write(
+        value: EsploraSyncConfig?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13769,13 +15506,10 @@ public object FfiConverterOptionalTypeEsploraSyncConfig: FfiConverterRustBuffer<
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo: FfiConverterRustBuffer<Lsps1Bolt11PaymentInfo?> {
+public object FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo : FfiConverterRustBuffer<Lsps1Bolt11PaymentInfo?> {
     override fun read(buf: ByteBuffer): Lsps1Bolt11PaymentInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13791,7 +15525,10 @@ public object FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo: FfiConverterRustBu
         }
     }
 
-    override fun write(value: Lsps1Bolt11PaymentInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: Lsps1Bolt11PaymentInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13801,13 +15538,10 @@ public object FfiConverterOptionalTypeLSPS1Bolt11PaymentInfo: FfiConverterRustBu
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeLSPS1ChannelInfo: FfiConverterRustBuffer<Lsps1ChannelInfo?> {
+public object FfiConverterOptionalTypeLSPS1ChannelInfo : FfiConverterRustBuffer<Lsps1ChannelInfo?> {
     override fun read(buf: ByteBuffer): Lsps1ChannelInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13823,7 +15557,10 @@ public object FfiConverterOptionalTypeLSPS1ChannelInfo: FfiConverterRustBuffer<L
         }
     }
 
-    override fun write(value: Lsps1ChannelInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: Lsps1ChannelInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13833,13 +15570,10 @@ public object FfiConverterOptionalTypeLSPS1ChannelInfo: FfiConverterRustBuffer<L
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeLSPS1OnchainPaymentInfo: FfiConverterRustBuffer<Lsps1OnchainPaymentInfo?> {
+public object FfiConverterOptionalTypeLSPS1OnchainPaymentInfo : FfiConverterRustBuffer<Lsps1OnchainPaymentInfo?> {
     override fun read(buf: ByteBuffer): Lsps1OnchainPaymentInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13855,7 +15589,10 @@ public object FfiConverterOptionalTypeLSPS1OnchainPaymentInfo: FfiConverterRustB
         }
     }
 
-    override fun write(value: Lsps1OnchainPaymentInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: Lsps1OnchainPaymentInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13865,13 +15602,42 @@ public object FfiConverterOptionalTypeLSPS1OnchainPaymentInfo: FfiConverterRustB
     }
 }
 
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeLSPS7OriginalOrder : FfiConverterRustBuffer<Lsps7OriginalOrder?> {
+    override fun read(buf: ByteBuffer): Lsps7OriginalOrder? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeLSPS7OriginalOrder.read(buf)
+    }
 
+    override fun allocationSize(value: Lsps7OriginalOrder?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeLSPS7OriginalOrder.allocationSize(value)
+        }
+    }
 
+    override fun write(
+        value: Lsps7OriginalOrder?,
+        buf: ByteBuffer,
+    ) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeLSPS7OriginalOrder.write(value, buf)
+        }
+    }
+}
 
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeNodeAnnouncementInfo: FfiConverterRustBuffer<NodeAnnouncementInfo?> {
+public object FfiConverterOptionalTypeNodeAnnouncementInfo : FfiConverterRustBuffer<NodeAnnouncementInfo?> {
     override fun read(buf: ByteBuffer): NodeAnnouncementInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13887,7 +15653,10 @@ public object FfiConverterOptionalTypeNodeAnnouncementInfo: FfiConverterRustBuff
         }
     }
 
-    override fun write(value: NodeAnnouncementInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: NodeAnnouncementInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13897,13 +15666,10 @@ public object FfiConverterOptionalTypeNodeAnnouncementInfo: FfiConverterRustBuff
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeNodeInfo: FfiConverterRustBuffer<NodeInfo?> {
+public object FfiConverterOptionalTypeNodeInfo : FfiConverterRustBuffer<NodeInfo?> {
     override fun read(buf: ByteBuffer): NodeInfo? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13919,7 +15685,10 @@ public object FfiConverterOptionalTypeNodeInfo: FfiConverterRustBuffer<NodeInfo?
         }
     }
 
-    override fun write(value: NodeInfo?, buf: ByteBuffer) {
+    override fun write(
+        value: NodeInfo?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13929,13 +15698,10 @@ public object FfiConverterOptionalTypeNodeInfo: FfiConverterRustBuffer<NodeInfo?
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeOutPoint: FfiConverterRustBuffer<OutPoint?> {
+public object FfiConverterOptionalTypeOutPoint : FfiConverterRustBuffer<OutPoint?> {
     override fun read(buf: ByteBuffer): OutPoint? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13951,7 +15717,10 @@ public object FfiConverterOptionalTypeOutPoint: FfiConverterRustBuffer<OutPoint?
         }
     }
 
-    override fun write(value: OutPoint?, buf: ByteBuffer) {
+    override fun write(
+        value: OutPoint?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13961,13 +15730,10 @@ public object FfiConverterOptionalTypeOutPoint: FfiConverterRustBuffer<OutPoint?
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePaymentDetails: FfiConverterRustBuffer<PaymentDetails?> {
+public object FfiConverterOptionalTypePaymentDetails : FfiConverterRustBuffer<PaymentDetails?> {
     override fun read(buf: ByteBuffer): PaymentDetails? {
         if (buf.get().toInt() == 0) {
             return null
@@ -13983,7 +15749,10 @@ public object FfiConverterOptionalTypePaymentDetails: FfiConverterRustBuffer<Pay
         }
     }
 
-    override fun write(value: PaymentDetails?, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentDetails?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -13993,13 +15762,10 @@ public object FfiConverterOptionalTypePaymentDetails: FfiConverterRustBuffer<Pay
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeRouteParametersConfig: FfiConverterRustBuffer<RouteParametersConfig?> {
+public object FfiConverterOptionalTypeRouteParametersConfig : FfiConverterRustBuffer<RouteParametersConfig?> {
     override fun read(buf: ByteBuffer): RouteParametersConfig? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14015,7 +15781,10 @@ public object FfiConverterOptionalTypeRouteParametersConfig: FfiConverterRustBuf
         }
     }
 
-    override fun write(value: RouteParametersConfig?, buf: ByteBuffer) {
+    override fun write(
+        value: RouteParametersConfig?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14025,13 +15794,10 @@ public object FfiConverterOptionalTypeRouteParametersConfig: FfiConverterRustBuf
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeAsyncPaymentsRole: FfiConverterRustBuffer<AsyncPaymentsRole?> {
+public object FfiConverterOptionalTypeAsyncPaymentsRole : FfiConverterRustBuffer<AsyncPaymentsRole?> {
     override fun read(buf: ByteBuffer): AsyncPaymentsRole? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14047,7 +15813,10 @@ public object FfiConverterOptionalTypeAsyncPaymentsRole: FfiConverterRustBuffer<
         }
     }
 
-    override fun write(value: AsyncPaymentsRole?, buf: ByteBuffer) {
+    override fun write(
+        value: AsyncPaymentsRole?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14057,13 +15826,10 @@ public object FfiConverterOptionalTypeAsyncPaymentsRole: FfiConverterRustBuffer<
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeClosureReason: FfiConverterRustBuffer<ClosureReason?> {
+public object FfiConverterOptionalTypeClosureReason : FfiConverterRustBuffer<ClosureReason?> {
     override fun read(buf: ByteBuffer): ClosureReason? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14079,7 +15845,10 @@ public object FfiConverterOptionalTypeClosureReason: FfiConverterRustBuffer<Clos
         }
     }
 
-    override fun write(value: ClosureReason?, buf: ByteBuffer) {
+    override fun write(
+        value: ClosureReason?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14089,13 +15858,10 @@ public object FfiConverterOptionalTypeClosureReason: FfiConverterRustBuffer<Clos
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeEvent: FfiConverterRustBuffer<Event?> {
+public object FfiConverterOptionalTypeEvent : FfiConverterRustBuffer<Event?> {
     override fun read(buf: ByteBuffer): Event? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14111,7 +15877,10 @@ public object FfiConverterOptionalTypeEvent: FfiConverterRustBuffer<Event?> {
         }
     }
 
-    override fun write(value: Event?, buf: ByteBuffer) {
+    override fun write(
+        value: Event?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14121,13 +15890,10 @@ public object FfiConverterOptionalTypeEvent: FfiConverterRustBuffer<Event?> {
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeLogLevel: FfiConverterRustBuffer<LogLevel?> {
+public object FfiConverterOptionalTypeLogLevel : FfiConverterRustBuffer<LogLevel?> {
     override fun read(buf: ByteBuffer): LogLevel? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14143,7 +15909,10 @@ public object FfiConverterOptionalTypeLogLevel: FfiConverterRustBuffer<LogLevel?
         }
     }
 
-    override fun write(value: LogLevel?, buf: ByteBuffer) {
+    override fun write(
+        value: LogLevel?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14153,13 +15922,10 @@ public object FfiConverterOptionalTypeLogLevel: FfiConverterRustBuffer<LogLevel?
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeNetwork: FfiConverterRustBuffer<Network?> {
+public object FfiConverterOptionalTypeNetwork : FfiConverterRustBuffer<Network?> {
     override fun read(buf: ByteBuffer): Network? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14175,7 +15941,10 @@ public object FfiConverterOptionalTypeNetwork: FfiConverterRustBuffer<Network?> 
         }
     }
 
-    override fun write(value: Network?, buf: ByteBuffer) {
+    override fun write(
+        value: Network?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14185,13 +15954,10 @@ public object FfiConverterOptionalTypeNetwork: FfiConverterRustBuffer<Network?> 
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeOfferAmount: FfiConverterRustBuffer<OfferAmount?> {
+public object FfiConverterOptionalTypeOfferAmount : FfiConverterRustBuffer<OfferAmount?> {
     override fun read(buf: ByteBuffer): OfferAmount? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14207,7 +15973,10 @@ public object FfiConverterOptionalTypeOfferAmount: FfiConverterRustBuffer<OfferA
         }
     }
 
-    override fun write(value: OfferAmount?, buf: ByteBuffer) {
+    override fun write(
+        value: OfferAmount?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14217,13 +15986,10 @@ public object FfiConverterOptionalTypeOfferAmount: FfiConverterRustBuffer<OfferA
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePaymentFailureReason: FfiConverterRustBuffer<PaymentFailureReason?> {
+public object FfiConverterOptionalTypePaymentFailureReason : FfiConverterRustBuffer<PaymentFailureReason?> {
     override fun read(buf: ByteBuffer): PaymentFailureReason? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14239,7 +16005,10 @@ public object FfiConverterOptionalTypePaymentFailureReason: FfiConverterRustBuff
         }
     }
 
-    override fun write(value: PaymentFailureReason?, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentFailureReason?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14249,13 +16018,10 @@ public object FfiConverterOptionalTypePaymentFailureReason: FfiConverterRustBuff
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeWordCount: FfiConverterRustBuffer<WordCount?> {
+public object FfiConverterOptionalTypeWordCount : FfiConverterRustBuffer<WordCount?> {
     override fun read(buf: ByteBuffer): WordCount? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14271,7 +16037,10 @@ public object FfiConverterOptionalTypeWordCount: FfiConverterRustBuffer<WordCoun
         }
     }
 
-    override fun write(value: WordCount?, buf: ByteBuffer) {
+    override fun write(
+        value: WordCount?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14281,13 +16050,10 @@ public object FfiConverterOptionalTypeWordCount: FfiConverterRustBuffer<WordCoun
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByte>?> {
+public object FfiConverterOptionalSequenceUByte : FfiConverterRustBuffer<List<kotlin.UByte>?> {
     override fun read(buf: ByteBuffer): List<kotlin.UByte>? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14303,7 +16069,10 @@ public object FfiConverterOptionalSequenceUByte: FfiConverterRustBuffer<List<kot
         }
     }
 
-    override fun write(value: List<kotlin.UByte>?, buf: ByteBuffer) {
+    override fun write(
+        value: List<kotlin.UByte>?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14313,13 +16082,42 @@ public object FfiConverterOptionalSequenceUByte: FfiConverterRustBuffer<List<kot
     }
 }
 
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalSequenceString : FfiConverterRustBuffer<List<kotlin.String>?> {
+    override fun read(buf: ByteBuffer): List<kotlin.String>? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterSequenceString.read(buf)
+    }
 
+    override fun allocationSize(value: List<kotlin.String>?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterSequenceString.allocationSize(value)
+        }
+    }
 
+    override fun write(
+        value: List<kotlin.String>?,
+        buf: ByteBuffer,
+    ) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterSequenceString.write(value, buf)
+        }
+    }
+}
 
 /**
  * @suppress
  */
-public object FfiConverterOptionalSequenceSequenceUByte: FfiConverterRustBuffer<List<List<kotlin.UByte>>?> {
+public object FfiConverterOptionalSequenceSequenceUByte : FfiConverterRustBuffer<List<List<kotlin.UByte>>?> {
     override fun read(buf: ByteBuffer): List<List<kotlin.UByte>>? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14335,7 +16133,10 @@ public object FfiConverterOptionalSequenceSequenceUByte: FfiConverterRustBuffer<
         }
     }
 
-    override fun write(value: List<List<kotlin.UByte>>?, buf: ByteBuffer) {
+    override fun write(
+        value: List<List<kotlin.UByte>>?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14345,13 +16146,10 @@ public object FfiConverterOptionalSequenceSequenceUByte: FfiConverterRustBuffer<
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalSequenceTypeSocketAddress: FfiConverterRustBuffer<List<SocketAddress>?> {
+public object FfiConverterOptionalSequenceTypeSocketAddress : FfiConverterRustBuffer<List<SocketAddress>?> {
     override fun read(buf: ByteBuffer): List<SocketAddress>? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14367,7 +16165,10 @@ public object FfiConverterOptionalSequenceTypeSocketAddress: FfiConverterRustBuf
         }
     }
 
-    override fun write(value: List<SocketAddress>?, buf: ByteBuffer) {
+    override fun write(
+        value: List<SocketAddress>?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14377,13 +16178,10 @@ public object FfiConverterOptionalSequenceTypeSocketAddress: FfiConverterRustBuf
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeAddress: FfiConverterRustBuffer<Address?> {
+public object FfiConverterOptionalTypeAddress : FfiConverterRustBuffer<Address?> {
     override fun read(buf: ByteBuffer): Address? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14399,7 +16197,10 @@ public object FfiConverterOptionalTypeAddress: FfiConverterRustBuffer<Address?> 
         }
     }
 
-    override fun write(value: Address?, buf: ByteBuffer) {
+    override fun write(
+        value: Address?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14409,13 +16210,10 @@ public object FfiConverterOptionalTypeAddress: FfiConverterRustBuffer<Address?> 
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeChannelId: FfiConverterRustBuffer<ChannelId?> {
+public object FfiConverterOptionalTypeChannelId : FfiConverterRustBuffer<ChannelId?> {
     override fun read(buf: ByteBuffer): ChannelId? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14431,7 +16229,10 @@ public object FfiConverterOptionalTypeChannelId: FfiConverterRustBuffer<ChannelI
         }
     }
 
-    override fun write(value: ChannelId?, buf: ByteBuffer) {
+    override fun write(
+        value: ChannelId?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14441,13 +16242,10 @@ public object FfiConverterOptionalTypeChannelId: FfiConverterRustBuffer<ChannelI
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeNodeAlias: FfiConverterRustBuffer<NodeAlias?> {
+public object FfiConverterOptionalTypeNodeAlias : FfiConverterRustBuffer<NodeAlias?> {
     override fun read(buf: ByteBuffer): NodeAlias? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14463,7 +16261,10 @@ public object FfiConverterOptionalTypeNodeAlias: FfiConverterRustBuffer<NodeAlia
         }
     }
 
-    override fun write(value: NodeAlias?, buf: ByteBuffer) {
+    override fun write(
+        value: NodeAlias?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14473,13 +16274,10 @@ public object FfiConverterOptionalTypeNodeAlias: FfiConverterRustBuffer<NodeAlia
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePaymentHash: FfiConverterRustBuffer<PaymentHash?> {
+public object FfiConverterOptionalTypePaymentHash : FfiConverterRustBuffer<PaymentHash?> {
     override fun read(buf: ByteBuffer): PaymentHash? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14495,7 +16293,10 @@ public object FfiConverterOptionalTypePaymentHash: FfiConverterRustBuffer<Paymen
         }
     }
 
-    override fun write(value: PaymentHash?, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentHash?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14505,13 +16306,10 @@ public object FfiConverterOptionalTypePaymentHash: FfiConverterRustBuffer<Paymen
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePaymentId: FfiConverterRustBuffer<PaymentId?> {
+public object FfiConverterOptionalTypePaymentId : FfiConverterRustBuffer<PaymentId?> {
     override fun read(buf: ByteBuffer): PaymentId? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14527,7 +16325,10 @@ public object FfiConverterOptionalTypePaymentId: FfiConverterRustBuffer<PaymentI
         }
     }
 
-    override fun write(value: PaymentId?, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentId?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14537,13 +16338,10 @@ public object FfiConverterOptionalTypePaymentId: FfiConverterRustBuffer<PaymentI
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePaymentPreimage: FfiConverterRustBuffer<PaymentPreimage?> {
+public object FfiConverterOptionalTypePaymentPreimage : FfiConverterRustBuffer<PaymentPreimage?> {
     override fun read(buf: ByteBuffer): PaymentPreimage? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14559,7 +16357,10 @@ public object FfiConverterOptionalTypePaymentPreimage: FfiConverterRustBuffer<Pa
         }
     }
 
-    override fun write(value: PaymentPreimage?, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentPreimage?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14569,13 +16370,10 @@ public object FfiConverterOptionalTypePaymentPreimage: FfiConverterRustBuffer<Pa
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePaymentSecret: FfiConverterRustBuffer<PaymentSecret?> {
+public object FfiConverterOptionalTypePaymentSecret : FfiConverterRustBuffer<PaymentSecret?> {
     override fun read(buf: ByteBuffer): PaymentSecret? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14591,7 +16389,10 @@ public object FfiConverterOptionalTypePaymentSecret: FfiConverterRustBuffer<Paym
         }
     }
 
-    override fun write(value: PaymentSecret?, buf: ByteBuffer) {
+    override fun write(
+        value: PaymentSecret?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14601,13 +16402,10 @@ public object FfiConverterOptionalTypePaymentSecret: FfiConverterRustBuffer<Paym
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypePublicKey: FfiConverterRustBuffer<PublicKey?> {
+public object FfiConverterOptionalTypePublicKey : FfiConverterRustBuffer<PublicKey?> {
     override fun read(buf: ByteBuffer): PublicKey? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14623,7 +16421,10 @@ public object FfiConverterOptionalTypePublicKey: FfiConverterRustBuffer<PublicKe
         }
     }
 
-    override fun write(value: PublicKey?, buf: ByteBuffer) {
+    override fun write(
+        value: PublicKey?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14633,13 +16434,10 @@ public object FfiConverterOptionalTypePublicKey: FfiConverterRustBuffer<PublicKe
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeScriptBuf: FfiConverterRustBuffer<ScriptBuf?> {
+public object FfiConverterOptionalTypeScriptBuf : FfiConverterRustBuffer<ScriptBuf?> {
     override fun read(buf: ByteBuffer): ScriptBuf? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14655,7 +16453,10 @@ public object FfiConverterOptionalTypeScriptBuf: FfiConverterRustBuffer<ScriptBu
         }
     }
 
-    override fun write(value: ScriptBuf?, buf: ByteBuffer) {
+    override fun write(
+        value: ScriptBuf?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14665,13 +16466,10 @@ public object FfiConverterOptionalTypeScriptBuf: FfiConverterRustBuffer<ScriptBu
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeUntrustedString: FfiConverterRustBuffer<UntrustedString?> {
+public object FfiConverterOptionalTypeUntrustedString : FfiConverterRustBuffer<UntrustedString?> {
     override fun read(buf: ByteBuffer): UntrustedString? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14687,7 +16485,10 @@ public object FfiConverterOptionalTypeUntrustedString: FfiConverterRustBuffer<Un
         }
     }
 
-    override fun write(value: UntrustedString?, buf: ByteBuffer) {
+    override fun write(
+        value: UntrustedString?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14697,13 +16498,10 @@ public object FfiConverterOptionalTypeUntrustedString: FfiConverterRustBuffer<Un
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterOptionalTypeUserChannelId: FfiConverterRustBuffer<UserChannelId?> {
+public object FfiConverterOptionalTypeUserChannelId : FfiConverterRustBuffer<UserChannelId?> {
     override fun read(buf: ByteBuffer): UserChannelId? {
         if (buf.get().toInt() == 0) {
             return null
@@ -14719,7 +16517,10 @@ public object FfiConverterOptionalTypeUserChannelId: FfiConverterRustBuffer<User
         }
     }
 
-    override fun write(value: UserChannelId?, buf: ByteBuffer) {
+    override fun write(
+        value: UserChannelId?,
+        buf: ByteBuffer,
+    ) {
         if (value == null) {
             buf.put(0)
         } else {
@@ -14729,13 +16530,10 @@ public object FfiConverterOptionalTypeUserChannelId: FfiConverterRustBuffer<User
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByte>> {
+public object FfiConverterSequenceUByte : FfiConverterRustBuffer<List<kotlin.UByte>> {
     override fun read(buf: ByteBuffer): List<kotlin.UByte> {
         val len = buf.getInt()
         return List<kotlin.UByte>(len) {
@@ -14749,7 +16547,10 @@ public object FfiConverterSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByt
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<kotlin.UByte>, buf: ByteBuffer) {
+    override fun write(
+        value: List<kotlin.UByte>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterUByte.write(it, buf)
@@ -14757,13 +16558,10 @@ public object FfiConverterSequenceUByte: FfiConverterRustBuffer<List<kotlin.UByt
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceULong: FfiConverterRustBuffer<List<kotlin.ULong>> {
+public object FfiConverterSequenceULong : FfiConverterRustBuffer<List<kotlin.ULong>> {
     override fun read(buf: ByteBuffer): List<kotlin.ULong> {
         val len = buf.getInt()
         return List<kotlin.ULong>(len) {
@@ -14777,7 +16575,10 @@ public object FfiConverterSequenceULong: FfiConverterRustBuffer<List<kotlin.ULon
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<kotlin.ULong>, buf: ByteBuffer) {
+    override fun write(
+        value: List<kotlin.ULong>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterULong.write(it, buf)
@@ -14785,13 +16586,38 @@ public object FfiConverterSequenceULong: FfiConverterRustBuffer<List<kotlin.ULon
     }
 }
 
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceString : FfiConverterRustBuffer<List<kotlin.String>> {
+    override fun read(buf: ByteBuffer): List<kotlin.String> {
+        val len = buf.getInt()
+        return List<kotlin.String>(len) {
+            FfiConverterString.read(buf)
+        }
+    }
 
+    override fun allocationSize(value: List<kotlin.String>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterString.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
 
+    override fun write(
+        value: List<kotlin.String>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterString.write(it, buf)
+        }
+    }
+}
 
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeChannelDetails: FfiConverterRustBuffer<List<ChannelDetails>> {
+public object FfiConverterSequenceTypeChannelDetails : FfiConverterRustBuffer<List<ChannelDetails>> {
     override fun read(buf: ByteBuffer): List<ChannelDetails> {
         val len = buf.getInt()
         return List<ChannelDetails>(len) {
@@ -14805,7 +16631,10 @@ public object FfiConverterSequenceTypeChannelDetails: FfiConverterRustBuffer<Lis
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<ChannelDetails>, buf: ByteBuffer) {
+    override fun write(
+        value: List<ChannelDetails>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeChannelDetails.write(it, buf)
@@ -14813,13 +16642,10 @@ public object FfiConverterSequenceTypeChannelDetails: FfiConverterRustBuffer<Lis
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeCustomTlvRecord: FfiConverterRustBuffer<List<CustomTlvRecord>> {
+public object FfiConverterSequenceTypeCustomTlvRecord : FfiConverterRustBuffer<List<CustomTlvRecord>> {
     override fun read(buf: ByteBuffer): List<CustomTlvRecord> {
         val len = buf.getInt()
         return List<CustomTlvRecord>(len) {
@@ -14833,7 +16659,10 @@ public object FfiConverterSequenceTypeCustomTlvRecord: FfiConverterRustBuffer<Li
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<CustomTlvRecord>, buf: ByteBuffer) {
+    override fun write(
+        value: List<CustomTlvRecord>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeCustomTlvRecord.write(it, buf)
@@ -14841,13 +16670,38 @@ public object FfiConverterSequenceTypeCustomTlvRecord: FfiConverterRustBuffer<Li
     }
 }
 
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeLSPS7ExtendableChannel : FfiConverterRustBuffer<List<Lsps7ExtendableChannel>> {
+    override fun read(buf: ByteBuffer): List<Lsps7ExtendableChannel> {
+        val len = buf.getInt()
+        return List<Lsps7ExtendableChannel>(len) {
+            FfiConverterTypeLSPS7ExtendableChannel.read(buf)
+        }
+    }
 
+    override fun allocationSize(value: List<Lsps7ExtendableChannel>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeLSPS7ExtendableChannel.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
 
+    override fun write(
+        value: List<Lsps7ExtendableChannel>,
+        buf: ByteBuffer,
+    ) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeLSPS7ExtendableChannel.write(it, buf)
+        }
+    }
+}
 
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypePaymentDetails: FfiConverterRustBuffer<List<PaymentDetails>> {
+public object FfiConverterSequenceTypePaymentDetails : FfiConverterRustBuffer<List<PaymentDetails>> {
     override fun read(buf: ByteBuffer): List<PaymentDetails> {
         val len = buf.getInt()
         return List<PaymentDetails>(len) {
@@ -14861,7 +16715,10 @@ public object FfiConverterSequenceTypePaymentDetails: FfiConverterRustBuffer<Lis
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<PaymentDetails>, buf: ByteBuffer) {
+    override fun write(
+        value: List<PaymentDetails>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePaymentDetails.write(it, buf)
@@ -14869,13 +16726,10 @@ public object FfiConverterSequenceTypePaymentDetails: FfiConverterRustBuffer<Lis
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypePeerDetails: FfiConverterRustBuffer<List<PeerDetails>> {
+public object FfiConverterSequenceTypePeerDetails : FfiConverterRustBuffer<List<PeerDetails>> {
     override fun read(buf: ByteBuffer): List<PeerDetails> {
         val len = buf.getInt()
         return List<PeerDetails>(len) {
@@ -14889,7 +16743,10 @@ public object FfiConverterSequenceTypePeerDetails: FfiConverterRustBuffer<List<P
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<PeerDetails>, buf: ByteBuffer) {
+    override fun write(
+        value: List<PeerDetails>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePeerDetails.write(it, buf)
@@ -14897,13 +16754,10 @@ public object FfiConverterSequenceTypePeerDetails: FfiConverterRustBuffer<List<P
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeRouteHintHop: FfiConverterRustBuffer<List<RouteHintHop>> {
+public object FfiConverterSequenceTypeRouteHintHop : FfiConverterRustBuffer<List<RouteHintHop>> {
     override fun read(buf: ByteBuffer): List<RouteHintHop> {
         val len = buf.getInt()
         return List<RouteHintHop>(len) {
@@ -14917,7 +16771,10 @@ public object FfiConverterSequenceTypeRouteHintHop: FfiConverterRustBuffer<List<
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<RouteHintHop>, buf: ByteBuffer) {
+    override fun write(
+        value: List<RouteHintHop>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeRouteHintHop.write(it, buf)
@@ -14925,13 +16782,10 @@ public object FfiConverterSequenceTypeRouteHintHop: FfiConverterRustBuffer<List<
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeLightningBalance: FfiConverterRustBuffer<List<LightningBalance>> {
+public object FfiConverterSequenceTypeLightningBalance : FfiConverterRustBuffer<List<LightningBalance>> {
     override fun read(buf: ByteBuffer): List<LightningBalance> {
         val len = buf.getInt()
         return List<LightningBalance>(len) {
@@ -14945,7 +16799,10 @@ public object FfiConverterSequenceTypeLightningBalance: FfiConverterRustBuffer<L
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<LightningBalance>, buf: ByteBuffer) {
+    override fun write(
+        value: List<LightningBalance>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeLightningBalance.write(it, buf)
@@ -14953,13 +16810,10 @@ public object FfiConverterSequenceTypeLightningBalance: FfiConverterRustBuffer<L
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeNetwork: FfiConverterRustBuffer<List<Network>> {
+public object FfiConverterSequenceTypeNetwork : FfiConverterRustBuffer<List<Network>> {
     override fun read(buf: ByteBuffer): List<Network> {
         val len = buf.getInt()
         return List<Network>(len) {
@@ -14973,7 +16827,10 @@ public object FfiConverterSequenceTypeNetwork: FfiConverterRustBuffer<List<Netwo
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<Network>, buf: ByteBuffer) {
+    override fun write(
+        value: List<Network>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeNetwork.write(it, buf)
@@ -14981,13 +16838,10 @@ public object FfiConverterSequenceTypeNetwork: FfiConverterRustBuffer<List<Netwo
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypePendingSweepBalance: FfiConverterRustBuffer<List<PendingSweepBalance>> {
+public object FfiConverterSequenceTypePendingSweepBalance : FfiConverterRustBuffer<List<PendingSweepBalance>> {
     override fun read(buf: ByteBuffer): List<PendingSweepBalance> {
         val len = buf.getInt()
         return List<PendingSweepBalance>(len) {
@@ -15001,7 +16855,10 @@ public object FfiConverterSequenceTypePendingSweepBalance: FfiConverterRustBuffe
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<PendingSweepBalance>, buf: ByteBuffer) {
+    override fun write(
+        value: List<PendingSweepBalance>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePendingSweepBalance.write(it, buf)
@@ -15009,13 +16866,10 @@ public object FfiConverterSequenceTypePendingSweepBalance: FfiConverterRustBuffe
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceSequenceUByte: FfiConverterRustBuffer<List<List<kotlin.UByte>>> {
+public object FfiConverterSequenceSequenceUByte : FfiConverterRustBuffer<List<List<kotlin.UByte>>> {
     override fun read(buf: ByteBuffer): List<List<kotlin.UByte>> {
         val len = buf.getInt()
         return List<List<kotlin.UByte>>(len) {
@@ -15029,7 +16883,10 @@ public object FfiConverterSequenceSequenceUByte: FfiConverterRustBuffer<List<Lis
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<List<kotlin.UByte>>, buf: ByteBuffer) {
+    override fun write(
+        value: List<List<kotlin.UByte>>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterSequenceUByte.write(it, buf)
@@ -15037,13 +16894,10 @@ public object FfiConverterSequenceSequenceUByte: FfiConverterRustBuffer<List<Lis
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceSequenceTypeRouteHintHop: FfiConverterRustBuffer<List<List<RouteHintHop>>> {
+public object FfiConverterSequenceSequenceTypeRouteHintHop : FfiConverterRustBuffer<List<List<RouteHintHop>>> {
     override fun read(buf: ByteBuffer): List<List<RouteHintHop>> {
         val len = buf.getInt()
         return List<List<RouteHintHop>>(len) {
@@ -15057,7 +16911,10 @@ public object FfiConverterSequenceSequenceTypeRouteHintHop: FfiConverterRustBuff
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<List<RouteHintHop>>, buf: ByteBuffer) {
+    override fun write(
+        value: List<List<RouteHintHop>>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterSequenceTypeRouteHintHop.write(it, buf)
@@ -15065,13 +16922,10 @@ public object FfiConverterSequenceSequenceTypeRouteHintHop: FfiConverterRustBuff
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeAddress: FfiConverterRustBuffer<List<Address>> {
+public object FfiConverterSequenceTypeAddress : FfiConverterRustBuffer<List<Address>> {
     override fun read(buf: ByteBuffer): List<Address> {
         val len = buf.getInt()
         return List<Address>(len) {
@@ -15085,7 +16939,10 @@ public object FfiConverterSequenceTypeAddress: FfiConverterRustBuffer<List<Addre
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<Address>, buf: ByteBuffer) {
+    override fun write(
+        value: List<Address>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeAddress.write(it, buf)
@@ -15093,13 +16950,10 @@ public object FfiConverterSequenceTypeAddress: FfiConverterRustBuffer<List<Addre
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeNodeId: FfiConverterRustBuffer<List<NodeId>> {
+public object FfiConverterSequenceTypeNodeId : FfiConverterRustBuffer<List<NodeId>> {
     override fun read(buf: ByteBuffer): List<NodeId> {
         val len = buf.getInt()
         return List<NodeId>(len) {
@@ -15113,7 +16967,10 @@ public object FfiConverterSequenceTypeNodeId: FfiConverterRustBuffer<List<NodeId
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<NodeId>, buf: ByteBuffer) {
+    override fun write(
+        value: List<NodeId>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeNodeId.write(it, buf)
@@ -15121,13 +16978,10 @@ public object FfiConverterSequenceTypeNodeId: FfiConverterRustBuffer<List<NodeId
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypePublicKey: FfiConverterRustBuffer<List<PublicKey>> {
+public object FfiConverterSequenceTypePublicKey : FfiConverterRustBuffer<List<PublicKey>> {
     override fun read(buf: ByteBuffer): List<PublicKey> {
         val len = buf.getInt()
         return List<PublicKey>(len) {
@@ -15141,7 +16995,10 @@ public object FfiConverterSequenceTypePublicKey: FfiConverterRustBuffer<List<Pub
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<PublicKey>, buf: ByteBuffer) {
+    override fun write(
+        value: List<PublicKey>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypePublicKey.write(it, buf)
@@ -15149,13 +17006,10 @@ public object FfiConverterSequenceTypePublicKey: FfiConverterRustBuffer<List<Pub
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterSequenceTypeSocketAddress: FfiConverterRustBuffer<List<SocketAddress>> {
+public object FfiConverterSequenceTypeSocketAddress : FfiConverterRustBuffer<List<SocketAddress>> {
     override fun read(buf: ByteBuffer): List<SocketAddress> {
         val len = buf.getInt()
         return List<SocketAddress>(len) {
@@ -15169,7 +17023,10 @@ public object FfiConverterSequenceTypeSocketAddress: FfiConverterRustBuffer<List
         return sizeForLength + sizeForItems
     }
 
-    override fun write(value: List<SocketAddress>, buf: ByteBuffer) {
+    override fun write(
+        value: List<SocketAddress>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeSocketAddress.write(it, buf)
@@ -15177,13 +17034,10 @@ public object FfiConverterSequenceTypeSocketAddress: FfiConverterRustBuffer<List
     }
 }
 
-
-
-
 /**
  * @suppress
  */
-public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.String, kotlin.String>> {
+public object FfiConverterMapStringString : FfiConverterRustBuffer<Map<kotlin.String, kotlin.String>> {
     override fun read(buf: ByteBuffer): Map<kotlin.String, kotlin.String> {
         val len = buf.getInt()
         return buildMap<kotlin.String, kotlin.String>(len) {
@@ -15197,14 +17051,19 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
 
     override fun allocationSize(value: Map<kotlin.String, kotlin.String>): ULong {
         val spaceForMapSize = 4UL
-        val spaceForChildren = value.map { (k, v) ->
-            FfiConverterString.allocationSize(k) +
-            FfiConverterString.allocationSize(v)
-        }.sum()
+        val spaceForChildren =
+            value
+                .map { (k, v) ->
+                    FfiConverterString.allocationSize(k) +
+                        FfiConverterString.allocationSize(v)
+                }.sum()
         return spaceForMapSize + spaceForChildren
     }
 
-    override fun write(value: Map<kotlin.String, kotlin.String>, buf: ByteBuffer) {
+    override fun write(
+        value: Map<kotlin.String, kotlin.String>,
+        buf: ByteBuffer,
+    ) {
         buf.putInt(value.size)
         // The parens on `(k, v)` here ensure we're calling the right method,
         // which is important for compatibility with older android devices.
@@ -15216,8 +17075,6 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
     }
 }
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15225,8 +17082,6 @@ public object FfiConverterMapStringString: FfiConverterRustBuffer<Map<kotlin.Str
  */
 public typealias Address = kotlin.String
 public typealias FfiConverterTypeAddress = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15236,8 +17091,6 @@ public typealias FfiConverterTypeAddress = FfiConverterString
 public typealias BlockHash = kotlin.String
 public typealias FfiConverterTypeBlockHash = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15245,8 +17098,6 @@ public typealias FfiConverterTypeBlockHash = FfiConverterString
  */
 public typealias ChannelId = kotlin.String
 public typealias FfiConverterTypeChannelId = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15256,7 +17107,13 @@ public typealias FfiConverterTypeChannelId = FfiConverterString
 public typealias Lsps1OrderId = kotlin.String
 public typealias FfiConverterTypeLSPS1OrderId = FfiConverterString
 
-
+/**
+ * Typealias from the type name used in the UDL file to the builtin type.  This
+ * is needed because the UDL type name is used in function/method signatures.
+ * It's also what we have an external type that references a custom type.
+ */
+public typealias Lsps7OrderId = kotlin.String
+public typealias FfiConverterTypeLSPS7OrderId = FfiConverterString
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15266,8 +17123,6 @@ public typealias FfiConverterTypeLSPS1OrderId = FfiConverterString
 public typealias LspsDateTime = kotlin.String
 public typealias FfiConverterTypeLSPSDateTime = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15275,8 +17130,6 @@ public typealias FfiConverterTypeLSPSDateTime = FfiConverterString
  */
 public typealias Mnemonic = kotlin.String
 public typealias FfiConverterTypeMnemonic = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15286,8 +17139,6 @@ public typealias FfiConverterTypeMnemonic = FfiConverterString
 public typealias NodeAlias = kotlin.String
 public typealias FfiConverterTypeNodeAlias = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15295,8 +17146,6 @@ public typealias FfiConverterTypeNodeAlias = FfiConverterString
  */
 public typealias NodeId = kotlin.String
 public typealias FfiConverterTypeNodeId = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15306,8 +17155,6 @@ public typealias FfiConverterTypeNodeId = FfiConverterString
 public typealias OfferId = kotlin.String
 public typealias FfiConverterTypeOfferId = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15315,8 +17162,6 @@ public typealias FfiConverterTypeOfferId = FfiConverterString
  */
 public typealias PaymentHash = kotlin.String
 public typealias FfiConverterTypePaymentHash = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15326,8 +17171,6 @@ public typealias FfiConverterTypePaymentHash = FfiConverterString
 public typealias PaymentId = kotlin.String
 public typealias FfiConverterTypePaymentId = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15335,8 +17178,6 @@ public typealias FfiConverterTypePaymentId = FfiConverterString
  */
 public typealias PaymentPreimage = kotlin.String
 public typealias FfiConverterTypePaymentPreimage = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15346,8 +17187,6 @@ public typealias FfiConverterTypePaymentPreimage = FfiConverterString
 public typealias PaymentSecret = kotlin.String
 public typealias FfiConverterTypePaymentSecret = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15355,8 +17194,6 @@ public typealias FfiConverterTypePaymentSecret = FfiConverterString
  */
 public typealias PublicKey = kotlin.String
 public typealias FfiConverterTypePublicKey = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15366,8 +17203,6 @@ public typealias FfiConverterTypePublicKey = FfiConverterString
 public typealias ScriptBuf = kotlin.String
 public typealias FfiConverterTypeScriptBuf = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15375,8 +17210,6 @@ public typealias FfiConverterTypeScriptBuf = FfiConverterString
  */
 public typealias SocketAddress = kotlin.String
 public typealias FfiConverterTypeSocketAddress = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15386,8 +17219,6 @@ public typealias FfiConverterTypeSocketAddress = FfiConverterString
 public typealias Txid = kotlin.String
 public typealias FfiConverterTypeTxid = FfiConverterString
 
-
-
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
  * is needed because the UDL type name is used in function/method signatures.
@@ -15395,8 +17226,6 @@ public typealias FfiConverterTypeTxid = FfiConverterString
  */
 public typealias UntrustedString = kotlin.String
 public typealias FfiConverterTypeUntrustedString = FfiConverterString
-
-
 
 /**
  * Typealias from the type name used in the UDL file to the builtin type.  This
@@ -15406,29 +17235,19 @@ public typealias FfiConverterTypeUntrustedString = FfiConverterString
 public typealias UserChannelId = kotlin.String
 public typealias FfiConverterTypeUserChannelId = FfiConverterString
 
-
-
-
-
-
-
- fun `defaultConfig`(): Config {
-            return FfiConverterTypeConfig.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_func_default_config(
-        _status)
-}
+fun `defaultConfig`(): Config =
+    FfiConverterTypeConfig.lift(
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_func_default_config(_status)
+        },
     )
-    }
-    
- fun `generateEntropyMnemonic`(`wordCount`: WordCount?): Mnemonic {
-            return FfiConverterTypeMnemonic.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_ldk_node_fn_func_generate_entropy_mnemonic(
-        FfiConverterOptionalTypeWordCount.lower(`wordCount`),_status)
-}
+
+fun `generateEntropyMnemonic`(`wordCount`: WordCount?): Mnemonic =
+    FfiConverterTypeMnemonic.lift(
+        uniffiRustCall { _status ->
+            UniffiLib.INSTANCE.uniffi_ldk_node_fn_func_generate_entropy_mnemonic(
+                FfiConverterOptionalTypeWordCount.lower(`wordCount`),
+                _status,
+            )
+        },
     )
-    }
-    
-
-

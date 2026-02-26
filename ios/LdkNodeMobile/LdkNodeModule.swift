@@ -502,6 +502,40 @@ class LdkNodeModule: RCTEventEmitter {
         ])
     }
 
+    @objc(resetNetworkGraph:rejecter:)
+    func resetNetworkGraph(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                try node.resetNetworkGraph()
+                resolve(["status": "ok"])
+            } catch {
+                reject("error", error.localizedDescription, error)
+            }
+        }
+    }
+
+    @objc(updateRgsSnapshot:rejecter:)
+    func updateRgsSnapshot(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let timestamp = try node.updateRgsSnapshot()
+                resolve(["timestamp": timestamp])
+            } catch {
+                reject("error", error.localizedDescription, error)
+            }
+        }
+    }
+
     // MARK: - Channel Methods
 
     @objc(listChannels:rejecter:)
