@@ -879,6 +879,28 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Spontaneous Payment Methods
+
+    @ReactMethod
+    fun sendSpontaneousPayment(nodeId: String, amountMsat: Double, promise: Promise) {
+        GlobalScope.launch(Dispatchers.IO) {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val paymentId = node.spontaneousPayment().send(amountMsat.toLong().toULong(), nodeId, null)
+                val result = Arguments.createMap().apply {
+                    putString("paymentId", paymentId)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
     // BOLT12 Payment Methods
 
     @ReactMethod

@@ -286,6 +286,24 @@ const sendBolt11UsingAmount = async ({
 };
 
 // ============================================================================
+// Spontaneous Payment Functions
+// ============================================================================
+
+const sendSpontaneousPayment = async ({
+    nodeId,
+    amountMsat
+}: {
+    nodeId: string;
+    amountMsat: number;
+}): Promise<string> => {
+    const result: any = await LdkNodeModule.sendSpontaneousPayment(
+        nodeId,
+        amountMsat
+    );
+    return result.paymentId;
+};
+
+// ============================================================================
 // BOLT12 Payment Functions
 // ============================================================================
 
@@ -694,6 +712,12 @@ export interface ILdkNodeInjections {
             amountMsat: number;
         }) => Promise<string>;
     };
+    spontaneous: {
+        sendSpontaneousPayment: (params: {
+            nodeId: string;
+            amountMsat: number;
+        }) => Promise<string>;
+    };
     bolt12: {
         bolt12Receive: (params: {
             amountMsat: number;
@@ -823,6 +847,9 @@ const LdkNodeInjection: ILdkNodeInjections = {
         receiveVariableAmountBolt11,
         sendBolt11,
         sendBolt11UsingAmount
+    },
+    spontaneous: {
+        sendSpontaneousPayment
     },
     bolt12: {
         bolt12Receive,

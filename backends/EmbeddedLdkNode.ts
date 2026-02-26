@@ -575,6 +575,54 @@ export default class EmbeddedLdkNode {
     };
 
     /**
+     * Send a keysend (spontaneous) payment
+     */
+    sendKeysend = async (data: any): Promise<any> => {
+        const pubkey = data.pubkey;
+        const amt = Number(data.amt);
+
+        const paymentId = await LdkNode.spontaneous.sendSpontaneousPayment({
+            nodeId: pubkey,
+            amountMsat: amt * 1000
+        });
+
+        // Wait for payment to complete and get the preimage
+        // Poll for up to 60 seconds
+        const maxAttempts = 60;
+        const delayMs = 1000;
+        let payment = null;
+
+        for (let i = 0; i < maxAttempts; i++) {
+            const payments = await LdkNode.payments.listPayments();
+            payment = payments.find((p) => p.id === paymentId);
+
+            if (payment?.status === 'succeeded') {
+                break;
+            }
+            if (payment?.status === 'failed') {
+                throw new Error(localeString('error.paymentFailed'));
+            }
+
+            // Wait before next poll
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
+
+        if (payment?.status !== 'succeeded') {
+            throw new Error(localeString('error.paymentTimedOut'));
+        }
+
+        const preimage = payment?.kind.preimage || '';
+        const hash = payment?.kind.hash || paymentId;
+
+        return {
+            payment_hash: hash,
+            payment_preimage: preimage,
+            payment_route: {},
+            status: 'SUCCEEDED'
+        };
+    };
+
+    /**
      * Get payments (Lightning outbound payments only)
      */
     getPayments = async (): Promise<any> => {
@@ -1261,7 +1309,7 @@ export default class EmbeddedLdkNode {
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
-    supportsKeysend = () => false; // LDK Node supports it but not exposed yet
+    supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => false;

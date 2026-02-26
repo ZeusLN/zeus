@@ -742,6 +742,25 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - Spontaneous Payment Methods
+
+    @objc(sendSpontaneousPayment:amountMsat:resolver:rejecter:)
+    func sendSpontaneousPayment(_ nodeId: String, amountMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let paymentId = try node.spontaneousPayment().send(amountMsat: UInt64(amountMsat), nodeId: nodeId, routeParameters: nil)
+                resolve(["paymentId": paymentId])
+            } catch {
+                reject("error", error.localizedDescription, error)
+            }
+        }
+    }
+
     // MARK: - BOLT12 Payment Methods
 
     @objc(bolt12Receive:description:expirySecs:resolver:rejecter:)
