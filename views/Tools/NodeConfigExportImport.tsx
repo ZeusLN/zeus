@@ -54,7 +54,9 @@ const getImplementationDisplayName = (
     implementation: string | undefined
 ): string => {
     if (!implementation) return 'Unknown';
-    const found = INTERFACE_KEYS.find((item) => item.value === implementation);
+    const found = INTERFACE_KEYS.find(
+        (item) => !item.isHeader && item.value === implementation
+    );
     return found ? found.key : implementation;
 };
 

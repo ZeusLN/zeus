@@ -37,8 +37,32 @@ export default class DropdownSetting extends React.Component<
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
+        // Maps each iOS button index (minus 1 for Cancel) to the
+        // index in the original `values` array, or -1 for headers.
+        const valueIndexMap: Array<number> = [];
         values.forEach(
-            (value: { key: string; translateKey: string; value: string }) => {
+            (
+                value: {
+                    key: string;
+                    translateKey: string;
+                    value: string;
+                    isHeader?: boolean;
+                },
+                index: number
+            ) => {
+                if (value.isHeader) {
+                    pickerValuesAndroid.push(
+                        <Picker.Item
+                            key={value.key}
+                            label={`── ${value.key} ──`}
+                            value=""
+                            enabled={false}
+                        />
+                    );
+                    pickerValuesIOS.push(`── ${value.key} ──`);
+                    valueIndexMap.push(-1);
+                    return;
+                }
                 const translatedKey = value.translateKey
                     ? localeString(value.translateKey)
                     : undefined;
@@ -50,14 +74,26 @@ export default class DropdownSetting extends React.Component<
                     />
                 );
                 pickerValuesIOS.push(translatedKey ?? value.key);
+                valueIndexMap.push(index);
             }
         );
 
+        // Collect indices of header entries for iOS disabled buttons
+        const disabledButtonIndices: Array<number> = [];
+        valueIndexMap.forEach((mappedIndex, i) => {
+            if (mappedIndex === -1) {
+                // +1 because index 0 is Cancel
+                disabledButtonIndices.push(i + 1);
+            }
+        });
+
         const selectedIndex = values.findIndex(
-            (value: any) => value.value === selectedValue
+            (value: any) => !value.isHeader && value.value === selectedValue
         );
         const display =
-            selectedIndex > -1 ? pickerValuesIOS[selectedIndex + 1] : null;
+            selectedIndex > -1
+                ? pickerValuesIOS[valueIndexMap.indexOf(selectedIndex) + 1]
+                : null;
 
         return (
             <React.Fragment>
@@ -114,13 +150,18 @@ export default class DropdownSetting extends React.Component<
                                 ActionSheetIOS.showActionSheetWithOptions(
                                     {
                                         options: pickerValuesIOS,
-                                        cancelButtonIndex: 0
+                                        cancelButtonIndex: 0,
+                                        disabledButtonIndices
                                     },
                                     (buttonIndex) => {
                                         if (buttonIndex) {
-                                            onValueChange(
-                                                values[buttonIndex - 1].value
-                                            );
+                                            const mappedIndex =
+                                                valueIndexMap[buttonIndex - 1];
+                                            if (mappedIndex !== -1) {
+                                                onValueChange(
+                                                    values[mappedIndex].value
+                                                );
+                                            }
                                         }
                                     }
                                 )
