@@ -552,6 +552,29 @@ export default class EmbeddedLdkNode {
     };
 
     /**
+     * Send a keysend (spontaneous) payment
+     */
+    sendKeysend = async (data: any): Promise<any> => {
+        const pubkey = data.pubkey;
+        const amt = Number(data.amt);
+
+        const paymentId = await LdkNode.spontaneous.sendSpontaneousPayment({
+            nodeId: pubkey,
+            amountMsat: amt * 1000
+        });
+
+        const { hash, preimage } =
+            await this.awaitPaymentCompletion(paymentId);
+
+        return {
+            payment_hash: hash,
+            payment_preimage: preimage,
+            payment_route: {},
+            status: 'SUCCEEDED'
+        };
+    };
+
+    /**
      * Get payments (Lightning outbound payments only)
      */
     getPayments = async (): Promise<any> => {
@@ -1247,7 +1270,7 @@ export default class EmbeddedLdkNode {
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
-    supportsKeysend = () => false; // LDK Node supports it but not exposed yet
+    supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => false;
