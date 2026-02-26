@@ -453,6 +453,12 @@ export interface ILdkNodeModule {
     sendBolt11(invoice: string): Promise<string>;
     sendBolt11UsingAmount(invoice: string, amountMsat: number): Promise<string>;
 
+    // Spontaneous Payment Methods
+    sendSpontaneousPayment(
+        nodeId: string,
+        amountMsat: number
+    ): Promise<{ paymentId: string }>;
+
     // BOLT12 Payment Methods
     bolt12Receive(
         amountMsat: number,
