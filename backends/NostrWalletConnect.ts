@@ -120,6 +120,7 @@ export default class NostrWalletConnect {
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
+    supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;

@@ -743,6 +743,7 @@ export default class LightningNodeConnect {
     supportsLSPScustomMessage = () => true;
     supportsLSPS1rest = () => true;
     supportsOffers = () => false;
+    supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
