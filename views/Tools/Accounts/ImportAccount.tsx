@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -176,7 +177,13 @@ export default class ImportAccount extends React.Component<
 
         if (!understood) {
             return (
-                <View style={{ flex: 1 }}>
+                <SafeAreaView
+                    style={{
+                        flex: 1,
+                        backgroundColor: themeColor('background')
+                    }}
+                    edges={['top', 'bottom']}
+                >
                     <ScrollView showsVerticalScrollIndicator={false}>
                         <View style={{ marginHorizontal: 10 }}>
                             <ErrorMessage
@@ -230,7 +237,7 @@ export default class ImportAccount extends React.Component<
                             title={localeString('general.iUnderstand')}
                         />
                     </View>
-                </View>
+                </SafeAreaView>
             );
         }
 
