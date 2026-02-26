@@ -417,6 +417,8 @@ export interface ILdkNodeModule {
     status(): Promise<NodeStatus>;
     listBalances(): Promise<BalanceDetails>;
     networkGraphInfo(): Promise<{ channelCount: number; nodeCount: number }>;
+    resetNetworkGraph(): Promise<void>;
+    updateRgsSnapshot(): Promise<{ timestamp: number }>;
 
     // Channel Methods
     listChannels(): Promise<ChannelDetails[]>;

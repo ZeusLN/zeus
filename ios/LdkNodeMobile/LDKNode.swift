@@ -2676,6 +2676,8 @@ public protocol NodeProtocol : AnyObject {
     
     func removePayment(paymentId: PaymentId) throws 
     
+    func resetNetworkGraph() throws 
+    
     func signMessage(msg: [UInt8])  -> String
     
     func spliceIn(userChannelId: UserChannelId, counterpartyNodeId: PublicKey, spliceAmountSats: UInt64) throws 
@@ -2695,6 +2697,8 @@ public protocol NodeProtocol : AnyObject {
     func unifiedQrPayment()  -> UnifiedQrPayment
     
     func updateChannelConfig(userChannelId: UserChannelId, counterpartyNodeId: PublicKey, channelConfig: ChannelConfig) throws 
+    
+    func updateRgsSnapshot() throws  -> UInt32
     
     func verifySignature(msg: [UInt8], sig: String, pkey: PublicKey)  -> Bool
     
@@ -2960,6 +2964,12 @@ open func removePayment(paymentId: PaymentId)throws  {try rustCallWithError(FfiC
 }
 }
     
+open func resetNetworkGraph()throws  {try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_reset_network_graph(self.uniffiClonePointer(),$0
+    )
+}
+}
+    
 open func signMessage(msg: [UInt8]) -> String {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_ldk_node_fn_method_node_sign_message(self.uniffiClonePointer(),
@@ -3033,6 +3043,13 @@ open func updateChannelConfig(userChannelId: UserChannelId, counterpartyNodeId: 
         FfiConverterTypeChannelConfig.lower(channelConfig),$0
     )
 }
+}
+    
+open func updateRgsSnapshot()throws  -> UInt32 {
+    return try  FfiConverterUInt32.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_update_rgs_snapshot(self.uniffiClonePointer(),$0
+    )
+})
 }
     
 open func verifySignature(msg: [UInt8], sig: String, pkey: PublicKey) -> Bool {
@@ -12118,6 +12135,9 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_node_remove_payment() != 47952) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_node_reset_network_graph() != 24091) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_node_sign_message() != 49319) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -12146,6 +12166,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_update_channel_config() != 37852) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_update_rgs_snapshot() != 59073) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_verify_signature() != 20486) {
