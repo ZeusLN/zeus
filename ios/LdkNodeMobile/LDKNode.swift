@@ -2648,6 +2648,8 @@ public protocol NodeProtocol : AnyObject {
     
     func listChannels()  -> [ChannelDetails]
     
+    func listClosedChannels()  -> [ClosedChannelDetails]
+    
     func listPayments()  -> [PaymentDetails]
     
     func listPeers()  -> [PeerDetails]
@@ -2840,6 +2842,13 @@ open func listBalances() -> BalanceDetails {
 open func listChannels() -> [ChannelDetails] {
     return try!  FfiConverterSequenceTypeChannelDetails.lift(try! rustCall() {
     uniffi_ldk_node_fn_method_node_list_channels(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func listClosedChannels() -> [ClosedChannelDetails] {
+    return try!  FfiConverterSequenceTypeClosedChannelDetails.lift(try! rustCall() {
+    uniffi_ldk_node_fn_method_node_list_closed_channels(self.uniffiClonePointer(),$0
     )
 })
 }
@@ -5084,6 +5093,120 @@ public func FfiConverterTypeChannelUpdateInfo_lift(_ buf: RustBuffer) throws -> 
 #endif
 public func FfiConverterTypeChannelUpdateInfo_lower(_ value: ChannelUpdateInfo) -> RustBuffer {
     return FfiConverterTypeChannelUpdateInfo.lower(value)
+}
+
+
+public struct ClosedChannelDetails {
+    public var channelId: ChannelId
+    public var userChannelId: UserChannelId
+    public var counterpartyNodeId: PublicKey?
+    public var fundingTxo: OutPoint?
+    public var channelCapacitySats: UInt64?
+    public var lastLocalBalanceMsat: UInt64?
+    public var closureReason: ClosureReason?
+    public var closedAtTimestamp: UInt64
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(channelId: ChannelId, userChannelId: UserChannelId, counterpartyNodeId: PublicKey?, fundingTxo: OutPoint?, channelCapacitySats: UInt64?, lastLocalBalanceMsat: UInt64?, closureReason: ClosureReason?, closedAtTimestamp: UInt64) {
+        self.channelId = channelId
+        self.userChannelId = userChannelId
+        self.counterpartyNodeId = counterpartyNodeId
+        self.fundingTxo = fundingTxo
+        self.channelCapacitySats = channelCapacitySats
+        self.lastLocalBalanceMsat = lastLocalBalanceMsat
+        self.closureReason = closureReason
+        self.closedAtTimestamp = closedAtTimestamp
+    }
+}
+
+
+
+extension ClosedChannelDetails: Equatable, Hashable {
+    public static func ==(lhs: ClosedChannelDetails, rhs: ClosedChannelDetails) -> Bool {
+        if lhs.channelId != rhs.channelId {
+            return false
+        }
+        if lhs.userChannelId != rhs.userChannelId {
+            return false
+        }
+        if lhs.counterpartyNodeId != rhs.counterpartyNodeId {
+            return false
+        }
+        if lhs.fundingTxo != rhs.fundingTxo {
+            return false
+        }
+        if lhs.channelCapacitySats != rhs.channelCapacitySats {
+            return false
+        }
+        if lhs.lastLocalBalanceMsat != rhs.lastLocalBalanceMsat {
+            return false
+        }
+        if lhs.closureReason != rhs.closureReason {
+            return false
+        }
+        if lhs.closedAtTimestamp != rhs.closedAtTimestamp {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(channelId)
+        hasher.combine(userChannelId)
+        hasher.combine(counterpartyNodeId)
+        hasher.combine(fundingTxo)
+        hasher.combine(channelCapacitySats)
+        hasher.combine(lastLocalBalanceMsat)
+        hasher.combine(closureReason)
+        hasher.combine(closedAtTimestamp)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeClosedChannelDetails: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> ClosedChannelDetails {
+        return
+            try ClosedChannelDetails(
+                channelId: FfiConverterTypeChannelId.read(from: &buf), 
+                userChannelId: FfiConverterTypeUserChannelId.read(from: &buf), 
+                counterpartyNodeId: FfiConverterOptionTypePublicKey.read(from: &buf), 
+                fundingTxo: FfiConverterOptionTypeOutPoint.read(from: &buf), 
+                channelCapacitySats: FfiConverterOptionUInt64.read(from: &buf), 
+                lastLocalBalanceMsat: FfiConverterOptionUInt64.read(from: &buf), 
+                closureReason: FfiConverterOptionTypeClosureReason.read(from: &buf), 
+                closedAtTimestamp: FfiConverterUInt64.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: ClosedChannelDetails, into buf: inout [UInt8]) {
+        FfiConverterTypeChannelId.write(value.channelId, into: &buf)
+        FfiConverterTypeUserChannelId.write(value.userChannelId, into: &buf)
+        FfiConverterOptionTypePublicKey.write(value.counterpartyNodeId, into: &buf)
+        FfiConverterOptionTypeOutPoint.write(value.fundingTxo, into: &buf)
+        FfiConverterOptionUInt64.write(value.channelCapacitySats, into: &buf)
+        FfiConverterOptionUInt64.write(value.lastLocalBalanceMsat, into: &buf)
+        FfiConverterOptionTypeClosureReason.write(value.closureReason, into: &buf)
+        FfiConverterUInt64.write(value.closedAtTimestamp, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeClosedChannelDetails_lift(_ buf: RustBuffer) throws -> ClosedChannelDetails {
+    return try FfiConverterTypeClosedChannelDetails.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeClosedChannelDetails_lower(_ value: ClosedChannelDetails) -> RustBuffer {
+    return FfiConverterTypeClosedChannelDetails.lower(value)
 }
 
 
@@ -10552,6 +10675,31 @@ fileprivate struct FfiConverterSequenceTypeChannelDetails: FfiConverterRustBuffe
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeClosedChannelDetails: FfiConverterRustBuffer {
+    typealias SwiftType = [ClosedChannelDetails]
+
+    public static func write(_ value: [ClosedChannelDetails], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeClosedChannelDetails.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [ClosedChannelDetails] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [ClosedChannelDetails]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeClosedChannelDetails.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeCustomTlvRecord: FfiConverterRustBuffer {
     typealias SwiftType = [CustomTlvRecord]
 
@@ -12091,6 +12239,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_list_channels() != 7954) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_list_closed_channels() != 18081) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_list_payments() != 35002) {
