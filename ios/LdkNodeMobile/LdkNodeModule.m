@@ -79,6 +79,16 @@ RCT_EXTERN_METHOD(eventHandled:(RCTPromiseResolveBlock)resolve rejecter:(RCTProm
 RCT_EXTERN_METHOD(lsps1RequestChannel:(double)lspBalanceSat clientBalanceSat:(double)clientBalanceSat channelExpiryBlocks:(double)channelExpiryBlocks announceChannel:(BOOL)announceChannel resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(lsps1CheckOrderStatus:(NSString *)orderId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
+// LSPS7 Methods
+RCT_EXTERN_METHOD(setLiquiditySourceLsps7:(NSString *)nodeId address:(NSString *)address token:(NSString *)token resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(lsps7GetExtendableChannels:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(lsps7CreateOrder:(NSString *)shortChannelId channelExtensionExpiryBlocks:(double)channelExtensionExpiryBlocks token:(NSString *)token refundOnchainAddress:(NSString *)refundOnchainAddress resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(lsps7CheckOrderStatus:(NSString *)orderId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
+// Log File Methods
+RCT_EXTERN_METHOD(tailLdkNodeLog:(nonnull NSNumber *)numLines resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(observeLdkNodeLogFile:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
 // Message Signing Methods
 RCT_EXTERN_METHOD(signMessage:(NSString *)message resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(verifySignature:(NSString *)message signature:(NSString *)signature publicKey:(NSString *)publicKey resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)

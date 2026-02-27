@@ -161,6 +161,7 @@ import RapidGossipSync from './views/Settings/EmbeddedNode/RapidGossipSync';
 import EsploraServer from './views/Settings/EmbeddedNode/EsploraServer';
 import VssServer from './views/Settings/EmbeddedNode/VssServer';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
+import LDKLogs from './views/Settings/EmbeddedNode/LDKLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
@@ -955,6 +956,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="LNDLogs" // @ts-ignore:next-line
                                                         component={LNDLogs}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LDKLogs" // @ts-ignore:next-line
+                                                        component={LDKLogs}
                                                     />
                                                     <Stack.Screen
                                                         name="Peers" // @ts-ignore:next-line

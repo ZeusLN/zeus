@@ -519,6 +519,25 @@ export interface ILdkNodeModule {
     ): Promise<Lsps1OrderResponse>;
     lsps1CheckOrderStatus(orderId: string): Promise<Lsps1OrderStatus>;
 
+    // LSPS7 Methods
+    setLiquiditySourceLsps7(
+        nodeId: string,
+        address: string,
+        token?: string | null
+    ): Promise<void>;
+    lsps7GetExtendableChannels(): Promise<Lsps7ExtendableChannel[]>;
+    lsps7CreateOrder(
+        shortChannelId: string,
+        channelExtensionExpiryBlocks: number,
+        token?: string | null,
+        refundOnchainAddress?: string | null
+    ): Promise<Lsps7OrderResponse>;
+    lsps7CheckOrderStatus(orderId: string): Promise<Lsps7OrderResponse>;
+
+    // Log File Methods
+    tailLdkNodeLog(numLines: number): Promise<string>;
+    observeLdkNodeLogFile(): Promise<boolean>;
+
     // Message Signing Methods
     signMessage(message: string): Promise<{ signature: string }>;
     verifySignature(
