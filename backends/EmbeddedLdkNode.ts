@@ -16,8 +16,10 @@ import type {
     NodeStatus,
     BalanceDetails,
     ChannelDetails,
+    ClosedChannelDetails,
     PaymentDetails,
     LdkNodeEvent,
+    ClosureReason,
     Lsps1OrderResponse,
     Lsps1OrderStatus
 } from '../ldknode/LdkNode.d';
@@ -79,6 +81,10 @@ export default class EmbeddedLdkNode {
      */
     startNode = async (): Promise<void> => {
         await LdkNode.node.start();
+        // Start the event loop for event subscribers
+        if (!this.eventLoopRunning) {
+            this.startEventLoop();
+        }
     };
 
     /**
@@ -111,10 +117,8 @@ export default class EmbeddedLdkNode {
             if (index > -1) {
                 this.eventCallbacks.splice(index, 1);
             }
-            // Stop event loop if no more callbacks
-            if (this.eventCallbacks.length === 0) {
-                this.stopEventLoop();
-            }
+            // Don't stop the event loop on unsubscribe — other
+            // subscribers may still need it
         };
     };
 
@@ -161,6 +165,22 @@ export default class EmbeddedLdkNode {
     private stopEventLoop = (): void => {
         this.eventLoopRunning = false;
     };
+
+    /**
+     * Check if a closure reason indicates a cooperative close
+     */
+    private static isCooperativeReason(
+        reason: ClosureReason | undefined
+    ): boolean {
+        const type = reason?.type;
+        return (
+            type === 'locallyInitiatedCooperativeClosure' ||
+            type === 'counterpartyInitiatedCooperativeClosure' ||
+            type === 'legacyCooperativeClosure' ||
+            type === 'counterpartyCoopClosedUnfundedChannel' ||
+            type === 'locallyCoopClosedUnfundedChannel'
+        );
+    }
 
     /**
      * Sync wallets (on-chain and lightning)
@@ -308,8 +328,13 @@ export default class EmbeddedLdkNode {
      */
     getChannels = async (): Promise<any> => {
         const channels = await LdkNode.channel.listChannels();
+        // Only return ready channels — pending open channels are
+        // returned by getPendingChannels() instead.
+        const readyChannels = channels.filter((c) => c.isChannelReady);
         return {
-            channels: channels.map((channel) => this.formatChannel(channel))
+            channels: readyChannels.map((channel) =>
+                this.formatChannel(channel)
+            )
         };
     };
 
@@ -322,30 +347,331 @@ export default class EmbeddedLdkNode {
 
     /**
      * Get pending channels
+     *
+     * Returns:
+     * - Channels still opening (not yet ready)
+     * - Channels with unsettled balances (pending close / waiting close),
+     *   cross-referenced with native closed channel records for close-type
+     *
+     * Force closes with settled balances go to getClosedChannels().
      */
     getPendingChannels = async (): Promise<any> => {
-        const channels = await LdkNode.channel.listChannels();
+        const [channels, balances, closedChannels] = await Promise.all([
+            LdkNode.channel.listChannels(),
+            LdkNode.node.listBalances(),
+            LdkNode.channel.listClosedChannels()
+        ]);
+
+        // Pending open: channels not yet ready
         const pendingOpen = channels.filter((c) => !c.isChannelReady);
+
+        // Build set of active channel IDs
+        const activeChannelIds = new Set(channels.map((c) => c.channelId));
+
+        // Build lookup of closed channel records by channelId
+        const closedChannelMap = new Map<string, ClosedChannelDetails>();
+        for (const cc of closedChannels) {
+            closedChannelMap.set(cc.channelId, cc);
+        }
+
+        // Collect lightning balance entries by channelId for non-active channels
+        const channelLightningBalances = new Map<
+            string,
+            import('../ldknode/LdkNode.d').LightningBalance[]
+        >();
+        for (const lb of balances.lightningBalances) {
+            if (lb.type === 'claimableOnChannelClose') continue;
+            if (activeChannelIds.has(lb.channelId)) continue;
+            const list = channelLightningBalances.get(lb.channelId) || [];
+            list.push(lb);
+            channelLightningBalances.set(lb.channelId, list);
+        }
+
+        // Collect sweep entries by channelId for non-active channels
+        const channelSweeps = new Map<
+            string,
+            import('../ldknode/LdkNode.d').PendingSweepBalance[]
+        >();
+        for (const sb of balances.pendingBalancesFromChannelClosures) {
+            if (!sb.channelId || activeChannelIds.has(sb.channelId)) continue;
+            const list = channelSweeps.get(sb.channelId) || [];
+            list.push(sb);
+            channelSweeps.set(sb.channelId, list);
+        }
+
+        const pendingClosing: any[] = [];
+        const waitingClose: any[] = [];
+
+        // Cooperative closes with balance entries (claimableAwaitingConfirmations
+        // with source: coopClose)
+        channelLightningBalances.forEach((lbs, channelId) => {
+            const isCoopClose = lbs.every(
+                (lb) =>
+                    lb.type === 'claimableAwaitingConfirmations' &&
+                    lb.source === 'coopClose'
+            );
+            if (!isCoopClose) return;
+
+            const totalSats = lbs.reduce(
+                (sum, lb) => sum + lb.amountSatoshis,
+                0
+            );
+            const closed = closedChannelMap.get(channelId);
+            const counterpartyNodeId =
+                lbs[0]?.counterpartyNodeId || closed?.counterpartyNodeId || '';
+
+            const sweeps = channelSweeps.get(channelId) || [];
+            const closingTxid =
+                sweeps.find((s) => s.latestSpendingTxid)?.latestSpendingTxid ||
+                '';
+
+            pendingClosing.push({
+                channel: {
+                    remote_pubkey: counterpartyNodeId,
+                    channel_point: '',
+                    capacity: (
+                        closed?.channelCapacitySats || totalSats
+                    ).toString(),
+                    local_balance: totalSats.toString(),
+                    remote_balance: '0'
+                },
+                closing_txid: closingTxid
+            });
+        });
+
+        // Sweep-only entries with no lightning balances and no confirmed
+        // sweeps: close tx not yet confirmed (waiting close / pending broadcast)
+        channelSweeps.forEach((sweeps, channelId) => {
+            if (channelLightningBalances.has(channelId)) return;
+
+            if (
+                sweeps.some((s) => s.type === 'awaitingThresholdConfirmations')
+            ) {
+                return;
+            }
+
+            const totalSats = sweeps.reduce(
+                (sum, s) => sum + s.amountSatoshis,
+                0
+            );
+            const closed = closedChannelMap.get(channelId);
+
+            const channel = {
+                remote_pubkey: closed?.counterpartyNodeId || '',
+                channel_point: '',
+                capacity: (closed?.channelCapacitySats || totalSats).toString(),
+                local_balance: totalSats.toString(),
+                remote_balance: '0'
+            };
+
+            if (sweeps.every((s) => s.type === 'pendingBroadcast')) {
+                waitingClose.push({ channel });
+            } else {
+                const closingTxid =
+                    sweeps.find((s) => s.latestSpendingTxid)
+                        ?.latestSpendingTxid || '';
+                pendingClosing.push({
+                    channel,
+                    closing_txid: closingTxid
+                });
+            }
+        });
+
+        // Cooperative closes that have no balance entries at all but were
+        // closed recently (within 10 minutes) — show as pending close
+        // until the close tx has confirmed
+        const channelIdsWithBalances = new Set<string>();
+        channelLightningBalances.forEach((_, id) =>
+            channelIdsWithBalances.add(id)
+        );
+        channelSweeps.forEach((_, id) => channelIdsWithBalances.add(id));
+
+        for (const cc of closedChannels) {
+            if (activeChannelIds.has(cc.channelId)) continue;
+            if (channelIdsWithBalances.has(cc.channelId)) continue;
+            if (!EmbeddedLdkNode.isCooperativeReason(cc.closureReason))
+                continue;
+
+            const ageSecs =
+                Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
+            if (ageSecs > 10 * 60) continue;
+
+            pendingClosing.push({
+                channel: {
+                    remote_pubkey: cc.counterpartyNodeId || '',
+                    channel_point: '',
+                    capacity: (cc.channelCapacitySats || 0).toString(),
+                    local_balance: (cc.lastLocalBalanceMsat
+                        ? Math.floor(cc.lastLocalBalanceMsat / 1000)
+                        : 0
+                    ).toString(),
+                    remote_balance: '0'
+                },
+                closing_txid: ''
+            });
+        }
 
         return {
             pending_open_channels: pendingOpen.map((channel) => ({
                 channel: this.formatChannel(channel)
             })),
-            pending_closing_channels: [],
+            pending_closing_channels: pendingClosing,
             pending_force_closing_channels: [],
-            waiting_close_channels: []
+            waiting_close_channels: waitingClose
         };
     };
 
     /**
-     * Get closed channels (not directly supported in ldk-node)
+     * Get closed channels
+     *
+     * Uses native listClosedChannels() for authoritative closed channel data.
+     * Enriches with balance data when available (for force closes with
+     * unsettled balances, blocks_til_maturity, etc).
+     *
+     * Channels still in active list or shown as pending are excluded.
      */
     getClosedChannels = async (): Promise<any> => {
-        // LDK Node doesn't maintain a list of closed channels
-        // This would need to be tracked separately by the application
-        return {
-            channels: []
+        const [channels, closedChannelList, balances, status] =
+            await Promise.all([
+                LdkNode.channel.listChannels(),
+                LdkNode.channel.listClosedChannels(),
+                LdkNode.node.listBalances(),
+                LdkNode.node.status()
+            ]);
+
+        const currentBlockHeight = status.currentBestBlock_height;
+        const activeChannelIds = new Set(channels.map((c) => c.channelId));
+
+        // Collect balance entries by channelId for non-active channels
+        const channelBalanceEntries = new Map<
+            string,
+            {
+                lightningBalances: import('../ldknode/LdkNode.d').LightningBalance[];
+                sweepBalances: import('../ldknode/LdkNode.d').PendingSweepBalance[];
+            }
+        >();
+
+        const ensureEntry = (channelId: string) => {
+            if (!channelBalanceEntries.has(channelId)) {
+                channelBalanceEntries.set(channelId, {
+                    lightningBalances: [],
+                    sweepBalances: []
+                });
+            }
+            return channelBalanceEntries.get(channelId)!;
         };
+
+        for (const lb of balances.lightningBalances) {
+            if (lb.type === 'claimableOnChannelClose') continue;
+            if (activeChannelIds.has(lb.channelId)) continue;
+            ensureEntry(lb.channelId).lightningBalances.push(lb);
+        }
+
+        for (const sb of balances.pendingBalancesFromChannelClosures) {
+            if (!sb.channelId || activeChannelIds.has(sb.channelId)) continue;
+            ensureEntry(sb.channelId).sweepBalances.push(sb);
+        }
+
+        const closedChannels: any[] = [];
+
+        for (const cc of closedChannelList) {
+            // Skip channels still in active list
+            if (activeChannelIds.has(cc.channelId)) continue;
+
+            const isCoop = EmbeddedLdkNode.isCooperativeReason(
+                cc.closureReason
+            );
+
+            // Skip cooperative closes that are still in the pending window
+            const ageSecs =
+                Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
+            const balEntry = channelBalanceEntries.get(cc.channelId);
+            const hasBalanceEntries = !!balEntry;
+
+            if (isCoop && !hasBalanceEntries && ageSecs <= 10 * 60) {
+                continue; // Still showing as pending close
+            }
+
+            // Skip channels still pending in balance entries
+            // (cooperative closes with pending balance → pending tab)
+            if (hasBalanceEntries) {
+                const coopWithPendingBalance =
+                    balEntry!.lightningBalances.length > 0 &&
+                    balEntry!.lightningBalances.every(
+                        (lb) =>
+                            lb.type === 'claimableAwaitingConfirmations' &&
+                            lb.source === 'coopClose'
+                    );
+                if (coopWithPendingBalance) continue;
+
+                // Skip sweep-only channels with no confirmed sweeps
+                if (
+                    balEntry!.lightningBalances.length === 0 &&
+                    balEntry!.sweepBalances.length > 0 &&
+                    !balEntry!.sweepBalances.some(
+                        (s) => s.type === 'awaitingThresholdConfirmations'
+                    )
+                ) {
+                    continue;
+                }
+            }
+
+            // Calculate capacity and balance
+            const balanceSats = hasBalanceEntries
+                ? [
+                      ...balEntry!.lightningBalances,
+                      ...balEntry!.sweepBalances
+                  ].reduce((sum, b) => sum + b.amountSatoshis, 0)
+                : cc.lastLocalBalanceMsat
+                ? Math.floor(cc.lastLocalBalanceMsat / 1000)
+                : 0;
+
+            const capacitySats = cc.channelCapacitySats || balanceSats;
+
+            const closingTxid = hasBalanceEntries
+                ? balEntry!.sweepBalances.find((s) => s.latestSpendingTxid)
+                      ?.latestSpendingTxid || ''
+                : '';
+
+            // Calculate blocks til maturity from balance data
+            let blocksTilMaturity = 0;
+            if (!isCoop && hasBalanceEntries) {
+                for (const lb of balEntry!.lightningBalances) {
+                    if (
+                        lb.type === 'claimableAwaitingConfirmations' &&
+                        lb.confirmationHeight != null
+                    ) {
+                        const remaining =
+                            lb.confirmationHeight - currentBlockHeight;
+                        if (remaining > blocksTilMaturity) {
+                            blocksTilMaturity = remaining;
+                        }
+                    }
+                }
+            }
+
+            const hasTimelock = blocksTilMaturity > 0;
+            const closeType = isCoop ? 'COOPERATIVE_CLOSE' : 'FORCE_CLOSE';
+
+            closedChannels.push({
+                remote_pubkey: cc.counterpartyNodeId || '',
+                channel_point: cc.fundingTxo_txid
+                    ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
+                    : '',
+                capacity: capacitySats.toString(),
+                settled_balance: balanceSats.toString(),
+                local_balance: balanceSats.toString(),
+                remote_balance: '0',
+                close_type: closeType,
+                closing_txid: closingTxid,
+                closing_tx_hash: closingTxid,
+                forceClose: hasTimelock,
+                blocks_til_maturity: hasTimelock ? blocksTilMaturity : 0,
+                time_locked_balance: hasTimelock ? balanceSats.toString() : '0'
+            });
+        }
+
+        return { channels: closedChannels };
     };
 
     /**
@@ -362,21 +688,102 @@ export default class EmbeddedLdkNode {
             announceChannel: !data.privateChannel
         });
 
-        return {
-            user_channel_id: userChannelId
-        };
+        // Wait for either channelPending (success) or channelClosed
+        // (rejection) event matching this userChannelId
+        const CHANNEL_OPEN_TIMEOUT_MS = 60000;
+        const result = await new Promise<any>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                unsubscribe();
+                // Timeout — resolve optimistically since the request
+                // was accepted by the local node
+                resolve({ user_channel_id: userChannelId });
+            }, CHANNEL_OPEN_TIMEOUT_MS);
+
+            const unsubscribe = this.subscribeToEvents(
+                (event: LdkNodeEvent) => {
+                    if (
+                        event.type === 'channelPending' &&
+                        event.userChannelId === userChannelId
+                    ) {
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        resolve({
+                            user_channel_id: userChannelId,
+                            funding_txid_str: event.fundingTxo_txid,
+                            output_index: event.fundingTxo_vout
+                        });
+                    } else if (
+                        event.type === 'channelClosed' &&
+                        event.userChannelId === userChannelId
+                    ) {
+                        clearTimeout(timeout);
+                        unsubscribe();
+                        const reason = EmbeddedLdkNode.closureReasonToMessage(
+                            event.reason
+                        );
+                        reject(new Error(reason));
+                    }
+                }
+            );
+        });
+
+        return result;
     };
+
+    private static closureReasonToMessage(
+        reason: ClosureReason | undefined
+    ): string {
+        if (!reason) return 'Channel closed: unknown reason';
+        const peerMsg = reason.peerMessage;
+        switch (reason.type) {
+            case 'counterpartyForceClosed':
+                return peerMsg
+                    ? `Channel rejected by counterparty: ${peerMsg}`
+                    : 'Channel rejected: counterparty force closed';
+            case 'counterpartyCoopClosedUnfundedChannel':
+                return 'Channel rejected by counterparty';
+            case 'locallyCoopClosedUnfundedChannel':
+                return 'Channel closed locally before funding';
+            case 'fundingTimedOut':
+                return 'Channel funding timed out';
+            case 'processingError':
+                return peerMsg
+                    ? `Channel failed: ${peerMsg}`
+                    : 'Channel failed due to a processing error';
+            case 'disconnectedPeer':
+                return 'Channel failed: peer disconnected';
+            case 'peerFeerateTooLow':
+                return peerMsg
+                    ? `Channel rejected: ${peerMsg}`
+                    : 'Channel rejected: peer feerate too low';
+            default:
+                return `Channel closed: ${reason.type}`;
+        }
+    }
 
     /**
      * Close a channel
+     *
+     * urlParams come from ChannelsStore in LND format:
+     * [funding_txid_str, output_index, forceClose, satPerVbyte, deliveryAddress]
+     * We look up the channel by funding txid to get the userChannelId
+     * and counterpartyNodeId that LDK Node's close API requires.
      */
     closeChannel = async (urlParams?: Array<string>): Promise<any> => {
-        const userChannelId = (urlParams && urlParams[0]) || '';
-        const counterpartyNodeId = (urlParams && urlParams[1]) || '';
+        const fundingTxid = (urlParams && urlParams[0]) || '';
+
+        const channels = await LdkNode.channel.listChannels();
+        const channel = channels.find((c) => c.fundingTxo_txid === fundingTxid);
+
+        if (!channel) {
+            throw new Error(
+                localeString('error.channelNotFound', { fundingTxid })
+            );
+        }
 
         await LdkNode.channel.closeChannel({
-            userChannelId,
-            counterpartyNodeId
+            userChannelId: channel.userChannelId,
+            counterpartyNodeId: channel.counterpartyNodeId
         });
 
         return { success: true };
@@ -1270,7 +1677,7 @@ export default class EmbeddedLdkNode {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => true;
-    supportsClosedChannels = () => false;
+    supportsClosedChannels = () => true;
     supportsMPP = () => true;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
