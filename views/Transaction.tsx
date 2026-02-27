@@ -185,6 +185,7 @@ export default class TransactionView extends React.Component<
                                         debit
                                         toggleable
                                         sensitive
+                                        forceMsats
                                     />
                                     {getFeePercentage && (
                                         <Text

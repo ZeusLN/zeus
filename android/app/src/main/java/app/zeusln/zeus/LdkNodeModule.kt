@@ -1078,6 +1078,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     putMap("kind", serializePaymentKind(payment.kind))
 
                     payment.amountMsat?.let { putDouble("amountMsat", it.toLong().toDouble()) }
+                    payment.feePaidMsat?.let { putDouble("feePaidMsat", it.toLong().toDouble()) }
 
                     when (payment.direction) {
                         PaymentDirection.INBOUND -> putString("direction", "inbound")

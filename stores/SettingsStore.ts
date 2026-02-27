@@ -1394,7 +1394,7 @@ export default class SettingsStore {
             bigKeypadButtons: false,
             showAllDecimalPlaces: false,
             removeDecimalSpaces: false,
-            showMillisatoshiAmounts: true
+            showMillisatoshiAmounts: false
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
