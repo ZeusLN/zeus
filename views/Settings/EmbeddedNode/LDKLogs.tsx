@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { NativeModules, Platform, View } from 'react-native';
-import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import CopyButton from '../../../components/CopyButton';
@@ -8,23 +7,20 @@ import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import LogBox from '../../../components/LogBox';
 
-import SettingsStore from '../../../stores/SettingsStore';
-
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { LdkNodeEventEmitter } from '../../../utils/EventListenerUtils';
 
+const MAX_LOG_LENGTH = 100000;
+
 interface LDKLogsProps {
     navigation: StackNavigationProp<any, any>;
-    SettingsStore: SettingsStore;
 }
 
 interface LDKLogsState {
     log: string;
 }
 
-@inject('SettingsStore')
-@observer
 export default class LDKLogs extends React.Component<
     LDKLogsProps,
     LDKLogsState
@@ -45,6 +41,9 @@ export default class LDKLogs extends React.Component<
                 'ldklog',
                 (data: string) => {
                     log = log + data;
+                    if (log.length > MAX_LOG_LENGTH) {
+                        log = log.slice(-MAX_LOG_LENGTH);
+                    }
                     this.setState({ log });
                 }
             );
