@@ -31,7 +31,7 @@ export function RoutingListItem({
                 <View style={{ flex: 1, paddingRight: 10 }}>
                     <Body>{title}</Body>
                 </View>
-                <Amount sats={fee} credit sensitive />
+                <Amount sats={fee} credit sensitive forceMsats />
             </Row>
             <Row justify="space-between">
                 <Text style={{ color: themeColor('text') }}>{date}</Text>

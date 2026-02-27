@@ -195,8 +195,7 @@ export default class EmbeddedLdkNode {
             block_height: status.currentBestBlock_height,
             block_hash: status.currentBestBlock_hash,
             synced_to_chain:
-                status.isRunning &&
-                !!status.latestOnchainWalletSyncTimestamp,
+                status.isRunning && !!status.latestOnchainWalletSyncTimestamp,
             synced_to_graph: !!status.latestRgsSnapshotTimestamp,
             version: 'ldk-node',
             testnet: network === 'testnet',
@@ -540,8 +539,7 @@ export default class EmbeddedLdkNode {
             paymentId = await LdkNode.bolt11.sendBolt11(data.payment_request);
         }
 
-        const { hash, preimage } =
-            await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
 
         return {
             payment_hash: hash,
@@ -563,8 +561,7 @@ export default class EmbeddedLdkNode {
             amountMsat: amt * 1000
         });
 
-        const { hash, preimage } =
-            await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
 
         return {
             payment_hash: hash,
@@ -971,8 +968,7 @@ export default class EmbeddedLdkNode {
             amountMsat: Number(amountSatoshis) * 1000
         });
 
-        const { hash, preimage } =
-            await this.awaitPaymentCompletion(paymentId);
+        const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
 
         return {
             payment_hash: hash,
@@ -1141,6 +1137,7 @@ export default class EmbeddedLdkNode {
         // For Lightning payments, hash and preimage are in the kind object
         const hash = payment.kind.hash || payment.id;
         const preimage = payment.kind.preimage || '';
+        const feeMsat = payment.feePaidMsat || 0;
 
         return {
             payment_hash: hash,
@@ -1152,9 +1149,9 @@ export default class EmbeddedLdkNode {
                 : '0',
             value_msat: payment.amountMsat?.toString() || '0',
             creation_date: payment.latestUpdateTimestamp.toString(),
-            fee: '0',
-            fee_sat: '0',
-            fee_msat: '0',
+            fee: new BigNumber(feeMsat).dividedBy(1000).toString(),
+            fee_sat: new BigNumber(feeMsat).dividedBy(1000).toFixed(0),
+            fee_msat: feeMsat.toString(),
             payment_preimage: preimage,
             status: this.mapPaymentStatus(payment.status),
             failure_reason:

@@ -933,6 +933,7 @@ class LdkNodeModule: RCTEventEmitter {
                 "id": payment.id,
                 "kind": self.serializePaymentKind(payment.kind),
                 "amountMsat": payment.amountMsat as Any,
+                "feePaidMsat": payment.feePaidMsat as Any,
                 "direction": self.serializePaymentDirection(payment.direction),
                 "status": self.serializePaymentStatus(payment.status),
                 "latestUpdateTimestamp": payment.latestUpdateTimestamp
