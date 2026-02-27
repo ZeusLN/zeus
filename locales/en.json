@@ -1286,6 +1286,7 @@
     "views.Settings.EmbeddedNode.AdvancedRescan.start": "Start rescan",
     "views.Settings.EmbeddedNode.LNDLogs.title": "LND Logs",
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "Copy logs to clipboard",
+    "views.Settings.EmbeddedNode.LDKLogs.title": "LDK Node Logs",
     "views.Settings.EmbeddedNode.feeEstimator": "Fee estimator",
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
     "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",

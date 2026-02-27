@@ -13,6 +13,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     private var builder: Builder? = null
     private var node: Node? = null
+    private var logFileObserver: LogFileObserver? = null
 
     // Stored config values for building with custom Config
     private var storedNetwork: Network = Network.BITCOIN
@@ -397,6 +398,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 builder.setLiquiditySourceLsps7(nodeId, address, this.storedLsps7Token)
             }
         }
+
+        // Enable filesystem logging
+        if (this.storedStorageDirPath.isNotEmpty()) {
+            Log.d("LdkNodeModule", "applyBuilderSettings: Enabling filesystem logger")
+            builder.setFilesystemLogger("${this.storedStorageDirPath}/ldk_node.log", LogLevel.DEBUG)
+        }
     }
 
     private fun createEsploraSyncConfig(): EsploraSyncConfig {
@@ -434,6 +441,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 node.stop()
+                this@LdkNodeModule.logFileObserver?.stopObserving()
+                this@LdkNodeModule.logFileObserver = null
                 this@LdkNodeModule.node = null
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
@@ -1521,5 +1530,29 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         } catch (e: Exception) {
             promise.reject("error", e.message, e)
         }
+    }
+
+    // Log File Methods
+
+    @ReactMethod
+    fun tailLdkNodeLog(numLines: Int, promise: Promise) {
+        val logPath = "${this.storedStorageDirPath}/ldk_node.log"
+        promise.resolve(LogFileObserver.tailFile(logPath, numLines))
+    }
+
+    @ReactMethod
+    fun observeLdkNodeLogFile(promise: Promise) {
+        if (logFileObserver != null) {
+            promise.resolve(true)
+            return
+        }
+        val logPath = "${this.storedStorageDirPath}/ldk_node.log"
+        logFileObserver = LogFileObserver(logPath) { line ->
+            reactApplicationContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit("ldklog", line + "\n")
+        }
+        logFileObserver?.startObserving()
+        promise.resolve(true)
     }
 }

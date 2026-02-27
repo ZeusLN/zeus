@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -16,7 +16,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { DEFAULT_VSS_SERVER } from '../../../utils/EmbeddedLdkNodeUtils';
 
 interface VssServerProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

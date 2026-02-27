@@ -4,6 +4,7 @@ android/local.properties
 # OSX
 #
 .DS_Store
+__MACOSX/
 
 # Xcode
 #

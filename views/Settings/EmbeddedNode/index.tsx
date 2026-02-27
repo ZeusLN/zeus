@@ -273,6 +273,33 @@ export default class EmbeddedNode extends React.Component<
                             </ListItem>
                         )}
 
+                        {/* Embedded LDK: LDK Logs */}
+                        {isEmbeddedLdk && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => navigation.navigate('LDKLogs')}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.LDKLogs.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
                         {/* Embedded LND: Advanced */}
                         {isEmbeddedLnd && (
                             <ListItem
