@@ -37,6 +37,7 @@ RCT_EXTERN_METHOD(updateRgsSnapshot:(RCTPromiseResolveBlock)resolve rejecter:(RC
 
 // Channel Methods
 RCT_EXTERN_METHOD(listChannels:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(listClosedChannels:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(openChannel:(NSString *)nodeId address:(NSString *)address channelAmountSats:(nonnull NSNumber *)channelAmountSats pushToCounterpartyMsat:(nonnull NSNumber *)pushToCounterpartyMsat announceChannel:(BOOL)announceChannel resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(closeChannel:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
