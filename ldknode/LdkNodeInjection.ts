@@ -10,6 +10,7 @@ import type {
     NodeStatus,
     BalanceDetails,
     ChannelDetails,
+    ClosedChannelDetails,
     PaymentDetails,
     PeerDetails,
     LdkNodeEvent,
@@ -169,6 +170,11 @@ const updateRgsSnapshot = async (): Promise<{ timestamp: number }> => {
 
 const listChannels = async (): Promise<ChannelDetails[]> => {
     const result: any = await LdkNodeModule.listChannels();
+    return result.channels;
+};
+
+const listClosedChannels = async (): Promise<ClosedChannelDetails[]> => {
+    const result: any = await LdkNodeModule.listClosedChannels();
     return result.channels;
 };
 
@@ -683,6 +689,7 @@ export interface ILdkNodeInjections {
     };
     channel: {
         listChannels: () => Promise<ChannelDetails[]>;
+        listClosedChannels: () => Promise<ClosedChannelDetails[]>;
         openChannel: (params: {
             nodeId: string;
             address: string;
@@ -846,6 +853,7 @@ const LdkNodeInjection: ILdkNodeInjections = {
     },
     channel: {
         listChannels,
+        listClosedChannels,
         openChannel,
         closeChannel
     },

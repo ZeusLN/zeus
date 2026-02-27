@@ -751,6 +751,45 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
+    fun listClosedChannels(promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val closedChannels = node.listClosedChannels()
+            val result = Arguments.createArray()
+            for (channel in closedChannels) {
+                val channelMap = Arguments.createMap().apply {
+                    putString("channelId", channel.channelId)
+                    putString("userChannelId", channel.userChannelId)
+                    putDouble("closedAtTimestamp", channel.closedAtTimestamp.toLong().toDouble())
+                    channel.counterpartyNodeId?.let {
+                        putString("counterpartyNodeId", it)
+                    }
+                    channel.fundingTxo?.let {
+                        putString("fundingTxo_txid", it.txid)
+                        putDouble("fundingTxo_vout", it.vout.toDouble())
+                    }
+                    channel.channelCapacitySats?.let {
+                        putDouble("channelCapacitySats", it.toLong().toDouble())
+                    }
+                    channel.lastLocalBalanceMsat?.let {
+                        putDouble("lastLocalBalanceMsat", it.toLong().toDouble())
+                    }
+                    channel.closureReason?.let {
+                        putMap("closureReason", serializeClosureReason(it))
+                    }
+                }
+                result.pushMap(channelMap)
+            }
+            val response = Arguments.createMap().apply {
+                putArray("channels", result)
+            }
+            promise.resolve(response)
+        } catch (e: Exception) {
+            promise.reject("error", e.message, e)
+        }
+    }
+
+    @ReactMethod
     fun openChannel(nodeId: String, address: String, channelAmountSats: Double, pushToCounterpartyMsat: Double?, announceChannel: Boolean, promise: Promise) {
         moduleScope.launch {
             try {
@@ -1331,7 +1370,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 map.putString("channelId", event.channelId)
                 map.putString("userChannelId", event.userChannelId)
                 event.counterpartyNodeId?.let { map.putString("counterpartyNodeId", it) }
-                event.reason?.let { map.putString("reason", closureReasonToString(it)) }
+                event.reason?.let { map.putMap("reason", serializeClosureReason(it)) }
             }
             is Event.SplicePending -> {
                 map.putString("type", "splicePending")
@@ -1370,24 +1409,38 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
-    private fun closureReasonToString(reason: ClosureReason): String {
-        return when (reason) {
-            is ClosureReason.CounterpartyForceClosed -> "counterpartyForceClosed"
-            is ClosureReason.HolderForceClosed -> "holderForceClosed"
-            is ClosureReason.LegacyCooperativeClosure -> "legacyCooperativeClosure"
-            is ClosureReason.CounterpartyInitiatedCooperativeClosure -> "counterpartyInitiatedCooperativeClosure"
-            is ClosureReason.LocallyInitiatedCooperativeClosure -> "locallyInitiatedCooperativeClosure"
-            is ClosureReason.CommitmentTxConfirmed -> "commitmentTxConfirmed"
-            is ClosureReason.FundingTimedOut -> "fundingTimedOut"
-            is ClosureReason.ProcessingError -> "processingError"
-            is ClosureReason.DisconnectedPeer -> "disconnectedPeer"
-            is ClosureReason.OutdatedChannelManager -> "outdatedChannelManager"
-            is ClosureReason.CounterpartyCoopClosedUnfundedChannel -> "counterpartyCoopClosedUnfundedChannel"
-            is ClosureReason.LocallyCoopClosedUnfundedChannel -> "locallyCoopClosedUnfundedChannel"
-            is ClosureReason.FundingBatchClosure -> "fundingBatchClosure"
-            is ClosureReason.HtlCsTimedOut -> "htlcsTimedOut"
-            is ClosureReason.PeerFeerateTooLow -> "peerFeerateTooLow"
+    private fun serializeClosureReason(reason: ClosureReason): WritableMap {
+        val map = Arguments.createMap()
+        when (reason) {
+            is ClosureReason.CounterpartyForceClosed -> {
+                map.putString("type", "counterpartyForceClosed")
+                map.putString("peerMessage", reason.peerMsg)
+            }
+            is ClosureReason.HolderForceClosed -> {
+                map.putString("type", "holderForceClosed")
+                map.putString("peerMessage", reason.message)
+            }
+            is ClosureReason.LegacyCooperativeClosure -> map.putString("type", "legacyCooperativeClosure")
+            is ClosureReason.CounterpartyInitiatedCooperativeClosure -> map.putString("type", "counterpartyInitiatedCooperativeClosure")
+            is ClosureReason.LocallyInitiatedCooperativeClosure -> map.putString("type", "locallyInitiatedCooperativeClosure")
+            is ClosureReason.CommitmentTxConfirmed -> map.putString("type", "commitmentTxConfirmed")
+            is ClosureReason.FundingTimedOut -> map.putString("type", "fundingTimedOut")
+            is ClosureReason.ProcessingError -> {
+                map.putString("type", "processingError")
+                map.putString("peerMessage", reason.err)
+            }
+            is ClosureReason.DisconnectedPeer -> map.putString("type", "disconnectedPeer")
+            is ClosureReason.OutdatedChannelManager -> map.putString("type", "outdatedChannelManager")
+            is ClosureReason.CounterpartyCoopClosedUnfundedChannel -> map.putString("type", "counterpartyCoopClosedUnfundedChannel")
+            is ClosureReason.LocallyCoopClosedUnfundedChannel -> map.putString("type", "locallyCoopClosedUnfundedChannel")
+            is ClosureReason.FundingBatchClosure -> map.putString("type", "fundingBatchClosure")
+            is ClosureReason.HtlCsTimedOut -> map.putString("type", "htlcsTimedOut")
+            is ClosureReason.PeerFeerateTooLow -> {
+                map.putString("type", "peerFeerateTooLow")
+                map.putString("peerMessage", "Peer feerate ${reason.peerFeerateSatPerKw} sat/kw too low, required ${reason.requiredFeerateSatPerKw} sat/kw")
+            }
         }
+        return map
     }
 
     // LSPS1 Methods
