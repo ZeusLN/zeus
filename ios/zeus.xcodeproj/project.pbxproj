@@ -171,6 +171,7 @@
 		B1C2D3E62D36C99900000003 /* LDKNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E52D36C99900000002 /* LDKNode.swift */; };
 		B1C2D3E92D36C99900000006 /* LdkNodeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E72D36C99900000004 /* LdkNodeModule.swift */; };
 		B1C2D3EA2D36C99900000007 /* LdkNodeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E82D36C99900000005 /* LdkNodeModule.m */; };
+		B1C2D3EC2D36C99900000009 /* LogFileObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3EB2D36C99900000008 /* LogFileObserver.swift */; };
 		B1DB19555C1C4546922217C2 /* eye_closed.svg in Resources */ = {isa = PBXBuildFile; fileRef = 744BE042F00E4B16BDC79870 /* eye_closed.svg */; };
 		B20A92EA4E82493CB6D1A2F0 /* NFC.svg in Resources */ = {isa = PBXBuildFile; fileRef = 3C37D42473A54AD981B549B4 /* NFC.svg */; };
 		B39739CDBF39F16F2AD52938 /* libPods-zeus.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0EC14DF216D694B9C5C997FE /* libPods-zeus.a */; };
@@ -656,6 +657,7 @@
 		B1C2D3E52D36C99900000002 /* LDKNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LDKNode.swift; sourceTree = "<group>"; };
 		B1C2D3E72D36C99900000004 /* LdkNodeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LdkNodeModule.swift; sourceTree = "<group>"; };
 		B1C2D3E82D36C99900000005 /* LdkNodeModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LdkNodeModule.m; sourceTree = "<group>"; };
+		B1C2D3EB2D36C99900000008 /* LogFileObserver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogFileObserver.swift; sourceTree = "<group>"; };
 		B36D434AE9B14EE7AD5E6BCE /* Routing.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Routing.svg; path = ../assets/images/SVG/Routing.svg; sourceTree = "<group>"; };
 		B4C39762C9B748E39BFDA90F /* ExchangeBitcoin.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = ExchangeBitcoin.svg; path = ../assets/images/SVG/ExchangeBitcoin.svg; sourceTree = "<group>"; };
 		B4D00602022C4AE1BFA1A2C1 /* Hourglass.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Hourglass.svg; path = ../assets/images/SVG/Hourglass.svg; sourceTree = "<group>"; };
@@ -1044,6 +1046,7 @@
 			isa = PBXGroup;
 			children = (
 				B1C2D3E52D36C99900000002 /* LDKNode.swift */,
+				B1C2D3EB2D36C99900000008 /* LogFileObserver.swift */,
 				B1C2D3E72D36C99900000004 /* LdkNodeModule.swift */,
 				B1C2D3E82D36C99900000005 /* LdkNodeModule.m */,
 			);
@@ -1986,6 +1989,7 @@
 				B1C2D3E62D36C99900000003 /* LDKNode.swift in Sources */,
 				B1C2D3E92D36C99900000006 /* LdkNodeModule.swift in Sources */,
 				B1C2D3EA2D36C99900000007 /* LdkNodeModule.m in Sources */,
+				B1C2D3EC2D36C99900000009 /* LogFileObserver.swift in Sources */,
 				745388452A54C2B6000927CE /* LndMobileScheduledSync.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FBD1A6810BG00A75B9A /* BackgroundTaskManager.m in Sources */,

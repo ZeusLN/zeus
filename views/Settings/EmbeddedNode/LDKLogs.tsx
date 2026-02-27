@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { NativeModules, Platform, View } from 'react-native';
-import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import CopyButton from '../../../components/CopyButton';
@@ -8,26 +7,23 @@ import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
 import LogBox from '../../../components/LogBox';
 
-import SettingsStore from '../../../stores/SettingsStore';
-
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-import { LndMobileToolsEventEmitter } from '../../../utils/EventListenerUtils';
+import { LdkNodeEventEmitter } from '../../../utils/EventListenerUtils';
 
-interface LNDLogsProps {
+const MAX_LOG_LENGTH = 100000;
+
+interface LDKLogsProps {
     navigation: NativeStackNavigationProp<any, any>;
-    SettingsStore: SettingsStore;
 }
 
-interface LNDLogsState {
+interface LDKLogsState {
     log: string;
 }
 
-@inject('SettingsStore')
-@observer
-export default class LNDLogs extends React.Component<
-    LNDLogsProps,
-    LNDLogsState
+export default class LDKLogs extends React.Component<
+    LDKLogsProps,
+    LDKLogsState
 > {
     state = {
         log: ''
@@ -35,44 +31,30 @@ export default class LNDLogs extends React.Component<
     logListener: any = null;
 
     async componentDidMount(): Promise<void> {
-        const { SettingsStore } = this.props;
-        const { embeddedLndNetwork, lndDir } = SettingsStore;
         (async () => {
-            const network =
-                embeddedLndNetwork === 'Testnet' ? 'testnet' : 'mainnet';
-            const tailLog = await NativeModules.LndMobileTools.tailLog(
-                100,
-                lndDir || 'lnd',
-                network
+            const tailLog = await NativeModules.LdkNodeModule.tailLdkNodeLog(
+                100
             );
-            let log = tailLog
-                .split('\n')
-                .map((row) => row.slice(11))
-                .join('\n');
+            let log = tailLog;
 
-            this.logListener = LndMobileToolsEventEmitter.addListener(
-                'lndlog',
+            this.logListener = LdkNodeEventEmitter.addListener(
+                'ldklog',
                 (data: string) => {
-                    log = log + data.slice(11);
-                    if (log.length > 100000) {
-                        log = log.slice(-100000);
+                    log = log + data;
+                    if (log.length > MAX_LOG_LENGTH) {
+                        log = log.slice(-MAX_LOG_LENGTH);
                     }
-                    this.setState({
-                        log
-                    });
+                    this.setState({ log });
                 }
             );
 
-            NativeModules.LndMobileTools.observeLndLogFile(
-                lndDir || 'lnd',
-                network
-            ).catch((e: any) => {
-                console.log('Could not observe log file:', e);
-            });
+            NativeModules.LdkNodeModule.observeLdkNodeLogFile().catch(
+                (e: any) => {
+                    console.log('Could not observe LDK log file:', e);
+                }
+            );
 
-            this.setState({
-                log
-            });
+            this.setState({ log });
         })();
     }
 
@@ -93,7 +75,7 @@ export default class LNDLogs extends React.Component<
                         leftComponent="Back"
                         centerComponent={{
                             text: localeString(
-                                'views.Settings.EmbeddedNode.LNDLogs.title'
+                                'views.Settings.EmbeddedNode.LDKLogs.title'
                             ),
                             style: {
                                 color: themeColor('text'),

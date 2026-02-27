@@ -6,6 +6,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     private var node: Node?
     private var builder: Builder?
+    private var logFileObserver: LogFileObserver?
 
     // Stored config values for building with custom Config
     private var storedNetwork: Network = .bitcoin
@@ -37,7 +38,7 @@ class LdkNodeModule: RCTEventEmitter {
     }
 
     override func supportedEvents() -> [String]! {
-        return ["LdkNodeEvent"]
+        return ["LdkNodeEvent", "ldklog"]
     }
 
     @objc
@@ -371,6 +372,11 @@ class LdkNodeModule: RCTEventEmitter {
         if let lsps7NodeId = self.storedLsps7NodeId, let lsps7Address = self.storedLsps7Address {
             builder.setLiquiditySourceLsps7(nodeId: lsps7NodeId, address: lsps7Address, token: self.storedLsps7Token)
         }
+
+        if !self.storedStorageDirPath.isEmpty {
+            NSLog("LdkNodeModule: applyBuilderSettings: Enabling filesystem logger")
+            builder.setFilesystemLogger(logFilePath: "\(self.storedStorageDirPath)/ldk_node.log", maxLogLevel: .debug)
+        }
     }
 
     private func createEsploraSyncConfig() -> EsploraSyncConfig {
@@ -410,6 +416,8 @@ class LdkNodeModule: RCTEventEmitter {
 
         do {
             try node.stop()
+            self.logFileObserver?.stopObserving()
+            self.logFileObserver = nil
             self.node = nil
             resolve(["status": "ok"])
         } catch {
@@ -1491,6 +1499,74 @@ class LdkNodeModule: RCTEventEmitter {
             return "paid"
         case .refunded:
             return "refunded"
+        }
+    }
+
+    // MARK: - LSPS7 Serialization Helpers
+
+    private func serializeLsps7OrderResponse(_ response: Lsps7OrderResponse) -> [String: Any] {
+        var result: [String: Any] = [
+            "orderId": response.orderId,
+            "orderState": serializeLsps7OrderState(response.orderState),
+            "channelExtensionExpiryBlocks": response.channelExtensionExpiryBlocks,
+            "newChannelExpiryBlock": response.newChannelExpiryBlock,
+            "paymentInfo": serializeLsps1PaymentInfo(response.payment),
+            "channel": serializeLsps7ExtendableChannel(response.channel)
+        ]
+        return result
+    }
+
+    private func serializeLsps7ExtendableChannel(_ channel: Lsps7ExtendableChannel) -> [String: Any] {
+        var result: [String: Any] = [
+            "shortChannelId": channel.shortChannelId,
+            "maxChannelExtensionExpiryBlocks": channel.maxChannelExtensionExpiryBlocks,
+            "expirationBlock": channel.expirationBlock
+        ]
+        if let originalOrder = channel.originalOrder {
+            result["originalOrder"] = [
+                "id": originalOrder.id,
+                "service": originalOrder.service
+            ]
+        }
+        if let extensionOrderIds = channel.extensionOrderIds {
+            result["extensionOrderIds"] = extensionOrderIds
+        }
+        return result
+    }
+
+    // MARK: - Log File Methods
+
+    @objc(tailLdkNodeLog:resolver:rejecter:)
+    func tailLdkNodeLog(_ numLines: NSNumber,
+                         resolver resolve: @escaping RCTPromiseResolveBlock,
+                         rejecter reject: @escaping RCTPromiseRejectBlock) {
+        let logPath = "\(self.storedStorageDirPath)/ldk_node.log"
+        resolve(LogFileObserver.tailFile(path: logPath, numLines: numLines.intValue))
+    }
+
+    @objc(observeLdkNodeLogFile:rejecter:)
+    func observeLdkNodeLogFile(_ resolve: @escaping RCTPromiseResolveBlock,
+                                rejecter reject: @escaping RCTPromiseRejectBlock) {
+        if logFileObserver != nil {
+            resolve(true)
+            return
+        }
+        let logPath = "\(self.storedStorageDirPath)/ldk_node.log"
+        logFileObserver = LogFileObserver(filePath: logPath) { [weak self] data in
+            self?.sendEvent(withName: "ldklog", body: data)
+        }
+        logFileObserver?.startObserving()
+        resolve(true)
+    }
+
+    private func serializeLsps7OrderState(_ state: Lsps7OrderState) -> String {
+        switch state {
+        case .created:
+            return "CREATED"
+        case .completed:
+            return "COMPLETED"
+        case .failed:
+            return "FAILED"
         }
     }
 }
