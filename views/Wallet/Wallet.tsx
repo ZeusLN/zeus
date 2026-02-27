@@ -1050,6 +1050,26 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
+        } else if (implementation === 'embedded-ldk-node') {
+            try {
+                await NodeInfoStore.getNodeInfo();
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannelsWithPolling().then(() => {
+                    // Check for sweep to self-custody threshold after channels are online
+                    if (settings?.ecash?.enableCashu) {
+                        CashuStore.checkAndSweepMints();
+                        CashuStore.checkAndShowUpgradeModal(
+                            0,
+                            CashuStore.totalBalanceSats || 0
+                        );
+                    }
+                });
+            } catch (connectionError) {
+                console.log('LDK Node connection failed:', connectionError);
+                NodeInfoStore.handleGetNodeInfoError();
+                setConnectingStatus(false);
+                return;
+            }
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
