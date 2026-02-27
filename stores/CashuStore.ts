@@ -1693,17 +1693,25 @@ export default class CashuStore {
         // Find the next threshold above the dismissed one
         const nextThreshold = UPGRADE_THRESHOLDS.find((t) => t > threshold);
 
-        if (nextThreshold) {
-            this.modalStore.toggleInfoModal({
-                title: localeString('cashu.upgradePrompt.title'),
-                text: localeString('cashu.upgradePrompt.dismissed')
-            });
-        } else {
-            this.modalStore.toggleInfoModal({
-                title: localeString('cashu.upgradePrompt.title'),
-                text: localeString('cashu.upgradePrompt.dismissedFinal')
-            });
-        }
+        // Delay so the confirmation modal opens after the previous
+        // modal's close animation finishes (onClosed callback)
+        setTimeout(() => {
+            if (nextThreshold) {
+                const nextThresholdFormatted = nextThreshold.toLocaleString();
+                this.modalStore.toggleInfoModal({
+                    title: localeString('cashu.upgradePrompt.dismissedTitle'),
+                    text: localeString('cashu.upgradePrompt.dismissed').replace(
+                        '%{sats}',
+                        nextThresholdFormatted
+                    )
+                });
+            } else {
+                this.modalStore.toggleInfoModal({
+                    title: localeString('cashu.upgradePrompt.dismissedTitle'),
+                    text: localeString('cashu.upgradePrompt.dismissedFinal')
+                });
+            }
+        }, 500);
     };
 
     private getUpgradeModalBackgroundColor = (
