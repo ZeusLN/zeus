@@ -1180,6 +1180,7 @@ export default class EmbeddedLdkNode {
         // For Lightning payments, hash and preimage are in the kind object
         const hash = payment.kind.hash || payment.id;
         const preimage = payment.kind.preimage || '';
+        const feeMsat = payment.feePaidMsat || 0;
 
         return {
             payment_hash: hash,
@@ -1191,9 +1192,9 @@ export default class EmbeddedLdkNode {
                 : '0',
             value_msat: payment.amountMsat?.toString() || '0',
             creation_date: payment.latestUpdateTimestamp.toString(),
-            fee: '0',
-            fee_sat: '0',
-            fee_msat: '0',
+            fee: new BigNumber(feeMsat).dividedBy(1000).toString(),
+            fee_sat: new BigNumber(feeMsat).dividedBy(1000).toFixed(0),
+            fee_msat: feeMsat.toString(),
             payment_preimage: preimage,
             status: this.mapPaymentStatus(payment.status),
             failure_reason:

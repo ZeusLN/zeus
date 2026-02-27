@@ -401,6 +401,7 @@ export default class SendingLightning extends React.Component<
                                                         debit
                                                         sensitive
                                                         toggleable
+                                                        forceMsats
                                                     />
                                                     {donationFeePercentage && (
                                                         <Text
@@ -742,6 +743,7 @@ export default class SendingLightning extends React.Component<
                                                             sats={feeAmount}
                                                             sensitive
                                                             toggleable
+                                                            forceMsats
                                                             fontSize={
                                                                 amountFontSize
                                                             }

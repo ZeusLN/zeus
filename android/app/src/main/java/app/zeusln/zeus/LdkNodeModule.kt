@@ -1111,6 +1111,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     }
 
                     payment.amountMsat?.let { putDouble("amountMsat", it.toLong().toDouble()) }
+                    payment.feePaidMsat?.let { putDouble("feePaidMsat", it.toLong().toDouble()) }
 
                     when (val direction = payment.direction) {
                         PaymentDirection.INBOUND -> putString("direction", "inbound")
