@@ -196,7 +196,7 @@ export default class EmbeddedLdkNode {
             block_hash: status.currentBestBlock_hash,
             synced_to_chain: status.isRunning,
             synced_to_graph: !!status.latestRgsSnapshotTimestamp,
-            version: 'ldk-node',
+            version: 'ldk-node v0.7.0-zeus-lsps7-rgs-troubleshoot-logobserver',
             testnet: network === 'testnet',
             regtest: network === 'regtest',
             signet: network === 'signet',
