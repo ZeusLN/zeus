@@ -2012,6 +2012,7 @@
     "cashu.upgradePrompt.dismissedTitle": "Reminder Dismissed",
     "cashu.upgradePrompt.dismissed": "You'll be reminded again at %{sats} sats.",
     "cashu.upgradePrompt.dismissedFinal": "You won't be reminded again.",
+    "cashu.upgradePrompt.menuItem": "Upgrade to Self-Custody",
     "zeuspay.intro.explainer1": "ZEUS Pay is a service that gives you a Lightning address, like satoshi@zeuspay.com, for receiving payments to your Lightning wallet.",
     "zeuspay.intro.explainer2": "Below are the kinds of Lightning addresses you can have for your wallet type:",
     "zeuspay.intro.prosAndCons": "Pros and cons",

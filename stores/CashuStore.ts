@@ -50,7 +50,7 @@ import CashuUtils from '../utils/CashuUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
-import { themeColor, blendHexColors } from '../utils/ThemeUtils';
+import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -1717,24 +1717,10 @@ export default class CashuStore {
     private getUpgradeModalBackgroundColor = (
         currentBalance: number
     ): string | undefined => {
-        const modalBg = themeColor('modalBackground');
-        const errorColor = themeColor('error');
-
-        if (!modalBg || !errorColor) return undefined;
-
-        // blendHexColors only supports 6-char hex strings (#rrggbb).
-        // Some themes use rgb(), 3-char hex, or color names which would
-        // produce invalid color strings and crash the app.
-        const hexRegex = /^#?[0-9a-fA-F]{6}$/;
-        if (!hexRegex.test(modalBg) || !hexRegex.test(errorColor))
-            return undefined;
-
-        // Blend from modal background toward error/red based on balance ratio
-        const ratio = Math.min(currentBalance / 100_000, 1);
-        if (currentBalance >= 10_000) {
-            return blendHexColors(modalBg, errorColor, ratio * 0.6);
-        }
-        return undefined;
+        return getUpgradeBackgroundColor(
+            themeColor('modalBackground'),
+            currentBalance
+        );
     };
 
     @action
@@ -1804,6 +1790,44 @@ export default class CashuStore {
                 break; // Show only one modal per balance update
             }
         }
+    };
+
+    public showUpgradeModal = () => {
+        const balance = this.totalBalanceSats || 0;
+        // Find the highest threshold the current balance meets
+        const threshold = [...UPGRADE_THRESHOLDS]
+            .reverse()
+            .find((t) => balance >= t);
+        if (!threshold) return;
+
+        const titleKey =
+            UPGRADE_TITLES[threshold] || 'cashu.upgradePrompt.title';
+        const messageKey =
+            UPGRADE_MESSAGES[threshold] || 'cashu.upgradePrompt.messageGeneral';
+        const backgroundColor = this.getUpgradeModalBackgroundColor(balance);
+
+        this.modalStore.toggleInfoModal({
+            title: localeString(titleKey),
+            text: localeString(messageKey),
+            backgroundColor,
+            link: 'https://docs.zeusln.app/self-custody',
+            buttons: [
+                {
+                    title: localeString('cashu.upgradePrompt.purchaseChannel'),
+                    callback: () => {
+                        this.modalStore.toggleInfoModal({});
+                        NavigationService.navigate('LSPS1');
+                    }
+                },
+                {
+                    title: localeString('cashu.upgradePrompt.transferOnChain'),
+                    callback: () => {
+                        this.modalStore.toggleInfoModal({});
+                        NavigationService.navigate('Swaps');
+                    }
+                }
+            ]
+        });
     };
 
     @action

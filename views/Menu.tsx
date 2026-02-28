@@ -23,6 +23,7 @@ import MintIcon from '../assets/images/SVG/Mint.svg';
 import NodeOn from '../assets/images/SVG/Node On.svg';
 import Olympus from '../assets/images/SVG/Olympus.svg';
 import KeyIcon from '../assets/images/SVG/Key.svg';
+import UpgradeIcon from '../assets/images/SVG/Upgrade.svg';
 import NetworkIcon from '../assets/images/SVG/Network.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
@@ -38,9 +39,15 @@ import Screen from '../components/Screen';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import {
+    themeColor,
+    getUpgradeBackgroundColor,
+    getUpgradeIntensity
+} from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
 
+import CashuStore from '../stores/CashuStore';
+import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import SettingsStore, { INTERFACE_KEYS } from '../stores/SettingsStore';
@@ -50,6 +57,8 @@ import { version } from '../package.json';
 
 interface MenuProps {
     navigation: StackNavigationProp<any, any>;
+    CashuStore: CashuStore;
+    ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
@@ -61,7 +70,14 @@ interface MenuState {
     easterEggCount: number;
 }
 
-@inject('NodeInfoStore', 'LightningAddressStore', 'SettingsStore', 'UnitsStore')
+@inject(
+    'CashuStore',
+    'ChannelsStore',
+    'NodeInfoStore',
+    'LightningAddressStore',
+    'SettingsStore',
+    'UnitsStore'
+)
 @observer
 export default class Menu extends React.Component<MenuProps, MenuState> {
     state = {
@@ -87,6 +103,8 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
     render() {
         const {
             navigation,
+            CashuStore,
+            ChannelsStore,
             NodeInfoStore,
             LightningAddressStore,
             SettingsStore
@@ -254,6 +272,83 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {selectedNode &&
+                        SettingsStore.settings?.ecash?.enableCashu &&
+                        CashuStore.totalBalanceSats >= 10_000 &&
+                        ChannelsStore.channels.length === 0 &&
+                        (() => {
+                            const balance = CashuStore.totalBalanceSats;
+                            const bgColor =
+                                getUpgradeBackgroundColor(
+                                    themeColor('secondary'),
+                                    balance
+                                ) || themeColor('secondary');
+                            const t = getUpgradeIntensity(balance);
+                            return (
+                                <View
+                                    style={{
+                                        width: '90%',
+                                        alignSelf: 'center',
+                                        marginVertical: 5,
+                                        borderRadius: 10,
+                                        backgroundColor: bgColor,
+                                        shadowColor: themeColor('highlight'),
+                                        shadowOpacity: 0.4 + t * 0.4,
+                                        shadowRadius: 4 + t * 8,
+                                        shadowOffset: {
+                                            width: 0,
+                                            height: 0
+                                        },
+                                        elevation: 4 + t * 8
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            position: 'absolute',
+                                            top: -(1 + t * 1.5),
+                                            left: -(1 + t * 1.5),
+                                            right: -(1 + t * 1.5),
+                                            bottom: -(1 + t * 1.5),
+                                            borderRadius: 10 + 1 + t * 1.5,
+                                            borderWidth: 1 + t * 1.5,
+                                            borderColor: themeColor('highlight')
+                                        }}
+                                    />
+                                    <View>
+                                        <TouchableOpacity
+                                            style={styles.columnField}
+                                            onPress={() =>
+                                                CashuStore.showUpgradeModal()
+                                            }
+                                        >
+                                            <View style={styles.icon}>
+                                                <UpgradeIcon
+                                                    height={24}
+                                                    width={24}
+                                                    stroke={themeColor('text')}
+                                                />
+                                            </View>
+                                            <Text
+                                                style={{
+                                                    ...styles.columnText,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'cashu.upgradePrompt.menuItem'
+                                                )}
+                                            </Text>
+                                            <View style={styles.ForwardArrow}>
+                                                <ForwardIcon
+                                                    stroke={forwardArrowColor}
+                                                />
+                                            </View>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            );
+                        })()}
 
                     <View
                         style={{
