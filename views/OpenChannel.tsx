@@ -1359,7 +1359,7 @@ export default class OpenChannel extends React.Component<
                                             },
                                             false,
                                             connectPeerOnly
-                                        );
+                                        ).catch(() => {});
                                     }}
                                     disabled={
                                         loading ||
