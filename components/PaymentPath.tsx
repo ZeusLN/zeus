@@ -160,31 +160,19 @@ const ExpandedHop = (props: any) => {
                                     fontFamily: 'PPNeueMontreal-Medium'
                                 }}
                             >
-                                {`${
-                                    isOrigin
-                                        ? localeString('views.Channel.yourNode')
-                                        : aliasMap.get(hop.pubKey)
-                                        ? pubkeyValue
-                                        : typeof hop.node === 'string' &&
-                                          hop.node.length >= 66
-                                        ? `${
-                                              typeof nodeValue === 'string'
-                                                  ? (nodeValue as string).slice(
-                                                        0,
-                                                        14
-                                                    )
-                                                  : ''
-                                          }...${
-                                              typeof nodeValue === 'string'
-                                                  ? (nodeValue as string).slice(
-                                                        -14
-                                                    )
-                                                  : ''
-                                          }`
-                                        : typeof nodeValue === 'string'
-                                        ? nodeValue
-                                        : ''
-                                }`}
+                                {isOrigin
+                                    ? localeString('views.Channel.yourNode')
+                                    : aliasMap.get(hop.pubKey)
+                                    ? pubkeyValue
+                                    : typeof nodeValue === 'string'
+                                    ? typeof hop.node === 'string' &&
+                                      hop.node.length >= 66
+                                        ? `${nodeValue.slice(
+                                              0,
+                                              14
+                                          )}...${nodeValue.slice(-14)}`
+                                        : nodeValue
+                                    : ''}
                             </Text>
                         )}
                     </TouchableOpacity>
@@ -193,8 +181,9 @@ const ExpandedHop = (props: any) => {
                     {hop.sent ? (
                         <KeyValue
                             keyValue={localeString('general.sent')}
-                            value={<Amount sats={hop.sent} toggleable />}
-                            sensitive
+                            value={
+                                <Amount sats={hop.sent} toggleable sensitive />
+                            }
                         />
                     ) : (
                         <KeyValue
@@ -203,15 +192,21 @@ const ExpandedHop = (props: any) => {
                                     ? localeString('general.received')
                                     : localeString('models.Payment.forwarded')
                             }
-                            value={<Amount sats={hop.forwarded} toggleable />}
-                            sensitive
+                            value={
+                                <Amount
+                                    sats={hop.forwarded}
+                                    toggleable
+                                    sensitive
+                                />
+                            }
                         />
                     )}
                     {!isOrigin && !isDestination && (
                         <KeyValue
                             keyValue={localeString('models.Payment.fee')}
-                            value={<Amount sats={hop.fee} toggleable />}
-                            sensitive
+                            value={
+                                <Amount sats={hop.fee} toggleable sensitive />
+                            }
                         />
                     )}
                 </View>
