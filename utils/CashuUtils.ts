@@ -1,5 +1,37 @@
 import CashuDevKit, { CDKToken } from '../cashu-cdk';
 
+export enum MintPaymentStatus {
+    IDLE = 'idle',
+    REQUESTING = 'requesting',
+    PAYING = 'paying',
+    SUCCESS = 'success',
+    FAILED = 'failed'
+}
+
+export interface MintProgressInfo {
+    mintUrl: string;
+    mintName?: string;
+    balance: number;
+    selected: boolean;
+    status: MintPaymentStatus;
+    allocatedAmount?: number;
+    error?: string;
+}
+
+export enum MultinutPaymentStep {
+    SELECT = 'select',
+    PROCESSING = 'processing',
+    COMPLETE = 'complete',
+    FAILED = 'failed'
+}
+
+export type MultimintProgressCallback = (progress: {
+    step: MultinutPaymentStep;
+    mints: MintProgressInfo[];
+    totalSelectedBalance: number;
+    isProcessing: boolean;
+}) => void;
+
 export const cashuTokenPrefixes = [
     'https://wallet.nutstash.app/#',
     'https://wallet.cashu.me/?token=',
@@ -191,26 +223,3 @@ class CashuUtils {
 
 const cashuUtils = new CashuUtils();
 export default cashuUtils;
-
-export enum MintPaymentStatus {
-    IDLE = 'idle',
-    REQUESTING = 'requesting',
-    PAYING = 'paying',
-    SUCCESS = 'success',
-    FAILED = 'failed'
-}
-
-export enum MultinutPaymentStep {
-    IDLE = 'idle',
-    PROCESSING = 'processing',
-    COMPLETE = 'complete',
-    FAILED = 'failed'
-}
-
-export interface MintProgressInfo {
-    mintUrl: string;
-    mintName: string;
-    balance: number;
-    status: MintPaymentStatus;
-    error?: string;
-}
