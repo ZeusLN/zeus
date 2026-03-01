@@ -7,7 +7,6 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -334,40 +333,34 @@ export default class ImportAccount extends React.Component<
                             }}
                             values={AddressTypes}
                         />
-                        <ListItem
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor: 'transparent'
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                marginVertical: 20
                             }}
                         >
-                            <ListItem.Title
+                            <Text
                                 style={{
                                     color: themeColor('secondaryText'),
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    left: -10
+                                    fontSize: 17,
+                                    flex: 1
                                 }}
                             >
                                 {localeString(
                                     'views.ImportAccount.existingAccount'
                                 )}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
+                            </Text>
+                            <Switch
+                                value={existing_account}
+                                onValueChange={(value: boolean) => {
+                                    this.setState({
+                                        existing_account: value
+                                    });
                                 }}
-                            >
-                                <Switch
-                                    value={existing_account}
-                                    onValueChange={(value: boolean) => {
-                                        this.setState({
-                                            existing_account: value
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </ListItem>
+                            />
+                        </View>
                         {existing_account && (
                             <>
                                 <Text
