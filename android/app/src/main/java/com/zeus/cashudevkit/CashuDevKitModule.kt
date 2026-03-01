@@ -116,6 +116,34 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         return wallet
     }
 
+    private fun executeTransferOperation(
+        promise: Promise,
+        operationName: String,
+        transferOperation: suspend (MultiMintWallet) -> TransferResult
+    ) {
+        val initializedWallet = getInitializedWallet(promise) ?: return
+
+        scope.launch {
+            try {
+                val result = transferOperation(initializedWallet)
+                withContext(Dispatchers.Main) {
+                    promise.resolve(encodeTransferResult(result).toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "$operationName error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "$operationName error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("TRANSFER_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
     private var currentDbPath: String? = null
 
     private fun getDatabasePath(mnemonic: String): String {
@@ -929,60 +957,28 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun transferExactReceive(sourceMint: String, targetMint: String, amount: Double, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
-
-        scope.launch {
-            try {
+        executeTransferOperation(
+            promise = promise,
+            operationName = "transferExactReceive"
+        ) { wallet ->
                 val sourceUrl = MintUrl(sourceMint)
                 val targetUrl = MintUrl(targetMint)
                 val transferMode = TransferMode.ExactReceive(Amount(amount.toLong().toULong()))
 
-                val result = wallet.transfer(sourceUrl, targetUrl, transferMode)
-
-                withContext(Dispatchers.Main) {
-                    promise.resolve(encodeTransferResult(result).toString())
-                }
-            } catch (e: FfiException) {
-                val (code, message) = mapFfiException(e)
-                Log.e(TAG, "transferExactReceive error: $message", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject(code, message, e)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "transferExactReceive error", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject("TRANSFER_ERROR", e.message, e)
-                }
-            }
+                wallet.transfer(sourceUrl, targetUrl, transferMode)
         }
     }
 
     @ReactMethod
     fun transferFullBalance(sourceMint: String, targetMint: String, promise: Promise) {
-        val wallet = getInitializedWallet(promise) ?: return
-
-        scope.launch {
-            try {
+        executeTransferOperation(
+            promise = promise,
+            operationName = "transferFullBalance"
+        ) { wallet ->
                 val sourceUrl = MintUrl(sourceMint)
                 val targetUrl = MintUrl(targetMint)
 
-                val result = wallet.transfer(sourceUrl, targetUrl, TransferMode.FullBalance)
-
-                withContext(Dispatchers.Main) {
-                    promise.resolve(encodeTransferResult(result).toString())
-                }
-            } catch (e: FfiException) {
-                val (code, message) = mapFfiException(e)
-                Log.e(TAG, "transferFullBalance error: $message", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject(code, message, e)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "transferFullBalance error", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject("TRANSFER_ERROR", e.message, e)
-                }
-            }
+                wallet.transfer(sourceUrl, targetUrl, TransferMode.FullBalance)
         }
     }
 
