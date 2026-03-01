@@ -71,14 +71,14 @@ export default class MultimintPayment extends React.Component<
             selectedMints.length > 0 ? selectedMints : availableMints;
 
         const totalSelectedBalance = effectiveMints.reduce(
-            (sum, mint) => sum + Number(mint.balance || 0),
+            (sum, mint) => sum + mint.balance,
             0
         );
 
         const requestAmount =
             CashuStore?.payReq?.getRequestAmount ||
             Number(route.params?.paymentAmount || 0);
-        const feeEstimate = Number(CashuStore?.feeEstimate) || 0;
+        const feeEstimate = CashuStore?.feeEstimate || 0;
         const totalNeeded = requestAmount + feeEstimate;
 
         const hasNoMintsSelected = effectiveMints.length === 0;
@@ -134,6 +134,15 @@ export default class MultimintPayment extends React.Component<
     executePayment = async () => {
         const { CashuStore, route } = this.props;
 
+        if (!CashuStore) {
+            this.setState({
+                step: MultinutPaymentStep.FAILED,
+                isProcessing: false,
+                error: 'CashuStore not available'
+            });
+            return;
+        }
+
         try {
             this.setState((prev) => ({
                 step: MultinutPaymentStep.PROCESSING,
@@ -146,16 +155,17 @@ export default class MultimintPayment extends React.Component<
                 }))
             }));
 
-            const payment = await CashuStore!!.payLnInvoiceFromEcash({
-                amount: route.params?.paymentAmount
+            const payment = await CashuStore.payLnInvoiceFromEcash({
+                amount: route.params?.paymentAmount,
+                onProgress: this.onProgressUpdate
             });
 
-            if (!payment || CashuStore!!.paymentError) {
+            if (!payment || CashuStore.paymentError) {
                 this.setState({
                     step: MultinutPaymentStep.FAILED,
                     isProcessing: false,
                     error:
-                        CashuStore!!.paymentErrorMsg ||
+                        CashuStore.paymentErrorMsg ||
                         localeString('stores.CashuStore.errorPayingInvoice')
                 });
                 return;
@@ -199,14 +209,10 @@ export default class MultimintPayment extends React.Component<
                 }`;
             }
             if (item.status === MintPaymentStatus.PAYING && isProcessing) {
-                return `${localeString(
-                    'views.Cashu.MultimintPayment.paying'
-                )} | ${item.mintUrl}`;
+                return `Paying... | ${item.mintUrl}`;
             }
             if (item.status === MintPaymentStatus.REQUESTING && isProcessing) {
-                return `${localeString(
-                    'views.Cashu.MultimintPayment.requesting'
-                )} | ${item.mintUrl}`;
+                return `Requesting... | ${item.mintUrl}`;
             }
             return item.mintUrl;
         };
@@ -391,9 +397,7 @@ export default class MultimintPayment extends React.Component<
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Cashu.MultimintPayment.totalAvailable'
-                                    )}
+                                    Total Available:
                                 </Text>
                                 <Amount
                                     sats={totalSelectedBalance}
