@@ -110,6 +110,18 @@ export interface CDKMelted {
 }
 
 // ============================================================================
+// Multi-mint Transfer Types
+// ============================================================================
+
+export interface CDKTransferResult {
+    amount_sent: number;
+    amount_received: number;
+    fees_paid: number;
+    source_balance_after: number;
+    target_balance_after: number;
+}
+
+// ============================================================================
 // Spending Conditions (P2PK)
 // ============================================================================
 
@@ -279,6 +291,15 @@ export interface CashuDevKitNativeModule {
     ): Promise<string>;
     checkMeltQuote(mintUrl: string, quoteId: string): Promise<string>;
     melt(mintUrl: string, quoteId: string): Promise<string>;
+    transferExactReceive(
+        sourceMint: string,
+        targetMint: string,
+        amount: number
+    ): Promise<string>;
+    transferFullBalance(
+        sourceMint: string,
+        targetMint: string
+    ): Promise<string>;
 
     // Token Operations
     prepareSend(

@@ -10,6 +10,7 @@ import CashuDevKit, {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
+    CDKTransferResult,
     CDKToken,
     CDKSendKind,
     CDKSpendingConditions,
@@ -52,7 +53,10 @@ import ModalStore from './ModalStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
-import CashuUtils from '../utils/CashuUtils';
+import CashuUtils, {
+    MintPaymentStatus,
+    MintProgressInfo
+} from '../utils/CashuUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
@@ -159,6 +163,7 @@ export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
     @observable public randomizeMintSelection: boolean = false;
+    @observable public selectedMintUrls: string[] = [];
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     // Per-mint data fetched from CDK
@@ -212,6 +217,7 @@ export default class CashuStore {
     @observable public paymentStartTime?: number;
     @observable public paymentDuration?: number;
     @observable public paymentFee?: number;
+    @observable public lastMultiMintUsedMints: string[] = [];
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable public trustedMintRecommendations?: MintRecommendation[];
@@ -294,6 +300,7 @@ export default class CashuStore {
         this.paymentErrorMsg = '';
         this.paymentStartTime = undefined;
         this.noteKey = undefined;
+        this.lastMultiMintUsedMints = [];
     };
 
     /**
@@ -834,14 +841,19 @@ export default class CashuStore {
      */
     public createMeltQuoteCDK = async (
         mintUrl: string,
-        bolt11Invoice: string
+        bolt11Invoice: string,
+        options?: any
     ): Promise<CDKMeltQuote> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
         }
 
         await this.ensureMintAdded(mintUrl);
-        return await CashuDevKit.createMeltQuote(mintUrl, bolt11Invoice);
+        return await CashuDevKit.createMeltQuote(
+            mintUrl,
+            bolt11Invoice,
+            options
+        );
     };
 
     /**
@@ -863,6 +875,293 @@ export default class CashuStore {
         await this.syncCDKBalances();
 
         return result;
+    };
+
+    /**
+     * CDK: Top up a target mint by transferring balance from other mints.
+     * Returns total amount received by the target mint.
+     */
+    private transferToMintCDK = async (
+        targetMintUrl: string,
+        amountNeeded: number
+    ): Promise<number> => {
+        if (amountNeeded <= 0) {
+            return 0;
+        }
+
+        const normalizedTargetMint = this.normalizeMintUrl(targetMintUrl);
+        const balances = await CashuDevKit.getBalances();
+
+        const useSelectedSources =
+            !!this.settingsStore.settings?.ecash?.enableMultiMint &&
+            Array.isArray(this.selectedMintUrls) &&
+            this.selectedMintUrls.length > 0;
+
+        const allowedSources = useSelectedSources
+            ? new Set(
+                  this.selectedMintUrls.map((mint) =>
+                      this.normalizeMintUrl(mint)
+                  )
+              )
+            : null;
+
+        const sourceMints = Object.entries(balances)
+            .filter(([mintUrl, balance]) => {
+                const normalizedSourceMint = this.normalizeMintUrl(mintUrl);
+                return (
+                    normalizedSourceMint !== normalizedTargetMint &&
+                    balance > 0 &&
+                    (!allowedSources ||
+                        allowedSources.has(normalizedSourceMint))
+                );
+            })
+            .sort((a, b) => b[1] - a[1]);
+
+        let totalReceived = 0;
+
+        for (const [sourceMintUrl] of sourceMints) {
+            const remainingNeeded = amountNeeded - totalReceived;
+            if (remainingNeeded <= 0) {
+                break;
+            }
+
+            let transferResult: CDKTransferResult;
+            try {
+                transferResult = await CashuDevKit.transferExactReceive(
+                    sourceMintUrl,
+                    normalizedTargetMint,
+                    remainingNeeded
+                );
+            } catch (e) {
+                try {
+                    transferResult = await CashuDevKit.transferFullBalance(
+                        sourceMintUrl,
+                        normalizedTargetMint
+                    );
+                } catch (fallbackError) {
+                    continue;
+                }
+            }
+
+            totalReceived += transferResult.amount_received || 0;
+        }
+
+        await this.syncCDKBalances();
+        return totalReceived;
+    };
+
+    private mintSupportsMpp = (mintUrl: string): boolean => {
+        const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
+        const mintInfo =
+            this.mintInfos[normalizedMintUrl] || this.mintInfos[mintUrl];
+        const nuts: any = mintInfo?.nuts;
+
+        return !!(nuts && (nuts[15] || nuts['15']));
+    };
+
+    private payLnInvoiceFromEcashMultiMint = async ({
+        paymentAmt,
+        isDonationPayment
+    }: {
+        paymentAmt: number;
+        isDonationPayment: boolean;
+    }): Promise<CashuPayment | undefined> => {
+        const paymentRequest = this.paymentRequest;
+        if (!paymentRequest) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = 'No payment request available';
+                this.loading = false;
+            });
+            return;
+        }
+
+        const selectedMints =
+            this.selectedMintUrls.length > 0
+                ? this.selectedMintUrls
+                : this.selectedMintUrl
+                ? [this.selectedMintUrl]
+                : [];
+
+        const uniqueSelectedMints = Array.from(
+            new Set(selectedMints.map((mint) => this.normalizeMintUrl(mint)))
+        );
+
+        const supportedMints = uniqueSelectedMints.filter((mintUrl) =>
+            this.mintSupportsMpp(mintUrl)
+        );
+
+        if (supportedMints.length === 0) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.notEnoughFunds'
+                );
+                this.loading = false;
+            });
+            return;
+        }
+
+        const balances = await CashuDevKit.getBalances();
+        const normalizedBalances = Object.entries(balances).reduce(
+            (acc, [mintUrl, balance]) => {
+                acc[this.normalizeMintUrl(mintUrl)] = balance;
+                return acc;
+            },
+            {} as Record<string, number>
+        );
+
+        const mintsBySmallestBalance = supportedMints
+            .map((mintUrl) => ({
+                mintUrl,
+                balance: normalizedBalances[mintUrl] || 0
+            }))
+            .filter(({ balance }) => balance > 0)
+            .sort((a, b) => a.balance - b.balance);
+
+        if (mintsBySmallestBalance.length === 0) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.notEnoughFunds'
+                );
+                this.loading = false;
+            });
+            return;
+        }
+
+        let remainingAmount = paymentAmt;
+        let totalFeePaid = 0;
+        const segmentPayments: CashuPayment[] = [];
+
+        for (const { mintUrl } of mintsBySmallestBalance) {
+            if (remainingAmount <= 0) {
+                break;
+            }
+
+            let mintBalance = normalizedBalances[mintUrl] || 0;
+            if (mintBalance <= 0) {
+                continue;
+            }
+
+            const initialAllocation = Math.min(remainingAmount, mintBalance);
+            if (initialAllocation <= 0) {
+                continue;
+            }
+
+            await this.ensureMintAdded(mintUrl);
+
+            let quote = await this.createMeltQuoteCDK(mintUrl, paymentRequest, {
+                mpp: { amount: initialAllocation }
+            });
+
+            let requiredFromMint = quote.amount + quote.fee_reserve;
+
+            if (requiredFromMint > mintBalance) {
+                const affordableAllocation = Math.max(
+                    0,
+                    Math.min(remainingAmount, mintBalance - quote.fee_reserve)
+                );
+
+                if (affordableAllocation <= 0) {
+                    continue;
+                }
+
+                quote = await this.createMeltQuoteCDK(mintUrl, paymentRequest, {
+                    mpp: { amount: affordableAllocation }
+                });
+                requiredFromMint = quote.amount + quote.fee_reserve;
+
+                if (requiredFromMint > mintBalance) {
+                    continue;
+                }
+            }
+
+            const meltResult = await CashuDevKit.melt(mintUrl, quote.id);
+            const paidAmount = meltResult.amount || quote.amount;
+            const meltState = (
+                meltResult.state ||
+                quote.state ||
+                ''
+            ).toString();
+            const normalizedMeltState =
+                meltState.length > 0 ? meltState.toUpperCase() : 'PAID';
+
+            totalFeePaid += meltResult.fee_paid || 0;
+            remainingAmount = Math.max(0, remainingAmount - paidAmount);
+            mintBalance = Math.max(0, mintBalance - requiredFromMint);
+            normalizedBalances[mintUrl] = mintBalance;
+
+            const payment = new CashuPayment({
+                ...this.payReq,
+                bolt11: this.paymentRequest,
+                meltResponse: {
+                    quote: {
+                        quote: quote.id,
+                        amount: quote.amount,
+                        fee_reserve: quote.fee_reserve,
+                        state: normalizedMeltState,
+                        expiry: quote.expiry,
+                        payment_preimage: meltResult.preimage || null
+                    },
+                    change: meltResult.change,
+                    state: normalizedMeltState,
+                    amount: meltResult.amount,
+                    fee_paid: meltResult.fee_paid,
+                    preimage: meltResult.preimage
+                },
+                amount: meltResult.amount,
+                fee: meltResult.fee_paid,
+                payment_preimage: meltResult.preimage || '',
+                mintUrl
+            });
+
+            segmentPayments.push(payment);
+        }
+
+        if (remainingAmount > 0) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.notEnoughFunds'
+                );
+                this.loading = false;
+            });
+            return;
+        }
+
+        this.payments?.push(...segmentPayments);
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-payments`,
+            this.payments
+        );
+
+        await this.syncCDKBalances(true);
+
+        runInAction(() => {
+            this.lastMultiMintUsedMints = segmentPayments.map(
+                (payment) => payment.mintUrl
+            );
+
+            if (!isDonationPayment) {
+                const preimage = segmentPayments
+                    .map((payment) => payment?.payment_preimage)
+                    .find((value) => !!value);
+
+                this.paymentPreimage = preimage || '';
+                this.paymentSuccess = true;
+                this.paymentFee = totalFeePaid;
+                this.noteKey = segmentPayments[0]?.getNoteKey;
+                this.loading = false;
+            }
+
+            if (this.paymentStartTime) {
+                this.paymentDuration =
+                    (Date.now() - this.paymentStartTime) / 1000;
+            }
+        });
+
+        return segmentPayments[0];
     };
 
     /**
@@ -1166,6 +1465,7 @@ export default class CashuStore {
         this.totalBalanceSats = 0;
         this.mintUrls = [];
         this.selectedMintUrl = '';
+        this.selectedMintUrls = [];
         this.invoices = undefined;
         this.payments = undefined;
         this.receivedTokens = undefined;
@@ -1841,6 +2141,28 @@ export default class CashuStore {
     @action
     public setSelectedMint = async (mintUrl: string) => {
         this.clearInvoice();
+        await Promise.all([
+            Storage.setItem(
+                `${this.getLndDir()}-cashu-selectedMintUrl`,
+                mintUrl
+            ),
+            Storage.setItem(
+                `${this.getLndDir()}-cashu-selectedMintUrls`,
+                JSON.stringify([mintUrl])
+            )
+        ]);
+
+        runInAction(() => {
+            this.selectedMintUrl = mintUrl;
+            this.selectedMintUrls = [mintUrl];
+        });
+
+        return mintUrl;
+    };
+
+    @action
+    public setReceiveMint = async (mintUrl: string) => {
+        this.clearInvoice();
         await Storage.setItem(
             `${this.getNodeDir()}-cashu-selectedMintUrl`,
             mintUrl
@@ -1874,6 +2196,52 @@ export default class CashuStore {
 
         const index = Math.floor(Math.random() * mintsToUse.length);
         return mintsToUse[index];
+    };
+
+    @action
+    public setSelectedMintUrls = async (mintUrls: string[]) => {
+        const uniqueMintUrls = Array.from(new Set(mintUrls));
+
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            JSON.stringify(uniqueMintUrls)
+        );
+
+        runInAction(() => {
+            this.selectedMintUrls = uniqueMintUrls;
+
+            if (!uniqueMintUrls.includes(this.selectedMintUrl)) {
+                this.selectedMintUrl =
+                    uniqueMintUrls[0] || this.selectedMintUrl;
+            }
+        });
+
+        if (this.selectedMintUrl) {
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-selectedMintUrl`,
+                this.selectedMintUrl
+            );
+        }
+
+        return uniqueMintUrls;
+    };
+
+    @action
+    public toggleMintSelection = async (mintUrl: string): Promise<void> => {
+        const currentSelection = Array.isArray(this.selectedMintUrls)
+            ? [...this.selectedMintUrls]
+            : [];
+
+        const isSelected = currentSelection.includes(mintUrl);
+        if (isSelected && currentSelection.length === 1) {
+            return;
+        }
+
+        const nextSelected = isSelected
+            ? currentSelection.filter((url) => url !== mintUrl)
+            : [...currentSelection, mintUrl];
+
+        await this.setSelectedMintUrls(nextSelected);
     };
 
     @action
@@ -1968,6 +2336,21 @@ export default class CashuStore {
     };
 
     @action
+    public getMultimintInfo = (): MintProgressInfo[] => {
+        const availableMints = this.mintUrls.map((mintUrl) => {
+            const mintName = this.mintInfos[mintUrl]?.name || mintUrl;
+            return {
+                mintUrl,
+                mintName,
+                balance: this.mintBalances[mintUrl] || 0,
+                status: MintPaymentStatus.IDLE,
+                error: undefined
+            };
+        });
+        return availableMints;
+    };
+
+    @action
     public removeMint = async (mintUrl: string) => {
         this.loading = true;
         try {
@@ -2003,6 +2386,22 @@ export default class CashuStore {
                 );
             }
         }
+
+        const filteredSelectedMintUrls = (this.selectedMintUrls || []).filter(
+            (selectedMint) =>
+                this.normalizeMintUrl(selectedMint) !==
+                this.normalizeMintUrl(mintUrl)
+        );
+        this.selectedMintUrls =
+            filteredSelectedMintUrls.length > 0
+                ? filteredSelectedMintUrls
+                : this.selectedMintUrl
+                ? [this.selectedMintUrl]
+                : [];
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            JSON.stringify(this.selectedMintUrls)
+        );
 
         // Clean up any legacy local storage for this mint
         const walletId = `${this.getNodeDir()}==${mintUrl}`;
@@ -2299,6 +2698,7 @@ export default class CashuStore {
         const [
             storedMintUrls, // Only needed for migration to CDK
             storedselectedMintUrl,
+            storedselectedMintUrls,
             storedInvoices,
             storedPayments,
             storedReceivedTokens,
@@ -2310,6 +2710,7 @@ export default class CashuStore {
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
+            Storage.getItem(`${lndDir}-cashu-selectedMintUrls`),
             Storage.getItem(`${lndDir}-cashu-invoices`),
             Storage.getItem(`${lndDir}-cashu-payments`),
             Storage.getItem(`${lndDir}-cashu-received-tokens`),
@@ -2323,6 +2724,11 @@ export default class CashuStore {
         // Parse app-specific stored data
         this.selectedMintUrl = storedselectedMintUrl || '';
         this.randomizeMintSelection = storedRandomizeMintSelection === 'true';
+        this.selectedMintUrls = storedselectedMintUrls
+            ? JSON.parse(storedselectedMintUrls)
+            : this.selectedMintUrl
+            ? [this.selectedMintUrl]
+            : [];
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
                   (invoice: any) => new CashuInvoice(invoice)
@@ -2673,6 +3079,24 @@ export default class CashuStore {
                 this.selectedMintUrl
             );
         }
+
+        const selectedMintUrls = (this.selectedMintUrls || []).filter((mint) =>
+            this.mintUrls.includes(mint)
+        );
+
+        this.selectedMintUrls =
+            selectedMintUrls.length > 0
+                ? selectedMintUrls
+                : this.selectedMintUrl
+                ? [this.selectedMintUrl]
+                : this.mintUrls[0]
+                ? [this.mintUrls[0]]
+                : [];
+
+        await Storage.setItem(
+            `${lndDir}-cashu-selectedMintUrls`,
+            JSON.stringify(this.selectedMintUrls)
+        );
 
         runInAction(() => {
             this.loadingMsg = undefined;
@@ -3235,27 +3659,43 @@ export default class CashuStore {
 
         const mintUrl = this.selectedMintUrl;
 
-        if (!this.meltQuote) {
-            if (!isDonationPayment) {
-                runInAction(() => {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = 'No melt quote available';
-                    this.loading = false;
-                });
-            }
-            return;
-        }
-
         try {
             const paymentAmt = this.payReq?.getRequestAmount
                 ? this.payReq?.getRequestAmount
                 : Number(amount);
 
+            const shouldUseMultiMint =
+                !!this.settingsStore.settings?.ecash?.enableMultiMint &&
+                Array.isArray(this.selectedMintUrls) &&
+                this.selectedMintUrls.length > 1;
+
+            if (shouldUseMultiMint) {
+                return await this.payLnInvoiceFromEcashMultiMint({
+                    paymentAmt,
+                    isDonationPayment
+                });
+            }
+
+            if (!this.meltQuote) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = 'No melt quote available';
+                    this.loading = false;
+                });
+                return;
+            }
+
             // Check balance via CDK
-            const balance = await CashuDevKit.getMintBalance(mintUrl);
             const amountToPay = this.feeEstimate
                 ? this.feeEstimate + paymentAmt
                 : paymentAmt;
+
+            let balance = await CashuDevKit.getMintBalance(mintUrl);
+
+            if (balance < amountToPay) {
+                await this.transferToMintCDK(mintUrl, amountToPay - balance);
+                balance = await CashuDevKit.getMintBalance(mintUrl);
+            }
 
             if (balance < amountToPay) {
                 if (!isDonationPayment) {
@@ -3308,7 +3748,9 @@ export default class CashuStore {
                 if (!isDonationPayment) {
                     this.paymentPreimage = paymentPreimage;
                     this.paymentSuccess = true;
+                    this.paymentFee = realFee;
                     this.noteKey = payment.getNoteKey;
+                    this.lastMultiMintUsedMints = [mintUrl];
                     this.loading = false;
 
                     if (this.paymentStartTime) {
@@ -4159,6 +4601,7 @@ export default class CashuStore {
 
             // Clean up app-specific storage
             await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
+            await Storage.removeItem(`${lndDir}-cashu-selectedMintUrls`);
             await Storage.removeItem(`${lndDir}-cashu-invoices`);
             await Storage.removeItem(`${lndDir}-cashu-payments`);
             await Storage.removeItem(`${lndDir}-cashu-received-tokens`);
