@@ -209,10 +209,14 @@ export default class MultimintPayment extends React.Component<
                 }`;
             }
             if (item.status === MintPaymentStatus.PAYING && isProcessing) {
-                return `Paying... | ${item.mintUrl}`;
+                return `${localeString(
+                    'views.Cashu.MultimintPayment.paying'
+                )} | ${item.mintUrl}`;
             }
             if (item.status === MintPaymentStatus.REQUESTING && isProcessing) {
-                return `Requesting... | ${item.mintUrl}`;
+                return `${localeString(
+                    'views.Cashu.MultimintPayment.requesting'
+                )} | ${item.mintUrl}`;
             }
             return item.mintUrl;
         };
@@ -397,7 +401,9 @@ export default class MultimintPayment extends React.Component<
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
-                                    Total Available:
+                                    {localeString(
+                                        'views.Cashu.MultimintPayment.totalAvailable'
+                                    )}
                                 </Text>
                                 <Amount
                                     sats={totalSelectedBalance}
