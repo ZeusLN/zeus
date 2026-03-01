@@ -147,6 +147,7 @@ interface Bolt12AddressSettings {
 
 interface EcashSettings {
     enableCashu: boolean;
+    enableMultiMint: boolean;
     automaticallySweep: boolean;
     sweepThresholdSats?: number;
 }
@@ -1482,6 +1483,7 @@ export default class SettingsStore {
         },
         ecash: {
             enableCashu: false,
+            enableMultiMint: false,
             automaticallySweep: false,
             sweepThresholdSats: 10000
         },

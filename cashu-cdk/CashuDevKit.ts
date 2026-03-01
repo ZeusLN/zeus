@@ -14,6 +14,7 @@ import {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
+    CDKTransferResult,
     CDKSpendingConditions,
     CDKSendOptions,
     CDKReceiveOptions,
@@ -424,6 +425,49 @@ class CashuDevKit {
     async melt(mintUrl: string, quoteId: string): Promise<CDKMelted> {
         try {
             const json = await CashuDevKitModule.melt(mintUrl, quoteId);
+            return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
+    /**
+     * Transfer an exact amount to a target mint (target receives requested amount)
+     * @param sourceMint - Source mint URL
+     * @param targetMint - Target mint URL
+     * @param amount - Amount to receive at target (sats)
+     */
+    async transferExactReceive(
+        sourceMint: string,
+        targetMint: string,
+        amount: number
+    ): Promise<CDKTransferResult> {
+        try {
+            const json = await CashuDevKitModule.transferExactReceive(
+                sourceMint,
+                targetMint,
+                amount
+            );
+            return JSON.parse(json);
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
+
+    /**
+     * Transfer full available balance from source mint to target mint
+     * @param sourceMint - Source mint URL
+     * @param targetMint - Target mint URL
+     */
+    async transferFullBalance(
+        sourceMint: string,
+        targetMint: string
+    ): Promise<CDKTransferResult> {
+        try {
+            const json = await CashuDevKitModule.transferFullBalance(
+                sourceMint,
+                targetMint
+            );
             return JSON.parse(json);
         } catch (error) {
             throw mapCDKError(error);
