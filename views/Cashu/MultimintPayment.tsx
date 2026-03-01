@@ -15,35 +15,23 @@ import { Icon, ListItem } from '@rneui/themed';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
-import LightningLoadingPattern from '../../components/LightningLoadingPattern';
 import PaidIndicator from '../../components/PaidIndicator';
 import Screen from '../../components/Screen';
 import SuccessAnimation from '../../components/SuccessAnimation';
 
 import CashuStore from '../../stores/CashuStore';
 
+import {
+    MintPaymentStatus,
+    MintProgressInfo,
+    MultinutPaymentStep
+} from '../../utils/CashuUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
-
-enum MultimintStep {
-    Processing = 'processing',
-    Complete = 'complete',
-    Failed = 'failed'
-}
-
-type MintStatus = 'idle' | 'processing' | 'success' | 'failed';
-
-interface MintInfo {
-    mintUrl: string;
-    mintName?: string;
-    balance: number;
-    status: MintStatus;
-    error?: string;
-}
 
 interface MultimintPaymentProps {
     navigation: StackNavigationProp<any, any>;
@@ -52,8 +40,9 @@ interface MultimintPaymentProps {
 }
 
 interface MultimintPaymentState {
-    mints: MintInfo[];
-    step: MultimintStep;
+    mints: MintProgressInfo[];
+    totalSelectedBalance: number;
+    step: MultinutPaymentStep;
     isProcessing: boolean;
     error?: string;
 }
@@ -66,104 +55,135 @@ export default class MultimintPayment extends React.Component<
 > {
     constructor(props: MultimintPaymentProps) {
         super(props);
-        const { CashuStore } = props;
-        const selectedMintUrls = CashuStore?.selectedMintUrls || [];
 
-        const mints = selectedMintUrls.map((mintUrl) => ({
-            mintUrl,
-            mintName: CashuStore?.mintInfos[mintUrl]?.name || mintUrl,
-            balance: CashuStore?.mintBalances[mintUrl] || 0,
-            status: 'idle' as MintStatus
-        }));
+        const { CashuStore, route } = props;
+        const selectedMintUrls = CashuStore?.selectedMintUrls || [];
+        const selectedMintSet = new Set(selectedMintUrls);
+        const availableMints = CashuStore?.getMultimintInfo() || [];
+
+        const selectedMints =
+            selectedMintUrls.length > 0
+                ? availableMints.filter((mint) =>
+                      selectedMintSet.has(mint.mintUrl)
+                  )
+                : availableMints;
+        const effectiveMints =
+            selectedMints.length > 0 ? selectedMints : availableMints;
+
+        const totalSelectedBalance = effectiveMints.reduce(
+            (sum, mint) => sum + mint.balance,
+            0
+        );
+
+        const requestAmount =
+            CashuStore?.payReq?.getRequestAmount ||
+            Number(route.params?.paymentAmount || 0);
+        const feeEstimate = CashuStore?.feeEstimate || 0;
+        const totalNeeded = requestAmount + feeEstimate;
+
+        const hasNoMintsSelected = effectiveMints.length === 0;
+        const hasInsufficientBalance =
+            totalNeeded > totalSelectedBalance && totalSelectedBalance > 0;
 
         this.state = {
-            mints,
-            step: mints.length
-                ? MultimintStep.Processing
-                : MultimintStep.Failed,
+            mints: effectiveMints,
+            totalSelectedBalance,
+            step:
+                hasNoMintsSelected || hasInsufficientBalance
+                    ? MultinutPaymentStep.FAILED
+                    : MultinutPaymentStep.PROCESSING,
             isProcessing: false,
-            error:
-                mints.length === 0
-                    ? localeString(
-                          'views.Cashu.MultimintPayment.noMintsSelected'
-                      )
-                    : undefined
+            error: hasNoMintsSelected
+                ? localeString('views.Cashu.MultimintPayment.noMintsSelected')
+                : hasInsufficientBalance
+                ? localeString('stores.CashuStore.notEnoughFunds')
+                : undefined
         };
     }
 
     componentDidMount(): void {
-        if (this.state.step !== MultimintStep.Failed) {
+        if (this.state.step !== MultinutPaymentStep.FAILED) {
             this.executePayment();
         }
     }
 
+    onProgressUpdate = (progressInfo: {
+        step: MultinutPaymentStep;
+        mints: MintProgressInfo[];
+        totalSelectedBalance: number;
+        isProcessing: boolean;
+    }) => {
+        this.setState((prev) => ({
+            mints: prev.mints.map((mint) => {
+                const updated = progressInfo.mints.find(
+                    (item) => item.mintUrl === mint.mintUrl
+                );
+                return updated ? { ...mint, ...updated } : mint;
+            }),
+            totalSelectedBalance:
+                progressInfo.totalSelectedBalance ?? prev.totalSelectedBalance,
+            isProcessing: progressInfo.isProcessing ?? prev.isProcessing,
+            step: progressInfo.step || prev.step,
+            error:
+                progressInfo.step === MultinutPaymentStep.FAILED
+                    ? prev.error
+                    : undefined
+        }));
+    };
+
     executePayment = async () => {
         const { CashuStore, route } = this.props;
+
         if (!CashuStore) {
             this.setState({
-                step: MultimintStep.Failed,
+                step: MultinutPaymentStep.FAILED,
+                isProcessing: false,
                 error: 'CashuStore not available'
             });
             return;
         }
 
         try {
-            this.setState((prevState) => ({
+            this.setState((prev) => ({
+                step: MultinutPaymentStep.PROCESSING,
                 isProcessing: true,
-                step: MultimintStep.Processing,
                 error: undefined,
-                mints: prevState.mints.map((mint) => ({
+                mints: prev.mints.map((mint) => ({
                     ...mint,
-                    status: 'processing',
+                    status: MintPaymentStatus.IDLE,
                     error: undefined
                 }))
             }));
 
-            const paymentAmount = route.params?.paymentAmount;
             const payment = await CashuStore.payLnInvoiceFromEcash({
-                amount: paymentAmount
+                amount: route.params?.paymentAmount,
+                onProgress: this.onProgressUpdate
             });
-            const successfulMints = new Set(
-                CashuStore.lastMultiMintUsedMints || []
-            );
 
             if (!payment || CashuStore.paymentError) {
-                this.setState((prevState) => ({
+                this.setState({
+                    step: MultinutPaymentStep.FAILED,
                     isProcessing: false,
-                    step: MultimintStep.Failed,
                     error:
                         CashuStore.paymentErrorMsg ||
-                        localeString('stores.CashuStore.errorPayingInvoice'),
-                    mints: prevState.mints.map((mint) => ({
-                        ...mint,
-                        status: 'failed'
-                    }))
-                }));
+                        localeString('stores.CashuStore.errorPayingInvoice')
+                });
                 return;
             }
 
-            this.setState((prevState) => ({
+            this.setState({
+                step: MultinutPaymentStep.COMPLETE,
                 isProcessing: false,
-                step: MultimintStep.Complete,
-                mints: prevState.mints.map((mint) => ({
-                    ...mint,
-                    status: successfulMints.has(mint.mintUrl)
-                        ? 'success'
-                        : 'idle'
-                }))
-            }));
+                error: undefined
+            });
         } catch (error: any) {
-            this.setState((prevState) => ({
+            this.setState({
+                step: MultinutPaymentStep.FAILED,
                 isProcessing: false,
-                step: MultimintStep.Failed,
                 error:
                     error?.message ||
-                    localeString('stores.CashuStore.errorPayingInvoice'),
-                mints: prevState.mints.map((mint) => ({
-                    ...mint,
-                    status: 'failed'
-                }))
-            }));
+                    localeString('stores.CashuStore.errorPayingInvoice')
+            });
         }
     };
 
@@ -176,14 +196,26 @@ export default class MultimintPayment extends React.Component<
         />
     );
 
-    renderMintItem = ({ item }: { item: MintInfo }) => {
-        let subtitle = item.mintUrl;
-        if (item.status === 'success') {
-            subtitle = `${localeString('general.success')} | ${item.mintUrl}`;
-        }
-        if (item.status === 'failed') {
-            subtitle = `${localeString('general.failed')} | ${item.mintUrl}`;
-        }
+    renderMintItem = ({ item }: { item: MintProgressInfo }) => {
+        const { isProcessing } = this.state;
+
+        const getSubtitle = () => {
+            if (item.status === MintPaymentStatus.SUCCESS) {
+                return `${localeString('general.success')} | ${item.mintUrl}`;
+            }
+            if (item.status === MintPaymentStatus.FAILED) {
+                return `${localeString('general.failed')} | ${
+                    item.error || item.mintUrl
+                }`;
+            }
+            if (item.status === MintPaymentStatus.PAYING && isProcessing) {
+                return `Paying... | ${item.mintUrl}`;
+            }
+            if (item.status === MintPaymentStatus.REQUESTING && isProcessing) {
+                return `Requesting... | ${item.mintUrl}`;
+            }
+            return item.mintUrl;
+        };
 
         return (
             <ListItem
@@ -192,14 +224,16 @@ export default class MultimintPayment extends React.Component<
                     backgroundColor: 'transparent'
                 }}
             >
-                {item.status === 'processing' && (
+                {(item.status === MintPaymentStatus.PAYING ||
+                    item.status === MintPaymentStatus.REQUESTING) && (
                     <ActivityIndicator
                         size="small"
                         color={themeColor('highlight')}
                         style={{ marginRight: 10 }}
                     />
                 )}
-                {item.status === 'success' && (
+
+                {item.status === MintPaymentStatus.SUCCESS && (
                     <Icon
                         name="check-circle"
                         color={themeColor('success')}
@@ -207,7 +241,8 @@ export default class MultimintPayment extends React.Component<
                         style={{ marginRight: 10 }}
                     />
                 )}
-                {item.status === 'failed' && (
+
+                {item.status === MintPaymentStatus.FAILED && (
                     <Icon
                         name="error"
                         color={themeColor('error')}
@@ -230,10 +265,12 @@ export default class MultimintPayment extends React.Component<
                         style={{
                             color: themeColor('secondaryText'),
                             fontSize: 12,
-                            fontFamily: 'Lato-Regular'
+                            fontFamily: 'Lato-Regular',
+                            flexWrap: 'wrap',
+                            flexShrink: 1
                         }}
                     >
-                        {subtitle}
+                        {getSubtitle()}
                     </ListItem.Subtitle>
                 </ListItem.Content>
                 <Amount sats={item.balance} sensitive />
@@ -242,43 +279,19 @@ export default class MultimintPayment extends React.Component<
     };
 
     render() {
-        const { CashuStore, navigation } = this.props;
-        const { mints, step, isProcessing, error } = this.state;
+        const { navigation, CashuStore, route } = this.props;
+        const { mints, totalSelectedBalance, step, error } = this.state;
         const windowSize = Dimensions.get('window');
-        const showLoading = step === MultimintStep.Processing && isProcessing;
-        const showError = step === MultimintStep.Failed;
-        const showSuccess = step === MultimintStep.Complete;
 
         const paymentAmount =
             CashuStore?.payReq?.getRequestAmount ||
-            Number(this.props.route.params?.paymentAmount || 0);
+            Number(route.params?.paymentAmount || 0);
 
-        if (showLoading) {
-            return (
-                <Screen>
-                    <View
-                        style={{
-                            flex: 1,
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <LightningLoadingPattern />
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                paddingBottom: windowSize.height / 10,
-                                fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
-                            }}
-                        >
-                            {localeString('views.SendingLightning.sending')}
-                        </Text>
-                    </View>
-                </Screen>
-            );
-        }
+        const hasError =
+            step === MultinutPaymentStep.FAILED ||
+            !!error ||
+            !!CashuStore?.paymentError;
+        const errorMessage = error || CashuStore?.paymentErrorMsg;
 
         return (
             <Screen>
@@ -295,74 +308,105 @@ export default class MultimintPayment extends React.Component<
                 />
 
                 <View style={styles.container}>
-                    <View
-                        style={{
-                            ...styles.statusWrap,
-                            paddingTop: windowSize.height * 0.05
-                        }}
-                    >
-                        {!showError && (
+                    {hasError ? (
+                        <View
+                            style={{
+                                ...styles.statusWrap,
+                                paddingTop: windowSize.height * 0.05
+                            }}
+                        >
+                            <ErrorIcon
+                                width={windowSize.height * 0.13}
+                                height={windowSize.height * 0.13}
+                            />
+                            <Text
+                                style={{
+                                    color: themeColor('warning'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 32,
+                                    marginTop: 24
+                                }}
+                            >
+                                {localeString('general.error')}
+                            </Text>
+                            {!!errorMessage && (
+                                <Text
+                                    style={{
+                                        color: themeColor('warning'),
+                                        textAlign: 'center',
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginTop: 8,
+                                        paddingHorizontal: 12
+                                    }}
+                                >
+                                    {errorMessage}
+                                </Text>
+                            )}
+                        </View>
+                    ) : (
+                        <View
+                            style={{
+                                ...styles.statusWrap,
+                                paddingTop: windowSize.height * 0.05
+                            }}
+                        >
                             <Wordmark
                                 height={windowSize.width * 0.25}
                                 width={windowSize.width}
                                 fill={themeColor('highlight')}
                             />
-                        )}
 
-                        {showSuccess && (
-                            <>
-                                <PaidIndicator />
-                                <View style={{ alignItems: 'center' }}>
+                            {step === MultinutPaymentStep.COMPLETE && (
+                                <>
+                                    <PaidIndicator />
                                     <SuccessAnimation />
                                     <Text
-                                        style={[
-                                            styles.successText,
-                                            { color: themeColor('text') }
-                                        ]}
+                                        style={{
+                                            color: themeColor('text'),
+                                            paddingTop: 12,
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 18
+                                        }}
                                     >
                                         {localeString(
                                             'views.SendingLightning.success'
                                         )}
                                     </Text>
-                                    <View style={{ marginTop: 10 }}>
-                                        <Amount
-                                            sats={paymentAmount}
-                                            sensitive
-                                            toggleable
-                                            jumboText
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
+                                </>
+                            )}
 
-                        {showError && (
-                            <View style={{ alignItems: 'center' }}>
-                                <ErrorIcon
-                                    width={windowSize.height * 0.13}
-                                    height={windowSize.height * 0.13}
+                            <View style={{ marginTop: 10, marginBottom: 8 }}>
+                                <Amount
+                                    sats={paymentAmount}
+                                    sensitive
+                                    toggleable
+                                    jumboText
                                 />
-                                <Text
-                                    style={[
-                                        styles.errorTitle,
-                                        { color: themeColor('warning') }
-                                    ]}
-                                >
-                                    {localeString('general.error')}
-                                </Text>
-                                {!!error && (
-                                    <Text
-                                        style={[
-                                            styles.errorText,
-                                            { color: themeColor('warning') }
-                                        ]}
-                                    >
-                                        {error}
-                                    </Text>
-                                )}
                             </View>
-                        )}
-                    </View>
+
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        marginRight: 6,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    Total Available:
+                                </Text>
+                                <Amount
+                                    sats={totalSelectedBalance}
+                                    sensitive
+                                    color="secondaryText"
+                                />
+                            </View>
+                        </View>
+                    )}
 
                     <FlatList
                         data={mints}
@@ -375,55 +419,64 @@ export default class MultimintPayment extends React.Component<
                 </View>
 
                 <View style={styles.bottomSection}>
-                    {(showError || !!CashuStore?.paymentErrorMsg) && (
+                    {step === MultinutPaymentStep.PROCESSING && !hasError && (
                         <Button
-                            title={localeString(
-                                'views.SendingLightning.tryAgain'
-                            )}
-                            icon={{
-                                name: 'rotate-ccw',
-                                type: 'feather',
-                                size: 25
-                            }}
+                            title={localeString('general.cancel')}
                             onPress={() => navigation.goBack()}
-                            secondary
+                            noUppercase
                         />
                     )}
 
-                    {showError && (
-                        <Button
-                            title={localeString(
-                                'views.Settings.Ecash.cashuTroubleshooting'
-                            )}
-                            icon={{
-                                name: 'life-buoy',
-                                type: 'feather',
-                                size: 25
-                            }}
-                            onPress={() => {
-                                UrlUtils.goToUrl(
-                                    'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
-                                );
-                            }}
-                            secondary
-                        />
+                    {step !== MultinutPaymentStep.PROCESSING &&
+                        !hasError &&
+                        CashuStore?.noteKey && (
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.AddANote'
+                                )}
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        noteKey: CashuStore.noteKey
+                                    })
+                                }
+                                secondary
+                            />
+                        )}
+
+                    {hasError && (
+                        <>
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.tryAgain'
+                                )}
+                                icon={{
+                                    name: 'rotate-ccw',
+                                    type: 'feather',
+                                    size: 25
+                                }}
+                                onPress={() => navigation.goBack()}
+                                secondary
+                            />
+                            <Button
+                                title={localeString(
+                                    'views.Settings.Ecash.cashuTroubleshooting'
+                                )}
+                                icon={{
+                                    name: 'life-buoy',
+                                    type: 'feather',
+                                    size: 25
+                                }}
+                                onPress={() => {
+                                    UrlUtils.goToUrl(
+                                        'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
+                                    );
+                                }}
+                                secondary
+                            />
+                        </>
                     )}
 
-                    {showSuccess && CashuStore?.noteKey && (
-                        <Button
-                            title={localeString(
-                                'views.SendingLightning.AddANote'
-                            )}
-                            onPress={() =>
-                                navigation.navigate('AddNotes', {
-                                    noteKey: CashuStore.noteKey
-                                })
-                            }
-                            secondary
-                        />
-                    )}
-
-                    {(showSuccess || showError) && (
+                    {step !== MultinutPaymentStep.PROCESSING && (
                         <Button
                             title={localeString(
                                 'views.SendingLightning.goToWallet'
@@ -435,20 +488,8 @@ export default class MultimintPayment extends React.Component<
                             }}
                             onPress={() => navigation.popTo('Wallet')}
                             buttonStyle={{ height: 40 }}
-                            titleStyle={{
-                                color: themeColor('background')
-                            }}
+                            titleStyle={{ color: themeColor('background') }}
                         />
-                    )}
-
-                    {!showSuccess && !showError && (
-                        <>
-                            <Button
-                                title={localeString('general.cancel')}
-                                onPress={() => navigation.goBack()}
-                                noUppercase
-                            />
-                        </>
                     )}
                 </View>
             </Screen>
@@ -467,26 +508,13 @@ const styles = StyleSheet.create({
     },
     mintsList: {
         flex: 1,
-        marginBottom: 20
+        marginBottom: 20,
+        marginTop: 10
     },
     bottomSection: {
         width: '100%',
         justifyContent: 'space-between',
         gap: 15,
         bottom: 15
-    },
-    errorTitle: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 32,
-        marginTop: 32
-    },
-    errorText: {
-        fontFamily: 'PPNeueMontreal-Book',
-        textAlign: 'center'
-    },
-    successText: {
-        paddingTop: 20,
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 18
     }
 });
