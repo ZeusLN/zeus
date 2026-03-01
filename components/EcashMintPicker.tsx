@@ -270,9 +270,6 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontFamily: 'PPNeueMontreal-Book'
     },
-    secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     field: {
         justifyContent: 'center',
         width: '100%',
