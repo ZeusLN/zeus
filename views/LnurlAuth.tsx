@@ -41,7 +41,7 @@ interface LnurlAuthState {
     action: string;
     k1: string;
     linkingKeyPub: string;
-    signedMessageDER: string;
+    signedMessageDERHex: string;
     preparingSignature: boolean;
     authenticating: boolean;
     signatureSuccess: boolean;
@@ -68,7 +68,7 @@ export default class LnurlAuth extends React.Component<
                 action: '',
                 k1: '',
                 linkingKeyPub: '',
-                signedMessageDER: '',
+                signedMessageDERHex: '',
                 preparingSignature: false,
                 authenticating: false,
                 signatureSuccess: false,
@@ -96,7 +96,7 @@ export default class LnurlAuth extends React.Component<
             action: lnurl.action,
             k1: lnurl.k1,
             linkingKeyPub: '',
-            signedMessageDER: '',
+            signedMessageDERHex: '',
             preparingSignature: false,
             authenticating: false,
             signatureSuccess: false,
@@ -112,7 +112,7 @@ export default class LnurlAuth extends React.Component<
 
         const body = LNURLAUTH_CANONICAL_PHRASE;
 
-        BackendUtils.lnurlAuth(body)
+        return BackendUtils.lnurlAuth(body)
             .then((signature: any) => {
                 // got the signed message, now build linkingkey
 
@@ -136,13 +136,17 @@ export default class LnurlAuth extends React.Component<
                     { canonical: true }
                 );
                 const signedMessageDER = signedMessage.toDER();
+                const signedMessageDERHex =
+                    Base64Utils.bytesToHex(signedMessageDER);
 
                 this.setState({
                     linkingKeyPub,
-                    signedMessageDER: Base64Utils.bytesToHex(signedMessageDER),
+                    signedMessageDERHex,
                     preparingSignature: false,
                     signatureSuccess: true
                 });
+
+                return { linkingKeyPub, signedMessageDERHex };
             })
             .catch((error: any) => {
                 // handle error
@@ -152,6 +156,7 @@ export default class LnurlAuth extends React.Component<
                 });
             });
     }
+
     componentDidMount() {
         const { implementation } = this.props.SettingsStore;
         if (implementation === 'lndhub') {
@@ -164,15 +169,23 @@ export default class LnurlAuth extends React.Component<
         }
     }
 
-    sendValues() {
+    sendValues(signResult?: {
+        linkingKeyPub: string;
+        signedMessageDERHex: string;
+    }) {
         this.setState({ authenticating: true });
+
+        const linkingKeyPub =
+            signResult?.linkingKeyPub ?? this.state.linkingKeyPub;
+        const signedMessageDERHex =
+            signResult?.signedMessageDERHex ?? this.state.signedMessageDERHex;
 
         const { route } = this.props;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
-        qs.key = this.state.linkingKeyPub;
-        qs.sig = this.state.signedMessageDER;
+        qs.key = linkingKeyPub;
+        qs.sig = signedMessageDERHex;
 
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
@@ -326,8 +339,10 @@ export default class LnurlAuth extends React.Component<
                                         this.setState({
                                             chooseAuthMode: false
                                         });
-                                        await this.triggerSign();
-                                        this.sendValues();
+                                        const signResult =
+                                            await this.triggerSign();
+                                        if (signResult)
+                                            this.sendValues(signResult);
                                     } else {
                                         this.sendValues();
                                     }
