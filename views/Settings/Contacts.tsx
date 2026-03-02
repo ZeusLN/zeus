@@ -7,7 +7,11 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import Animated, { SharedTransition } from 'react-native-reanimated';
+import {
+    SharedImage,
+    SharedView,
+    SharedText
+} from '../../components/SharedTransition';
 import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -31,9 +35,6 @@ import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 import Ecash from '../../assets/images/SVG/Ecash.svg';
 import { CashuLockSettingsParams } from '../Cashu/CashuLockSettings';
-
-// Shared transition for contact list -> details (must match ContactDetails)
-const contactSharedTransition = SharedTransition.duration(450).springify();
 
 export interface ContactsParams extends CashuLockSettingsParams {
     SendScreen: boolean;
@@ -235,7 +236,8 @@ export default class Contacts extends React.Component<
                     }}
                 >
                     {contact.photo ? (
-                        <Animated.Image
+                        <SharedImage
+                            tag={`contact-photo-${item.contactId || item.id}`}
                             source={{ uri: contact.getPhoto }}
                             style={{
                                 width: 40,
@@ -243,13 +245,10 @@ export default class Contacts extends React.Component<
                                 borderRadius: 20,
                                 marginRight: 10
                             }}
-                            sharedTransitionTag={`contact-photo-${
-                                item.contactId || item.id
-                            }`}
-                            sharedTransitionStyle={contactSharedTransition}
                         />
                     ) : (
-                        <Animated.View
+                        <SharedView
+                            tag={`contact-photo-${item.contactId || item.id}`}
                             style={{
                                 width: 40,
                                 height: 40,
@@ -260,11 +259,6 @@ export default class Contacts extends React.Component<
                                 justifyContent: 'center',
                                 overflow: 'hidden'
                             }}
-                            sharedTransitionTag={`contact-photo-${
-                                item.contactId || item.id
-                            }`}
-                            sharedTransitionStyle={contactSharedTransition}
-                            collapsable={false}
                         >
                             {contact.getAvatarInitials ? (
                                 <Text
@@ -281,18 +275,15 @@ export default class Contacts extends React.Component<
                             ) : (
                                 <Text style={{ fontSize: 20 }}>⚡</Text>
                             )}
-                        </Animated.View>
+                        </SharedView>
                     )}
                     <View style={{ flex: 1 }}>
-                        <Animated.Text
+                        <SharedText
+                            tag={`contact-name-${item.contactId || item.id}`}
                             style={{ fontSize: 16, color: themeColor('text') }}
-                            sharedTransitionTag={`contact-name-${
-                                item.contactId || item.id
-                            }`}
-                            sharedTransitionStyle={contactSharedTransition}
                         >
                             {item.name}
-                        </Animated.Text>
+                        </SharedText>
                         <Text
                             numberOfLines={1}
                             ellipsizeMode="middle"
