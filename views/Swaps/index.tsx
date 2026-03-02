@@ -347,6 +347,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 route.params;
 
             if (
+                initialReverse !== undefined &&
+                initialInvoice === undefined &&
+                initialAmountSats === undefined
+            ) {
+                this.setState({
+                    paramsProcessed: true,
+                    reverse: initialReverse
+                });
+            } else if (
                 initialInvoice !== undefined &&
                 initialAmountSats !== undefined &&
                 initialReverse !== undefined

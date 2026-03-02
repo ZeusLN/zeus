@@ -498,3 +498,34 @@ export function blendHexColors(hex1: string, hex2: string, t = 0.5) {
     const toHex = (n: number) => n.toString(16).padStart(2, '0');
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
+
+/**
+ * Returns 0–1 intensity ratio based on ecash balance across upgrade tiers.
+ * 10k → 0, 100k → 1.
+ */
+export function getUpgradeIntensity(balance: number): number {
+    if (balance < 10_000) return 0;
+    return Math.min((balance - 10_000) / 90_000, 1);
+}
+
+/**
+ * Blend a base color toward the theme error color based on ecash balance.
+ * Returns undefined when colors aren't valid hex or balance < 10k.
+ */
+export function getUpgradeBackgroundColor(
+    baseColor: string | undefined,
+    balance: number
+): string | undefined {
+    const errorColor = themeColor('error');
+    if (!baseColor || !errorColor) return undefined;
+
+    const hexRegex = /^#?[0-9a-fA-F]{6}$/;
+    if (!hexRegex.test(baseColor) || !hexRegex.test(errorColor))
+        return undefined;
+
+    if (balance >= 10_000) {
+        const ratio = Math.min(balance / 100_000, 1);
+        return blendHexColors(baseColor, errorColor, ratio * 0.6);
+    }
+    return undefined;
+}
