@@ -27,10 +27,14 @@ export default class SwapsQRScanner extends BaseQRScanner {
             )
         ) {
             navigation.goBack();
-            navigation.navigate('Swaps', {
-                initialInvoice: value,
-                initialAmountSats: satAmount,
-                initialReverse: true
+            navigation.navigate({
+                name: 'Swaps',
+                params: {
+                    initialInvoice: value,
+                    initialAmountSats: satAmount,
+                    initialReverse: true
+                },
+                merge: true
             });
             return;
         }
@@ -49,10 +53,14 @@ export default class SwapsQRScanner extends BaseQRScanner {
             const amount = invoiceModel.getRequestAmount;
 
             navigation.goBack();
-            navigation.navigate('Swaps', {
-                initialInvoice: value,
-                initialAmountSats: amount,
-                initialReverse: false
+            navigation.navigate({
+                name: 'Swaps',
+                params: {
+                    initialInvoice: value,
+                    initialAmountSats: amount,
+                    initialReverse: false
+                },
+                merge: true
             });
             return;
         }

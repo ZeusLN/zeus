@@ -23,8 +23,10 @@ export default class RefundSwapQRScanner extends BaseQRScanner {
             )
         ) {
             navigation.goBack();
-            navigation.navigate('RefundSwap', {
-                scannedAddress: value
+            navigation.navigate({
+                name: 'RefundSwap',
+                params: { scannedAddress: value },
+                merge: true
             });
             return;
         }
