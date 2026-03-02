@@ -205,44 +205,50 @@ export default class InvoicesStore {
             unified: true,
             customPreimage,
             noLsp
-        }).then(
-            ({
-                rHash,
-                paymentRequest
-            }: {
-                rHash: string;
-                paymentRequest: string;
-            }) => {
-                if (BackendUtils.supportsOnchainReceiving() && !skipOnchain) {
-                    return this.getNewAddress(
-                        addressType
-                            ? { type: addressType, unified: true }
-                            : { unified: true }
+        }).then((result) => {
+            if (!result?.rHash || !result?.paymentRequest) {
+                runInAction(() => {
+                    this.loading = false;
+                    this.creatingInvoice = false;
+                });
+                return Promise.reject(
+                    new Error(
+                        localeString(
+                            'stores.InvoicesStore.errorCreatingInvoice'
+                        )
                     )
-                        .then((onChainAddress: string) => {
-                            runInAction(() => {
-                                this.onChainAddress = onChainAddress;
-                                this.payment_request = paymentRequest;
-                                this.loading = false;
-                                this.creatingInvoice = false;
-                            });
-                            return { rHash, onChainAddress };
-                        })
-                        .catch(() => {
-                            runInAction(() => {
-                                this.loading = false;
-                                this.creatingInvoice = false;
-                            });
-                        });
-                } else {
-                    runInAction(() => {
-                        this.payment_request = paymentRequest;
-                        this.creatingInvoice = false;
-                    });
-                    return { rHash };
-                }
+                );
             }
-        );
+            const { rHash, paymentRequest } = result;
+            if (BackendUtils.supportsOnchainReceiving() && !skipOnchain) {
+                return this.getNewAddress(
+                    addressType
+                        ? { type: addressType, unified: true }
+                        : { unified: true }
+                )
+                    .then((onChainAddress: string) => {
+                        runInAction(() => {
+                            this.onChainAddress = onChainAddress;
+                            this.payment_request = paymentRequest;
+                            this.loading = false;
+                            this.creatingInvoice = false;
+                        });
+                        return { rHash, onChainAddress };
+                    })
+                    .catch(() => {
+                        runInAction(() => {
+                            this.loading = false;
+                            this.creatingInvoice = false;
+                        });
+                    });
+            } else {
+                runInAction(() => {
+                    this.payment_request = paymentRequest;
+                    this.creatingInvoice = false;
+                });
+                return { rHash };
+            }
+        });
     };
 
     @action

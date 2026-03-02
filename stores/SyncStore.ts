@@ -42,6 +42,11 @@ export default class SyncStore {
         this.isRecovering = false;
         this.isInExpressGraphSync = false;
         this.error = false;
+        this.nodeInfo = undefined;
+        this.bestBlockHeight = 0;
+        this.currentBlockHeight = 0;
+        this.currentProgress = 0;
+        this.numBlocksUntilSynced = 1;
         this.stopRescanTracking();
     };
 
@@ -129,6 +134,7 @@ export default class SyncStore {
 
         // initial fetch
         while (!this.nodeInfo?.block_height) {
+            if (!this.isSyncing) return;
             await this.getNodeInfo();
             if (!this.nodeInfo?.block_height) {
                 await sleep(3000);
@@ -139,6 +145,7 @@ export default class SyncStore {
 
         let i = 0;
         while (this.numBlocksUntilSynced > 0) {
+            if (!this.isSyncing) break; // Abort when reset() called (e.g. LND stopped for wallet creation)
             await sleep(2000);
             this.getNodeInfo().then(() => this.setSyncInfo());
 

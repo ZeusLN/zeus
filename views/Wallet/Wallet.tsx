@@ -50,7 +50,12 @@ import {
     startLnd,
     stopLnd,
     expressGraphSync,
-    LND_FOLDER_MISSING_ERROR
+    isLndError,
+    isTransientRpcError,
+    LndErrorCode,
+    matchesLndErrorCode,
+    retryOnTransientError,
+    waitForRpcReady
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
@@ -324,7 +329,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         Linking.addEventListener('url', this.handleOpenURL);
     }
 
-    async getSettingsAndNavigate() {
+    async getSettingsAndNavigate(transientRetryCount = 0) {
         try {
             this.setState({ loading: true });
             const { SettingsStore, navigation } = this.props;
@@ -359,7 +364,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     this.startListeners();
                     this.setState({ unlocked: true });
                 }
-                await this.fetchData();
+                await this.fetchData(transientRetryCount);
             } else if (loginRequired) {
                 navigation.navigate('Lockscreen');
             } else if (
@@ -383,7 +388,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     this.startListeners();
                     this.setState({ unlocked: true });
                 }
-                await this.fetchData();
+                await this.fetchData(transientRetryCount);
             } else {
                 // Only navigate to IntroSplash if Wallet screen is focused
                 // to prevent interference when user is on other screens
@@ -391,6 +396,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (navigation.isFocused()) {
                     navigation.navigate('IntroSplash');
                 }
+            }
+        } catch (error) {
+            if (this.props.SettingsStore?.connecting) {
+                this.props.SettingsStore.setConnectingStatus(false);
             }
         } finally {
             this.setState({ loading: false });
@@ -401,7 +410,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }, 100);
     }
 
-    async fetchData() {
+    async fetchData(transientRetryCount = 0) {
         const {
             AlertStore,
             NodeInfoStore,
@@ -493,31 +502,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                // Helper to check if error is folder missing
-                const isFolderMissingError = (error: any): boolean => {
-                    // Skip folder missing detection during recovery - folder may not exist yet
-                    // and errors during recovery should not trigger the modal
-                    if (recovery) return false;
-
-                    const msg =
-                        error?.message ||
-                        error?.toString?.() ||
-                        String(error) ||
-                        '';
-                    console.log(
-                        'isFolderMissingError checking:',
-                        msg,
-                        typeof error
-                    );
-                    return (
-                        msg === LND_FOLDER_MISSING_ERROR ||
-                        msg.includes("doesn't exist") ||
-                        msg.includes('doesn\u2019t exist') || // curly apostrophe
-                        msg.includes('does not exist') ||
-                        msg.includes('No such file or directory')
-                    );
-                };
-
                 // Helper to show folder missing alert
                 const showFolderMissingAlert = () => {
                     console.log('showFolderMissingAlert called');
@@ -555,7 +539,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 try {
                     AlertStore.checkNeutrinoPeers();
 
-                    if (!recovery) await stopLnd();
+                    // Skip stopLnd when wallet is already closed (e.g. after delete)
+                    if (!recovery && SettingsStore.embeddedLndStarted) {
+                        await stopLnd();
+                    }
 
                     if (settings?.ecash?.enableCashu)
                         await CashuStore.initializeWallets();
@@ -588,7 +575,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         error?.message,
                         error
                     );
-                    if (isFolderMissingError(error)) {
+                    if (
+                        !recovery &&
+                        matchesLndErrorCode(
+                            error?.message || String(error),
+                            LndErrorCode.LND_FOLDER_MISSING
+                        )
+                    ) {
                         showFolderMissingAlert();
                         return;
                     }
@@ -636,11 +629,45 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         isRecovery: recovery
                     });
                 } catch (error: any) {
-                    console.log('startLnd error:', error?.message);
-                    if (isFolderMissingError(error)) {
+                    const errorMessage = error?.message ?? '';
+                    console.log('startLnd error:', errorMessage);
+
+                    // Handle folder missing error
+                    if (
+                        matchesLndErrorCode(
+                            errorMessage,
+                            LndErrorCode.LND_FOLDER_MISSING
+                        )
+                    ) {
                         showFolderMissingAlert();
                         return;
                     }
+
+                    // Handle LND start failed after max retries - restart app
+                    if (isLndError(error, LndErrorCode.LND_START_FAILED)) {
+                        restartNeeded(true);
+                        return;
+                    }
+
+                    // Handle transient errors - attempt restart with exponential backoff
+                    if (isTransientRpcError(errorMessage)) {
+                        await retryOnTransientError(
+                            error,
+                            errorMessage,
+                            'startLnd error',
+                            transientRetryCount,
+                            setConnectingStatus,
+                            () =>
+                                this.getSettingsAndNavigate(
+                                    transientRetryCount + 1
+                                )
+                        );
+                        return;
+                    }
+
+                    // Fatal error - throw to outer handler
+                    console.error('Fatal startLnd error:', error);
+                    setConnectingStatus(false);
                     throw error;
                 }
 
@@ -735,48 +762,100 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }, 60000); // 60 seconds
                 }
             }
-
-            SyncStore.checkRecoveryStatus();
-            await NodeInfoStore.getNodeInfo();
-            NodeInfoStore.getNetworkInfo();
-            await UTXOsStore.listAccounts();
-            await BalanceStore.getCombinedBalance(false);
-            ChannelsStore.getChannelsWithPolling().then(() => {
-                // Check for sweep to self-custody threshold after channels are online
-                if (settings?.ecash?.enableCashu) {
-                    CashuStore.checkAndSweepMints();
-                    // Check Cashu balance for upgrade prompts after channels are loaded
-                    CashuStore.checkAndShowUpgradeModal(
-                        0,
-                        CashuStore.totalBalanceSats || 0
-                    );
-                }
-            });
-
-            if (rescan) {
-                await updateSettings({
-                    rescan: false
+            try {
+                await waitForRpcReady();
+                SyncStore.checkRecoveryStatus();
+                await NodeInfoStore.getNodeInfo();
+                NodeInfoStore.getNetworkInfo();
+                await UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance(false);
+                ChannelsStore.getChannelsWithPolling().then(() => {
+                    // Check for sweep to self-custody threshold after channels are online
+                    if (settings?.ecash?.enableCashu) {
+                        CashuStore.checkAndSweepMints();
+                        // Check Cashu balance for upgrade prompts after channels are loaded
+                        CashuStore.checkAndShowUpgradeModal(
+                            0,
+                            CashuStore.totalBalanceSats || 0
+                        );
+                    }
                 });
-            }
-            if (recovery) {
-                const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
-                if (!isBackedUp) {
-                    await Storage.setItem(IS_BACKED_UP_KEY, true);
-                }
-                if (isSyncing) return;
-                try {
-                    await ChannelBackupStore.recoverStaticChannelBackup();
+
+                if (rescan) {
                     await updateSettings({
-                        recovery: false
+                        rescan: false
                     });
+                }
+                if (recovery) {
+                    const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
+                    if (!isBackedUp) {
+                        await Storage.setItem(IS_BACKED_UP_KEY, true);
+                    }
+                    if (isSyncing) return;
+                    try {
+                        await ChannelBackupStore.recoverStaticChannelBackup();
+                        await updateSettings({
+                            recovery: false
+                        });
+                        if (
+                            SettingsStore.settings
+                                .automaticDisasterRecoveryBackup
+                        )
+                            ChannelBackupStore.initSubscribeChannelEvents();
+                    } catch (recoverError) {
+                        console.error('recover error', recoverError);
+                    }
+                } else {
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
-                } catch (recoverError) {
-                    console.error('recover error', recoverError);
                 }
-            } else {
-                if (SettingsStore.settings.automaticDisasterRecoveryBackup)
-                    ChannelBackupStore.initSubscribeChannelEvents();
+            } catch (rpcError: any) {
+                const errorMessage = rpcError?.message ?? '';
+                console.error('RPC/Data fetching error:', errorMessage);
+
+                // Handle wallet directory not found (deleted wallet)
+                if (
+                    matchesLndErrorCode(
+                        errorMessage,
+                        LndErrorCode.LND_FOLDER_MISSING
+                    )
+                ) {
+                    setConnectingStatus(false);
+                    Alert.alert(
+                        localeString('views.Wallet.lndFolderMissing.title'),
+                        localeString('views.Wallet.lndFolderMissing.message'),
+                        [
+                            {
+                                text: localeString(
+                                    'views.Wallet.lndFolderMissing.deleteWallet'
+                                ),
+                                onPress: () =>
+                                    this.props.navigation.navigate('Wallets'),
+                                style: 'destructive' as const
+                            }
+                        ]
+                    );
+                    return;
+                }
+
+                // Handle transient RPC errors - attempt restart with exponential backoff
+                if (isTransientRpcError(errorMessage)) {
+                    await retryOnTransientError(
+                        rpcError,
+                        errorMessage,
+                        'RPC error',
+                        transientRetryCount,
+                        setConnectingStatus,
+                        () =>
+                            this.getSettingsAndNavigate(transientRetryCount + 1)
+                    );
+                    return;
+                }
+
+                // Fatal error - clear connecting status and re-throw
+                console.error('Fatal RPC error:', rpcError);
+                setConnectingStatus(false);
+                throw rpcError;
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {

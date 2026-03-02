@@ -352,7 +352,7 @@ class LndMobile extends ReactContextBaseJavaModule {
         promise.reject(TAG, "Could not Send MSG_CHECKSTATUS to LndMobileService", e);
       }
     } else {
-      promise.reject(TAG, "lndMobileServiceMessenger unitialized");
+      promise.reject(TAG, "lndMobileServiceMessenger uninitialized");
     }
   }
 

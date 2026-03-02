@@ -80,20 +80,20 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                     <View
                         style={{ marginLeft: 20, marginRight: 20, height: 140 }}
                     >
-                        {currentBlockHeight && (
+                        {currentBlockHeight != null ? (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Sync.currentBlockHeight'
                                 )}
                                 value={numberWithCommas(currentBlockHeight)}
                             />
-                        )}
-                        {bestBlockHeight && (
+                        ) : null}
+                        {bestBlockHeight != null ? (
                             <KeyValue
                                 keyValue={localeString('views.Sync.tip')}
                                 value={numberWithCommas(bestBlockHeight)}
                             />
-                        )}
+                        ) : null}
                         {!!numBlocksUntilSynced && (
                             <KeyValue
                                 keyValue={localeString(

@@ -314,6 +314,8 @@ export default class LSPStore {
                 'ChannelAcceptor',
                 async (event: any) => {
                     try {
+                        if (!event?.data) return;
+
                         const channelAcceptRequest =
                             channel.decodeChannelAcceptRequest(event.data);
 
@@ -425,15 +427,26 @@ export default class LSPStore {
     };
 
     @action
-    public handleCustomMessages = (decoded: any) => {
+    public handleCustomMessages = (decoded: any): boolean => {
+        if (!decoded?.peer || !decoded?.data) return false;
+        let data: any;
+        try {
+            data = JSON.parse(Base64Utils.base64ToUtf8(decoded.data));
+        } catch (parseError: any) {
+            console.warn(
+                'Custom message data is not valid JSON, skipping:',
+                parseError?.message
+            );
+            return false;
+        }
         const peer = Base64Utils.base64ToHex(decoded.peer);
-        const data = JSON.parse(Base64Utils.base64ToUtf8(decoded.data));
 
         console.log('Received custom message', { peer, data });
 
         if (data.id === this.getInfoId) {
             this.getInfoData = data;
             this.loadingLSPS1 = false;
+            return true;
         } else if (data.id === this.createOrderId) {
             if (data.error) {
                 this.error = true;
@@ -444,6 +457,7 @@ export default class LSPStore {
                 this.createOrderResponse = data;
             }
             this.loadingLSPS1 = false;
+            return true;
         } else if (data.id === this.getOrderId) {
             if (data.error) {
                 this.error = true;
@@ -454,6 +468,7 @@ export default class LSPStore {
                 this.getOrderResponse = data;
             }
             this.loadingLSPS1 = false;
+            return true;
         } else if (data.id === this.getExtendableOrdersId) {
             if (data.error) {
                 this.error = true;
@@ -464,6 +479,7 @@ export default class LSPStore {
                 this.getExtendableOrdersData = data?.result?.extendable_orders;
             }
             this.loadingLSPS7 = false;
+            return true;
         } else if (data.id === this.createExtensionOrderId) {
             if (data.error) {
                 this.error = true;
@@ -474,6 +490,7 @@ export default class LSPStore {
                 this.createExtensionOrderResponse = data;
             }
             this.loadingLSPS7 = false;
+            return true;
         } else if (data.id === this.getExtensionOrderId) {
             if (data.error) {
                 this.error = true;
@@ -484,7 +501,9 @@ export default class LSPStore {
                 this.getExtensionOrderResponse = data;
             }
             this.loadingLSPS7 = false;
+            return true;
         }
+        return false;
     };
 
     @action
@@ -507,13 +526,16 @@ export default class LSPStore {
             this.customMessagesSubscriber = LndMobileEventEmitter.addListener(
                 'SubscribeCustomMessages',
                 async (event: any) => {
+                    if (!event?.data) return;
                     try {
                         const decoded = index.decodeCustomMessage(event.data);
-                        runInAction(() => {
-                            this.handleCustomMessages(decoded);
+                        const handled = runInAction(() =>
+                            this.handleCustomMessages(decoded)
+                        );
+                        if (handled) {
                             this.resolvedCustomMessage = true;
-                        });
-                        clearTimeout(timeoutId);
+                            clearTimeout(timeoutId);
+                        }
                     } catch (error: any) {
                         console.error(
                             'sub custom messages error: ' + error.message
@@ -527,11 +549,13 @@ export default class LSPStore {
             BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
-                    runInAction(() => {
-                        this.handleCustomMessages(decoded);
+                    const handled = runInAction(() =>
+                        this.handleCustomMessages(decoded)
+                    );
+                    if (handled) {
                         this.resolvedCustomMessage = true;
-                    });
-                    clearTimeout(timeoutId);
+                        clearTimeout(timeoutId);
+                    }
                 },
                 (error: any) => {
                     console.error(

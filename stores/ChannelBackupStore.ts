@@ -259,6 +259,8 @@ export default class ChannelBackupStore {
             'SubscribeChannelEvents',
             async (event: any) => {
                 try {
+                    if (!event?.data) return;
+
                     const channelEvent = channel.decodeChannelEvent(event.data);
                     if (
                         channelEvent.open_channel ||
