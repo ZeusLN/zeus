@@ -350,26 +350,22 @@ export default class ContactDetails extends React.Component<
         const avatarCircle = contact.photo ? (
             <Image
                 source={{ uri: contact.getPhoto }}
-                style={{ width: 150, height: 150, borderRadius: 75 }}
+                style={styles.avatarContainer}
             />
         ) : (
             <View
-                style={{
-                    width: 150,
-                    height: 150,
-                    borderRadius: 75,
-                    backgroundColor: themeColor('secondary'),
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}
+                style={[
+                    styles.avatarContainer,
+                    styles.avatarView,
+                    { backgroundColor: themeColor('secondary') }
+                ]}
             >
                 {contact.getAvatarInitials ? (
                     <Text
-                        style={{
-                            fontSize: 48,
-                            fontWeight: 'bold',
-                            color: themeColor('text')
-                        }}
+                        style={[
+                            styles.avatarInitials,
+                            { color: themeColor('text') }
+                        ]}
                     >
                         {contact.getAvatarInitials}
                     </Text>
@@ -416,34 +412,15 @@ export default class ContactDetails extends React.Component<
                             navigation={navigation}
                         />
                         <ScrollView
-                            contentContainerStyle={{
-                                backgroundColor: 'none',
-                                alignItems: 'center',
-                                paddingBottom: 10
-                            }}
+                            contentContainerStyle={styles.scrollContent}
                         >
                             {contact.banner ? (
-                                <View
-                                    style={{
-                                        width: '100%',
-                                        height: 150,
-                                        marginBottom: 95
-                                    }}
-                                >
+                                <View style={styles.bannerContainer}>
                                     <Image
                                         source={{ uri: contact.getBanner }}
-                                        style={{
-                                            width: '100%',
-                                            height: 150
-                                        }}
+                                        style={styles.bannerImage}
                                     />
-                                    <View
-                                        style={{
-                                            position: 'absolute',
-                                            top: 75,
-                                            alignSelf: 'center'
-                                        }}
-                                    >
+                                    <View style={styles.bannerAvatarOverlay}>
                                         {avatarCircle}
                                     </View>
                                 </View>
@@ -452,21 +429,12 @@ export default class ContactDetails extends React.Component<
                                     {avatarCircle}
                                 </View>
                             )}
-                            <Text
-                                style={{
-                                    fontSize: 40,
-                                    fontWeight: 'bold',
-                                    marginBottom: 10,
-                                    color: 'white'
-                                }}
-                            >
+                            <Text style={styles.contactName}>
                                 {contact.name}
                             </Text>
                             <Text
                                 style={{
-                                    fontSize: 20,
-                                    marginBottom: 6,
-                                    marginHorizontal: 20,
+                                    ...styles.contactDescription,
                                     color: themeColor('secondaryText')
                                 }}
                             >
@@ -632,13 +600,6 @@ export default class ContactDetails extends React.Component<
 }
 
 const styles = StyleSheet.create({
-    text: {
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    button: {
-        paddingTop: 10,
-        paddingBottom: 10
-    },
     contactRow: {
         flexDirection: 'row',
         marginLeft: 20,
@@ -651,5 +612,48 @@ const styles = StyleSheet.create({
         marginLeft: 5,
         marginRight: 5,
         flexShrink: 1
+    },
+    avatarContainer: {
+        width: 150,
+        height: 150,
+        borderRadius: 75
+    },
+    avatarView: {
+        alignItems: 'center',
+        justifyContent: 'center'
+    },
+    avatarInitials: {
+        fontSize: 48,
+        fontWeight: 'bold'
+    },
+    scrollContent: {
+        backgroundColor: 'none',
+        alignItems: 'center',
+        paddingBottom: 10
+    },
+    bannerContainer: {
+        width: '100%',
+        height: 150,
+        marginBottom: 95
+    },
+    bannerImage: {
+        width: '100%',
+        height: 150
+    },
+    bannerAvatarOverlay: {
+        position: 'absolute',
+        top: 75,
+        alignSelf: 'center'
+    },
+    contactName: {
+        fontSize: 40,
+        fontWeight: 'bold',
+        marginBottom: 10,
+        color: 'white'
+    },
+    contactDescription: {
+        fontSize: 20,
+        marginBottom: 6,
+        marginHorizontal: 20
     }
 });
