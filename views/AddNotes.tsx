@@ -124,15 +124,14 @@ export default class AddNotes extends React.Component<
                         multiline
                         numberOfLines={0}
                         style={{
-                            padding: 20,
+                            paddingHorizontal: 20,
                             flexGrow: 1,
                             flexShrink: 1,
                             backgroundColor: 'none'
                         }}
                         textInputStyle={{
                             height: '100%',
-                            textAlignVertical: 'top',
-                            marginTop: -13
+                            textAlignVertical: 'top'
                         }}
                         value={notes}
                         placeholder={
