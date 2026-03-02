@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
@@ -20,13 +20,27 @@ import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import SwapStore from '../stores/SwapStore';
 
 import { feeStore, settingsStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { calculateLimit } from '../utils/SwapUtils';
 import Invoice from '../models/Invoice';
+import SwapIcon from '../assets/images/SVG/Swap.svg';
+
+interface SubmarineSwapInfo {
+    fees?: {
+        percentage?: number;
+        minerFees?: number;
+    };
+    limits?: {
+        minimal?: number;
+        maximal?: number;
+    };
+}
 
 interface RouteParams {
     value: string;
@@ -44,6 +58,7 @@ interface ChoosePaymentMethodProps {
     CashuStore?: CashuStore;
     UTXOsStore?: UTXOsStore;
     InvoicesStore?: InvoicesStore;
+    SwapStore?: SwapStore;
 }
 
 interface ChoosePaymentMethodState {
@@ -54,9 +69,16 @@ interface ChoosePaymentMethodState {
     offer: string;
     lnurlParams: LNURLWithdrawParams | undefined;
     feeRate: string;
+    validAmountToSwap: boolean;
 }
 
-@inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'InvoicesStore')
+@inject(
+    'BalanceStore',
+    'CashuStore',
+    'UTXOsStore',
+    'InvoicesStore',
+    'SwapStore'
+)
 @observer
 export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
@@ -73,7 +95,8 @@ export default class ChoosePaymentMethod extends React.Component<
         lightningAddress: '',
         offer: '',
         lnurlParams: undefined,
-        feeRate: ''
+        feeRate: '',
+        validAmountToSwap: false
     };
 
     componentDidMount() {
@@ -135,12 +158,19 @@ export default class ChoosePaymentMethod extends React.Component<
             ...(lnurlParams && { lnurlParams })
         };
         if (Object.keys(stateUpdate).length > 0) {
-            this.setState((prev) => ({ ...prev, ...stateUpdate }));
+            this.setState((prev) => {
+                const newState = { ...prev, ...stateUpdate };
+                const validAmountToSwap = this.isAmountValidToSwap(
+                    newState.satAmount
+                );
+                return { ...newState, validAmountToSwap };
+            });
         }
 
         this.fetchFeeEstimates({ lightning, lnurlParams });
         this.fetchOnchainFees(value);
     }
+
     fetchOnchainFees = (value?: string) => {
         if (
             !value ||
@@ -168,6 +198,71 @@ export default class ChoosePaymentMethod extends React.Component<
         }
         await Promise.all(tasks);
     };
+
+    isAmountValidToSwap(satAmount?: string): boolean {
+        const { SwapStore } = this.props;
+        const amount = satAmount ?? this.state.satAmount;
+
+        if (!SwapStore || !amount) {
+            return false;
+        }
+
+        const subInfo: SubmarineSwapInfo = SwapStore.subInfo;
+
+        if (!subInfo || Object.keys(subInfo).length === 0) {
+            return false;
+        }
+
+        const serviceFeePct = subInfo.fees?.percentage ?? 0;
+        const networkFee = Number(subInfo.fees?.minerFees ?? 0);
+        const reverse = false; // submarine swap: OnChain -> LN
+
+        const min = calculateLimit(
+            subInfo.limits?.minimal ?? 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+        const max = calculateLimit(
+            subInfo.limits?.maximal ?? 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+        const input = calculateLimit(
+            Number(amount) || 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+
+        return input >= min && input <= max;
+    }
+
+    navigateToSwaps = () => {
+        const { navigation } = this.props;
+        const { lightning, satAmount } = this.state;
+        const amountNum = Number(satAmount);
+        if (!lightning || !satAmount || isNaN(amountNum) || amountNum <= 0) {
+            return;
+        }
+        navigation.navigate('Swaps', {
+            initialInvoice: lightning,
+            initialAmountSats: satAmount.toString(),
+            initialReverse: false // OnChain -> LN for paying a LN invoice
+        });
+    };
+
+    private renderSwapIconButton = () => (
+        <TouchableOpacity onPress={this.navigateToSwaps} style={{ padding: 8 }}>
+            <SwapIcon
+                fill={themeColor('text')}
+                width="36"
+                height="26"
+                style={{ alignSelf: 'center' }}
+            />
+        </TouchableOpacity>
+    );
 
     hasInsufficientFunds = () => {
         const { BalanceStore, CashuStore } = this.props;
@@ -221,7 +316,8 @@ export default class ChoosePaymentMethod extends React.Component<
             lightningAddress,
             offer,
             lnurlParams,
-            feeRate
+            feeRate,
+            validAmountToSwap
         } = this.state;
 
         const { accounts } = UTXOsStore!;
@@ -245,6 +341,12 @@ export default class ChoosePaymentMethod extends React.Component<
             showFees &&
             !!settingsStore?.settings?.privacy?.enableMempoolRates;
 
+        const canSwap =
+            validAmountToSwap &&
+            lightning &&
+            satAmount &&
+            Number(satAmount) > 0;
+
         return (
             <Screen>
                 <Header
@@ -253,6 +355,9 @@ export default class ChoosePaymentMethod extends React.Component<
                         text: localeString('views.Accounts.select'),
                         style: { color: themeColor('text') }
                     }}
+                    rightComponent={
+                        canSwap ? this.renderSwapIconButton() : undefined
+                    }
                     navigation={navigation}
                 />
 
