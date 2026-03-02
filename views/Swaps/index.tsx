@@ -87,8 +87,8 @@ interface SwapState {
     serviceFeeSats: number | BigNumber;
     inputSats: number | BigNumber;
     outputSats: number | BigNumber;
-    inputFiat: string;
-    outputFiat: string;
+    inputDisplay: string;
+    outputDisplay: string;
     invoice: string;
     isValid: boolean;
     error: string;
@@ -128,8 +128,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         serviceFeeSats: 0,
         inputSats: 0,
         outputSats: 0,
-        inputFiat: '',
-        outputFiat: '',
+        inputDisplay: '',
+        outputDisplay: '',
         invoice: '',
         isValid: false,
         apiUpdates: '',
@@ -148,7 +148,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         flowLspNotConfigured: true
     };
 
-    private isNavigatingToLSPFees = false;
+    private isNavigatingAway = false;
     private _unsubscribe?: () => void;
 
     checkIsValid = () => {
@@ -270,8 +270,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         SwapStore.ECPair = ECPairFactory(ecc);
 
         const unsubBlur = this.props.navigation.addListener('blur', () => {
-            if (this.isNavigatingToLSPFees) {
-                this.isNavigatingToLSPFees = false;
+            if (this.isNavigatingAway) {
+                this.isNavigatingAway = false;
                 return;
             }
             this.resetFields();
@@ -357,91 +357,105 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 });
             } else if (
                 initialInvoice !== undefined &&
-                initialAmountSats !== undefined &&
                 initialReverse !== undefined
             ) {
-                this.setState({ paramsProcessed: true }, async () => {
-                    // Use callback to ensure paramsProcessed is set before further calcs
-                    const { units } = UnitsStore;
-                    const { fiatRates } = FiatStore;
-                    const { fiat } = settings;
-                    const fiatEntry =
-                        fiat && fiatRates
-                            ? fiatRates.filter(
-                                  (entry: any) => entry.code === fiat
-                              )[0]
-                            : null;
-                    const rate =
-                        fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
-
-                    const info: any = initialReverse
-                        ? SwapStore.reverseInfo
-                        : SwapStore.subInfo;
-                    const serviceFeePct = info?.fees?.percentage || 0;
-                    const networkFeeBigNum = initialReverse
-                        ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                              info?.fees?.minerFees?.lockup || 0
-                          )
-                        : new BigNumber(info?.fees?.minerFees || 0);
-                    const networkFee = networkFeeBigNum.toNumber();
-
-                    const newOutputSats = new BigNumber(initialAmountSats || 0);
-                    let newOutputFiat = '';
-                    if (
-                        units === 'fiat' &&
-                        rate > 0 &&
-                        newOutputSats.isGreaterThan(0)
-                    ) {
-                        newOutputFiat = newOutputSats
-                            .div(SATS_PER_BTC)
-                            .times(rate)
-                            .toFixed(2);
-                    }
-
-                    const newInputSats = calculateSendAmount(
-                        newOutputSats,
-                        serviceFeePct,
-                        networkFee,
-                        this.state.reverse
-                    );
-                    let newInputFiat = '';
-                    if (
-                        units === 'fiat' &&
-                        rate > 0 &&
-                        newInputSats.isGreaterThan(0)
-                    ) {
-                        newInputFiat = newInputSats
-                            .div(SATS_PER_BTC)
-                            .times(rate)
-                            .toFixed(2);
-                    }
-
-                    const newServiceFeeSats = calculateServiceFeeOnSend(
-                        newInputSats,
-                        serviceFeePct,
-                        networkFee,
-                        this.state.reverse
-                    );
-
+                if (initialAmountSats === undefined) {
                     this.setState(
                         {
+                            paramsProcessed: true,
                             invoice: initialInvoice,
-                            reverse: initialReverse,
-                            outputSats: newOutputSats,
-                            outputFiat:
-                                units === 'fiat'
-                                    ? newOutputFiat
-                                    : this.state.outputFiat,
-                            inputSats: newInputSats,
-                            inputFiat:
-                                units === 'fiat'
-                                    ? newInputFiat
-                                    : this.state.inputFiat,
-                            serviceFeeSats: newServiceFeeSats
+                            reverse: initialReverse
                         },
                         () => this.checkIsValid()
                     );
-                });
+                } else {
+                    this.setState({ paramsProcessed: true }, async () => {
+                        // Use callback to ensure paramsProcessed is set before further calcs
+                        const { units } = UnitsStore;
+                        const { fiatRates } = FiatStore;
+                        const { fiat } = settings;
+                        const fiatEntry =
+                            fiat && fiatRates
+                                ? fiatRates.filter(
+                                      (entry: any) => entry.code === fiat
+                                  )[0]
+                                : null;
+                        const rate =
+                            fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+                        const info: any = initialReverse
+                            ? SwapStore.reverseInfo
+                            : SwapStore.subInfo;
+                        const serviceFeePct = info?.fees?.percentage || 0;
+                        const networkFeeBigNum = initialReverse
+                            ? new BigNumber(
+                                  info?.fees?.minerFees?.claim || 0
+                              ).plus(info?.fees?.minerFees?.lockup || 0)
+                            : new BigNumber(info?.fees?.minerFees || 0);
+                        const networkFee = networkFeeBigNum.toNumber();
+
+                        const newOutputSats = new BigNumber(
+                            initialAmountSats || 0
+                        );
+                        let newOutputDisplay = '';
+                        if (newOutputSats.isGreaterThan(0)) {
+                            if (units === 'fiat' && rate > 0) {
+                                newOutputDisplay = newOutputSats
+                                    .div(SATS_PER_BTC)
+                                    .times(rate)
+                                    .toFixed(2);
+                            } else if (units === 'BTC') {
+                                newOutputDisplay = newOutputSats
+                                    .div(SATS_PER_BTC)
+                                    .toFixed(8);
+                            } else if (units === 'sats') {
+                                newOutputDisplay = newOutputSats.toFixed(0);
+                            }
+                        }
+
+                        const newInputSats = calculateSendAmount(
+                            newOutputSats,
+                            serviceFeePct,
+                            networkFee,
+                            this.state.reverse
+                        );
+                        let newInputDisplay = '';
+                        if (newInputSats.isGreaterThan(0)) {
+                            if (units === 'fiat' && rate > 0) {
+                                newInputDisplay = newInputSats
+                                    .div(SATS_PER_BTC)
+                                    .times(rate)
+                                    .toFixed(2);
+                            } else if (units === 'BTC') {
+                                newInputDisplay = newInputSats
+                                    .div(SATS_PER_BTC)
+                                    .toFixed(8);
+                            } else if (units === 'sats') {
+                                newInputDisplay = newInputSats.toFixed(0);
+                            }
+                        }
+
+                        const newServiceFeeSats = calculateServiceFeeOnSend(
+                            newInputSats,
+                            serviceFeePct,
+                            networkFee,
+                            this.state.reverse
+                        );
+
+                        this.setState(
+                            {
+                                invoice: initialInvoice,
+                                reverse: initialReverse,
+                                outputSats: newOutputSats,
+                                outputDisplay: newOutputDisplay,
+                                inputSats: newInputSats,
+                                inputDisplay: newInputDisplay,
+                                serviceFeeSats: newServiceFeeSats
+                            },
+                            () => this.checkIsValid()
+                        );
+                    });
+                }
             }
         }
         // Call checkIsValid whenever relevant state that it depends on might have changed.
@@ -484,8 +498,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 inputSats: 0,
                 outputSats: 0,
                 isValid: false,
-                inputFiat: '',
-                outputFiat: '',
+                inputDisplay: '',
+                outputDisplay: '',
                 invoice: '',
                 error: '',
                 paramsProcessed: false
@@ -708,8 +722,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             serviceFeeSats,
             inputSats,
             outputSats,
-            inputFiat,
-            outputFiat,
+            inputDisplay,
+            outputDisplay,
             error,
             apiUpdates,
             invoice,
@@ -916,9 +930,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                                 !reverse,
                                                                             inputSats: 0,
                                                                             outputSats: 0,
-                                                                            inputFiat:
+                                                                            inputDisplay:
                                                                                 '',
-                                                                            outputFiat:
+                                                                            outputDisplay:
                                                                                 '',
                                                                             serviceFeeSats: 0,
                                                                             invoice:
@@ -1054,17 +1068,17 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     inputSats:
                                                                         satAmountNew.toNumber(),
                                                                     outputSats,
-                                                                    inputFiat:
+                                                                    inputDisplay:
                                                                         amount &&
                                                                         amount.toString(),
-                                                                    outputFiat:
+                                                                    outputDisplay:
                                                                         newOutputDisplayString
                                                                 },
                                                                 () =>
                                                                     this.checkIsValid()
                                                             );
                                                         }}
-                                                        amount={inputFiat}
+                                                        amount={inputDisplay}
                                                         hideConversion
                                                         hideUnitChangeButton
                                                         error={errorInput}
@@ -1082,8 +1096,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             reverse: !reverse,
                                                             inputSats: 0,
                                                             outputSats: 0,
-                                                            inputFiat: '',
-                                                            outputFiat: '',
+                                                            inputDisplay: '',
+                                                            outputDisplay: '',
                                                             serviceFeeSats: 0,
                                                             invoice: ''
                                                         });
@@ -1127,9 +1141,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                                     !reverse,
                                                                                 inputSats: 0,
                                                                                 outputSats: 0,
-                                                                                inputFiat:
+                                                                                inputDisplay:
                                                                                     '',
-                                                                                outputFiat:
+                                                                                outputDisplay:
                                                                                     '',
                                                                                 serviceFeeSats: 0,
                                                                                 invoice:
@@ -1296,9 +1310,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             input,
                                                                         outputSats:
                                                                             satAmountNew.toNumber(),
-                                                                        inputFiat:
+                                                                        inputDisplay:
                                                                             newInputDisplayString,
-                                                                        outputFiat:
+                                                                        outputDisplay:
                                                                             amount &&
                                                                             amount.toString()
                                                                     },
@@ -1306,7 +1320,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                         this.checkIsValid()
                                                                 );
                                                             }}
-                                                            amount={outputFiat}
+                                                            amount={
+                                                                outputDisplay
+                                                            }
                                                             hideConversion
                                                             hideUnitChangeButton
                                                             error={errorOutput}
@@ -1467,9 +1483,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 }
 
                                                                 return {
-                                                                    inputFiat:
+                                                                    inputDisplay:
                                                                         newInputDisplayAmount,
-                                                                    outputFiat:
+                                                                    outputDisplay:
                                                                         newOutputDisplayAmount
                                                                 };
                                                             }
@@ -1553,7 +1569,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 min || 0
                                                             );
 
-                                                        let inputFiat = '';
+                                                        let inputDisplay = '';
                                                         if (
                                                             satAmountNew.isGreaterThan(
                                                                 0
@@ -1562,7 +1578,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             if (
                                                                 units === 'fiat'
                                                             ) {
-                                                                inputFiat =
+                                                                inputDisplay =
                                                                     satAmountNew
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1576,7 +1592,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'BTC'
                                                             ) {
-                                                                inputFiat =
+                                                                inputDisplay =
                                                                     satAmountNew
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1587,7 +1603,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'sats'
                                                             ) {
-                                                                inputFiat =
+                                                                inputDisplay =
                                                                     satAmountNew.toFixed(
                                                                         0
                                                                     );
@@ -1613,7 +1629,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 reverse
                                                             );
 
-                                                        let outputFiat = '';
+                                                        let outputDisplay = '';
                                                         if (
                                                             outputSats.isGreaterThan(
                                                                 0
@@ -1622,7 +1638,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             if (
                                                                 units === 'fiat'
                                                             ) {
-                                                                outputFiat =
+                                                                outputDisplay =
                                                                     outputSats
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1636,7 +1652,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'BTC'
                                                             ) {
-                                                                outputFiat =
+                                                                outputDisplay =
                                                                     outputSats
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1647,7 +1663,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'sats'
                                                             ) {
-                                                                outputFiat =
+                                                                outputDisplay =
                                                                     outputSats.toFixed(
                                                                         0
                                                                     );
@@ -1665,8 +1681,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             inputSats:
                                                                 satAmountNew.toNumber(),
                                                             outputSats,
-                                                            inputFiat,
-                                                            outputFiat
+                                                            inputDisplay,
+                                                            outputDisplay
                                                         });
                                                     }}
                                                 >
@@ -1695,7 +1711,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 max || 0
                                                             );
 
-                                                        let inputFiat = '';
+                                                        let inputDisplay = '';
                                                         if (
                                                             satAmountNew.isGreaterThan(
                                                                 0
@@ -1704,7 +1720,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             if (
                                                                 units === 'fiat'
                                                             ) {
-                                                                inputFiat =
+                                                                inputDisplay =
                                                                     satAmountNew
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1718,7 +1734,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'BTC'
                                                             ) {
-                                                                inputFiat =
+                                                                inputDisplay =
                                                                     satAmountNew
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1729,7 +1745,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'sats'
                                                             ) {
-                                                                inputFiat =
+                                                                inputDisplay =
                                                                     satAmountNew.toFixed(
                                                                         0
                                                                     );
@@ -1755,7 +1771,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 reverse
                                                             );
 
-                                                        let outputFiat = '';
+                                                        let outputDisplay = '';
                                                         if (
                                                             outputSats.isGreaterThan(
                                                                 0
@@ -1764,7 +1780,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             if (
                                                                 units === 'fiat'
                                                             ) {
-                                                                outputFiat =
+                                                                outputDisplay =
                                                                     outputSats
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1778,7 +1794,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'BTC'
                                                             ) {
-                                                                outputFiat =
+                                                                outputDisplay =
                                                                     outputSats
                                                                         .div(
                                                                             SATS_PER_BTC
@@ -1789,7 +1805,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             } else if (
                                                                 units === 'sats'
                                                             ) {
-                                                                outputFiat =
+                                                                outputDisplay =
                                                                     outputSats.toFixed(
                                                                         0
                                                                     );
@@ -1807,8 +1823,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             inputSats:
                                                                 satAmountNew.toNumber(),
                                                             outputSats,
-                                                            inputFiat,
-                                                            outputFiat
+                                                            inputDisplay,
+                                                            outputDisplay
                                                         });
                                                     }}
                                                 >
@@ -1915,7 +1931,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     invoice && (
                                                         <TouchableOpacity
                                                             onPress={() => {
-                                                                this.isNavigatingToLSPFees =
+                                                                this.isNavigatingAway =
                                                                     true;
                                                                 navigation.navigate(
                                                                     new BigNumber(
@@ -1999,12 +2015,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 () => this.checkIsValid()
                                             );
                                         }}
-                                        onScan={() =>
+                                        onScan={() => {
+                                            this.isNavigatingAway = true;
                                             navigation.navigate(
                                                 'HandleAnythingQRScanner',
                                                 { view: 'Swaps' }
-                                            )
-                                        }
+                                            );
+                                        }}
                                         placeholder={
                                             fetchingInvoice
                                                 ? ''
@@ -2214,6 +2231,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 fee: text
                                                             })
                                                         }
+                                                        onNavigateAway={() => {
+                                                            this.isNavigatingAway =
+                                                                true;
+                                                        }}
                                                         navigation={navigation}
                                                     />
                                                 </>
