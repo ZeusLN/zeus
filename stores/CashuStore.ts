@@ -1774,7 +1774,9 @@ export default class CashuStore {
                             ),
                             callback: () => {
                                 this.modalStore.toggleInfoModal({});
-                                NavigationService.navigate('Swaps');
+                                NavigationService.navigate('Swaps', {
+                                    initialReverse: true
+                                });
                             }
                         }
                     ],
@@ -1823,7 +1825,9 @@ export default class CashuStore {
                     title: localeString('cashu.upgradePrompt.transferOnChain'),
                     callback: () => {
                         this.modalStore.toggleInfoModal({});
-                        NavigationService.navigate('Swaps');
+                        NavigationService.navigate('Swaps', {
+                            initialReverse: true
+                        });
                     }
                 }
             ]
