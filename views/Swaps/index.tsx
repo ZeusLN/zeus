@@ -148,8 +148,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         flowLspNotConfigured: true
     };
 
-    private isNavigatingToLSPFees = false;
-    private isNavigatingToQRScanner = false;
+    private isNavigatingAway = false;
     private _unsubscribe?: () => void;
 
     checkIsValid = () => {
@@ -271,12 +270,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         SwapStore.ECPair = ECPairFactory(ecc);
 
         const unsubBlur = this.props.navigation.addListener('blur', () => {
-            if (this.isNavigatingToLSPFees) {
-                this.isNavigatingToLSPFees = false;
-                return;
-            }
-            if (this.isNavigatingToQRScanner) {
-                this.isNavigatingToQRScanner = false;
+            if (this.isNavigatingAway) {
+                this.isNavigatingAway = false;
                 return;
             }
             this.resetFields();
@@ -356,12 +351,14 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 initialInvoice === undefined &&
                 initialAmountSats === undefined
             ) {
-                // Coming from upgrade prompt - just set reverse mode
                 this.setState({
                     paramsProcessed: true,
                     reverse: initialReverse
                 });
-            } else if (initialInvoice !== undefined && initialReverse !== undefined) {
+            } else if (
+                initialInvoice !== undefined &&
+                initialReverse !== undefined
+            ) {
                 if (initialAmountSats === undefined) {
                     this.setState(
                         {
@@ -1934,7 +1931,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     invoice && (
                                                         <TouchableOpacity
                                                             onPress={() => {
-                                                                this.isNavigatingToLSPFees =
+                                                                this.isNavigatingAway =
                                                                     true;
                                                                 navigation.navigate(
                                                                     new BigNumber(
@@ -2019,7 +2016,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             );
                                         }}
                                         onScan={() => {
-                                            this.isNavigatingToQRScanner = true;
+                                            this.isNavigatingAway = true;
                                             navigation.navigate(
                                                 'HandleAnythingQRScanner',
                                                 { view: 'Swaps' }
@@ -2234,6 +2231,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 fee: text
                                                             })
                                                         }
+                                                        onNavigateAway={() => {
+                                                            this.isNavigatingAway =
+                                                                true;
+                                                        }}
                                                         navigation={navigation}
                                                     />
                                                 </>
