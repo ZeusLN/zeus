@@ -706,6 +706,7 @@ export default class LightningNodeConnect {
     supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
+    supportsMessageVerification = () => true;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
