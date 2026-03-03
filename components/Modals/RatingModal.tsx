@@ -67,6 +67,15 @@ export default class RatingModal extends React.Component<
         }, 400);
     };
 
+    handlePermanentDismiss = () => {
+        const { ModalStore } = this.props;
+        ModalStore?.dismissRatingPermanently();
+
+        setTimeout(() => {
+            this.setState({ rating: 0, viewState: 'initial' });
+        }, 400);
+    };
+
     renderStars = () => {
         let stars = [];
         for (let i = 1; i <= 5; i++) {
@@ -91,11 +100,11 @@ export default class RatingModal extends React.Component<
         <>
             <Image source={ZEUS} style={styles.appIcon} />
             <Text style={[styles.title, { color: themeColor('qr') }]}>
-                {localeString('components.RatingModal.enjoyingZeus')}
+                {localeString('views.Settings.Support.enjoyingZeus')}
             </Text>
             <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
                 {`${localeString(
-                    'components.RatingModal.tapToRate'
+                    'views.Settings.Support.tapToRate'
                 )} \n${storeName}.`}
             </Text>
 
@@ -120,7 +129,7 @@ export default class RatingModal extends React.Component<
                 onPress={this.handleClose}
             >
                 <Text style={styles.actionText}>
-                    {localeString('components.RatingModal.notNow')}
+                    {localeString('views.Settings.Support.notNow')}
                 </Text>
             </TouchableOpacity>
         </>
@@ -129,10 +138,10 @@ export default class RatingModal extends React.Component<
     renderLowRatingView = () => (
         <>
             <Text style={[styles.title, { color: themeColor('qr') }]}>
-                {localeString('components.RatingModal.weAreSorry')}
+                {localeString('views.Settings.Support.weAreSorry')}
             </Text>
             <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
-                {localeString('components.RatingModal.whatWentWrong')}
+                {localeString('views.Settings.Support.whatWentWrong')}
             </Text>
 
             <View
@@ -145,7 +154,7 @@ export default class RatingModal extends React.Component<
             <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => {
-                    this.handleClose();
+                    this.handlePermanentDismiss();
                     setTimeout(() => {
                         Linking.openURL(
                             `mailto:support@zeusln.com?subject=Feedback (Rating: ${this.state.rating} stars)`
@@ -154,7 +163,7 @@ export default class RatingModal extends React.Component<
                 }}
             >
                 <Text style={[styles.actionText, styles.bold]}>
-                    {localeString('components.RatingModal.contactSupport')}
+                    {localeString('views.Settings.Support.contactSupport')}
                 </Text>
             </TouchableOpacity>
             <View
@@ -166,10 +175,10 @@ export default class RatingModal extends React.Component<
 
             <TouchableOpacity
                 style={styles.actionButton}
-                onPress={this.handleClose}
+                onPress={this.handlePermanentDismiss}
             >
                 <Text style={styles.actionText}>
-                    {localeString('components.RatingModal.noThanks')}
+                    {localeString('views.Settings.Support.noThanks')}
                 </Text>
             </TouchableOpacity>
         </>
@@ -179,11 +188,11 @@ export default class RatingModal extends React.Component<
         <>
             <Image source={ZEUS} style={styles.appIcon} />
             <Text style={[styles.title, { color: themeColor('qr') }]}>
-                {localeString('components.RatingModal.thankYouFeedback')}
+                {localeString('views.Settings.Support.thankYouFeedback')}
             </Text>
 
             <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
-                {localeString('components.RatingModal.leaveReview')}
+                {localeString('views.Settings.Support.leaveReview')}
             </Text>
 
             <View
@@ -197,11 +206,11 @@ export default class RatingModal extends React.Component<
                 style={styles.actionButton}
                 onPress={() => {
                     openStoreForReview();
-                    this.handleClose();
+                    this.handlePermanentDismiss();
                 }}
             >
                 <Text style={[styles.actionText, styles.bold]}>
-                    {localeString('components.RatingModal.writeAReview')}
+                    {localeString('views.Settings.Support.writeAReview')}
                 </Text>
             </TouchableOpacity>
 
@@ -214,10 +223,10 @@ export default class RatingModal extends React.Component<
 
             <TouchableOpacity
                 style={styles.actionButton}
-                onPress={this.handleClose}
+                onPress={this.handlePermanentDismiss}
             >
                 <Text style={styles.actionText}>
-                    {localeString('components.RatingModal.noThanks')}
+                    {localeString('views.Settings.Support.noThanks')}
                 </Text>
             </TouchableOpacity>
         </>

@@ -52,7 +52,7 @@ function Support(props: SupportProps) {
             path: 'SocialMedia'
         },
         {
-            label: localeString('components.RatingModal.give5starReview'),
+            label: localeString('views.Settings.Support.reviewOnAppstore'),
             action: openStoreForReview
         }
     ];

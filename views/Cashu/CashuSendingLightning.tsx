@@ -534,30 +534,6 @@ export default class CashuSendingLightning extends React.Component<
                 )}
                 {this.renderZaplockerWarningModal()}
                 {this.renderInfoModal()}
-                {loading && (
-                    <View
-                        style={{
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            height: '100%',
-                            marginTop: 25
-                        }}
-                    >
-                        <LightningLoadingPattern />
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                // paddingBottom for centering
-                                paddingBottom: windowSize.height / 10,
-                                fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
-                            }}
-                        >
-                            {localeString('views.SendingLightning.sending')}
-                        </Text>
-                    </View>
-                )}
                 {paymentType === 'donation' && (
                     <View
                         style={{

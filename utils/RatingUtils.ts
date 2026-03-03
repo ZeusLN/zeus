@@ -5,6 +5,10 @@ export const ANDROID_PACKAGE = 'app.zeusln.zeus';
 
 export const LOW_RATING_THRESHOLD = 2;
 export const RATING_MODAL_TRIGGER_DELAY = 1000;
+export const RATING_REPROMPT_INTERVAL = 10;
+
+export const RATING_DISMISSED_KEY = 'ratingDismissedPermanently';
+export const PAYMENT_COUNT_KEY = 'successfulPaymentCount';
 
 export const openStoreForReview = async () => {
     const url =
