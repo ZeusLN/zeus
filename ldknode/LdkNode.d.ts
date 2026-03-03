@@ -478,13 +478,24 @@ export interface ILdkNodeModule {
         description: string,
         expirySecs: number
     ): Promise<{ invoice: string }>;
-    sendBolt11(invoice: string): Promise<string>;
-    sendBolt11UsingAmount(invoice: string, amountMsat: number): Promise<string>;
+    sendBolt11(
+        invoice: string,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
+    ): Promise<string>;
+    sendBolt11UsingAmount(
+        invoice: string,
+        amountMsat: number,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
+    ): Promise<string>;
 
     // Spontaneous Payment Methods
     sendSpontaneousPayment(
         nodeId: string,
-        amountMsat: number
+        amountMsat: number,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
     ): Promise<{ paymentId: string }>;
 
     // BOLT12 Payment Methods
@@ -499,16 +510,22 @@ export interface ILdkNodeModule {
     ): Promise<{ offer: string; offerId: string }>;
     bolt12Send(
         offerStr: string,
-        payerNote?: string | null
+        payerNote: string | null,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
     ): Promise<{ paymentId: string }>;
     bolt12SendUsingAmount(
         offerStr: string,
         amountMsat: number,
-        payerNote?: string | null
+        payerNote: string | null,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
     ): Promise<{ paymentId: string }>;
     bolt12InitiateRefund(
         amountMsat: number,
-        expirySecs: number
+        expirySecs: number,
+        maxTotalRoutingFeeMsat: number,
+        maxPathCount: number
     ): Promise<{ refund: string }>;
     bolt12RequestRefundPayment(refundStr: string): Promise<{ invoice: string }>;
 

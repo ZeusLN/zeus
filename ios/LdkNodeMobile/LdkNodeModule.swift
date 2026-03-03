@@ -745,6 +745,20 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - Route Parameters Helper
+
+    private func buildRouteParameters(maxTotalRoutingFeeMsat: Double, maxPathCount: Double) -> RouteParametersConfig? {
+        let hasFeeMsat = maxTotalRoutingFeeMsat >= 0
+        let hasPathCount = maxPathCount >= 0
+        guard hasFeeMsat || hasPathCount else { return nil }
+        return RouteParametersConfig(
+            maxTotalRoutingFeeMsat: hasFeeMsat ? UInt64(maxTotalRoutingFeeMsat) : nil,
+            maxTotalCltvExpiryDelta: 1008,
+            maxPathCount: hasPathCount ? UInt8(maxPathCount) : 10,
+            maxChannelSaturationPowerOfHalf: 2
+        )
+    }
+
     // MARK: - BOLT11 Payment Methods
 
     @objc(receiveBolt11:invoiceDescription:expirySecs:resolver:rejecter:)
@@ -781,18 +795,20 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(sendBolt11:resolver:rejecter:)
-    func sendBolt11(_ invoice: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(sendBolt11:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func sendBolt11(_ invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
             return
         }
 
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bolt11 = node.bolt11Payment()
                 let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
-                let paymentId = try bolt11.send(invoice: bolt11Invoice, routeParameters: nil)
+                let paymentId = try bolt11.send(invoice: bolt11Invoice, routeParameters: routeParams)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -800,18 +816,20 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(sendBolt11UsingAmount:amountMsat:resolver:rejecter:)
-    func sendBolt11UsingAmount(_ invoice: String, amountMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(sendBolt11UsingAmount:amountMsat:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func sendBolt11UsingAmount(_ invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
             return
         }
 
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bolt11 = node.bolt11Payment()
                 let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
-                let paymentId = try bolt11.sendUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: nil)
+                let paymentId = try bolt11.sendUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: routeParams)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -821,16 +839,18 @@ class LdkNodeModule: RCTEventEmitter {
 
     // MARK: - Spontaneous Payment Methods
 
-    @objc(sendSpontaneousPayment:amountMsat:resolver:rejecter:)
-    func sendSpontaneousPayment(_ nodeId: String, amountMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(sendSpontaneousPayment:amountMsat:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func sendSpontaneousPayment(_ nodeId: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
             return
         }
 
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let paymentId = try node.spontaneousPayment().send(amountMsat: UInt64(amountMsat), nodeId: nodeId, routeParameters: nil)
+                let paymentId = try node.spontaneousPayment().send(amountMsat: UInt64(amountMsat), nodeId: nodeId, routeParameters: routeParams)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -872,18 +892,20 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(bolt12Send:payerNote:resolver:rejecter:)
-    func bolt12Send(_ offerStr: String, payerNote: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(bolt12Send:payerNote:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func bolt12Send(_ offerStr: String, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
             return
         }
 
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bolt12 = node.bolt12Payment()
                 let offer = try Offer.fromStr(offerStr: offerStr)
-                let paymentId = try bolt12.send(offer: offer, quantity: nil, payerNote: payerNote, routeParameters: nil)
+                let paymentId = try bolt12.send(offer: offer, quantity: nil, payerNote: payerNote, routeParameters: routeParams)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -891,18 +913,20 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(bolt12SendUsingAmount:amountMsat:payerNote:resolver:rejecter:)
-    func bolt12SendUsingAmount(_ offerStr: String, amountMsat: Double, payerNote: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(bolt12SendUsingAmount:amountMsat:payerNote:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func bolt12SendUsingAmount(_ offerStr: String, amountMsat: Double, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
             return
         }
 
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bolt12 = node.bolt12Payment()
                 let offer = try Offer.fromStr(offerStr: offerStr)
-                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: UInt64(amountMsat), quantity: nil, payerNote: payerNote, routeParameters: nil)
+                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: UInt64(amountMsat), quantity: nil, payerNote: payerNote, routeParameters: routeParams)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -910,16 +934,18 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(bolt12InitiateRefund:expirySecs:resolver:rejecter:)
-    func bolt12InitiateRefund(_ amountMsat: Double, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(bolt12InitiateRefund:expirySecs:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
+    func bolt12InitiateRefund(_ amountMsat: Double, expirySecs: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
             return
         }
+
+        let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
 
         do {
             let bolt12 = node.bolt12Payment()
-            let refund = try bolt12.initiateRefund(amountMsat: UInt64(amountMsat), expirySecs: UInt32(expirySecs), quantity: nil, payerNote: nil, routeParameters: nil)
+            let refund = try bolt12.initiateRefund(amountMsat: UInt64(amountMsat), expirySecs: UInt32(expirySecs), quantity: nil, payerNote: nil, routeParameters: routeParams)
             resolve(["refund": refund.description])
         } catch {
             reject("error", self.errorMessage(error), error)

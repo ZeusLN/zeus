@@ -124,6 +124,7 @@ export default class NostrWalletConnect {
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
+    supportsCustomFeeLimit = () => false;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;
