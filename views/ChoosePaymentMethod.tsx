@@ -21,6 +21,7 @@ import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import SwapStore from '../stores/SwapStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { feeStore, settingsStore } from '../stores/Stores';
 
@@ -59,6 +60,7 @@ interface ChoosePaymentMethodProps {
     UTXOsStore?: UTXOsStore;
     InvoicesStore?: InvoicesStore;
     SwapStore?: SwapStore;
+    SettingsStore?: SettingsStore;
 }
 
 interface ChoosePaymentMethodState {
@@ -77,7 +79,8 @@ interface ChoosePaymentMethodState {
     'CashuStore',
     'UTXOsStore',
     'InvoicesStore',
-    'SwapStore'
+    'SwapStore',
+    'SettingsStore'
 )
 @observer
 export default class ChoosePaymentMethod extends React.Component<
@@ -239,42 +242,120 @@ export default class ChoosePaymentMethod extends React.Component<
         return input >= min && input <= max;
     }
 
+    isAmountValidToSwapForReverse(satAmount?: string): boolean {
+        const { SwapStore } = this.props;
+        const amount = satAmount ?? this.state.satAmount;
+
+        if (!SwapStore || !amount) return false;
+
+        const reverseInfo: SubmarineSwapInfo = SwapStore.reverseInfo as any;
+        if (!reverseInfo || Object.keys(reverseInfo).length === 0) return false;
+
+        const serviceFeePct = reverseInfo.fees?.percentage ?? 0;
+        const minerFees = reverseInfo.fees?.minerFees as
+            | number
+            | { claim?: number; lockup?: number }
+            | undefined;
+        const networkFee =
+            typeof minerFees === 'object' && minerFees !== null
+                ? Number(minerFees.claim ?? 0) + Number(minerFees.lockup ?? 0)
+                : Number(minerFees ?? 0);
+        const reverse = true;
+
+        const min = calculateLimit(
+            reverseInfo.limits?.minimal ?? 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+        const max = calculateLimit(
+            reverseInfo.limits?.maximal ?? 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+        const amountNum = Number(amount) || 0;
+        return amountNum >= min && amountNum <= max;
+    }
+
     navigateToSwaps = () => {
-        const { navigation } = this.props;
-        const { lightning, satAmount } = this.state;
+        const { navigation, BalanceStore, CashuStore, SettingsStore } =
+            this.props;
+        const { value, lightning, satAmount } = this.state;
+
         const amountNum = Number(satAmount);
-        if (!lightning || !satAmount || isNaN(amountNum) || amountNum <= 0) {
+
+        // No amount, or user has sufficient funds → let them choose swap type
+        if (this.hasInsufficientFunds()) {
+            navigation.navigate('Swaps');
             return;
         }
-        navigation.navigate('Swaps', {
-            initialInvoice: lightning,
-            initialAmountSats: satAmount.toString(),
-            initialReverse: false // OnChain -> LN for paying a LN invoice
-        });
+
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBalanceSats: ecashBalance } = CashuStore!;
+        const { enableCashu } = SettingsStore?.settings?.ecash ?? {};
+
+        const onchain = Number(totalBlockchainBalance);
+        const lightning_ = Number(lightningBalance);
+        const ecash = enableCashu ? Number(ecashBalance) : 0;
+
+        const hasOnchain = onchain >= amountNum;
+        const hasLightningOrEcash =
+            lightning_ >= amountNum || ecash >= amountNum;
+        const hasOnchainPayment =
+            !!value && BackendUtils.supportsOnchainReceiving();
+
+        // Lightning/ecash unavailable, on-chain has funds → submarine (OnChain → LN)
+        if (
+            lightning &&
+            !hasLightningOrEcash &&
+            hasOnchain &&
+            this.isAmountValidToSwap(satAmount)
+        ) {
+            navigation.navigate('Swaps', {
+                initialInvoice: lightning,
+                initialAmountSats: satAmount,
+                initialReverse: false
+            });
+            return;
+        }
+
+        // On-chain unavailable, Lightning/ecash has funds → reverse (LN → OnChain)
+        if (
+            hasOnchainPayment &&
+            !hasOnchain &&
+            hasLightningOrEcash &&
+            this.isAmountValidToSwapForReverse(satAmount)
+        ) {
+            navigation.navigate('Swaps', {
+                initialInvoice: value,
+                initialAmountSats: satAmount,
+                initialReverse: true
+            });
+            return;
+        }
+
+        navigation.navigate('Swaps');
     };
 
     private renderSwapIconButton = () => (
-        <TouchableOpacity onPress={this.navigateToSwaps} style={{ padding: 8 }}>
-            <SwapIcon
-                fill={themeColor('text')}
-                width="36"
-                height="26"
-                style={{ alignSelf: 'center' }}
-            />
+        <TouchableOpacity onPress={this.navigateToSwaps}>
+            <SwapIcon fill={themeColor('text')} width="36" height="26" />
         </TouchableOpacity>
     );
 
     hasInsufficientFunds = () => {
-        const { BalanceStore, CashuStore } = this.props;
+        const { BalanceStore, CashuStore, SettingsStore } = this.props;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats: ecashBalance } = CashuStore!;
+        const { enableCashu } = SettingsStore?.settings?.ecash ?? {};
         const { value, lightning, lightningAddress, offer, lnurlParams } =
             this.state;
         const satAmount = Number(this.state.satAmount);
 
         const onchain = Number(totalBlockchainBalance);
         const lightning_ = Number(lightningBalance);
-        const ecash = Number(ecashBalance);
+        const ecash = enableCashu ? Number(ecashBalance) : 0;
         const total = onchain + lightning_ + ecash;
 
         if (total === 0) return true;
@@ -341,11 +422,9 @@ export default class ChoosePaymentMethod extends React.Component<
             showFees &&
             !!settingsStore?.settings?.privacy?.enableMempoolRates;
 
-        const canSwap =
-            validAmountToSwap &&
-            lightning &&
-            satAmount &&
-            Number(satAmount) > 0;
+        const validAmountForReverse =
+            this.isAmountValidToSwapForReverse(satAmount);
+        const canSwap = validAmountToSwap || validAmountForReverse;
 
         return (
             <Screen>
