@@ -678,7 +678,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     showRescueKeyBtn: true
                                 });
 
-                                navigation.navigate('Seed', {
+                                navigation.navigate('SwapsRescueKey', {
                                     seedPhrase: mnemonic.split(' ')
                                 });
                             }}
@@ -695,7 +695,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     isModalVisible: false,
                                     isIntroModalVisible: false
                                 });
-                                navigation.navigate('SeedRecovery', {
+                                navigation.navigate('SwapsRecovery', {
                                     restoreRescueKey: true
                                 });
                             }}
@@ -795,7 +795,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
                     <KeyIcon
                         onPress={() => {
-                            navigation.navigate('Seed', {
+                            navigation.navigate('SwapsRescueKey', {
                                 seedPhrase: this.state.seedPhrase
                             });
                         }}

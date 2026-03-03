@@ -290,7 +290,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         )}
                         secondary
                         onPress={async () => {
-                            navigation.navigate('SeedRecovery', {
+                            navigation.navigate('SwapsRecovery', {
                                 restoreSwaps: true
                             });
                         }}
