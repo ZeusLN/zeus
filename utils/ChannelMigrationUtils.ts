@@ -1,4 +1,4 @@
-import { Alert, Platform, NativeModules } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import Share from 'react-native-share';
 import RNRestart from 'react-native-restart';
@@ -6,7 +6,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import * as CryptoJS from 'crypto-js';
 
 import { localeString } from './LocaleUtils';
-import { sleep } from '../utils/SleepUtils';
+import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
@@ -132,8 +132,7 @@ export const uploadChannelBackupToOlympus = async (
 
                 try {
                     console.log('Stopping LND for backup...');
-                    await NativeModules.LndMobile.stopLnd();
-                    await sleep(5000);
+                    await stopLnd();
                 } catch (e) {
                     console.log('LND Stop Error', e);
                 }
@@ -391,8 +390,7 @@ export const restoreChannelBackupFromOlympus = async (
         // 5. Stop LND before overwriting the active database
         try {
             console.log('Stopping LND for restore...');
-            await NativeModules.LndMobile.stopLnd();
-            await sleep(5000);
+            await stopLnd();
         } catch (e) {
             console.log('LND Stop Error', e);
         }
@@ -476,8 +474,7 @@ export const exportChannelDb = async (
         }
 
         try {
-            await NativeModules.LndMobile.stopLnd();
-            await sleep(5000);
+            await stopLnd();
         } catch (e: any) {
             if (e?.message?.includes?.('closed')) {
                 console.log('LND stopped successfully.');
@@ -494,7 +491,12 @@ export const exportChannelDb = async (
         const backupFileName = `zeus-channels-${
             isTestnet ? 'testnet' : 'mainnet'
         }-${Date.now()}.${extension}`;
-        const stagingPath = `${RNFS.DocumentDirectoryPath}/${backupFileName}`;
+
+        const stagingDir =
+            Platform.OS === 'android'
+                ? RNFS.CachesDirectoryPath
+                : RNFS.DocumentDirectoryPath;
+        const stagingPath = `${stagingDir}/${backupFileName}`;
 
         if (await RNFS.exists(stagingPath)) {
             await RNFS.unlink(stagingPath);
@@ -504,39 +506,55 @@ export const exportChannelDb = async (
 
         if (setLoading) setLoading(false);
 
-        const shareResult = await Share.open({
-            title: localeString('views.Tools.migration.export.title'),
-            url: `file://${stagingPath}`,
-            type: 'application/octet-stream',
-            filename: backupFileName,
-            failOnCancel: false
-        });
+        try {
+            const shareResult = await Share.open({
+                title: localeString('views.Tools.migration.export.title'),
+                url: `file://${stagingPath}`,
+                type: 'application/octet-stream',
+                filename: backupFileName,
+                failOnCancel: false
+            });
 
-        const isDismissed =
-            shareResult.dismissedAction || shareResult.success === false;
+            const isDismissed =
+                shareResult.dismissedAction || shareResult.success === false;
 
-        if (isDismissed) {
+            if (isDismissed) {
+                await RNFS.unlink(stagingPath);
+                return;
+            }
+
+            await Storage.setItem(
+                CHANNEL_MIGRATION_ACTIVE,
+                JSON.stringify({ migrationStatus: true, lndDir })
+            );
             await RNFS.unlink(stagingPath);
-            return;
+
+            Alert.alert(
+                localeString('views.Tools.migration.export.success'),
+                localeString('views.Tools.migration.export.success.text'),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+        } catch (err: any) {
+            if (await RNFS.exists(stagingPath)) {
+                await RNFS.unlink(stagingPath);
+            }
+
+            const errorMsg = err?.message || String(err);
+            if (
+                errorMsg.includes('User did not share') ||
+                errorMsg.includes('cancel')
+            ) {
+                return;
+            }
+
+            throw err;
         }
-
-        await Storage.setItem(
-            CHANNEL_MIGRATION_ACTIVE,
-            JSON.stringify({ migrationStatus: true, lndDir })
-        );
-        await RNFS.unlink(stagingPath);
-
-        Alert.alert(
-            localeString('views.Tools.migration.export.success'),
-            localeString('views.Tools.migration.export.success.text'),
-            [
-                {
-                    text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
-                }
-            ],
-            { cancelable: false }
-        );
     } catch (error) {
         console.error('Export Failed:', error);
         if (setLoading) setLoading(false);
