@@ -150,6 +150,17 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                     nodeSubtitle += ' [Bolt]';
                 }
             }
+
+            if (selectedNode.implementation === 'embedded-ldk-node') {
+                if (selectedNode.embeddedLdkNetwork) {
+                    nodeSubtitle += ` (${
+                        selectedNode.embeddedLdkNetwork
+                            .charAt(0)
+                            .toUpperCase() +
+                        selectedNode.embeddedLdkNetwork.slice(1)
+                    })`;
+                }
+            }
         }
 
         const youveGotSats = LightningAddressStore.paid?.length > 0;
