@@ -221,6 +221,7 @@ class BackendUtils {
         this.call('supportsBolt11BlindedRoutes');
     supportsAddressesWithDerivationPaths = () =>
         this.call('supportsAddressesWithDerivationPaths');
+    supportsCustomFeeLimit = () => this.call('supportsCustomFeeLimit');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
     supportsAddressMessageSigning = () =>
