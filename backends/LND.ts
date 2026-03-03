@@ -871,6 +871,7 @@ export default class LND {
     supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
+    supportsMessageVerification = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
