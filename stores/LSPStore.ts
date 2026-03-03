@@ -50,8 +50,8 @@ export default class LSPStore {
     @observable public createOrderResponse: any = {};
     @observable public getOrderResponse: any = {};
     // LSPS7
-    @observable public getExtendableOrdersId: string;
-    @observable public getExtendableOrdersData: any = [];
+    @observable public getExtendableChannelsId: string;
+    @observable public getExtendableChannelsData: any = [];
     @observable public createExtensionOrderId: string;
     @observable public createExtensionOrderResponse: any = {};
     @observable public getExtensionOrderId: string;
@@ -75,7 +75,8 @@ export default class LSPStore {
             () => {
                 const lspPubkey = this.getLSPSPubkey();
                 if (
-                    BackendUtils.supportsLSPScustomMessage() &&
+                    (BackendUtils.supportsLSPScustomMessage() ||
+                        BackendUtils.supportsLSPS7native()) &&
                     lspPubkey &&
                     this.channelsStore.channels.some(
                         (channel: { remotePubkey: string }) =>
@@ -479,14 +480,15 @@ export default class LSPStore {
             }
             this.loadingLSPS1 = false;
             return true;
-        } else if (data.id === this.getExtendableOrdersId) {
+        } else if (data.id === this.getExtendableChannelsId) {
             if (data.error) {
                 this.error = true;
                 this.error_msg = data?.error?.message
                     ? errorToUserFriendly(data?.error?.message)
                     : '';
             } else {
-                this.getExtendableOrdersData = data?.result?.extendable_orders;
+                this.getExtendableChannelsData =
+                    data?.result?.extendable_channels;
             }
             this.loadingLSPS7 = false;
             return true;
@@ -962,11 +964,45 @@ export default class LSPStore {
     // LSPS7
 
     @action
-    public getExtendableChannels = () => {
+    public getExtendableChannels = async () => {
         this.error = false;
         this.error_msg = '';
 
-        this.getExtendableOrdersId = uuidv4();
+        // Use native LSPS7 method if available (LDK Node backend)
+        if (BackendUtils.supportsLSPS7native()) {
+            try {
+                const channels =
+                    await BackendUtils.lsps7GetExtendableChannels();
+                // Normalize camelCase keys from native module to snake_case
+                // to match the JSON-RPC custom message format
+                runInAction(() => {
+                    this.getExtendableChannelsData = channels.map(
+                        (ch: any) => ({
+                            short_channel_id: ch.shortChannelId,
+                            max_channel_extension_expiry_blocks:
+                                ch.maxChannelExtensionExpiryBlocks,
+                            expiration_block: ch.expirationBlock,
+                            original_order: ch.originalOrder,
+                            extension_order_ids: ch.extensionOrderIds
+                        })
+                    );
+                    this.loadingLSPS7 = false;
+                });
+                return;
+            } catch (error: any) {
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg =
+                        error?.message ||
+                        localeString('error.getExtendableChannels');
+                    this.loadingLSPS7 = false;
+                });
+                return;
+            }
+        }
+
+        // Fall back to custom message for other backends
+        this.getExtendableChannelsId = uuidv4();
         const method = 'lsps7.get_extendable_channels';
 
         this.sendCustomMessage({
@@ -976,7 +1012,7 @@ export default class LSPStore {
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {},
-                id: this.getExtendableOrdersId
+                id: this.getExtendableChannelsId
             })
         })
             .then((response) => {
@@ -991,11 +1027,37 @@ export default class LSPStore {
     };
 
     @action
-    public lsps7CreateOrderCustomMessage = (state: any) => {
+    public lsps7CreateOrderCustomMessage = async (state: any) => {
         this.loadingLSPS7 = true;
         this.error = false;
         this.error_msg = '';
 
+        // Use native LSPS7 method if available (LDK Node backend)
+        if (BackendUtils.supportsLSPS7native()) {
+            try {
+                const response = await BackendUtils.lsps7CreateOrder({
+                    shortChannelId: state.chanId,
+                    channelExtensionExpiryBlocks: state.channelExtensionBlocks,
+                    token: state.token,
+                    refundOnchainAddress: state.refundOnchainAddress
+                });
+                runInAction(() => {
+                    this.createExtensionOrderResponse = { result: response };
+                    this.loadingLSPS7 = false;
+                });
+                return;
+            } catch (error: any) {
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg =
+                        error?.message || localeString('error.createOrder');
+                    this.loadingLSPS7 = false;
+                });
+                return;
+            }
+        }
+
+        // Fall back to custom message for other backends
         this.createExtensionOrderId = uuidv4();
         const method = 'lsps7.create_order';
 
@@ -1031,9 +1093,35 @@ export default class LSPStore {
     };
 
     @action
-    public lsps7GetOrderCustomMessage(orderId: string, peer: string) {
+    public lsps7GetOrderCustomMessage = async (
+        orderId: string,
+        peer: string
+    ) => {
         this.loadingLSPS7 = true;
 
+        // Use native LSPS7 method if available (LDK Node backend)
+        if (BackendUtils.supportsLSPS7native()) {
+            try {
+                const response = await BackendUtils.lsps7CheckOrderStatus(
+                    orderId
+                );
+                runInAction(() => {
+                    this.getExtensionOrderResponse = { result: response };
+                    this.loadingLSPS7 = false;
+                });
+                return;
+            } catch (error: any) {
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg =
+                        error?.message || localeString('error.getOrderStatus');
+                    this.loadingLSPS7 = false;
+                });
+                return;
+            }
+        }
+
+        // Fall back to custom message for other backends
         this.getExtensionOrderId = uuidv4();
         const method = 'lsps7.get_order';
 
@@ -1061,5 +1149,5 @@ export default class LSPStore {
                     error
                 );
             });
-    }
+    };
 }

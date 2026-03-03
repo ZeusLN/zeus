@@ -198,6 +198,7 @@ export interface ChannelDetails {
     forceCloseSpendDelay?: number;
     inboundHtlcMinimumMsat: number;
     inboundHtlcMaximumMsat?: number;
+    shortChannelId?: string;
 }
 
 export interface ClosedChannelDetails {
@@ -403,6 +404,34 @@ export interface Lsps1OrderStatus {
 }
 
 // ============================================================================
+// LSPS7 Types
+// ============================================================================
+
+export type Lsps7OrderState = 'created' | 'completed' | 'failed';
+
+export interface Lsps7OriginalOrder {
+    id: string;
+    service: string;
+}
+
+export interface Lsps7ExtendableChannel {
+    shortChannelId: string;
+    maxChannelExtensionExpiryBlocks: number;
+    expirationBlock: number;
+    originalOrder?: Lsps7OriginalOrder;
+    extensionOrderIds?: string[];
+}
+
+export interface Lsps7OrderResponse {
+    orderId: string;
+    orderState: Lsps7OrderState;
+    channelExtensionExpiryBlocks: number;
+    newChannelExpiryBlock: number;
+    paymentInfo: Lsps1PaymentInfo;
+    channel: Lsps7ExtendableChannel;
+}
+
+// ============================================================================
 // Module Interface
 // ============================================================================
 
@@ -458,6 +487,11 @@ export interface ILdkNodeModule {
     closeChannel(
         userChannelId: string,
         counterpartyNodeId: string
+    ): Promise<void>;
+    forceCloseChannel(
+        userChannelId: string,
+        counterpartyNodeId: string,
+        reason: string
     ): Promise<void>;
 
     // On-chain Methods

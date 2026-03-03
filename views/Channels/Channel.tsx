@@ -111,7 +111,7 @@ export default class ChannelView extends React.Component<
 
         const currentBlockHeight = NodeInfoStore.nodeInfo.currentBlockHeight;
 
-        const renewalInfo = LSPStore.getExtendableOrdersData?.filter(
+        const renewalInfo = LSPStore.getExtendableChannelsData?.filter(
             (extendableChannel: any) => {
                 return (
                     extendableChannel.short_channel_id ===
