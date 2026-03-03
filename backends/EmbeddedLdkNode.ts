@@ -771,6 +771,7 @@ export default class EmbeddedLdkNode {
      */
     closeChannel = async (urlParams?: Array<string>): Promise<any> => {
         const fundingTxid = (urlParams && urlParams[0]) || '';
+        const forceClose = urlParams && urlParams[2] ? true : false;
 
         const channels = await LdkNode.channel.listChannels();
         const channel = channels.find((c) => c.fundingTxo_txid === fundingTxid);
@@ -781,10 +782,17 @@ export default class EmbeddedLdkNode {
             );
         }
 
-        await LdkNode.channel.closeChannel({
-            userChannelId: channel.userChannelId,
-            counterpartyNodeId: channel.counterpartyNodeId
-        });
+        if (forceClose) {
+            await LdkNode.channel.forceCloseChannel({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId
+            });
+        } else {
+            await LdkNode.channel.closeChannel({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId
+            });
+        }
 
         return { success: true };
     };
@@ -1526,11 +1534,10 @@ export default class EmbeddedLdkNode {
             channel_point: channel.fundingTxo_txid
                 ? `${channel.fundingTxo_txid}:${channel.fundingTxo_vout}`
                 : '',
-            // Use channel_id (not chan_id) to avoid chanFormat conversion issues
-            // LDK channelId is a hex string, not a numeric short channel ID
+            // chan_id is the numeric SCID (used by chanFormat for NNNxNNNxNNN)
+            chan_id: channel.shortChannelId || '',
+            // channel_id is the 32-byte hex channel ID
             channel_id: channel.channelId,
-            // Provide short_channel_id directly to prevent chanFormat crash
-            short_channel_id: channel.channelId,
             capacity: channel.channelValueSats.toString(),
             local_balance: localBalanceSats.toString(),
             remote_balance: remoteBalanceSats.toString(),
