@@ -1697,6 +1697,7 @@ export default class EmbeddedLdkNode {
     // ========================================================================
 
     supportsMessageSigning = () => true;
+    supportsMessageVerification = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;

@@ -420,6 +420,7 @@ export default class EmbeddedLND extends LND {
     supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
+    supportsMessageVerification = () => true;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
