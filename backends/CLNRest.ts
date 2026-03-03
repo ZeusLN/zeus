@@ -630,6 +630,7 @@ export default class CLNRest {
     supportsOffers = () => true;
     supportsListingOffers = () => true;
     supportsBolt12Address = () => true;
+    supportsCustomFeeLimit = () => false;
     isLNDBased = () => false;
     supportsForwardingHistory = () => true;
     supportInboundFees = () => false;

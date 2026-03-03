@@ -935,15 +935,28 @@ export default class EmbeddedLdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
+        const maxTotalRoutingFeeMsat = data.fee_limit_sat
+            ? Number(data.fee_limit_sat) * 1000
+            : undefined;
+        const maxPathCount = data.max_parts
+            ? Number(data.max_parts)
+            : undefined;
+
         let paymentId: string;
 
         if (data.amt) {
             paymentId = await LdkNode.bolt11.sendBolt11UsingAmount({
                 invoice: data.payment_request,
-                amountMsat: Number(data.amt) * 1000
+                amountMsat: Number(data.amt) * 1000,
+                maxTotalRoutingFeeMsat,
+                maxPathCount
             });
         } else {
-            paymentId = await LdkNode.bolt11.sendBolt11(data.payment_request);
+            paymentId = await LdkNode.bolt11.sendBolt11({
+                invoice: data.payment_request,
+                maxTotalRoutingFeeMsat,
+                maxPathCount
+            });
         }
 
         const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
@@ -962,10 +975,18 @@ export default class EmbeddedLdkNode {
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
         const amt = Number(data.amt);
+        const maxTotalRoutingFeeMsat = data.fee_limit_sat
+            ? Number(data.fee_limit_sat) * 1000
+            : undefined;
+        const maxPathCount = data.max_parts
+            ? Number(data.max_parts)
+            : undefined;
 
         const paymentId = await LdkNode.spontaneous.sendSpontaneousPayment({
             nodeId: pubkey,
-            amountMsat: amt * 1000
+            amountMsat: amt * 1000,
+            maxTotalRoutingFeeMsat,
+            maxPathCount
         });
 
         const { hash, preimage } = await this.awaitPaymentCompletion(paymentId);
@@ -1710,6 +1731,7 @@ export default class EmbeddedLdkNode {
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
+    supportsCustomFeeLimit = () => true;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;
