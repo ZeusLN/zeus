@@ -51,6 +51,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
+import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
 import NavigationService from '../NavigationService';
 
@@ -2847,6 +2848,10 @@ export default class CashuStore {
                         (Date.now() - this.paymentStartTime) / 1000;
                 }
             });
+
+            setTimeout(() => {
+                this.modalStore.checkAndTriggerRatingModal();
+            }, RATING_MODAL_TRIGGER_DELAY);
 
             return payment;
         } catch (err: any) {

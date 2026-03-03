@@ -1,0 +1,27 @@
+import { Linking, Platform } from 'react-native';
+
+export const APP_STORE_ID = '1456038895';
+export const ANDROID_PACKAGE = 'app.zeusln.zeus';
+
+export const LOW_RATING_THRESHOLD = 2;
+export const RATING_MODAL_TRIGGER_DELAY = 1000;
+export const RATING_REPROMPT_INTERVAL = 10;
+
+export const RATING_DISMISSED_KEY = 'ratingDismissedPermanently';
+export const PAYMENT_COUNT_KEY = 'successfulPaymentCount';
+
+export const openStoreForReview = async () => {
+    const url =
+        Platform.OS === 'ios'
+            ? `itms-apps://itunes.apple.com/app/id${APP_STORE_ID}?action=write-review`
+            : `market://details?id=${ANDROID_PACKAGE}`;
+
+    try {
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+            await Linking.openURL(url);
+        }
+    } catch (error) {
+        console.error('An error occurred while opening store URL', error);
+    }
+};

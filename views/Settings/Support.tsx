@@ -1,6 +1,8 @@
 import * as React from 'react';
+
 import { FlatList, Platform, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
+
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
@@ -9,6 +11,7 @@ import Screen from '../../components/Screen';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { openStoreForReview } from '../../utils/RatingUtils';
 
 import { nodeInfoStore } from '../../stores/Stores';
 
@@ -47,6 +50,10 @@ function Support(props: SupportProps) {
         {
             label: localeString('views.Settings.SocialMedia.title'),
             path: 'SocialMedia'
+        },
+        {
+            label: localeString('views.Settings.Support.reviewOnAppstore'),
+            action: openStoreForReview
         }
     ];
 
@@ -76,6 +83,7 @@ function Support(props: SupportProps) {
                         onPress={() => {
                             if (item.path) navigation.navigate(item.path);
                             if (item.url) UrlUtils.goToUrl(item.url);
+                            if (item.action) item.action();
                         }}
                     >
                         <ListItem.Content>
