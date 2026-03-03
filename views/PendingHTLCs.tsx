@@ -99,9 +99,13 @@ export default class PendingHTLCs extends React.PureComponent<
                             const displayName = item.incoming
                                 ? localeString('views.PendingHTLCs.incoming')
                                 : localeString('views.PendingHTLCs.outgoing');
-                            const subTitle = `${localeString(
-                                'views.PendingHTLCs.expirationHeight'
-                            )}: ${numberWithCommas(item.expiration_height)}`;
+                            const subTitle = item.expiration_height
+                                ? `${localeString(
+                                      'views.PendingHTLCs.expirationHeight'
+                                  )}: ${numberWithCommas(
+                                      item.expiration_height
+                                  )}`
+                                : '';
 
                             return (
                                 <React.Fragment>
