@@ -242,8 +242,8 @@ export default class SeedRecovery extends React.PureComponent<
 
         let nodes: any;
         if (settings.nodes) {
-            nodes = settings.nodes || [];
-            nodes[nodes.length] = node;
+            nodes = [...settings.nodes];
+            nodes.push(node);
         } else {
             nodes = [node];
         }
@@ -296,8 +296,8 @@ export default class SeedRecovery extends React.PureComponent<
 
         let nodes: any;
         if (settings.nodes) {
-            nodes = settings.nodes || [];
-            nodes[nodes.length] = node;
+            nodes = [...settings.nodes];
+            nodes.push(node);
         } else {
             nodes = [node];
         }
