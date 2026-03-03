@@ -20,7 +20,10 @@ import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
-import SwapStore from '../stores/SwapStore';
+import SwapStore, {
+    ReverseSwapInfo,
+    SubmarineSwapInfo
+} from '../stores/SwapStore';
 import SettingsStore from '../stores/SettingsStore';
 
 import { feeStore, settingsStore } from '../stores/Stores';
@@ -31,17 +34,6 @@ import BackendUtils from '../utils/BackendUtils';
 import { calculateLimit } from '../utils/SwapUtils';
 import Invoice from '../models/Invoice';
 import SwapIcon from '../assets/images/SVG/Swap.svg';
-
-interface SubmarineSwapInfo {
-    fees?: {
-        percentage?: number;
-        minerFees?: number;
-    };
-    limits?: {
-        minimal?: number;
-        maximal?: number;
-    };
-}
 
 interface RouteParams {
     value: string;
@@ -195,15 +187,15 @@ export default class ChoosePaymentMethod extends React.Component<
     };
 
     private getSwapLimits(
-        info: SubmarineSwapInfo,
+        info: SubmarineSwapInfo | ReverseSwapInfo,
         reverse: boolean
     ): { min: number; max: number } {
         const serviceFeePct = info.fees?.percentage ?? 0;
         const rawMinerFees = info.fees?.minerFees;
         const networkFee =
             typeof rawMinerFees === 'object' && rawMinerFees !== null
-                ? Number((rawMinerFees as any).claim ?? 0) +
-                  Number((rawMinerFees as any).lockup ?? 0)
+                ? Number(rawMinerFees.claim ?? 0) +
+                  Number(rawMinerFees.lockup ?? 0)
                 : Number(rawMinerFees ?? 0);
 
         return {
@@ -229,16 +221,27 @@ export default class ChoosePaymentMethod extends React.Component<
         const amount = Number(satAmount ?? this.state.satAmount) || 0;
         if (!SwapStore || !amount) return false;
 
-        const info: SubmarineSwapInfo = reverse
+        const info: SubmarineSwapInfo | ReverseSwapInfo = reverse
             ? SwapStore.reverseInfo
             : SwapStore.subInfo;
 
         if (!info || Object.keys(info).length === 0) return false;
 
         const { min, max } = this.getSwapLimits(info, reverse);
+        const rawMinerFees = info.fees?.minerFees;
+        const networkFee =
+            typeof rawMinerFees === 'object' && rawMinerFees !== null
+                ? Number(rawMinerFees.claim ?? 0) +
+                  Number(rawMinerFees.lockup ?? 0)
+                : Number(rawMinerFees ?? 0);
         const input = reverse
             ? amount
-            : calculateLimit(amount, info.fees?.percentage ?? 0, 0, false);
+            : calculateLimit(
+                  amount,
+                  info.fees?.percentage ?? 0,
+                  networkFee,
+                  false
+              );
 
         return input >= min && input <= max;
     }

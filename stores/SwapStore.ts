@@ -30,9 +30,35 @@ import Storage from '../storage';
 
 import Swap, { SwapState, SwapType } from '../models/Swap';
 
+interface SwapLimits {
+    minimal?: number;
+    maximal?: number;
+}
+
+// ─── Submarine (OnChain → LN) ─────
+export interface SubmarineSwapInfo {
+    fees?: {
+        percentage?: number;
+        minerFees?: number;
+    };
+    limits?: SwapLimits;
+}
+
+// ─── Reverse (LN → OnChain) ─────
+export interface ReverseSwapInfo {
+    fees?: {
+        percentage?: number;
+        minerFees?: {
+            claim?: number;
+            lockup?: number;
+        };
+    };
+    limits?: SwapLimits;
+}
+
 export default class SwapStore {
-    @observable public subInfo = {};
-    @observable public reverseInfo = {};
+    @observable public subInfo: SubmarineSwapInfo = {};
+    @observable public reverseInfo: ReverseSwapInfo = {};
     @observable public loading = true;
     @observable public apiError = '';
     @observable public swaps: any = [];
