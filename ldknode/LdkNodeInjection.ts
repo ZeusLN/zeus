@@ -15,7 +15,9 @@ import type {
     PeerDetails,
     LdkNodeEvent,
     Lsps1OrderResponse,
-    Lsps1OrderStatus
+    Lsps1OrderStatus,
+    Lsps7ExtendableChannel,
+    Lsps7OrderResponse
 } from './LdkNode.d';
 
 const { LdkNodeModule } = NativeModules;
@@ -78,6 +80,22 @@ const setLiquiditySourceLsps2 = async ({
     token?: string | null;
 }): Promise<void> => {
     return await LdkNodeModule.setLiquiditySourceLsps2(
+        nodeId,
+        address,
+        token ?? null
+    );
+};
+
+const setLiquiditySourceLsps7 = async ({
+    nodeId,
+    address,
+    token
+}: {
+    nodeId: string;
+    address: string;
+    token?: string | null;
+}): Promise<void> => {
+    return await LdkNodeModule.setLiquiditySourceLsps7(
         nodeId,
         address,
         token ?? null
@@ -209,6 +227,22 @@ const closeChannel = async ({
     counterpartyNodeId: string;
 }): Promise<void> => {
     return await LdkNodeModule.closeChannel(userChannelId, counterpartyNodeId);
+};
+
+const forceCloseChannel = async ({
+    userChannelId,
+    counterpartyNodeId,
+    reason
+}: {
+    userChannelId: string;
+    counterpartyNodeId: string;
+    reason?: string;
+}): Promise<void> => {
+    return await LdkNodeModule.forceCloseChannel(
+        userChannelId,
+        counterpartyNodeId,
+        reason ?? ''
+    );
 };
 
 // ============================================================================
@@ -526,6 +560,41 @@ const lsps1CheckOrderStatus = async (
 };
 
 // ============================================================================
+// LSPS7 Functions
+// ============================================================================
+
+const lsps7GetExtendableChannels = async (): Promise<
+    Lsps7ExtendableChannel[]
+> => {
+    return await LdkNodeModule.lsps7GetExtendableChannels();
+};
+
+const lsps7CreateOrder = async ({
+    shortChannelId,
+    channelExtensionExpiryBlocks,
+    token,
+    refundOnchainAddress
+}: {
+    shortChannelId: string;
+    channelExtensionExpiryBlocks: number;
+    token?: string | null;
+    refundOnchainAddress?: string | null;
+}): Promise<Lsps7OrderResponse> => {
+    return await LdkNodeModule.lsps7CreateOrder(
+        shortChannelId,
+        channelExtensionExpiryBlocks,
+        token ?? null,
+        refundOnchainAddress ?? null
+    );
+};
+
+const lsps7CheckOrderStatus = async (
+    orderId: string
+): Promise<Lsps7OrderResponse> => {
+    return await LdkNodeModule.lsps7CheckOrderStatus(orderId);
+};
+
+// ============================================================================
 // Message Signing Functions
 // ============================================================================
 
@@ -646,6 +715,18 @@ const initializeNode = async ({
         } catch (e) {
             console.log('LDK Node: LSPS2 configuration failed');
         }
+
+        // Also configure LSPS7 with the same LSP for channel lease extensions
+        try {
+            await setLiquiditySourceLsps7({
+                nodeId: lsps1Config.nodeId,
+                address: lsps1Config.address,
+                token: lsps1Config.token
+            });
+            console.log('LDK Node: LSPS7 liquidity source configured');
+        } catch (e) {
+            console.log('LDK Node: LSPS7 configuration failed');
+        }
     }
 
     // Set trusted peers for zero-conf channels (e.g., LSP)
@@ -746,6 +827,11 @@ export interface ILdkNodeInjections {
             userChannelId: string;
             counterpartyNodeId: string;
         }) => Promise<void>;
+        forceCloseChannel: (params: {
+            userChannelId: string;
+            counterpartyNodeId: string;
+            reason?: string;
+        }) => Promise<void>;
     };
     onchain: {
         newOnchainAddress: () => Promise<string>;
@@ -845,6 +931,16 @@ export interface ILdkNodeInjections {
         }) => Promise<Lsps1OrderResponse>;
         checkOrderStatus: (orderId: string) => Promise<Lsps1OrderStatus>;
     };
+    lsps7: {
+        getExtendableChannels: () => Promise<Lsps7ExtendableChannel[]>;
+        createOrder: (params: {
+            shortChannelId: string;
+            channelExtensionExpiryBlocks: number;
+            token?: string | null;
+            refundOnchainAddress?: string | null;
+        }) => Promise<Lsps7OrderResponse>;
+        checkOrderStatus: (orderId: string) => Promise<Lsps7OrderResponse>;
+    };
     signing: {
         signMessage: (message: string) => Promise<string>;
         verifySignature: (params: {
@@ -914,7 +1010,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
         listChannels,
         listClosedChannels,
         openChannel,
-        closeChannel
+        closeChannel,
+        forceCloseChannel
     },
     onchain: {
         newOnchainAddress,
@@ -954,6 +1051,11 @@ const LdkNodeInjection: ILdkNodeInjections = {
     lsps1: {
         requestChannel: lsps1RequestChannel,
         checkOrderStatus: lsps1CheckOrderStatus
+    },
+    lsps7: {
+        getExtendableChannels: lsps7GetExtendableChannels,
+        createOrder: lsps7CreateOrder,
+        checkOrderStatus: lsps7CheckOrderStatus
     },
     signing: {
         signMessage,

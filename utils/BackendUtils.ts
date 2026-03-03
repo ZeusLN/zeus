@@ -142,6 +142,13 @@ class BackendUtils {
     checkLsps1OrderStatus = (...args: any[]) =>
         this.call('checkLsps1OrderStatus', args);
 
+    // LSPS7 Native (for embedded LDK Node)
+    lsps7GetExtendableChannels = (...args: any[]) =>
+        this.call('lsps7GetExtendableChannels', args);
+    lsps7CreateOrder = (...args: any[]) => this.call('lsps7CreateOrder', args);
+    lsps7CheckOrderStatus = (...args: any[]) =>
+        this.call('lsps7CheckOrderStatus', args);
+
     // BOLT 12 / Offers
     listOffers = (...args: any[]) => this.call('listOffers', args);
     createOffer = (...args: any[]) => this.call('createOffer', args);
@@ -180,6 +187,7 @@ class BackendUtils {
     supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
     supportsLSPS1rest = () => this.call('supportsLSPS1rest');
     supportsLSPS1native = () => this.call('supportsLSPS1native');
+    supportsLSPS7native = () => this.call('supportsLSPS7native');
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainBalance = () => this.call('supportsOnchainBalance');

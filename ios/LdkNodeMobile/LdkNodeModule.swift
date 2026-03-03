@@ -605,6 +605,9 @@ class LdkNodeModule: RCTEventEmitter {
             if let inboundHtlcMaximumMsat = channel.inboundHtlcMaximumMsat {
                 result["inboundHtlcMaximumMsat"] = inboundHtlcMaximumMsat
             }
+            if let shortChannelId = channel.shortChannelId {
+                result["shortChannelId"] = String(shortChannelId)
+            }
             return result
         }
         resolve(["channels": channelList])
@@ -689,6 +692,20 @@ class LdkNodeModule: RCTEventEmitter {
 
         do {
             try node.closeChannel(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    func forceCloseChannel(_ userChannelId: String, counterpartyNodeId: String, reason: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.node else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.forceCloseChannel(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, reason: reason.isEmpty ? nil : reason)
             resolve(["status": "ok"])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1278,6 +1295,36 @@ class LdkNodeModule: RCTEventEmitter {
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId as Any,
                 "reason": reason.map { serializeClosureReason($0) } as Any
+            ]
+        case .paymentForwarded(let prevChannelId, let nextChannelId, let prevUserChannelId, let nextUserChannelId, let prevNodeId, let nextNodeId, let totalFeeEarnedMsat, let skimmedFeeMsat, let claimFromOnchainTx, let outboundAmountForwardedMsat):
+            return [
+                "type": "paymentForwarded",
+                "prevChannelId": prevChannelId,
+                "nextChannelId": nextChannelId,
+                "prevUserChannelId": prevUserChannelId as Any,
+                "nextUserChannelId": nextUserChannelId as Any,
+                "prevNodeId": prevNodeId as Any,
+                "nextNodeId": nextNodeId as Any,
+                "totalFeeEarnedMsat": totalFeeEarnedMsat as Any,
+                "skimmedFeeMsat": skimmedFeeMsat as Any,
+                "claimFromOnchainTx": claimFromOnchainTx,
+                "outboundAmountForwardedMsat": outboundAmountForwardedMsat as Any
+            ]
+        case .splicePending(let channelId, let userChannelId, let counterpartyNodeId, let newFundingTxo):
+            return [
+                "type": "splicePending",
+                "channelId": channelId,
+                "userChannelId": userChannelId,
+                "counterpartyNodeId": counterpartyNodeId,
+                "newFundingTxo": ["txid": newFundingTxo.txid, "vout": newFundingTxo.vout]
+            ]
+        case .spliceFailed(let channelId, let userChannelId, let counterpartyNodeId, let abandonedFundingTxo):
+            return [
+                "type": "spliceFailed",
+                "channelId": channelId,
+                "userChannelId": userChannelId,
+                "counterpartyNodeId": counterpartyNodeId,
+                "abandonedFundingTxo": abandonedFundingTxo.map { ["txid": $0.txid, "vout": $0.vout] } as Any
             ]
         default:
             return ["type": "unknown"]
