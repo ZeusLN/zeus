@@ -116,6 +116,7 @@ export default class LndHub extends LND {
 
     supportsPeers = () => false;
     supportsMessageSigning = () => false;
+    supportsMessageVerification = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => false;
     supportsOnchainSends = () => false;
