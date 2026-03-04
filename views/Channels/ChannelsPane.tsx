@@ -55,6 +55,12 @@ import Peer from '../../models/Peer';
 import ModalBox from '../../components/ModalBox';
 import { reaction } from 'mobx';
 
+const Tab = createBottomTabNavigator();
+
+const OPEN_TAB_ROUTE = 'open';
+const PENDING_TAB_ROUTE = 'pending';
+const CLOSED_TAB_ROUTE = 'closed';
+
 interface ChannelsProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
@@ -392,8 +398,6 @@ export default class ChannelsPane extends React.PureComponent<
     };
 
     render() {
-        const Tab = createBottomTabNavigator();
-
         const { ChannelsStore, navigation } = this.props;
         const {
             loading,
@@ -447,68 +451,76 @@ export default class ChannelsPane extends React.PureComponent<
             filteredClosedChannels
         );
 
-        const openChannelsTabName = `${localeString(
+        const openChannelsTabLabel = `${localeString(
             'views.Wallet.Wallet.open'
         )} (${filteredChannels?.length || 0})`;
 
-        const pendingChannelsTabName = `${localeString(
+        const pendingChannelsTabLabel = `${localeString(
             'views.Wallet.Wallet.pending'
         )} (${filteredPendingChannels?.length || 0})`;
 
-        const closedChannelsTabName = `${localeString(
+        const closedChannelsTabLabel = `${localeString(
             'views.Wallet.Wallet.closed'
         )} (${filteredClosedChannels?.length || 0})`;
 
-        let initialRoute;
-        if (channelsType === ChannelsType.Open) {
-            initialRoute = openChannelsTabName;
-        } else if (channelsType === ChannelsType.Pending) {
-            initialRoute = pendingChannelsTabName;
+        let initialRoute: string = OPEN_TAB_ROUTE;
+        if (channelsType === ChannelsType.Pending) {
+            initialRoute = PENDING_TAB_ROUTE;
         } else if (channelsType === ChannelsType.Closed) {
-            initialRoute = closedChannelsTabName;
+            initialRoute = CLOSED_TAB_ROUTE;
         }
 
-        const getTabScreenOptions = ({ route }: { route: any }) => ({
-            headerShown: false,
-            tabBarActiveTintColor: themeColor('text'),
-            tabBarInactiveTintColor: 'gray',
-            tabBarShowLabel: true,
-            tabBarStyle: {
-                backgroundColor: 'transparent',
-                elevation: 0,
-                borderTopWidth: 0.2,
-                borderTopColor: themeColor('secondaryText'),
-                paddingTop: 10,
-                paddingBottom: 10,
-                height: 70
-            },
-            tabBarItemStyle: {
-                justifyContent: 'center' as const
-            },
-            tabBarIconStyle: {
-                display: 'none' as const
-            },
-            tabBarLabel: ({
-                focused,
-                color
-            }: {
-                focused: boolean;
-                color: string;
-            }) => (
-                <Text
-                    style={{
-                        fontSize: 16,
-                        fontFamily: focused
-                            ? 'PPNeueMontreal-Medium'
-                            : 'PPNeueMontreal-Book',
-                        color
-                    }}
-                >
-                    {route.name}
-                </Text>
-            ),
-            animation: 'shift' as const
-        });
+        const getTabScreenOptions = ({ route }: { route: any }) => {
+            let label: string;
+            if (route.name === PENDING_TAB_ROUTE) {
+                label = pendingChannelsTabLabel;
+            } else if (route.name === CLOSED_TAB_ROUTE) {
+                label = closedChannelsTabLabel;
+            } else {
+                label = openChannelsTabLabel;
+            }
+            return {
+                headerShown: false,
+                tabBarActiveTintColor: themeColor('text'),
+                tabBarInactiveTintColor: 'gray',
+                tabBarShowLabel: true,
+                tabBarStyle: {
+                    backgroundColor: 'transparent',
+                    elevation: 0,
+                    borderTopWidth: 0.2,
+                    borderTopColor: themeColor('secondaryText'),
+                    paddingTop: 10,
+                    paddingBottom: 10,
+                    height: 70
+                },
+                tabBarItemStyle: {
+                    justifyContent: 'center' as const
+                },
+                tabBarIconStyle: {
+                    display: 'none' as const
+                },
+                tabBarLabel: ({
+                    focused,
+                    color
+                }: {
+                    focused: boolean;
+                    color: string;
+                }) => (
+                    <Text
+                        style={{
+                            fontSize: 16,
+                            fontFamily: focused
+                                ? 'PPNeueMontreal-Medium'
+                                : 'PPNeueMontreal-Book',
+                            color
+                        }}
+                    >
+                        {label}
+                    </Text>
+                ),
+                animation: 'shift' as const
+            };
+        };
 
         return (
             <View style={{ flex: 1 }}>
@@ -538,7 +550,7 @@ export default class ChannelsPane extends React.PureComponent<
                                         screenOptions={getTabScreenOptions}
                                     >
                                         <Tab.Screen
-                                            name={openChannelsTabName}
+                                            name={OPEN_TAB_ROUTE}
                                             component={OpenChannelsScreen}
                                             listeners={{
                                                 focus: () =>
@@ -548,7 +560,7 @@ export default class ChannelsPane extends React.PureComponent<
                                             }}
                                         />
                                         <Tab.Screen
-                                            name={pendingChannelsTabName}
+                                            name={PENDING_TAB_ROUTE}
                                             component={PendingChannelsScreen}
                                             listeners={{
                                                 focus: () =>
@@ -558,7 +570,7 @@ export default class ChannelsPane extends React.PureComponent<
                                             }}
                                         />
                                         <Tab.Screen
-                                            name={closedChannelsTabName}
+                                            name={CLOSED_TAB_ROUTE}
                                             component={ClosedChannelsScreen}
                                             listeners={{
                                                 focus: () =>
@@ -582,7 +594,7 @@ export default class ChannelsPane extends React.PureComponent<
                                         screenOptions={getTabScreenOptions}
                                     >
                                         <Tab.Screen
-                                            name={openChannelsTabName}
+                                            name={OPEN_TAB_ROUTE}
                                             component={OpenChannelsScreen}
                                             listeners={{
                                                 focus: () =>
@@ -592,7 +604,7 @@ export default class ChannelsPane extends React.PureComponent<
                                             }}
                                         />
                                         <Tab.Screen
-                                            name={closedChannelsTabName}
+                                            name={CLOSED_TAB_ROUTE}
                                             component={ClosedChannelsScreen}
                                             listeners={{
                                                 focus: () =>
