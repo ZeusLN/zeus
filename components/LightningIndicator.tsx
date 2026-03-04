@@ -1,25 +1,28 @@
 import * as React from 'react';
-import { Image } from 'react-native';
+import Lottie from 'lottie-react-native';
 
-const Loading = require('../assets/images/GIF/Loading.gif');
+const lightningLoading = require('../assets/images/Lottie/lightning-loading.json');
 
 interface LightningIndicatorProps {
     size?: number;
 }
 
-function LoadingIndicator(props: LightningIndicatorProps) {
+function LightningIndicator(props: LightningIndicatorProps) {
     const { size } = props;
 
     return (
-        <Image
-            source={Loading}
+        <Lottie
+            source={lightningLoading}
+            autoPlay
+            loop
             style={{
                 alignSelf: 'center',
                 width: size || 100,
                 height: size || 100
             }}
+            resizeMode="contain"
         />
     );
 }
 
-export default LoadingIndicator;
+export default LightningIndicator;
