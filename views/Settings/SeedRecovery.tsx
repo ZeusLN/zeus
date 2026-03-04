@@ -922,8 +922,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             );
 
                                             console.log(
-                                                'Rescue key verified and saved!',
-                                                mnemonic
+                                                'Rescue key verified and saved!'
                                             );
 
                                             navigation.goBack();
