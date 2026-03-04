@@ -1689,11 +1689,11 @@ class LdkNodeModule: RCTEventEmitter {
     private func serializeLsps1PaymentState(_ state: Lsps1PaymentState) -> String {
         switch state {
         case .expectPayment:
-            return "expectPayment"
+            return "Expect Payment"
         case .paid:
-            return "paid"
+            return "Paid"
         case .refunded:
-            return "refunded"
+            return "Refunded"
         }
     }
 

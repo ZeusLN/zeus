@@ -1587,10 +1587,10 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     private fun lsps1PaymentStateToString(state: Lsps1PaymentState): String {
         return when (state) {
-            Lsps1PaymentState.EXPECT_PAYMENT -> "expectPayment"
-            Lsps1PaymentState.PAID -> "paid"
-            Lsps1PaymentState.REFUNDED -> "refunded"
-            else -> "unknown"
+            Lsps1PaymentState.EXPECT_PAYMENT -> "Expect Payment"
+            Lsps1PaymentState.PAID -> "Paid"
+            Lsps1PaymentState.REFUNDED -> "Refunded"
+            else -> "Unknown"
         }
     }
 
