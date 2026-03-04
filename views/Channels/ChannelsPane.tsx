@@ -116,7 +116,9 @@ export default class ChannelsPane extends React.PureComponent<
     async componentDidMount() {
         const { ChannelsStore } = this.props;
 
-        ChannelsStore?.resetOpenChannel();
+        if (!ChannelsStore?.channelSuccess) {
+            ChannelsStore?.resetOpenChannel();
+        }
 
         this.disposeReaction = reaction(
             () => ChannelsStore?.channelsView,
