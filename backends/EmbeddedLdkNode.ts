@@ -732,29 +732,83 @@ export default class EmbeddedLdkNode {
     private static closureReasonToMessage(
         reason: ClosureReason | undefined
     ): string {
-        if (!reason) return 'Channel closed: unknown reason';
+        if (!reason) return localeString('views.Channel.closureReason.unknown');
         const peerMsg = reason.peerMessage;
         switch (reason.type) {
             case 'counterpartyForceClosed':
                 return peerMsg
-                    ? `Channel rejected by counterparty: ${peerMsg}`
-                    : 'Channel rejected: counterparty force closed';
+                    ? localeString(
+                          'views.Channel.closureReason.counterpartyForceClosed',
+                          { peerMessage: peerMsg }
+                      )
+                    : localeString(
+                          'views.Channel.closureReason.counterpartyForceClosedDefault'
+                      );
             case 'counterpartyCoopClosedUnfundedChannel':
-                return 'Channel rejected by counterparty';
+                return localeString(
+                    'views.Channel.closureReason.counterpartyCoopClosedUnfunded'
+                );
             case 'locallyCoopClosedUnfundedChannel':
-                return 'Channel closed locally before funding';
+                return localeString(
+                    'views.Channel.closureReason.locallyCoopClosedUnfunded'
+                );
             case 'fundingTimedOut':
-                return 'Channel funding timed out';
+                return localeString(
+                    'views.Channel.closureReason.fundingTimedOut'
+                );
             case 'processingError':
                 return peerMsg
-                    ? `Channel failed: ${peerMsg}`
-                    : 'Channel failed due to a processing error';
+                    ? localeString(
+                          'views.Channel.closureReason.processingError',
+                          { peerMessage: peerMsg }
+                      )
+                    : localeString(
+                          'views.Channel.closureReason.processingErrorDefault'
+                      );
             case 'disconnectedPeer':
-                return 'Channel failed: peer disconnected';
+                return localeString(
+                    'views.Channel.closureReason.disconnectedPeer'
+                );
             case 'peerFeerateTooLow':
                 return peerMsg
-                    ? `Channel rejected: ${peerMsg}`
-                    : 'Channel rejected: peer feerate too low';
+                    ? localeString(
+                          'views.Channel.closureReason.peerFeerateTooLow',
+                          { peerMessage: peerMsg }
+                      )
+                    : localeString(
+                          'views.Channel.closureReason.peerFeerateTooLowDefault'
+                      );
+            case 'holderForceClosed':
+                return peerMsg
+                    ? localeString(
+                          'views.Channel.closureReason.holderForceClosed',
+                          { peerMessage: peerMsg }
+                      )
+                    : localeString(
+                          'views.Channel.closureReason.holderForceClosedDefault'
+                      );
+            case 'legacyCooperativeClosure':
+            case 'counterpartyInitiatedCooperativeClosure':
+            case 'locallyInitiatedCooperativeClosure':
+                return localeString(
+                    'views.Channel.closureReason.cooperativeClosure'
+                );
+            case 'commitmentTxConfirmed':
+                return localeString(
+                    'views.Channel.closureReason.commitmentTxConfirmed'
+                );
+            case 'outdatedChannelManager':
+                return localeString(
+                    'views.Channel.closureReason.outdatedChannelManager'
+                );
+            case 'fundingBatchClosure':
+                return localeString(
+                    'views.Channel.closureReason.fundingBatchClosure'
+                );
+            case 'htlcsTimedOut':
+                return localeString(
+                    'views.Channel.closureReason.htlcsTimedOut'
+                );
             default:
                 return `Channel closed: ${reason.type}`;
         }
