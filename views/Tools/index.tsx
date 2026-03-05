@@ -89,7 +89,8 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                 lndDir,
                                 isTestnet,
                                 walletPassword:
-                                    selectedNode.walletPassword || ''
+                                    selectedNode.walletPassword || '',
+                                isTorEnabled: selectedNode.enableTor
                             });
 
                             if (success) {
