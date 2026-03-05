@@ -54,12 +54,21 @@ export default class CashuTokenView extends React.Component<
     CashuTokenProps,
     CashuTokenState
 > {
+    checkInterval: ReturnType<typeof setInterval> | null = null;
+
     state = {
         updatedToken: undefined,
         success: false,
         errorMessage: '',
         infoIndex: 0,
         isTokenTooLarge: false
+    };
+
+    private stopCheckingInterval = () => {
+        if (this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
+        }
     };
 
     async componentDidMount() {
@@ -92,7 +101,7 @@ export default class CashuTokenView extends React.Component<
                 await initializeWallet(mint);
             }
             // Set up a periodic check every 5 seconds
-            const checkInterval = setInterval(async () => {
+            this.checkInterval = setInterval(async () => {
                 const isSpent = await checkTokenSpent(decoded);
 
                 if (isSpent) {
@@ -100,13 +109,17 @@ export default class CashuTokenView extends React.Component<
                     this.setState({
                         updatedToken
                     });
-                    clearInterval(checkInterval);
+                    this.stopCheckingInterval();
                     activityStore.getActivityAndFilter(
                         settingsStore.settings.locale
                     );
                 }
             }, 5000);
         }
+    }
+
+    componentWillUnmount() {
+        this.stopCheckingInterval();
     }
 
     shareGiftLink = async (token: string) => {
