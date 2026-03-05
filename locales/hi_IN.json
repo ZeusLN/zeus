@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "चैनल बंद करना तेज करें",
     "views.BumpFee.titleForceClose": "चैनल फोर्स क्लोज तेज करें",
     "views.BumpFee.targetConfs": "लक्षित पुष्टिकरण",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "फीस बढ़ाना सफल रहा!",
     "views.BumpFee.error": "फीस बढ़ाने में त्रुटि",
     "views.BumpFee.outpoint.explainer1": "एक आउटपॉइंट पिछले लेनदेन के एक विशेष आउटपुट का संदर्भ है। इसमें दो भाग होते हैं:",
