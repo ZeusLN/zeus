@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Percepat penutupan saluran",
     "views.BumpFee.titleForceClose": "Percepat penutupan paksa saluran ",
     "views.BumpFee.targetConfs": "Jumlah konfirmasi target",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Biaya berhasil dinaikkan!",
     "views.BumpFee.error": "Terjadi kesalahan saat menaikkan biaya",
     "views.BumpFee.outpoint.explainer1": "Outpoint adalah referensi ke output tertentu dari transaksi sebelumnya yang terdiri dari dua bagian:",
