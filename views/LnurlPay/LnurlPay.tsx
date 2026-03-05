@@ -393,10 +393,12 @@ export default class LnurlPay extends React.Component<
             console.log('Error parsing LNURL metadata:', err);
         }
 
-        // Priority: Contact photo > LNURL metadata image
-        const displayImage = matchedContact?.photo
+        // Priority: LNURL metadata image > Contact photo
+        const displayImage = metadataImage
+            ? metadataImage
+            : matchedContact?.photo
             ? matchedContact.getPhoto
-            : metadataImage;
+            : null;
         const displayName = matchedContact?.name;
         const displayAddress = lightningAddress || domain;
 
