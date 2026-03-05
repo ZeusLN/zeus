@@ -369,27 +369,23 @@ export async function migrateBboltToSqlite({
             });
         }
 
-        await sleep(2000);
+        await retry({
+            fn: async () => {
+                const currentStatus = await checkStatus();
+                const isRunning =
+                    (currentStatus &
+                        ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+                    ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
+                if (!isRunning) {
+                    throw new Error('LND not yet running');
+                }
+            },
+            maxRetries: 10,
+            delayMs: 500
+        });
 
-        const finalStatus = await checkStatus();
-        const isRunning =
-            (finalStatus & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
-            ELndMobileStatusCodes.STATUS_PROCESS_STARTED;
-
-        if (isRunning) {
-            console.log(`Migration successful for wallet: ${lndDir}`);
-            return true;
-        } else {
-            console.error(
-                `Migration failed - LND did not start for wallet: ${lndDir}`
-            );
-            await writeLndConfig({
-                lndDir,
-                isTestnet,
-                isSqlite: false
-            });
-            return false;
-        }
+        console.log(`Migration successful for wallet: ${lndDir}`);
+        return true;
     } catch (error) {
         console.error(
             `Error during bbolt to SQLite migration for wallet ${lndDir}:`,
