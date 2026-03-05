@@ -517,7 +517,7 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={favoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(_item, index) => index.toString()}
+                        keyExtractor={(item) => item.contactId || item.id}
                         scrollEnabled={false}
                         removeClippedSubviews={false}
                     />
@@ -548,7 +548,7 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={nonFavoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(_, index) => index.toString()}
+                        keyExtractor={(item) => item.contactId || item.id}
                         scrollEnabled={false}
                         removeClippedSubviews={false}
                     />
