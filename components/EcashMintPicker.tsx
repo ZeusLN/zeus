@@ -13,6 +13,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import Dice from '../assets/images/SVG/Dice.svg';
 
 interface EcashMintPickerProps {
     title?: string;
@@ -20,6 +21,7 @@ interface EcashMintPickerProps {
     navigation: StackNavigationProp<any, any>;
     hideAmount?: boolean;
     disabled?: boolean;
+    overrideMintUrl?: string;
 }
 
 @inject('CashuStore')
@@ -29,14 +31,25 @@ export default class EcashMintPicker extends React.Component<
     {}
 > {
     render() {
-        const { CashuStore, hideAmount, disabled, navigation } = this.props;
+        const {
+            CashuStore,
+            hideAmount,
+            disabled,
+            navigation,
+            overrideMintUrl
+        } = this.props;
         const {
             cashuWallets,
             mintUrls,
             selectedMintUrl,
             mintInfos,
-            mintBalances
+            mintBalances,
+            randomizeMintSelection
         } = CashuStore!!;
+
+        const displayMintUrl = overrideMintUrl || selectedMintUrl;
+        const showRandom =
+            randomizeMintSelection && !overrideMintUrl && mintUrls.length > 1;
 
         let mints: any = {};
         mintUrls.forEach((mintUrl) => {
@@ -63,21 +76,35 @@ export default class EcashMintPicker extends React.Component<
                     }}
                 >
                     <Row style={{ flex: 1 }}>
-                        <MintAvatar
-                            iconUrl={mints[selectedMintUrl]?.icon_url}
-                            name={mints[selectedMintUrl]?.name}
-                            size="small"
-                            style={{
-                                marginRight: 10,
-                                flexShrink: 0
-                            }}
-                        />
+                        {showRandom ? (
+                            <Dice
+                                fill={themeColor('text')}
+                                width={30}
+                                height={30}
+                                style={{
+                                    marginRight: 10,
+                                    flexShrink: 0
+                                }}
+                            />
+                        ) : (
+                            <MintAvatar
+                                iconUrl={mints[displayMintUrl]?.icon_url}
+                                name={mints[displayMintUrl]?.name}
+                                size="small"
+                                style={{
+                                    marginRight: 10,
+                                    flexShrink: 0
+                                }}
+                            />
+                        )}
                         <Text
                             style={{
                                 ...styles.text,
-                                color: mints[selectedMintUrl]?.errorConnecting
-                                    ? themeColor('warning')
-                                    : themeColor('text'),
+                                color:
+                                    !showRandom &&
+                                    mints[displayMintUrl]?.errorConnecting
+                                        ? themeColor('warning')
+                                        : themeColor('text'),
                                 flex: 1,
                                 flexShrink: 1,
                                 minWidth: 0
@@ -85,11 +112,13 @@ export default class EcashMintPicker extends React.Component<
                             numberOfLines={1}
                             ellipsizeMode="tail"
                         >
-                            {mints[selectedMintUrl]?.name
-                                ? mints[selectedMintUrl].name
+                            {showRandom
+                                ? localeString('cashu.randomMint')
+                                : mints[displayMintUrl]?.name
+                                ? mints[displayMintUrl].name
                                 : localeString('cashu.tapToConfigure.short')}
                         </Text>
-                        {!hideAmount && (
+                        {!hideAmount && !showRandom && (
                             <View
                                 style={{
                                     marginRight: 8,
@@ -97,7 +126,7 @@ export default class EcashMintPicker extends React.Component<
                                 }}
                             >
                                 <Amount
-                                    sats={mints[selectedMintUrl]?.mintBalance}
+                                    sats={mints[displayMintUrl]?.mintBalance}
                                     sensitive
                                 />
                             </View>
