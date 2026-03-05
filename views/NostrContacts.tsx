@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     Alert,
     FlatList,
-    Image,
     Text,
     TouchableOpacity,
     View,
@@ -14,6 +13,8 @@ import { CheckBox, Icon } from '@rneui/themed';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';
+
+import { SharedImage, SharedText } from '../components/SharedTransition';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -251,6 +252,7 @@ export default class NostrContacts extends React.Component<
             lud06: string;
             lud16: string;
             banner: string;
+            npub?: string;
         };
     }) => {
         const { isSelectionMode } = this.state;
@@ -292,7 +294,10 @@ export default class NostrContacts extends React.Component<
                         navigation.navigate('ContactDetails', {
                             nostrContact:
                                 await ContactUtils.transformContactData(item),
-                            isNostrContact: true
+                            isNostrContact: true,
+                            contactId: item.npub,
+                            contactName: item.display_name || item.name,
+                            contactPhoto: item.picture
                         });
                     }
                 }}
@@ -328,7 +333,8 @@ export default class NostrContacts extends React.Component<
                     }}
                 >
                     {item.picture && (
-                        <Image
+                        <SharedImage
+                            tag={`contact-photo-${item.npub}`}
                             source={{ uri: item.picture }}
                             style={{
                                 width: 40,
@@ -339,14 +345,15 @@ export default class NostrContacts extends React.Component<
                         />
                     )}
                     <View>
-                        <Text
+                        <SharedText
+                            tag={`contact-name-${item.npub}`}
                             style={{
                                 fontSize: 16,
                                 color: themeColor('text')
                             }}
                         >
                             {item?.display_name || item?.name}
-                        </Text>
+                        </SharedText>
                         {item.lud06 && (
                             <Text
                                 style={{

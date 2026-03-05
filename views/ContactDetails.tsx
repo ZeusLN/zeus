@@ -123,49 +123,42 @@ export default class ContactDetails extends React.Component<
 
     async componentDidMount() {
         try {
+            const isNostrContact = this.props.route.params?.isNostrContact;
+            this.setState({ isNostrContact });
+
             await this.fetchContact();
 
-            const isNostrContact = this.props.route.params?.isNostrContact;
-
-            this.setState({ isNostrContact });
+            this.props.navigation.addListener('focus', () => {
+                this.fetchContact();
+            });
         } catch (error) {
             console.error(error);
         }
     }
 
     fetchContact = async () => {
-        this.props.navigation.addListener('focus', async () => {
-            try {
-                const { contactId, nostrContact, isNostrContact } =
-                    this.props.route.params ?? {};
-                const contactsString: any = await Storage.getItem(CONTACTS_KEY);
+        try {
+            const { contactId, nostrContact, isNostrContact } =
+                this.props.route.params ?? {};
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
-                if (contactsString && contactId) {
-                    const existingContact = JSON.parse(contactsString);
-                    const contact = existingContact.find(
-                        (contact: Contact) =>
-                            contact.contactId === contactId ||
-                            contact.id === contactId
-                    );
+            const storedContact =
+                contactsString && contactId
+                    ? JSON.parse(contactsString).find(
+                          (c: Contact) =>
+                              c.contactId === contactId || c.id === contactId
+                      )
+                    : undefined;
 
-                    // Store the found contact in the component's state
-                    this.setState({
-                        contact,
-                        isNostrContact,
-                        isLoading: false
-                    });
-                } else {
-                    this.setState({
-                        contact: nostrContact,
-                        isNostrContact,
-                        isLoading: false
-                    });
-                }
-            } catch (error) {
-                console.log('Error fetching contact:', error);
-                this.setState({ isLoading: false });
-            }
-        });
+            this.setState({
+                contact: storedContact ?? nostrContact,
+                isNostrContact,
+                isLoading: false
+            });
+        } catch (error) {
+            console.log('Error fetching contact:', error);
+            this.setState({ isLoading: false });
+        }
     };
 
     sendAddress = (address: string) => {
@@ -480,7 +473,9 @@ export default class ContactDetails extends React.Component<
                             {contact.photo ? (
                                 <SharedImage
                                     tag={`contact-photo-${
-                                        contact.contactId || contact.id
+                                        contactId ||
+                                        contact.contactId ||
+                                        contact.id
                                     }`}
                                     source={{ uri: contact.getPhoto }}
                                     style={{
@@ -495,7 +490,9 @@ export default class ContactDetails extends React.Component<
                             ) : (
                                 <SharedView
                                     tag={`contact-photo-${
-                                        contact.contactId || contact.id
+                                        contactId ||
+                                        contact.contactId ||
+                                        contact.id
                                     }`}
                                     style={{
                                         width: 150,
@@ -534,7 +531,7 @@ export default class ContactDetails extends React.Component<
                             )}
                             <SharedText
                                 tag={`contact-name-${
-                                    contact.contactId || contact.id
+                                    contactId || contact.contactId || contact.id
                                 }`}
                                 style={{
                                     fontSize: 40,

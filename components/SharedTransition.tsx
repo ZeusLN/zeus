@@ -5,11 +5,17 @@ import {
     TextStyle,
     ViewStyle
 } from 'react-native';
-import Animated, { FadeIn, SharedTransition } from 'react-native-reanimated';
+import Animated, {
+    Easing,
+    FadeIn,
+    SharedTransition
+} from 'react-native-reanimated';
 
-export const sharedTransition = SharedTransition.duration(350).springify();
+export const sharedTransition = SharedTransition.springify(400).dampingRatio(1);
 
-export const sharedTransitionEntering = FadeIn.delay(320).duration(100);
+export const sharedTransitionEntering = FadeIn.delay(350)
+    .duration(220)
+    .easing(Easing.out(Easing.cubic));
 
 interface SharedBaseProps {
     /** Unique tag that pairs the source and destination elements. */
