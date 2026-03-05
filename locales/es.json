@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Acelerar el cierre del canal",
     "views.BumpFee.titleForceClose": "Acelerar el cierre forzado del canal",
     "views.BumpFee.targetConfs": "Objectivo de confirmaciones",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "¡Tarifa incrementada con éxito!",
     "views.BumpFee.error": "Error subida de tarifa",
     "views.BumpFee.outpoint.explainer1": "Un punto de salida es una referencia a una salida particular de una transacción anterior. Consta de dos partes:",
