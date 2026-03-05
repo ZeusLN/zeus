@@ -83,6 +83,7 @@ import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
+import { expirySecondsFromInput } from '../utils/ExpiryUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -141,7 +142,7 @@ interface ReceiveProps {
 
 interface ReceiveState {
     selectedIndex: number;
-    expirationIndex: number;
+    expirationIndex: number | null;
     addressType: string;
     memo: string;
     receiverName: string;
@@ -179,6 +180,30 @@ enum RouteHintMode {
     Automatic = 0,
     Custom = 1
 }
+
+enum ExpirationPreset {
+    TenMinutes = 0,
+    OneHour = 1,
+    OneDay = 2,
+    OneWeek = 3
+}
+
+const expirationIndexFromSeconds = (
+    expirySeconds: string
+): ExpirationPreset | null => {
+    switch (expirySeconds) {
+        case '600':
+            return ExpirationPreset.TenMinutes;
+        case '3600':
+            return ExpirationPreset.OneHour;
+        case '86400':
+            return ExpirationPreset.OneDay;
+        case '604800':
+            return ExpirationPreset.OneWeek;
+        default:
+            return null;
+    }
+};
 
 const LOCKED_EXPIRY = '1';
 const LOCKED_TIME_PERIOD = 'Hours';
@@ -274,18 +299,7 @@ export default class Receive extends React.Component<
 
         const newExpirySeconds = settings?.invoices?.expirySeconds || '3600';
 
-        let expirationIndex;
-        if (newExpirySeconds === '600') {
-            expirationIndex = 0;
-        } else if (newExpirySeconds === '3600') {
-            expirationIndex = 1;
-        } else if (newExpirySeconds === '86400') {
-            expirationIndex = 2;
-        } else if (newExpirySeconds === '604800') {
-            expirationIndex = 3;
-        } else {
-            expirationIndex = 4;
-        }
+        const expirationIndex = expirationIndexFromSeconds(newExpirySeconds);
 
         const lspIsActive =
             settings?.enableLSP &&
@@ -2725,123 +2739,21 @@ export default class Receive extends React.Component<
                                                                     onChangeText={(
                                                                         text: string
                                                                     ) => {
-                                                                        let expirySeconds =
-                                                                            '3600';
-                                                                        if (
-                                                                            timePeriod ===
-                                                                            'Seconds'
-                                                                        ) {
-                                                                            expirySeconds =
-                                                                                text;
-                                                                        } else if (
-                                                                            timePeriod ===
-                                                                            'Minutes'
-                                                                        ) {
-                                                                            expirySeconds =
-                                                                                new BigNumber(
-                                                                                    text
-                                                                                )
-                                                                                    .multipliedBy(
-                                                                                        60
+                                                                        const expirySeconds =
+                                                                            expirySecondsFromInput(
+                                                                                text,
+                                                                                timePeriod
+                                                                            );
+                                                                        this.setState(
+                                                                            {
+                                                                                expiry: text,
+                                                                                expirySeconds,
+                                                                                expirationIndex:
+                                                                                    expirationIndexFromSeconds(
+                                                                                        expirySeconds
                                                                                     )
-                                                                                    .toString();
-                                                                        } else if (
-                                                                            timePeriod ===
-                                                                            'Hours'
-                                                                        ) {
-                                                                            expirySeconds =
-                                                                                new BigNumber(
-                                                                                    text
-                                                                                )
-                                                                                    .multipliedBy(
-                                                                                        60 *
-                                                                                            60
-                                                                                    )
-                                                                                    .toString();
-                                                                        } else if (
-                                                                            timePeriod ===
-                                                                            'Days'
-                                                                        ) {
-                                                                            expirySeconds =
-                                                                                new BigNumber(
-                                                                                    text
-                                                                                )
-                                                                                    .multipliedBy(
-                                                                                        60 *
-                                                                                            60 *
-                                                                                            24
-                                                                                    )
-                                                                                    .toString();
-                                                                        } else if (
-                                                                            timePeriod ===
-                                                                            'Weeks'
-                                                                        ) {
-                                                                            expirySeconds =
-                                                                                new BigNumber(
-                                                                                    text
-                                                                                )
-                                                                                    .multipliedBy(
-                                                                                        60 *
-                                                                                            60 *
-                                                                                            24 *
-                                                                                            7
-                                                                                    )
-                                                                                    .toString();
-                                                                        }
-
-                                                                        if (
-                                                                            expirySeconds ==
-                                                                            '600'
-                                                                        ) {
-                                                                            this.setState(
-                                                                                {
-                                                                                    expiry: text,
-                                                                                    expirySeconds,
-                                                                                    expirationIndex: 0
-                                                                                }
-                                                                            );
-                                                                        } else if (
-                                                                            expirySeconds ==
-                                                                            '3600'
-                                                                        ) {
-                                                                            this.setState(
-                                                                                {
-                                                                                    expiry: text,
-                                                                                    expirySeconds,
-                                                                                    expirationIndex: 1
-                                                                                }
-                                                                            );
-                                                                        } else if (
-                                                                            expirySeconds ==
-                                                                            '86400'
-                                                                        ) {
-                                                                            this.setState(
-                                                                                {
-                                                                                    expiry: text,
-                                                                                    expirySeconds,
-                                                                                    expirationIndex: 2
-                                                                                }
-                                                                            );
-                                                                        } else if (
-                                                                            expirySeconds ==
-                                                                            '604800'
-                                                                        ) {
-                                                                            this.setState(
-                                                                                {
-                                                                                    expiry: text,
-                                                                                    expirySeconds,
-                                                                                    expirationIndex: 3
-                                                                                }
-                                                                            );
-                                                                        } else {
-                                                                            this.setState(
-                                                                                {
-                                                                                    expiry: text,
-                                                                                    expirySeconds,
-                                                                                    expirationIndex: 5
-                                                                                }
-                                                                            );
-                                                                        }
+                                                                            }
+                                                                        );
                                                                     }}
                                                                 />
                                                                 <Spacer
@@ -2862,101 +2774,20 @@ export default class Receive extends React.Component<
                                                                         onValueChange={async (
                                                                             value: string
                                                                         ) => {
-                                                                            let expirySeconds =
-                                                                                '3600';
-                                                                            if (
-                                                                                value ===
-                                                                                'Seconds'
-                                                                            ) {
-                                                                                expirySeconds =
-                                                                                    expiry;
-                                                                            } else if (
-                                                                                value ===
-                                                                                'Minutes'
-                                                                            ) {
-                                                                                expirySeconds =
-                                                                                    new BigNumber(
-                                                                                        expiry
-                                                                                    )
-                                                                                        .multipliedBy(
-                                                                                            60
-                                                                                        )
-                                                                                        .toString();
-                                                                            } else if (
-                                                                                value ===
-                                                                                'Hours'
-                                                                            ) {
-                                                                                expirySeconds =
-                                                                                    new BigNumber(
-                                                                                        expiry
-                                                                                    )
-                                                                                        .multipliedBy(
-                                                                                            60 *
-                                                                                                60
-                                                                                        )
-                                                                                        .toString();
-                                                                            } else if (
-                                                                                value ===
-                                                                                'Days'
-                                                                            ) {
-                                                                                expirySeconds =
-                                                                                    new BigNumber(
-                                                                                        expiry
-                                                                                    )
-                                                                                        .multipliedBy(
-                                                                                            60 *
-                                                                                                60 *
-                                                                                                24
-                                                                                        )
-                                                                                        .toString();
-                                                                            } else if (
-                                                                                value ===
-                                                                                'Weeks'
-                                                                            ) {
-                                                                                expirySeconds =
-                                                                                    new BigNumber(
-                                                                                        expiry
-                                                                                    )
-                                                                                        .multipliedBy(
-                                                                                            60 *
-                                                                                                60 *
-                                                                                                24 *
-                                                                                                7
-                                                                                        )
-                                                                                        .toString();
-                                                                            }
-
-                                                                            let expirationIndex;
-                                                                            if (
-                                                                                expirySeconds ===
-                                                                                '600'
-                                                                            ) {
-                                                                                expirationIndex = 0;
-                                                                            } else if (
-                                                                                expirySeconds ===
-                                                                                '3600'
-                                                                            ) {
-                                                                                expirationIndex = 1;
-                                                                            } else if (
-                                                                                expirySeconds ===
-                                                                                '86400'
-                                                                            ) {
-                                                                                expirationIndex = 2;
-                                                                            } else if (
-                                                                                expirySeconds ===
-                                                                                '604800'
-                                                                            ) {
-                                                                                expirationIndex = 3;
-                                                                            } else {
-                                                                                expirationIndex = 4;
-                                                                            }
-
+                                                                            const expirySeconds =
+                                                                                expirySecondsFromInput(
+                                                                                    expiry,
+                                                                                    value
+                                                                                );
                                                                             this.setState(
                                                                                 {
                                                                                     timePeriod:
                                                                                         value,
                                                                                     expirySeconds,
-                                                                                    expirationIndex
+                                                                                    expirationIndex:
+                                                                                        expirationIndexFromSeconds(
+                                                                                            expirySeconds
+                                                                                        )
                                                                                 }
                                                                             );
                                                                         }}
@@ -3418,9 +3249,11 @@ export default class Receive extends React.Component<
                                                             : '')
                                                     }
                                                     disabled={
-                                                        lspIsActive &&
-                                                        (!satAmount ||
-                                                            satAmount === '0')
+                                                        (lspIsActive &&
+                                                            (!satAmount ||
+                                                                satAmount ===
+                                                                    '0')) ||
+                                                        !expiry
                                                     }
                                                     onPress={() => {
                                                         // Clear the old error messages (if present)
