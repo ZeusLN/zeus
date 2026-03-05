@@ -155,6 +155,120 @@ export function PeerItem({
                             </View>
                         </View>
                     )}
+                    {peer.num_channels && (
+                        <View style={styles.statRow}>
+                            <Text
+                                style={{
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.NetworkInfo.numChannels')}
+                            </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {String(peer.num_channels)}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                    {peer.bytesSent && (
+                        <View style={styles.statRow}>
+                            <Text
+                                style={{
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.ChannelsPane.bytesSent')}
+                            </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {`${peer.bytesSent} B`}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                    {peer.bytesRecv && (
+                        <View style={styles.statRow}>
+                            <Text
+                                style={{
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.ChannelsPane.bytesRecv')}
+                            </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {`${peer.bytesRecv} B`}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                    {peer.inbound !== undefined && (
+                        <View style={styles.statRow}>
+                            <Text
+                                style={{
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.Channel.inbound')}
+                            </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {peer.inbound
+                                        ? localeString('general.true')
+                                        : localeString('general.false')}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
+                    {peer.connected !== undefined && (
+                        <View style={styles.statRow}>
+                            <Text
+                                style={{
+                                    ...styles.statLabel,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.ChannelsPane.connected')}
+                            </Text>
+                            <View style={styles.statValueWrap}>
+                                <Text
+                                    style={{
+                                        ...styles.statValue,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {peer.connected
+                                        ? localeString('general.true')
+                                        : localeString('general.false')}
+                                </Text>
+                            </View>
+                        </View>
+                    )}
                 </View>
             </View>
         </TouchableOpacity>
