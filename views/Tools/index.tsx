@@ -34,7 +34,7 @@ import { migrateBboltToSqlite } from '../../utils/LndMobileUtils';
 import MigrationsUtils from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { Node } from '../../stores/SettingsStore';
 import { Icon } from '@rneui/themed';
 
 interface ToolsProps {
@@ -67,7 +67,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
 
     handleFocus = () => this.props.SettingsStore.getSettings();
 
-    handleMigrateSqlite = (selectedNode: any) => {
+    handleMigrateSqlite = (selectedNode: Node) => {
         const { SettingsStore } = this.props;
         const { settings, updateSettings } = SettingsStore;
         const lndDir = selectedNode.lndDir || 'lnd';
@@ -99,7 +99,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                 );
                                 const nodes = settings?.nodes || [];
                                 const nodeIndex = nodes.findIndex(
-                                    (n: any) =>
+                                    (n: Node) =>
                                         n.implementation === 'embedded-lnd' &&
                                         (n.lndDir || 'lnd') === lndDir
                                 );
