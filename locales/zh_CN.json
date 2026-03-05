@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "加快通道关闭速度",
     "views.BumpFee.titleForceClose": "加快通道强制关闭速度",
     "views.BumpFee.targetConfs": "目标确认次数",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "成功提高手续费！",
     "views.BumpFee.error": "提高手续费出错",
     "views.BumpFee.outpoint.explainer1": "输出引用（Outpoint）是对上一笔交易中特定输出的引用。它由两部分组成：",
