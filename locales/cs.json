@@ -1340,7 +1340,7 @@
     "views.BumpFee.titleClose": "Urychlit uzavření kanálu",
     "views.BumpFee.titleForceClose": "Urychlit vynucené uzavření kanálu",
     "views.BumpFee.targetConfs": "Potvrzení cíle",
-    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
+    "views.BumpFee.targetConfsInputDescription": "Požadované bloky do potvrzení",
     "views.BumpFee.success": "Poplatek úspěšně zvýšen!",
     "views.BumpFee.error": "Chyba při navýšení poplatku",
     "views.BumpFee.outpoint.explainer1": "Výstupní bod je odkaz na konkrétní výstup předchozí transakce.  Skládá se ze dvou částí:",
