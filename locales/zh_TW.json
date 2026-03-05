@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "加速管道關閉",
     "views.BumpFee.titleForceClose": "加速管道強制關閉",
     "views.BumpFee.targetConfs": "目標確認次數",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "手續費提高成功！",
     "views.BumpFee.error": "提高手續費時發生錯誤",
     "views.BumpFee.outpoint.explainer1": "輸出點是對前一次交易中某個輸出項目的標記值，包含了兩部分：",
