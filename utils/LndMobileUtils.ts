@@ -330,11 +330,13 @@ export async function initializeLnd({
 export async function migrateBboltToSqlite({
     lndDir = 'lnd',
     isTestnet,
-    walletPassword
+    walletPassword,
+    isTorEnabled
 }: {
     lndDir: string;
     isTestnet?: boolean;
     walletPassword: string;
+    isTorEnabled?: boolean;
 }): Promise<boolean> {
     try {
         console.log(`Starting bbolt to SQLite migration for wallet: ${lndDir}`);
@@ -362,7 +364,7 @@ export async function migrateBboltToSqlite({
             await startLnd({
                 lndDir,
                 walletPassword,
-                isTorEnabled: false,
+                isTorEnabled: isTorEnabled || false,
                 isTestnet: isTestnet || false
             });
         }
