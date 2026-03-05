@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Nopeuta kanavan sulkemista",
     "views.BumpFee.titleForceClose": "Nopeuta kanavan sulkemista",
     "views.BumpFee.targetConfs": "Tavoitevahvistukset",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Onnistuneesti korotettu maksu!",
     "views.BumpFee.error": "Siirtomaksun nosto epäonnistui",
     "views.BumpFee.outpoint.explainer1": "An outpoint is a reference to a particular output of a previous transaction. It consists of two parts:",

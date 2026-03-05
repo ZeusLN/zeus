@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Accelerează închiderea canalului",
     "views.BumpFee.titleForceClose": "Accelerează închiderea forțată a canalului",
     "views.BumpFee.targetConfs": "Numărul țintă de confirmări",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Creştere taxa cu succes!",
     "views.BumpFee.error": "Eroare la mărirea comisionului",
     "views.BumpFee.outpoint.explainer1": "Un punct de ieșire este o referință la o anumită ieșire a unei tranzacții anterioare. Este format din două părți:",

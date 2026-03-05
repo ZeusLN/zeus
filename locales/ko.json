@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "채널 닫기 속도 향상",
     "views.BumpFee.titleForceClose": "채널 강제 닫기 속도 향상",
     "views.BumpFee.targetConfs": "목표 블록 승인 횟수",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "성공적으로 전송 수수료를 추가하였습니다!",
     "views.BumpFee.error": "전송 수수료 추가 오류",
     "views.BumpFee.outpoint.explainer1": "아웃포인트는 이전 트랜잭션의 특정 출력에 대한 참조입니다. 두 부분으로 구성됩니다:",

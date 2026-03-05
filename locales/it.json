@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Accelera la chiusura del canale",
     "views.BumpFee.titleForceClose": "Accelerare la forza di chiusura del canale",
     "views.BumpFee.targetConfs": "Conferma target",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Commissione urtata con successo!",
     "views.BumpFee.error": "Errore di immissione della tassa",
     "views.BumpFee.outpoint.explainer1": "Un outpoint è un riferimento a un output particolare di una transazione precedente. È composto da due parti:",

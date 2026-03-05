@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Accélérer la fermeture du canal",
     "views.BumpFee.titleForceClose": "Accélérer la fermeture forcée du canal",
     "views.BumpFee.targetConfs": "Confirmatives cibles",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Frais de réussite avec succès!",
     "views.BumpFee.error": "Erreur des frais de bosses",
     "views.BumpFee.outpoint.explainer1": "Un point de sortie est une référence à une sortie particulière d'une transaction précédente. Il se compose de deux parties:",

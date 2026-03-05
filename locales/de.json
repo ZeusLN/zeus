@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Kanalschließung beschleunigen",
     "views.BumpFee.titleForceClose": "Kanal-Force-Close beschleunigen",
     "views.BumpFee.targetConfs": "Ziel-Bestätigungen",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Gebühr erfolgreich erhöht!",
     "views.BumpFee.error": "Fehler bei Gebührenerhöhung",
     "views.BumpFee.outpoint.explainer1": "Ein Outpoint ist eine Referenz auf einen bestimmten Output einer vorherigen Transaktion. Er besteht aus zwei Teilen:",
