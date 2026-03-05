@@ -149,7 +149,11 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
         const windowWidth = Dimensions.get('window').width;
 
         return (
-            <View>
+            <View
+                style={{
+                    paddingTop: channelsView === ChannelsView.Peers ? 5 : 0
+                }}
+            >
                 <Row>
                     <SearchBar
                         placeholder={localeString('general.search')}
