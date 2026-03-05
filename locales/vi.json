@@ -1340,6 +1340,7 @@
     "views.BumpFee.titleClose": "Tăng tốc đóng kênh",
     "views.BumpFee.titleForceClose": "Tăng tốc đóng kênh bắt buộc",
     "views.BumpFee.targetConfs": "Xác nhận dự kiến",
+    "views.BumpFee.targetConfsInputDescription": "Desired blocks until confirmation",
     "views.BumpFee.success": "Nâng phí thành công!",
     "views.BumpFee.error": "Lỗi nâng phí",
     "views.BumpFee.outpoint.explainer1": "An outpoint is a reference to a particular output of a previous transaction. It consists of two parts:",
