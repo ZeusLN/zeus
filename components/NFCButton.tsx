@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { Platform, TouchableOpacity } from 'react-native';
 
-import { Icon } from '@rneui/themed';
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
+
+import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 
 import Button from './../components/Button';
 
@@ -74,14 +75,14 @@ export default class NFCButton extends React.Component<
                     style={{ padding: 5 }}
                     onPress={this.toggleNfc}
                 >
-                    <Icon
-                        name={'nfc'}
-                        size={27}
-                        color={
+                    <NfcIcon
+                        stroke={
                             nfcBroadcast
                                 ? themeColor('highlight')
                                 : themeColor('secondaryText')
                         }
+                        width={27}
+                        height={27}
                     />
                 </TouchableOpacity>
             );
@@ -95,12 +96,16 @@ export default class NFCButton extends React.Component<
                         : localeString('components.CollapsedQr.startNfc')
                 }
                 icon={
-                    icon
-                        ? icon
-                        : {
-                              name: 'nfc',
-                              size: 25
-                          }
+                    icon ? (
+                        icon
+                    ) : (
+                        <NfcIcon
+                            stroke={themeColor('highlight')}
+                            width={25}
+                            height={25}
+                            style={{ marginRight: 10 }}
+                        />
+                    )
                 }
                 containerStyle={{
                     marginTop: 10,
