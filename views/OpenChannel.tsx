@@ -50,6 +50,7 @@ import { AdditionalChannel } from '../models/OpenChannelRequest';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
+import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 import ToggleButton from '../components/ToggleButton';
 
 interface OpenChannelProps {
@@ -1128,10 +1129,14 @@ export default class OpenChannel extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString('general.enableNfc')}
-                                icon={{
-                                    name: 'nfc',
-                                    size: 25
-                                }}
+                                icon={
+                                    <NfcIcon
+                                        stroke={themeColor('highlight')}
+                                        width={25}
+                                        height={25}
+                                        style={{ marginRight: 10 }}
+                                    />
+                                }
                                 onPress={() => this.enableNfc()}
                                 secondary
                             />

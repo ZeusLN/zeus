@@ -795,6 +795,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             style={{
                                 flex: 1,
                                 flexDirection: 'row',
+                                alignItems: 'center',
                                 marginTop: 3
                             }}
                         >
@@ -844,7 +845,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     onPress={() => this.enableNfc()}
                                 >
                                     <NFC
-                                        fill={themeColor('text')}
+                                        stroke={themeColor('text')}
                                         width={30}
                                         height={30}
                                     />
