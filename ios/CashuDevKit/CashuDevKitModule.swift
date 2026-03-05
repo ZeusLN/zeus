@@ -68,6 +68,32 @@ class CashuDevKitModule: RCTEventEmitter {
     return .p2pk(pubkey: pubkey, conditions: conditions)
   }
 
+    private func parseMeltOptions(from optionsJson: String?) -> MeltOptions? {
+        guard
+            let json = optionsJson,
+            let data = json.data(using: .utf8),
+            let parsed = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
+            return nil
+        }
+
+        if let mpp = parsed["mpp"] as? [String: Any],
+           let amountNumber = mpp["amount"] as? NSNumber,
+           amountNumber.uint64Value > 0 {
+            return .mpp(amount: Amount(value: amountNumber.uint64Value))
+        }
+
+        if let amountless = parsed["amountless"] as? [String: Any],
+           let amountMsatNumber = amountless["amount_msat"] as? NSNumber,
+           amountMsatNumber.uint64Value > 0 {
+            return .amountless(
+                amountMsat: Amount(value: amountMsatNumber.uint64Value)
+            )
+        }
+
+        return nil
+    }
+
     /// Returns the initialized wallet or rejects with NO_WALLET error
     private func getInitializedWallet(reject: @escaping RCTPromiseRejectBlock) -> MultiMintWallet? {
         guard isInitialized, let wallet = wallet else {
@@ -75,6 +101,26 @@ class CashuDevKitModule: RCTEventEmitter {
             return nil
         }
         return wallet
+    }
+
+    private func executeTransfer(
+        resolve: @escaping RCTPromiseResolveBlock,
+        reject: @escaping RCTPromiseRejectBlock,
+        operation: @escaping (MultiMintWallet) async throws -> TransferResult
+    ) {
+        guard let wallet = getInitializedWallet(reject: reject) else { return }
+
+        Task {
+            do {
+                let result = try await operation(wallet)
+                resolve(encodeToJson(encodeTransferResult(result)))
+            } catch let error as FfiError {
+                let (code, message) = mapFfiError(error)
+                reject(code, message, error)
+            } catch {
+                reject("TRANSFER_ERROR", error.localizedDescription, error)
+            }
+        }
     }
 
     private var currentDbPath: String?
@@ -238,6 +284,16 @@ class CashuDevKitModule: RCTEventEmitter {
             result["change"] = change.map { encodeProof($0) }
         }
         return result
+    }
+
+    private func encodeTransferResult(_ result: TransferResult) -> [String: Any] {
+        return [
+            "amount_sent": result.amountSent.value,
+            "amount_received": result.amountReceived.value,
+            "fees_paid": result.feesPaid.value,
+            "source_balance_after": result.sourceBalanceAfter.value,
+            "target_balance_after": result.targetBalanceAfter.value
+        ]
     }
 
     private func encodeProof(_ proof: Proof) -> [String: Any] {
@@ -761,7 +817,12 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let url = MintUrl(url: mintUrl)
-                let quote = try await wallet.meltQuote(mintUrl: url, request: request, options: nil)
+                let options = parseMeltOptions(from: optionsJson)
+                let quote = try await wallet.meltQuote(
+                    mintUrl: url,
+                    request: request,
+                    options: options
+                )
                 resolve(encodeToJson(encodeMeltQuote(quote)))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
@@ -809,6 +870,40 @@ class CashuDevKitModule: RCTEventEmitter {
             } catch {
                 reject("MELT_ERROR", error.localizedDescription, error)
             }
+        }
+    }
+
+    @objc(transferExactReceive:targetMint:amount:resolver:rejecter:)
+    func transferExactReceive(_ sourceMint: String, targetMint: String, amount: NSNumber,
+                              resolve: @escaping RCTPromiseResolveBlock,
+                              reject: @escaping RCTPromiseRejectBlock) {
+        executeTransfer(resolve: resolve, reject: reject) { wallet in
+                let sourceMintUrl = MintUrl(url: sourceMint)
+                let targetMintUrl = MintUrl(url: targetMint)
+                let transferMode = TransferMode.exactReceive(
+                    amount: Amount(value: amount.uint64Value)
+                )
+
+                return try await wallet.transfer(
+                    sourceMint: sourceMintUrl,
+                    targetMint: targetMintUrl,
+                    transferMode: transferMode
+                )
+        }
+    }
+
+    @objc(transferFullBalance:targetMint:resolver:rejecter:)
+    func transferFullBalance(_ sourceMint: String, targetMint: String,
+                             resolve: @escaping RCTPromiseResolveBlock,
+                             reject: @escaping RCTPromiseRejectBlock) {
+        executeTransfer(resolve: resolve, reject: reject) { wallet in
+                let sourceMintUrl = MintUrl(url: sourceMint)
+                let targetMintUrl = MintUrl(url: targetMint)
+                return try await wallet.transfer(
+                    sourceMint: sourceMintUrl,
+                    targetMint: targetMintUrl,
+                    transferMode: .fullBalance
+                )
         }
     }
 
@@ -1179,7 +1274,12 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let url = MintUrl(url: mintUrl)
-                let quote = try await wallet.meltQuote(mintUrl: url, request: request, options: nil)
+                let options = parseMeltOptions(from: optionsJson)
+                let quote = try await wallet.meltQuote(
+                    mintUrl: url,
+                    request: request,
+                    options: options
+                )
                 resolve(encodeToJson(encodeMeltQuote(quote)))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
