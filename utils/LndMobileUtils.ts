@@ -779,13 +779,18 @@ async function waitForLndReady({
             LndMobileEventEmitter.addListener('SubscribeState', stateHandler);
         });
 
+    // Register listener BEFORE subscribeState() - native emits events immediately
+    // when the stream starts; calling waitForState() first ensures we don't get
+    // "Sending SubscribeState with no listeners registered"
+    const statePromise = waitForState();
+
     await sleep(LISTENER_REGISTRATION_MS);
 
     log.d('Starting state subscription');
     await subscribeState();
     log.d('State subscription started successfully');
 
-    return waitForState();
+    return statePromise;
 }
 
 export async function optimizeNeutrinoPeers(
