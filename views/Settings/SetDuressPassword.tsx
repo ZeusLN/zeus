@@ -9,6 +9,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -25,7 +26,6 @@ interface SetDuressPassphraseState {
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
     duressPassphraseEmptyError: boolean;
-    confirmDelete: boolean;
 }
 
 @inject('SettingsStore')
@@ -40,8 +40,7 @@ export default class SetDuressPassphrase extends React.Component<
         savedDuressPassphrase: '',
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
-        duressPassphraseEmptyError: false,
-        confirmDelete: false
+        duressPassphraseEmptyError: false
     };
 
     async componentDidMount() {
@@ -243,23 +242,33 @@ export default class SetDuressPassphrase extends React.Component<
                     {!!savedDuressPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
-                                title={
-                                    this.state.confirmDelete
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.SetDuressPassword.deletePassword'
-                                          )
-                                }
+                                title={localeString(
+                                    'views.Settings.SetDuressPassword.deletePassword'
+                                )}
                                 onPress={() => {
-                                    if (!this.state.confirmDelete) {
-                                        this.setState({
-                                            confirmDelete: true
-                                        });
-                                    } else {
-                                        this.deleteDuressPassword();
-                                    }
+                                    confirmAction(
+                                        localeString(
+                                            'views.Settings.SetDuressPassword.deletePassword'
+                                        ),
+                                        localeString(
+                                            'views.Settings.SetDuressPassword.deletePassword.confirm'
+                                        ),
+                                        {
+                                            text: localeString(
+                                                'views.Settings.SetDuressPassword.deletePassword'
+                                            ),
+                                            style: 'destructive',
+                                            onPress: () =>
+                                                this.deleteDuressPassword()
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            onPress: () => void 0,
+                                            isPreferred: true
+                                        }
+                                    );
                                 }}
                                 warning
                             />

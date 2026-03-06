@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Sulautettujen LND-lompakoiden on oltava aktiivisia, jotta ne voidaan poistaa. Haluatko tehdä tästä lompakosta aktiivisen lompakon?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Tällä lompakolla on kanavia, jotka ovat avoinna tai odottamassa. Suosittelemme sulkemaan nämä manuaalisesti ennen jatkamista, sillä muuten kanavat suljetaan väkisin palautuksen yhteydessä.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Tällä lompakolla on pääketjussa oleva saldo. Varmista, että olet varmuuskopioinut siemenlausekkeesi ennen kuin jatkat.",
-    "views.Settings.AddEditNode.tapToConfirm": "Napauta vahvistaaksesi",
     "views.Settings.WalletConfiguration.duplicateWallet": "Kaksinkertaista Lompakkokonfiguraatio",
     "views.Settings.WalletConfiguration.walletInterface": "Lompakon käyttöliittymä",
     "views.Settings.AddEditNode.useTor": "Käytä Toria",

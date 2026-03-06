@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "내장된 LND 지갑은 삭제하려면 활성화되어야 합니다. 이 지갑을 활성 지갑으로 만드시겠습니까?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "이 지갑에는 열려 있거나 보류 중인 채널이 있습니다. 진행하기 전에 수동으로 닫는 것이 좋습니다. 그렇지 않으면 복구 시 채널이 강제로 닫힙니다.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "이 지갑에는 온체인 잔액이 있습니다. 진행하기 전에 시드를 백업하세요.",
-    "views.Settings.AddEditNode.tapToConfirm": "확인",
     "views.Settings.WalletConfiguration.duplicateWallet": "지갑 설정 복제",
     "views.Settings.WalletConfiguration.walletInterface": "지갑 인터페이스",
     "views.Settings.AddEditNode.useTor": "Tor 사용",

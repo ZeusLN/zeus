@@ -9,6 +9,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -28,7 +29,6 @@ interface SetPassphraseState {
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
-    confirmDelete: boolean;
     isBiometryEnabled: boolean;
 }
 
@@ -45,7 +45,6 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
-        confirmDelete: false,
         isBiometryEnabled: false
     };
 
@@ -259,38 +258,56 @@ export default class SetPassphrase extends React.Component<
                     {!!savedPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
-                                title={
-                                    this.state.confirmDelete
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.SetPassword.deletePassword'
-                                          )
-                                }
+                                title={localeString(
+                                    'views.Settings.SetPassword.deletePassword'
+                                )}
                                 onPress={() => {
-                                    if (!this.state.confirmDelete) {
-                                        this.setState({
-                                            confirmDelete: true
-                                        });
-                                    } else if (this.state.isBiometryEnabled) {
-                                        this.props.ModalStore.toggleInfoModal({
+                                    confirmAction(
+                                        localeString(
+                                            'views.Settings.SetPassword.deletePassword'
+                                        ),
+                                        localeString(
+                                            'views.Settings.SetPassword.deletePassword.confirm'
+                                        ),
+                                        {
                                             text: localeString(
-                                                'views.Settings.Security.biometricsWillBeDisabled'
+                                                'views.Settings.SetPassword.deletePassword'
                                             ),
-                                            buttons: [
-                                                {
-                                                    title: localeString(
-                                                        'general.ok'
-                                                    ),
-                                                    callback: () =>
-                                                        this.deletePassword()
+                                            style: 'destructive',
+                                            onPress: () => {
+                                                if (
+                                                    this.state.isBiometryEnabled
+                                                ) {
+                                                    this.props.ModalStore.toggleInfoModal(
+                                                        {
+                                                            text: localeString(
+                                                                'views.Settings.Security.biometricsWillBeDisabled'
+                                                            ),
+                                                            buttons: [
+                                                                {
+                                                                    title: localeString(
+                                                                        'general.ok'
+                                                                    ),
+                                                                    callback:
+                                                                        () =>
+                                                                            this.deletePassword()
+                                                                }
+                                                            ]
+                                                        }
+                                                    );
+                                                } else {
+                                                    this.deletePassword();
                                                 }
-                                            ]
-                                        });
-                                    } else {
-                                        this.deletePassword();
-                                    }
+                                            }
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            onPress: () => void 0,
+                                            isPreferred: true
+                                        }
+                                    );
                                 }}
                                 warning
                             />

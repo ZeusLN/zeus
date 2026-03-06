@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Portofelele LND încorporate trebuie să fie active pentru a fi șterse. Faceți din acest portofel portofelul activ?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Acest portofel are canale deschise sau în așteptare. Vă recomandăm să le închideți manual înainte de a continua, altfel canalele vor fi închise forțat la recuperare.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Acest portofel are un echilibru pe lanț. Asigurați-vă că faceți o copie de rezervă de seed înainte de a continua.",
-    "views.Settings.AddEditNode.tapToConfirm": "Atinge pentru confirmare",
     "views.Settings.WalletConfiguration.duplicateWallet": "Duplicați configurația portofelului",
     "views.Settings.WalletConfiguration.walletInterface": "Interfață portofel",
     "views.Settings.AddEditNode.useTor": "Folosește Tor",

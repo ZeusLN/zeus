@@ -24,6 +24,7 @@ import AmountInput from '../../components/AmountInput';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
@@ -43,7 +44,6 @@ interface ProductState {
     product: Product | any;
     isLoading: boolean;
     isExisting: boolean;
-    confirmDelete: boolean;
 }
 
 @inject('InventoryStore', 'PosStore', 'UnitsStore')
@@ -58,8 +58,7 @@ export default class ProductDetails extends React.Component<
             categories: [],
             product: null,
             isLoading: true,
-            isExisting: false,
-            confirmDelete: false
+            isExisting: false
         };
     }
 
@@ -249,7 +248,7 @@ export default class ProductDetails extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { product, isLoading, isExisting, confirmDelete } = this.state;
+        const { product, isLoading, isExisting } = this.state;
 
         return (
             <>
@@ -500,23 +499,33 @@ export default class ProductDetails extends React.Component<
                                     />
                                     {isExisting && (
                                         <Button
-                                            title={
-                                                confirmDelete
-                                                    ? localeString(
-                                                          'views.Settings.POS.confirmDelete'
-                                                      )
-                                                    : localeString(
-                                                          'views.Settings.POS.deleteProduct'
-                                                      )
-                                            }
+                                            title={localeString(
+                                                'views.Settings.POS.deleteProduct'
+                                            )}
                                             onPress={() => {
-                                                if (!confirmDelete) {
-                                                    this.setState({
-                                                        confirmDelete: true
-                                                    });
-                                                } else {
-                                                    this.deleteItem();
-                                                }
+                                                confirmAction(
+                                                    localeString(
+                                                        'views.Settings.POS.deleteProduct'
+                                                    ),
+                                                    localeString(
+                                                        'views.Settings.POS.deleteProduct.confirm'
+                                                    ),
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.POS.deleteProduct'
+                                                        ),
+                                                        style: 'destructive',
+                                                        onPress: () =>
+                                                            this.deleteItem()
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0,
+                                                        isPreferred: true
+                                                    }
+                                                );
                                             }}
                                             containerStyle={{ paddingTop: 18 }}
                                             warning

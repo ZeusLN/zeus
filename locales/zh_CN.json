@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "嵌入式 LND 钱包必须处于活动状态才能删除。将此钱包设为活跃钱包？",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "该钱包有开通或待处理的通道。我们建议在继续操作前手动关闭这些通道，否则通道将在恢复时被强制关闭。",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "该钱包有链上余额。请确保在继续操作前备份您的助记词。",
-    "views.Settings.AddEditNode.tapToConfirm": "点击确认",
     "views.Settings.WalletConfiguration.duplicateWallet": "重复钱包配置",
     "views.Settings.WalletConfiguration.walletInterface": "钱包界面",
     "views.Settings.AddEditNode.useTor": "使用 Tor",

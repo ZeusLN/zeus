@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Integrierte LND-Wallets müssen aktiv sein, um gelöscht werden zu können. Soll diese Wallet jetzt aktiviert werden?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Diese Wallet hat offene oder ausstehende Kanäle. Wir empfehlen, diese manuell zu schließen, bevor du fortfährst. Andernfalls werden die Kanäle bei der Wiederherstellung per Force-Close geschlossen.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Diese Wallet hat On-Chain-Guthaben. Stelle sicher, dass du ein Seed-Backup hast, bevor du fortfährst.",
-    "views.Settings.AddEditNode.tapToConfirm": "Antippen zum Bestätigen",
     "views.Settings.WalletConfiguration.duplicateWallet": "Wallet-Konfiguration duplizieren",
     "views.Settings.WalletConfiguration.walletInterface": "Wallet-Schnittstelle",
     "views.Settings.AddEditNode.useTor": "Tor verwenden",

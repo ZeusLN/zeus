@@ -11,6 +11,7 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
+import { confirmAction } from '../../../utils/ActionUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -33,9 +34,6 @@ interface WatchtowerDetailsState {
     loading: boolean;
     error: string | null;
     watchtowerInfo: Watchtower | null;
-    confirmDelete: boolean;
-    confirmDeactivate: boolean;
-    confirmActivate: boolean;
 }
 
 @observer
@@ -46,10 +44,7 @@ export default class WatchtowerDetails extends React.Component<
     state = {
         loading: false,
         error: null,
-        watchtowerInfo: null,
-        confirmDelete: false,
-        confirmDeactivate: false,
-        confirmActivate: false
+        watchtowerInfo: null
     };
 
     async componentDidMount() {
@@ -77,67 +72,104 @@ export default class WatchtowerDetails extends React.Component<
         }
     };
 
-    deactivateWatchtower = async () => {
+    deactivateWatchtower = () => {
         const { route, navigation } = this.props;
         const { watchtower } = route.params;
 
-        if (!this.state.confirmDeactivate) {
-            this.setState({ confirmDeactivate: true });
-            return;
-        }
-        this.setState({ loading: true, error: null, confirmDeactivate: false });
-
-        try {
-            await BackendUtils.deactivateWatchtower(watchtower.pubkey);
-            navigation.goBack();
-        } catch (error: any) {
-            this.setState({
-                loading: false,
-                error: error.message || 'Failed to deactivate watchtower'
-            });
-        }
+        confirmAction(
+            localeString('general.deactivate'),
+            localeString('views.Tools.watchtowers.deactivate.confirm'),
+            {
+                text: localeString('general.deactivate'),
+                onPress: async () => {
+                    this.setState({ loading: true, error: null });
+                    try {
+                        await BackendUtils.deactivateWatchtower(
+                            watchtower.pubkey
+                        );
+                        navigation.goBack();
+                    } catch (error: any) {
+                        this.setState({
+                            loading: false,
+                            error:
+                                error.message ||
+                                'Failed to deactivate watchtower'
+                        });
+                    }
+                }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
     };
 
-    activateWatchtower = async () => {
+    activateWatchtower = () => {
         const { route, navigation } = this.props;
         const { watchtower } = route.params;
 
-        if (!this.state.confirmActivate) {
-            this.setState({ confirmActivate: true });
-            return;
-        }
-        this.setState({ loading: true, error: null, confirmActivate: false });
-        try {
-            await BackendUtils.addWatchtower({
-                pubkey: Base64Utils.base64ToHex(watchtower.pubkey),
-                address: watchtower.addresses[0]
-            });
-            navigation.goBack();
-        } catch (error: any) {
-            this.setState({
-                loading: false,
-                error: error.message || 'Failed to activate watchtower'
-            });
-        }
+        confirmAction(
+            localeString('general.activate'),
+            localeString('views.Tools.watchtowers.activate.confirm'),
+            {
+                text: localeString('general.activate'),
+                onPress: async () => {
+                    this.setState({ loading: true, error: null });
+                    try {
+                        await BackendUtils.addWatchtower({
+                            pubkey: Base64Utils.base64ToHex(watchtower.pubkey),
+                            address: watchtower.addresses[0]
+                        });
+                        navigation.goBack();
+                    } catch (error: any) {
+                        this.setState({
+                            loading: false,
+                            error:
+                                error.message || 'Failed to activate watchtower'
+                        });
+                    }
+                }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
     };
 
-    deleteWatchtower = async () => {
+    deleteWatchtower = () => {
         const { route, navigation } = this.props;
         const { watchtower } = route.params;
-        if (!this.state.confirmDelete) {
-            this.setState({ confirmDelete: true });
-            return;
-        }
-        this.setState({ loading: true, error: null, confirmDelete: false });
-        try {
-            await BackendUtils.removeWatchtower(watchtower.pubkey);
-            navigation.goBack();
-        } catch (error: any) {
-            this.setState({
-                loading: false,
-                error: error.message || 'Failed to delete watchtower'
-            });
-        }
+
+        confirmAction(
+            localeString('general.delete'),
+            localeString('views.Tools.watchtowers.delete.confirm'),
+            {
+                text: localeString('general.delete'),
+                style: 'destructive',
+                onPress: async () => {
+                    this.setState({ loading: true, error: null });
+                    try {
+                        await BackendUtils.removeWatchtower(watchtower.pubkey);
+                        navigation.goBack();
+                    } catch (error: any) {
+                        this.setState({
+                            loading: false,
+                            error:
+                                error.message || 'Failed to delete watchtower'
+                        });
+                    }
+                }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
     };
 
     render() {
@@ -290,26 +322,14 @@ export default class WatchtowerDetails extends React.Component<
                     <View style={styles.buttonContainer}>
                         {isActive ? (
                             <Button
-                                title={
-                                    this.state.confirmDeactivate
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString('general.deactivate')
-                                }
+                                title={localeString('general.deactivate')}
                                 onPress={this.deactivateWatchtower}
                                 disabled={loading}
                                 secondary
                             />
                         ) : (
                             <Button
-                                title={
-                                    this.state.confirmActivate
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString('general.activate')
-                                }
+                                title={localeString('general.activate')}
                                 onPress={this.activateWatchtower}
                                 disabled={loading}
                                 secondary
@@ -317,13 +337,7 @@ export default class WatchtowerDetails extends React.Component<
                         )}
 
                         <Button
-                            title={
-                                this.state.confirmDelete
-                                    ? localeString(
-                                          'views.Settings.AddEditNode.tapToConfirm'
-                                      )
-                                    : localeString('general.delete')
-                            }
+                            title={localeString('general.delete')}
                             onPress={this.deleteWatchtower}
                             disabled={loading}
                             buttonStyle={{

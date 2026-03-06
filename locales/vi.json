@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Ví LND nhúng cần được kích hoạt mới xoá được. Đặt ví này làm ví đang kích hoạt?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Ví này có kênh đang mở hoặc chờ xử lý. Khuyến nghị nên đóng kênh trước khi tiếp tục, nếu không kênh sẽ bị đóng khi phục hồi.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Ví này có số dư trên chuỗi. Đảm bảo bạn đã dự phòng từ khoá hạt giống trước khi tiếp tục.",
-    "views.Settings.AddEditNode.tapToConfirm": "Chạm để xác nhận",
     "views.Settings.WalletConfiguration.duplicateWallet": "Sao chép Cấu hình Ví",
     "views.Settings.WalletConfiguration.walletInterface": "Giao diện ví",
     "views.Settings.AddEditNode.useTor": "Dùng Tor",

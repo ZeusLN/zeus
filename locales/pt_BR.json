@@ -358,7 +358,6 @@
     "views.Settings.WalletConfiguration.deleteWallet.inactiveWarning": "Carteiras LND incorporadas devem estar ativas para serem excluídas. Tornar esta carteira a carteira ativa?",
     "views.Settings.WalletConfiguration.deleteWallet.channelsWarning": "Esta carteira tem canais que estão abertos ou pendentes. Recomendamos fechá-los manualmente antes de prosseguir, caso contrário, os canais serão fechados à força na recuperação.",
     "views.Settings.WalletConfiguration.deleteWallet.balanceWarning": "Esta carteira tem um saldo on-chain. Certifique-se de fazer backup de sua semente antes de prosseguir.",
-    "views.Settings.AddEditNode.tapToConfirm": "Toque para confirmar",
     "views.Settings.WalletConfiguration.duplicateWallet": "Configuração de carteira duplicada",
     "views.Settings.WalletConfiguration.walletInterface": "Interface de carteira",
     "views.Settings.AddEditNode.useTor": "Use Tor",
