@@ -14,6 +14,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { CheckBox } from '@rneui/themed';
 
 import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
@@ -580,7 +581,7 @@ export default class ActivityExport extends React.Component<
         } = this.state;
 
         return (
-            <>
+            <Screen>
                 <ScrollView>
                     <Header
                         leftComponent="Back"
@@ -612,8 +613,7 @@ export default class ActivityExport extends React.Component<
 
                     <View
                         style={{
-                            ...styles.container,
-                            backgroundColor: themeColor('background')
+                            ...styles.container
                         }}
                     >
                         {isActivityFetching ? (
@@ -748,7 +748,7 @@ export default class ActivityExport extends React.Component<
                         }}
                     />
                 )}
-            </>
+            </Screen>
         );
     }
 }
@@ -771,7 +771,6 @@ const styles = StyleSheet.create({
     },
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center'
     },

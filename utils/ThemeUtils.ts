@@ -308,7 +308,9 @@ const Desert: { [key: string]: any } = {
     background: '#000',
     secondary: '#141414',
     modalBackground: '#141414',
-    separator: '#141414'
+    separator: '#141414',
+    text: '#FFFFFF',
+    secondaryText: '#E8E8E8'
 };
 
 const OrangeCreamSoda: { [key: string]: any } = {

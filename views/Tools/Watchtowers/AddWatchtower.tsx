@@ -157,8 +157,7 @@ export default class AddWatchtower extends React.Component<
                 />
                 <View
                     style={{
-                        ...styles.container,
-                        backgroundColor: themeColor('background')
+                        ...styles.container
                     }}
                 >
                     {error && (
