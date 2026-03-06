@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -9,6 +9,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -245,31 +246,28 @@ export default class SetDuressPassphrase extends React.Component<
                                     'views.Settings.SetDuressPassword.deletePassword'
                                 )}
                                 onPress={() => {
-                                    Alert.alert(
+                                    confirmAction(
                                         localeString(
                                             'views.Settings.SetDuressPassword.deletePassword'
                                         ),
                                         localeString(
                                             'views.Settings.SetDuressPassword.deletePassword.confirm'
                                         ),
-                                        [
-                                            {
-                                                text: localeString(
-                                                    'views.Settings.SetDuressPassword.deletePassword'
-                                                ),
-                                                style: 'destructive',
-                                                onPress: () =>
-                                                    this.deleteDuressPassword()
-                                            },
-                                            {
-                                                text: localeString(
-                                                    'general.cancel'
-                                                ),
-                                                onPress: () => void 0,
-                                                isPreferred: true
-                                            }
-                                        ],
-                                        { cancelable: false }
+                                        {
+                                            text: localeString(
+                                                'views.Settings.SetDuressPassword.deletePassword'
+                                            ),
+                                            style: 'destructive',
+                                            onPress: () =>
+                                                this.deleteDuressPassword()
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            onPress: () => void 0,
+                                            isPreferred: true
+                                        }
                                     );
                                 }}
                                 warning

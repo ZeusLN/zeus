@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Text, View, StyleSheet, ScrollView } from 'react-native';
+import { Text, View, StyleSheet, ScrollView } from 'react-native';
 import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
+import { confirmAction } from '../../../utils/ActionUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -75,36 +76,33 @@ export default class WatchtowerDetails extends React.Component<
         const { route, navigation } = this.props;
         const { watchtower } = route.params;
 
-        Alert.alert(
+        confirmAction(
             localeString('general.deactivate'),
             localeString('views.Tools.watchtowers.deactivate.confirm'),
-            [
-                {
-                    text: localeString('general.deactivate'),
-                    onPress: async () => {
-                        this.setState({ loading: true, error: null });
-                        try {
-                            await BackendUtils.deactivateWatchtower(
-                                watchtower.pubkey
-                            );
-                            navigation.goBack();
-                        } catch (error: any) {
-                            this.setState({
-                                loading: false,
-                                error:
-                                    error.message ||
-                                    'Failed to deactivate watchtower'
-                            });
-                        }
+            {
+                text: localeString('general.deactivate'),
+                onPress: async () => {
+                    this.setState({ loading: true, error: null });
+                    try {
+                        await BackendUtils.deactivateWatchtower(
+                            watchtower.pubkey
+                        );
+                        navigation.goBack();
+                    } catch (error: any) {
+                        this.setState({
+                            loading: false,
+                            error:
+                                error.message ||
+                                'Failed to deactivate watchtower'
+                        });
                     }
-                },
-                {
-                    text: localeString('general.cancel'),
-                    onPress: () => void 0,
-                    isPreferred: true
                 }
-            ],
-            { cancelable: false }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
         );
     };
 
@@ -112,39 +110,33 @@ export default class WatchtowerDetails extends React.Component<
         const { route, navigation } = this.props;
         const { watchtower } = route.params;
 
-        Alert.alert(
+        confirmAction(
             localeString('general.activate'),
             localeString('views.Tools.watchtowers.activate.confirm'),
-            [
-                {
-                    text: localeString('general.activate'),
-                    onPress: async () => {
-                        this.setState({ loading: true, error: null });
-                        try {
-                            await BackendUtils.addWatchtower({
-                                pubkey: Base64Utils.base64ToHex(
-                                    watchtower.pubkey
-                                ),
-                                address: watchtower.addresses[0]
-                            });
-                            navigation.goBack();
-                        } catch (error: any) {
-                            this.setState({
-                                loading: false,
-                                error:
-                                    error.message ||
-                                    'Failed to activate watchtower'
-                            });
-                        }
+            {
+                text: localeString('general.activate'),
+                onPress: async () => {
+                    this.setState({ loading: true, error: null });
+                    try {
+                        await BackendUtils.addWatchtower({
+                            pubkey: Base64Utils.base64ToHex(watchtower.pubkey),
+                            address: watchtower.addresses[0]
+                        });
+                        navigation.goBack();
+                    } catch (error: any) {
+                        this.setState({
+                            loading: false,
+                            error:
+                                error.message || 'Failed to activate watchtower'
+                        });
                     }
-                },
-                {
-                    text: localeString('general.cancel'),
-                    onPress: () => void 0,
-                    isPreferred: true
                 }
-            ],
-            { cancelable: false }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
         );
     };
 
@@ -152,37 +144,31 @@ export default class WatchtowerDetails extends React.Component<
         const { route, navigation } = this.props;
         const { watchtower } = route.params;
 
-        Alert.alert(
+        confirmAction(
             localeString('general.delete'),
             localeString('views.Tools.watchtowers.delete.confirm'),
-            [
-                {
-                    text: localeString('general.delete'),
-                    style: 'destructive',
-                    onPress: async () => {
-                        this.setState({ loading: true, error: null });
-                        try {
-                            await BackendUtils.removeWatchtower(
-                                watchtower.pubkey
-                            );
-                            navigation.goBack();
-                        } catch (error: any) {
-                            this.setState({
-                                loading: false,
-                                error:
-                                    error.message ||
-                                    'Failed to delete watchtower'
-                            });
-                        }
+            {
+                text: localeString('general.delete'),
+                style: 'destructive',
+                onPress: async () => {
+                    this.setState({ loading: true, error: null });
+                    try {
+                        await BackendUtils.removeWatchtower(watchtower.pubkey);
+                        navigation.goBack();
+                    } catch (error: any) {
+                        this.setState({
+                            loading: false,
+                            error:
+                                error.message || 'Failed to delete watchtower'
+                        });
                     }
-                },
-                {
-                    text: localeString('general.cancel'),
-                    onPress: () => void 0,
-                    isPreferred: true
                 }
-            ],
-            { cancelable: false }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
         );
     };
 

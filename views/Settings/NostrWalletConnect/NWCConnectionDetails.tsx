@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-    Alert,
     View,
     StyleSheet,
     ScrollView,
@@ -21,6 +20,7 @@ import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import ModalStore from '../../../stores/ModalStore';
 
+import { confirmAction } from '../../../utils/ActionUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
 import NostrConnectUtils from '../../../utils/NostrConnectUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -242,42 +242,39 @@ export default class NWCConnectionDetails extends React.Component<
 
     deleteConnection = (connection: NWCConnection) => {
         const { NostrWalletConnectStore, navigation } = this.props;
-        Alert.alert(
+        confirmAction(
             localeString('views.Settings.NostrWalletConnect.deleteConnection'),
             localeString(
                 'views.Settings.NostrWalletConnect.deleteConnection.confirm'
             ),
-            [
-                {
-                    text: localeString(
-                        'views.Settings.NostrWalletConnect.deleteConnection'
-                    ),
-                    style: 'destructive',
-                    onPress: () => {
-                        this.setState({ deleting: true, error: null });
-                        NostrWalletConnectStore.deleteConnection(connection.id)
-                            .then(() => {
-                                navigation.goBack();
-                            })
-                            .catch((error) => {
-                                console.error(
-                                    'Failed to delete connection:',
-                                    error
-                                );
-                                this.setState({
-                                    error: 'Failed to delete connection',
-                                    deleting: false
-                                });
+            {
+                text: localeString(
+                    'views.Settings.NostrWalletConnect.deleteConnection'
+                ),
+                style: 'destructive',
+                onPress: () => {
+                    this.setState({ deleting: true, error: null });
+                    NostrWalletConnectStore.deleteConnection(connection.id)
+                        .then(() => {
+                            navigation.goBack();
+                        })
+                        .catch((error) => {
+                            console.error(
+                                'Failed to delete connection:',
+                                error
+                            );
+                            this.setState({
+                                error: 'Failed to delete connection',
+                                deleting: false
                             });
-                    }
-                },
-                {
-                    text: localeString('general.cancel'),
-                    onPress: () => void 0,
-                    isPreferred: true
+                        });
                 }
-            ],
-            { cancelable: false }
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
         );
     };
     render() {

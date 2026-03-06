@@ -26,6 +26,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import ValidationUtils from '../../utils/ValidationUtils';
+import { confirmAction } from '../../utils/ActionUtils';
 
 import Storage from '../../storage';
 
@@ -701,26 +702,23 @@ export default class WalletConfiguration extends React.Component<
     };
 
     private handleDeletePress = () => {
-        Alert.alert(
+        confirmAction(
             localeString('views.Settings.WalletConfiguration.deleteWallet'),
             localeString(
                 'views.Settings.WalletConfiguration.deleteWallet.confirm'
             ),
-            [
-                {
-                    text: localeString(
-                        'views.Settings.WalletConfiguration.deleteWallet'
-                    ),
-                    style: 'destructive',
-                    onPress: this.performDelete
-                },
-                {
-                    text: localeString('general.cancel'),
-                    onPress: () => void 0,
-                    isPreferred: true
-                }
-            ],
-            { cancelable: false }
+            {
+                text: localeString(
+                    'views.Settings.WalletConfiguration.deleteWallet'
+                ),
+                style: 'destructive',
+                onPress: this.performDelete
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
         );
     };
 

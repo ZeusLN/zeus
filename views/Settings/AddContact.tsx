@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Alert,
     View,
     TouchableOpacity,
     StyleSheet,
@@ -26,6 +25,7 @@ import Header from '../../components/Header';
 import { Row } from '../../components/layout/Row';
 
 import AddressUtils from '../../utils/AddressUtils';
+import { confirmAction } from '../../utils/ActionUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -1101,31 +1101,27 @@ export default class AddContact extends React.Component<
                                     'views.Settings.AddContact.deleteContact'
                                 )}
                                 onPress={() => {
-                                    Alert.alert(
+                                    confirmAction(
                                         localeString(
                                             'views.Settings.AddContact.deleteContact'
                                         ),
                                         localeString(
                                             'views.Settings.AddContact.deleteContact.confirm'
                                         ),
-                                        [
-                                            {
-                                                text: localeString(
-                                                    'views.Settings.AddContact.deleteContact'
-                                                ),
-                                                style: 'destructive',
-                                                onPress: () =>
-                                                    this.deleteContact()
-                                            },
-                                            {
-                                                text: localeString(
-                                                    'general.cancel'
-                                                ),
-                                                onPress: () => void 0,
-                                                isPreferred: true
-                                            }
-                                        ],
-                                        { cancelable: false }
+                                        {
+                                            text: localeString(
+                                                'views.Settings.AddContact.deleteContact'
+                                            ),
+                                            style: 'destructive',
+                                            onPress: () => this.deleteContact()
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            onPress: () => void 0,
+                                            isPreferred: true
+                                        }
                                     );
                                 }}
                                 warning

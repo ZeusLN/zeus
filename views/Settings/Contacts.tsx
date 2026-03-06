@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Alert,
     Text,
     View,
     TouchableOpacity,
@@ -18,6 +17,7 @@ import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -535,36 +535,33 @@ export default class Contacts extends React.Component<
                                     'views.Settings.Contacts.deleteAllContacts'
                                 )}
                                 onPress={() => {
-                                    Alert.alert(
+                                    confirmAction(
                                         localeString(
                                             'views.Settings.Contacts.deleteAllContacts'
                                         ),
                                         localeString(
                                             'views.Settings.Contacts.deleteAllContacts.confirm'
                                         ),
-                                        [
-                                            {
-                                                text: localeString(
-                                                    'views.Settings.Contacts.deleteAllContacts'
-                                                ),
-                                                style: 'destructive',
-                                                onPress: async () => {
-                                                    await Storage.setItem(
-                                                        CONTACTS_KEY,
-                                                        []
-                                                    );
-                                                    ContactStore?.loadContacts();
-                                                }
-                                            },
-                                            {
-                                                text: localeString(
-                                                    'general.cancel'
-                                                ),
-                                                onPress: () => void 0,
-                                                isPreferred: true
+                                        {
+                                            text: localeString(
+                                                'views.Settings.Contacts.deleteAllContacts'
+                                            ),
+                                            style: 'destructive',
+                                            onPress: async () => {
+                                                await Storage.setItem(
+                                                    CONTACTS_KEY,
+                                                    []
+                                                );
+                                                ContactStore?.loadContacts();
                                             }
-                                        ],
-                                        { cancelable: false }
+                                        },
+                                        {
+                                            text: localeString(
+                                                'general.cancel'
+                                            ),
+                                            onPress: () => void 0,
+                                            isPreferred: true
+                                        }
                                     );
                                 }}
                                 containerStyle={{
