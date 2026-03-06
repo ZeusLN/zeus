@@ -29,7 +29,7 @@ import Add from '../../assets/images/SVG/Add.svg';
 interface MintsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    route: Route<'Mints'>;
+    route: Route<'Mints', { disableRandom?: boolean }>;
 }
 
 interface MintsState {
@@ -87,8 +87,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     );
 
     render() {
-        const { navigation, CashuStore } = this.props;
+        const { navigation, route, CashuStore } = this.props;
         const { mints } = this.state;
+        const disableRandom = route?.params?.disableRandom;
         const {
             selectedMintUrl,
             clearInvoice,
@@ -133,7 +134,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         clearInvoice();
                     }}
                 />
-                {!!mints && mints.length > 1 && (
+                {!!mints && mints.length > 1 && !disableRandom && (
                     <View
                         style={{
                             flexDirection: 'row',
@@ -176,7 +177,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         }) => {
                             const mintInfo = item._mintInfo || item;
                             const isSelectedMint =
-                                !randomizeMintSelection &&
+                                (!randomizeMintSelection || disableRandom) &&
                                 selectedMintUrl &&
                                 mintInfo?.mintUrl &&
                                 selectedMintUrl === mintInfo?.mintUrl;
@@ -202,7 +203,10 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             backgroundColor: 'transparent'
                                         }}
                                         onPress={async () => {
-                                            if (randomizeMintSelection) {
+                                            if (
+                                                randomizeMintSelection &&
+                                                !disableRandom
+                                            ) {
                                                 await setRandomizeMintSelection(
                                                     false
                                                 );

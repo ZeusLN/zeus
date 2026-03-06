@@ -21,6 +21,7 @@ interface EcashMintPickerProps {
     navigation: StackNavigationProp<any, any>;
     hideAmount?: boolean;
     disabled?: boolean;
+    disableRandom?: boolean;
     overrideMintUrl?: string;
 }
 
@@ -35,6 +36,7 @@ export default class EcashMintPicker extends React.Component<
             CashuStore,
             hideAmount,
             disabled,
+            disableRandom,
             navigation,
             overrideMintUrl
         } = this.props;
@@ -49,7 +51,10 @@ export default class EcashMintPicker extends React.Component<
 
         const displayMintUrl = overrideMintUrl || selectedMintUrl;
         const showRandom =
-            randomizeMintSelection && !overrideMintUrl && mintUrls.length > 1;
+            randomizeMintSelection &&
+            !disableRandom &&
+            !overrideMintUrl &&
+            mintUrls.length > 1;
 
         let mints: any = {};
         mintUrls.forEach((mintUrl) => {
@@ -67,7 +72,7 @@ export default class EcashMintPicker extends React.Component<
             <View style={{ flex: 1, flexDirection: 'row' }}>
                 <TouchableOpacity
                     onPress={() => {
-                        navigation.navigate('Mints');
+                        navigation.navigate('Mints', { disableRandom });
                     }}
                     style={{
                         opacity: disabled ? 0.25 : 1,
