@@ -157,6 +157,7 @@ interface EcashSettings {
     enableCashu: boolean;
     automaticallySweep: boolean;
     sweepThresholdSats?: number;
+    initialMintUrls?: string[];
 }
 
 interface SwapsSettings {
@@ -1371,7 +1372,7 @@ export default class SettingsStore {
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
-            clipboard: false,
+            clipboard: true,
             lurkerMode: false,
             enableMempoolRates: true
         },
@@ -1432,7 +1433,7 @@ export default class SettingsStore {
         isBiometryEnabled: false,
         scramblePin: true,
         loginBackground: false,
-        fiatEnabled: false,
+        fiatEnabled: true,
         fiat: DEFAULT_FIAT,
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         // embedded node

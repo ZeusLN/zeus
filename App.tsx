@@ -198,6 +198,15 @@ import Order from './views/Order';
 import Intro from './views/Intro';
 import IntroSplash from './views/IntroSplash';
 
+// Onboarding
+import Onboarding1 from './views/Onboarding/Onboarding1';
+import RecommendedSettings from './views/Onboarding/RecommendedSettings';
+import WalletSetup from './views/Onboarding/WalletSetup';
+import WalletType from './views/Onboarding/WalletType';
+import NodeChoice from './views/Onboarding/NodeChoice';
+import MintDiscovery from './views/Onboarding/MintDiscovery';
+import WalletSettings from './views/Onboarding/WalletSettings';
+
 import EditFee from './views/EditFee';
 
 // Embedded LND
@@ -469,6 +478,40 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="IntroSplash" // @ts-ignore:next-line
                                                         component={IntroSplash}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Onboarding1" // @ts-ignore:next-line
+                                                        component={Onboarding1}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RecommendedSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            RecommendedSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletSetup" // @ts-ignore:next-line
+                                                        component={WalletSetup}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletType" // @ts-ignore:next-line
+                                                        component={WalletType}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NodeChoice" // @ts-ignore:next-line
+                                                        component={NodeChoice}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="MintDiscovery" // @ts-ignore:next-line
+                                                        component={
+                                                            MintDiscovery
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            WalletSettings
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Intro" // @ts-ignore:next-line
