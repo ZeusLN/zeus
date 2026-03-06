@@ -1,10 +1,18 @@
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { MenuSearchContext, MenuSearchItemDefinition } from './searchRegistry';
+import {
+    getSettingsItemPlacements,
+    MENU_SEARCH_ITEMS,
+    MenuSearchContext,
+    MenuSearchItemDefinition,
+    MenuSearchItemPlacement,
+    SettingsSurface
+} from './searchRegistry';
 
 interface BuildMenuSearchContextParams {
     hasSelectedNode: boolean;
     hasEmbeddedSeed: boolean;
+    implementation?: string;
     cashuEnabled: boolean;
     isTestnet: boolean;
     supportsOffers: boolean;
@@ -17,15 +25,25 @@ interface HandleMenuSearchItemPressParams {
     onClearStorage?: () => void;
 }
 
+export interface SettingsSurfaceGroup {
+    groupId: string;
+    items: Array<{
+        item: MenuSearchItemDefinition;
+        placement: MenuSearchItemPlacement;
+    }>;
+}
+
 export const buildMenuSearchContext = ({
     hasSelectedNode,
     hasEmbeddedSeed,
+    implementation,
     cashuEnabled,
     isTestnet,
     supportsOffers
 }: BuildMenuSearchContextParams): MenuSearchContext => ({
     hasSelectedNode,
     hasEmbeddedSeed,
+    implementation,
     supportsNodeInfo: BackendUtils.supportsNodeInfo(),
     supportsNetworkInfo: BackendUtils.supportsNetworkInfo(),
     supportsCashuWallet: BackendUtils.supportsCashuWallet(),
@@ -63,6 +81,47 @@ export const doesMenuSearchItemMatch = (
     );
 
     return searchTerms.some((term) => term.includes(normalizedQuery));
+};
+
+export const getMatchingSettingsItems = (
+    context: MenuSearchContext,
+    normalizedQuery: string
+) =>
+    MENU_SEARCH_ITEMS.filter(
+        (item) =>
+            !item.excludeFromSearch &&
+            item.isVisible(context) &&
+            doesMenuSearchItemMatch(item, normalizedQuery)
+    );
+
+export const getVisibleSettingsSurfaceGroups = (
+    context: MenuSearchContext,
+    surface: SettingsSurface
+) => {
+    const groups = new Map<string, SettingsSurfaceGroup>();
+
+    MENU_SEARCH_ITEMS.forEach((item) => {
+        if (!item.isVisible(context)) {
+            return;
+        }
+
+        getSettingsItemPlacements(item, surface).forEach((placement) => {
+            if (placement.isVisible && !placement.isVisible(context)) {
+                return;
+            }
+
+            if (!groups.has(placement.group)) {
+                groups.set(placement.group, {
+                    groupId: placement.group,
+                    items: []
+                });
+            }
+
+            groups.get(placement.group)?.items.push({ item, placement });
+        });
+    });
+
+    return Array.from(groups.values());
 };
 
 export const handleMenuSearchItemPress = ({
