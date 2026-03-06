@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Dimensions, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Screen from '../components/Screen';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -88,17 +88,14 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
             value={item}
             expanded
             hideText={route.params?.fromContactDetailsView && index === 0}
+            textBottom
+            truncateLongValue
             iconOnly={true}
         />
     );
 
     return (
-        <SafeAreaView
-            style={{
-                flex: 1,
-                backgroundColor: themeColor('background')
-            }}
-        >
+        <Screen>
             <Header
                 leftComponent="Back"
                 containerStyle={{
@@ -108,9 +105,8 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
             />
             <View
                 style={{
-                    flexGrow: 1,
-                    flexShrink: 1,
-                    justifyContent: 'center'
+                    flex: 1,
+                    justifyContent: 'flex-start'
                 }}
             >
                 <Carousel
@@ -118,7 +114,8 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                     withAnimation={{
                         type: 'spring',
                         config: {
-                            damping: 13
+                            damping: 40,
+                            stiffness: 200
                         }
                     }}
                     data={addressData}
@@ -128,7 +125,7 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                     loop={false}
                     scrollAnimationDuration={500}
                     snapEnabled={true}
-                    pagingEnabled={false}
+                    pagingEnabled={true}
                     overscrollEnabled={false}
                     mode="parallax"
                     modeConfig={{
@@ -137,7 +134,8 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                     }}
                     onConfigurePanGesture={(gesture) => {
                         'worklet';
-                        gesture.activeOffsetX([-10, 10]);
+                        gesture.activeOffsetX([-20, 20]);
+                        gesture.failOffsetY([-5, 5]);
                     }}
                 />
             </View>
@@ -156,7 +154,7 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
                     onPress={onPressPagination}
                 />
             )}
-        </SafeAreaView>
+        </Screen>
     );
 };
 
