@@ -181,6 +181,7 @@ export default class LegacySeedRecovery extends React.Component<
                     </Text>
                     <View style={styles.pickerContainer}>
                         <EcashMintPicker
+                            disableRandom
                             navigation={navigation}
                             hideAmount
                             disabled={checking}

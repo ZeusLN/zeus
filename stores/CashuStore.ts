@@ -143,6 +143,7 @@ interface ClaimTokenResponse {
 export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
+    @observable public randomizeMintSelection: boolean = false;
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     // Per-mint data fetched from CDK
@@ -160,6 +161,7 @@ export default class CashuStore {
     @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
+    @observable public lastInvoiceMintUrl?: string;
 
     @observable public loading = false;
     @observable public initializing = false;
@@ -999,6 +1001,7 @@ export default class CashuStore {
         this.watchedInvoicePaid = false;
         this.watchedInvoicePaidAmt = undefined;
         this.quoteId = undefined;
+        this.lastInvoiceMintUrl = undefined;
         this.error = false;
     };
 
@@ -1520,6 +1523,29 @@ export default class CashuStore {
     };
 
     @action
+    public setRandomizeMintSelection = async (value: boolean) => {
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-randomizeMintSelection`,
+            value ? 'true' : 'false'
+        );
+        runInAction(() => {
+            this.randomizeMintSelection = value;
+        });
+    };
+
+    public getRandomMintUrl = (): string => {
+        const onlineMints = this.mintUrls.filter(
+            (mintUrl) => !this.cashuWallets[mintUrl]?.errorConnecting
+        );
+
+        const mintsToUse = onlineMints.length > 0 ? onlineMints : this.mintUrls;
+        if (mintsToUse.length === 0) return '';
+
+        const index = Math.floor(Math.random() * mintsToUse.length);
+        return mintsToUse[index];
+    };
+
+    @action
     public addMint = async (
         mintUrl: string,
         checkForExistingProofs?: boolean
@@ -1938,7 +1964,8 @@ export default class CashuStore {
             storedSentTokens,
             storedSeedVersion,
             storedSeedPhrase,
-            storedSeed
+            storedSeed,
+            storedRandomizeMintSelection
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
@@ -1948,11 +1975,13 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-sent-tokens`),
             Storage.getItem(`${lndDir}-cashu-seed-version`),
             Storage.getItem(`${lndDir}-cashu-seed-phrase`),
-            Storage.getItem(`${lndDir}-cashu-seed`)
+            Storage.getItem(`${lndDir}-cashu-seed`),
+            Storage.getItem(`${lndDir}-cashu-randomizeMintSelection`)
         ]);
 
         // Parse app-specific stored data
         this.selectedMintUrl = storedselectedMintUrl || '';
+        this.randomizeMintSelection = storedRandomizeMintSelection === 'true';
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
                   (invoice: any) => new CashuInvoice(invoice)
@@ -2361,9 +2390,14 @@ export default class CashuStore {
                 );
             }
 
+            // Pick mint: random if enabled, otherwise selected
+            const mintUrl = this.randomizeMintSelection
+                ? this.getRandomMintUrl()
+                : this.selectedMintUrl;
+
             // Create mint quote via CDK
             const cdkQuote = await this.createMintQuoteCDK(
-                this.selectedMintUrl,
+                mintUrl,
                 value ? Number(value) : 0,
                 memo
             );
@@ -2394,7 +2428,7 @@ export default class CashuStore {
                 invoice = new CashuInvoice({
                     ...mintQuote,
                     decoded,
-                    mintUrl: this.selectedMintUrl
+                    mintUrl
                 });
                 this.invoices?.push(invoice);
                 await Storage.setItem(
@@ -2405,6 +2439,7 @@ export default class CashuStore {
 
             runInAction(() => {
                 this.invoice = invoice?.getPaymentRequest;
+                this.lastInvoiceMintUrl = mintUrl;
                 this.creatingInvoice = false;
             });
 
@@ -3421,6 +3456,7 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-seed-version`);
             await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);
             await Storage.removeItem(`${lndDir}-cashu-seed`);
+            await Storage.removeItem(`${lndDir}-cashu-randomizeMintSelection`);
 
             if (lightningAddressStore.lightningAddressType === 'cashu') {
                 lightningAddressStore.deleteAddress();

@@ -359,7 +359,9 @@ export default class ReceiveEcash extends React.Component<
         // persist invoice to check,
         // incase user backs out of view
         const quoteId = cloneDeep(CashuStore.quoteId);
-        const selectedMintUrl = cloneDeep(CashuStore.selectedMintUrl);
+        const selectedMintUrl = cloneDeep(
+            CashuStore.lastInvoiceMintUrl || CashuStore.selectedMintUrl
+        );
 
         this.lnInterval = setInterval(() => {
             checkInvoicePaid(quoteId, selectedMintUrl).then(
@@ -429,7 +431,8 @@ export default class ReceiveEcash extends React.Component<
             creatingInvoiceError,
             watchedInvoicePaid,
             watchedInvoicePaidAmt,
-            loadingMsg
+            loadingMsg,
+            lastInvoiceMintUrl
         } = CashuStore;
         const { posStatus, settings } = SettingsStore;
         const loading =
@@ -682,6 +685,9 @@ export default class ReceiveEcash extends React.Component<
                                                     >
                                                         <EcashMintPicker
                                                             hideAmount
+                                                            overrideMintUrl={
+                                                                lastInvoiceMintUrl
+                                                            }
                                                             navigation={
                                                                 navigation
                                                             }

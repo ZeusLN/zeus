@@ -369,6 +369,7 @@ export default class SendEcash extends React.Component<
                                             }}
                                         >
                                             <EcashMintPicker
+                                                disableRandom
                                                 navigation={navigation}
                                             />
                                         </View>

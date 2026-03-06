@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { FlatList, View, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    FlatList,
+    Text,
+    View,
+    StyleSheet,
+    TouchableOpacity
+} from 'react-native';
 import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -10,6 +16,7 @@ import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import MintAvatar from '../../components/MintAvatar';
 import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -22,7 +29,7 @@ import Add from '../../assets/images/SVG/Add.svg';
 interface MintsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    route: Route<'Mints'>;
+    route: Route<'Mints', { disableRandom?: boolean }>;
 }
 
 interface MintsState {
@@ -80,9 +87,16 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     );
 
     render() {
-        const { navigation, CashuStore } = this.props;
+        const { navigation, route, CashuStore } = this.props;
         const { mints } = this.state;
-        const { selectedMintUrl, clearInvoice, setSelectedMint } = CashuStore;
+        const disableRandom = route?.params?.disableRandom;
+        const {
+            selectedMintUrl,
+            clearInvoice,
+            setSelectedMint,
+            randomizeMintSelection,
+            setRandomizeMintSelection
+        } = CashuStore;
 
         const AddMintButton = () => (
             <TouchableOpacity
@@ -120,6 +134,37 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         clearInvoice();
                     }}
                 />
+                {!!mints && mints.length > 1 && !disableRandom && (
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            paddingHorizontal: 16,
+                            paddingVertical: 10
+                        }}
+                    >
+                        <Row style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 16
+                                }}
+                            >
+                                {localeString('cashu.randomizeMintSelection')}
+                            </Text>
+                        </Row>
+                        <Switch
+                            value={randomizeMintSelection}
+                            onValueChange={() =>
+                                setRandomizeMintSelection(
+                                    !randomizeMintSelection
+                                )
+                            }
+                        />
+                    </View>
+                )}
                 {!!mints && mints.length > 0 ? (
                     <FlatList
                         data={mints}
@@ -132,6 +177,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         }) => {
                             const mintInfo = item._mintInfo || item;
                             const isSelectedMint =
+                                (!randomizeMintSelection || disableRandom) &&
                                 selectedMintUrl &&
                                 mintInfo?.mintUrl &&
                                 selectedMintUrl === mintInfo?.mintUrl;
@@ -157,6 +203,14 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             backgroundColor: 'transparent'
                                         }}
                                         onPress={async () => {
+                                            if (
+                                                randomizeMintSelection &&
+                                                !disableRandom
+                                            ) {
+                                                await setRandomizeMintSelection(
+                                                    false
+                                                );
+                                            }
                                             await setSelectedMint(
                                                 mintInfo?.mintUrl
                                             ).then(() => {

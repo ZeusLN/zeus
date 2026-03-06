@@ -1890,6 +1890,8 @@
     "views.Cashu.CashuPayment.title": "Cashu Payment",
     "cashu.mint": "Mint",
     "cashu.mints": "Mints",
+    "cashu.randomizeMintSelection": "Random mint for receives",
+    "cashu.randomMint": "Random mint",
     "cashu.cashuMints": "Cashu mints",
     "cashu.mintUrl": "Mint URL",
     "cashu.token": "Cashu token",
