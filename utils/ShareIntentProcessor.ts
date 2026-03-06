@@ -18,7 +18,7 @@ let pendingShareIntentData: {
 } | null = null;
 
 /**
- * Processes a shared QR code image from Android share intent
+ * Processes a shared QR code image from Android share intent or iOS share extensions
  * @returns Navigation result with success status, route/params or error message
  */
 export const processSharedQRImage =
@@ -62,7 +62,7 @@ export const processSharedQRImage =
 export const processSharedQRImageFast =
     async (): Promise<ShareIntentResult | null> => {
         try {
-            // Get the shared image as base64 from Android intent
+            // Get the shared image as base64 from Android intent or iOS share extension
             const base64Image = await MobileTools.getSharedImageBase64();
 
             if (!base64Image) return null;
