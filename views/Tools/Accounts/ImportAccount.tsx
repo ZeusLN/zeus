@@ -176,48 +176,16 @@ export default class ImportAccount extends React.Component<
 
         if (!understood) {
             return (
-                <SafeAreaView
-                    style={{
-                        flex: 1,
-                        backgroundColor: themeColor('background')
-                    }}
-                    edges={['top', 'bottom']}
-                >
-                    <ScrollView showsVerticalScrollIndicator={false}>
-                        <View style={{ marginHorizontal: 10 }}>
-                            <ErrorMessage
-                                message={localeString(
-                                    'general.warning'
-                                ).toUpperCase()}
-                            />
-                        </View>
-                        <Text
-                            style={{
-                                ...styles.warningText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.ImportAccount.Warning.text1')}
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.warningText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString('views.ImportAccount.Warning.text2')}
-                        </Text>
-                        <Text
-                            style={{
-                                ...styles.warningText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString(
-                                'views.ImportAccount.Warning.text3'
-                            ).replace('Zeus', 'ZEUS')}
-                        </Text>
-                        {implementation !== 'embedded-lnd' && (
+                <Screen>
+                    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <View style={{ marginHorizontal: 10 }}>
+                                <ErrorMessage
+                                    message={localeString(
+                                        'general.warning'
+                                    ).toUpperCase()}
+                                />
+                            </View>
                             <Text
                                 style={{
                                     ...styles.warningText,
@@ -225,18 +193,52 @@ export default class ImportAccount extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.ImportAccount.note'
+                                    'views.ImportAccount.Warning.text1'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.warningText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.ImportAccount.Warning.text2'
+                                )}
+                            </Text>
+                            <Text
+                                style={{
+                                    ...styles.warningText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.ImportAccount.Warning.text3'
                                 ).replace('Zeus', 'ZEUS')}
                             </Text>
-                        )}
-                    </ScrollView>
-                    <View style={{ paddingVertical: 10 }}>
-                        <Button
-                            onPress={() => this.setState({ understood: true })}
-                            title={localeString('general.iUnderstand')}
-                        />
-                    </View>
-                </SafeAreaView>
+                            {implementation !== 'embedded-lnd' && (
+                                <Text
+                                    style={{
+                                        ...styles.warningText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.ImportAccount.note'
+                                    ).replace('Zeus', 'ZEUS')}
+                                </Text>
+                            )}
+                        </ScrollView>
+                        <View style={{ paddingVertical: 10 }}>
+                            <Button
+                                onPress={() =>
+                                    this.setState({ understood: true })
+                                }
+                                title={localeString('general.iUnderstand')}
+                            />
+                        </View>
+                    </SafeAreaView>
+                </Screen>
             );
         }
 
