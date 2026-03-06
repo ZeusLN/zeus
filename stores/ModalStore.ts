@@ -30,7 +30,9 @@ export default class ModalStore {
         callback?: () => void;
     }>;
     @observable public infoModalBackgroundColor?: string;
-    public infoModalOnClose?: () => void;
+    public infoModalOnDismiss?: () => void;
+    @observable public infoModalShowCloseButton?: boolean;
+    @observable public infoModalShowHelpButton?: boolean;
     @observable public alertModalText: string | Array<string> | undefined;
     @observable public alertModalLink: string | undefined;
     @observable public alertModalNav: string | undefined;
@@ -52,14 +54,18 @@ export default class ModalStore {
         link,
         buttons,
         backgroundColor,
-        onClose
+        onDismiss,
+        showCloseButton,
+        showHelpButton
     }: {
         title?: string;
         text?: string | Array<string>;
         link?: string;
         buttons?: Array<{ title: string; callback?: () => void }>;
         backgroundColor?: string;
-        onClose?: () => void;
+        onDismiss?: () => void;
+        showCloseButton?: boolean;
+        showHelpButton?: boolean;
     }) => {
         this.showInfoModal = title || text ? true : false; // Show if title or text exists
         this.infoModalTitle = title;
@@ -67,7 +73,9 @@ export default class ModalStore {
         this.infoModalLink = link;
         this.infoModalAdditionalButtons = buttons;
         this.infoModalBackgroundColor = backgroundColor;
-        this.infoModalOnClose = onClose;
+        this.infoModalOnDismiss = onDismiss;
+        this.infoModalShowCloseButton = showCloseButton;
+        this.infoModalShowHelpButton = showHelpButton;
     };
 
     @action
@@ -194,7 +202,9 @@ export default class ModalStore {
             this.infoModalLink = undefined;
             this.infoModalAdditionalButtons = undefined;
             this.infoModalBackgroundColor = undefined;
-            this.infoModalOnClose = undefined;
+            this.infoModalOnDismiss = undefined;
+            this.infoModalShowCloseButton = undefined;
+            this.infoModalShowHelpButton = undefined;
             return true;
         }
         if (this.showShareModal) {

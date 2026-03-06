@@ -28,7 +28,9 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
             infoModalLink,
             infoModalAdditionalButtons,
             infoModalBackgroundColor,
-            infoModalOnClose,
+            infoModalOnDismiss,
+            infoModalShowCloseButton,
+            infoModalShowHelpButton,
             toggleInfoModal
         } = ModalStore;
 
@@ -70,22 +72,26 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             }
                         }}
                     >
-                        <TouchableOpacity
-                            style={styles.closeIcon}
-                            onPress={() => toggleInfoModal({})}
-                            accessibilityLabel={localeString('general.close')}
-                        >
-                            <Text
-                                style={{
-                                    fontFamily: font('marlideBold'),
-                                    color: themeColor('text'),
-                                    fontSize: 18
-                                }}
+                        {infoModalShowCloseButton && (
+                            <TouchableOpacity
+                                style={styles.closeIcon}
+                                onPress={() => toggleInfoModal({})}
+                                accessibilityLabel={localeString(
+                                    'general.close'
+                                )}
                             >
-                                ✕
-                            </Text>
-                        </TouchableOpacity>
-                        {infoModalLink && (
+                                <Text
+                                    style={{
+                                        fontFamily: font('marlideBold'),
+                                        color: themeColor('text'),
+                                        fontSize: 18
+                                    }}
+                                >
+                                    ✕
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                        {infoModalShowHelpButton && infoModalLink && (
                             <TouchableOpacity
                                 style={styles.helpIcon}
                                 onPress={() => {
@@ -174,16 +180,17 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                     </View>
                                 )
                             )}
-                            {infoModalOnClose ? (
+                            {infoModalOnDismiss ? (
                                 <View style={styles.button}>
                                     <Button
                                         title={localeString(
                                             'cashu.upgradePrompt.dontRemind'
                                         )}
                                         onPress={() => {
-                                            const onClose = infoModalOnClose;
+                                            const onDismiss =
+                                                infoModalOnDismiss;
                                             toggleInfoModal({});
-                                            if (onClose) onClose();
+                                            if (onDismiss) onDismiss();
                                         }}
                                         secondary
                                     />

@@ -1781,7 +1781,9 @@ export default class CashuStore {
                             }
                         }
                     ],
-                    onClose: () => {
+                    showCloseButton: true,
+                    showHelpButton: true,
+                    onDismiss: () => {
                         this.dismissUpgradeThreshold(threshold);
                     }
                 });
@@ -1831,7 +1833,9 @@ export default class CashuStore {
                         });
                     }
                 }
-            ]
+            ],
+            showCloseButton: true,
+            showHelpButton: true
         });
     };
 
