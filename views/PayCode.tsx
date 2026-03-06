@@ -11,6 +11,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
+import { confirmAction } from '../utils/ActionUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -26,7 +27,6 @@ interface PayCodeProps {
 
 interface PayCodeState {
     payCode: any;
-    confirmDisableOffer: boolean;
 }
 
 @inject('OffersStore')
@@ -41,14 +41,13 @@ export default class PayCodeView extends React.Component<
         const { payCode } = route.params ?? {};
 
         this.state = {
-            payCode,
-            confirmDisableOffer: false
+            payCode
         };
     }
 
     render() {
         const { navigation, OffersStore } = this.props;
-        const { payCode, confirmDisableOffer } = this.state;
+        const { payCode } = this.state;
         const { active, label, single_use, offer_id, bolt12, used } = payCode;
         const { loading, error_msg } = OffersStore;
 
@@ -136,28 +135,35 @@ export default class PayCodeView extends React.Component<
                     {loading && <LoadingIndicator />}
                     {!loading && active && (
                         <Button
-                            title={
-                                confirmDisableOffer
-                                    ? localeString(
-                                          'views.PayCode.confirmDisableOffer'
-                                      )
-                                    : localeString('views.PayCode.disableOffer')
-                            }
+                            title={localeString('views.PayCode.disableOffer')}
                             warning
                             onPress={() => {
-                                if (!confirmDisableOffer) {
-                                    this.setState({
-                                        confirmDisableOffer: true
-                                    });
-                                } else {
-                                    OffersStore.disableOffer(offer_id).then(
-                                        (data: any) => {
-                                            this.setState({
-                                                payCode: data
+                                confirmAction(
+                                    localeString('views.PayCode.disableOffer'),
+                                    localeString(
+                                        'views.PayCode.disableOffer.confirm'
+                                    ),
+                                    {
+                                        text: localeString(
+                                            'views.PayCode.disableOffer'
+                                        ),
+                                        style: 'destructive',
+                                        onPress: () => {
+                                            OffersStore.disableOffer(
+                                                offer_id
+                                            ).then((data: any) => {
+                                                this.setState({
+                                                    payCode: data
+                                                });
                                             });
                                         }
-                                    );
-                                }
+                                    },
+                                    {
+                                        text: localeString('general.cancel'),
+                                        onPress: () => void 0,
+                                        isPreferred: true
+                                    }
+                                );
                             }}
                         />
                     )}

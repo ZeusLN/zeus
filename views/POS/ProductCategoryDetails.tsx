@@ -21,6 +21,7 @@ import Screen from '../../components/Screen';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import TextInput from '../../components/TextInput';
 
+import { confirmAction } from '../../utils/ActionUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
@@ -40,7 +41,6 @@ interface ProductCategoryState {
     category: ProductCategory | null;
     isLoading: boolean;
     isExisting: boolean;
-    confirmDelete: boolean;
 }
 
 @inject('InventoryStore', 'PosStore')
@@ -54,8 +54,7 @@ export default class ProductCategoryDetails extends React.Component<
         this.state = {
             category: null,
             isLoading: true,
-            isExisting: false,
-            confirmDelete: false
+            isExisting: false
         };
     }
 
@@ -150,8 +149,21 @@ export default class ProductCategoryDetails extends React.Component<
         }
     };
 
-    confirmDelete = () => {
-        this.setState({ confirmDelete: !this.state.confirmDelete });
+    handleDeletePress = () => {
+        confirmAction(
+            localeString('views.Settings.POS.deleteCategory'),
+            localeString('views.Settings.POS.deleteCategory.confirm'),
+            {
+                text: localeString('views.Settings.POS.deleteCategory'),
+                style: 'destructive',
+                onPress: () => this.deleteItem()
+            },
+            {
+                text: localeString('general.cancel'),
+                onPress: () => void 0,
+                isPreferred: true
+            }
+        );
     };
 
     render() {
@@ -173,7 +185,7 @@ export default class ProductCategoryDetails extends React.Component<
         );
 
         const Delete = () => (
-            <TouchableOpacity onPress={() => this.confirmDelete()}>
+            <TouchableOpacity onPress={() => this.handleDeletePress()}>
                 <View
                     style={{
                         width: 35,
@@ -275,38 +287,19 @@ export default class ProductCategoryDetails extends React.Component<
                                         paddingVertical: 20
                                     }}
                                 >
-                                    {this.state.confirmDelete ? (
-                                        <Button
-                                            title={localeString(
-                                                'views.Settings.POS.confirmDelete'
-                                            )}
-                                            onPress={() => this.deleteItem()}
-                                            containerStyle={{
-                                                borderColor:
-                                                    themeColor('delete')
-                                            }}
-                                            titleStyle={{
-                                                color: themeColor('delete')
-                                            }}
-                                            secondary
-                                        />
-                                    ) : (
-                                        <Button
-                                            title={localeString(
-                                                'views.Settings.POS.saveCategory'
-                                            )}
-                                            onPress={async () => {
-                                                this.saveCategory();
-                                            }}
-                                            containerStyle={{
-                                                opacity:
-                                                    category?.name !== ''
-                                                        ? 1
-                                                        : 0.5
-                                            }}
-                                            disabled={category?.name === ''}
-                                        />
-                                    )}
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.POS.saveCategory'
+                                        )}
+                                        onPress={async () => {
+                                            this.saveCategory();
+                                        }}
+                                        containerStyle={{
+                                            opacity:
+                                                category?.name !== '' ? 1 : 0.5
+                                        }}
+                                        disabled={category?.name === ''}
+                                    />
                                 </View>
                             </ScrollView>
                         </KeyboardAvoidingView>
