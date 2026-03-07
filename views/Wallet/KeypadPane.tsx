@@ -35,10 +35,13 @@ import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import {
+    KeypadAnimationRefs,
     validateKeypadInput,
-    startShakeAnimation,
     getAmountFontSize,
-    deleteLastCharacter
+    deleteLastCharacter,
+    resetKeypadTextAnimation,
+    resetAllKeypadAnimations,
+    startKeypadInvalidInputAnimation
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -84,6 +87,11 @@ export default class KeypadPane extends React.PureComponent<
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
+    animationRefs: KeypadAnimationRefs = {
+        textAnimationRef: null,
+        shakeAnimationRef: null
+    };
+    amountInput = '0';
     focusListener: any = null;
 
     constructor(props: KeypadPaneProps) {
@@ -121,10 +129,24 @@ export default class KeypadPane extends React.PureComponent<
         );
     }
 
+    componentDidUpdate(
+        _prevProps: KeypadPaneProps,
+        prevState: KeypadPaneState
+    ) {
+        if (prevState.amount !== this.state.amount) {
+            this.amountInput = this.state.amount;
+        }
+    }
+
     componentWillUnmount() {
         if (this.focusListener) {
             this.focusListener();
         }
+        resetAllKeypadAnimations(
+            this.shakeAnimation,
+            this.textAnimation,
+            this.animationRefs
+        );
     }
 
     async handleLsp() {
@@ -137,7 +159,7 @@ export default class KeypadPane extends React.PureComponent<
     }
 
     appendValue = (value: string): boolean => {
-        const { amount } = this.state;
+        const amount = this.amountInput;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
@@ -153,6 +175,9 @@ export default class KeypadPane extends React.PureComponent<
             this.startShake();
             return false;
         }
+
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = newAmount;
 
         let needInbound = false;
         let belowMinAmount = false;
@@ -181,13 +206,16 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     clearValue = (delayed?: boolean) => {
-        const clear = () =>
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        const clear = () => {
+            this.amountInput = '0';
             this.setState({
                 amount: '0',
                 needInbound: false,
                 belowMinAmount: false,
                 overrideBelowMinAmount: false
             });
+        };
         if (delayed) {
             setTimeout(clear, CLEAR_VALUE_DELAY);
         } else {
@@ -196,12 +224,16 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     deleteValue = () => {
-        const { amount } = this.state;
+        const amount = this.amountInput;
         if (amount === '0') {
             this.startShake();
             return;
         }
+
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+
         const newAmount = deleteLastCharacter(amount);
+        this.amountInput = newAmount;
 
         let needInbound = false;
         let belowMinAmount = false;
@@ -235,7 +267,11 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        startShakeAnimation(this.shakeAnimation, this.textAnimation);
+        startKeypadInvalidInputAnimation(
+            this.shakeAnimation,
+            this.textAnimation,
+            this.animationRefs
+        );
     };
 
     private modalBoxRef = React.createRef<ModalBox>();
