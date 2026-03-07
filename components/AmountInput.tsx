@@ -38,6 +38,7 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
+    onBlur?: () => void;
 }
 
 interface AmountInputState {
@@ -161,10 +162,14 @@ export default class AmountInput extends React.Component<
                 hideUnitChangeButton,
                 forceUnit: this.props.forceUnit,
                 onConfirm: (newAmount: string) => {
-                    const { onAmountChange, forceUnit } = this.props;
+                    const { onAmountChange, forceUnit, onBlur } = this.props;
                     const satAmount = getSatAmount(newAmount, forceUnit);
                     onAmountChange(newAmount, satAmount);
                     this.setState({ satAmount });
+                    // Trigger onBlur callback after amount is set
+                    if (onBlur) {
+                        onBlur();
+                    }
                 }
             });
         }
