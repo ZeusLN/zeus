@@ -30,9 +30,11 @@ import Screen from '../../components/Screen';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { clearAllData } from '../../utils/DataClearUtils';
+import { migrateBboltToSqlite } from '../../utils/LndMobileUtils';
+import MigrationsUtils from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { Node } from '../../stores/SettingsStore';
 import { Icon } from '@rneui/themed';
 
 interface ToolsProps {
@@ -64,6 +66,88 @@ export default class Tools extends React.Component<ToolsProps, {}> {
     }
 
     handleFocus = () => this.props.SettingsStore.getSettings();
+
+    handleMigrateSqlite = (selectedNode: Node) => {
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings } = SettingsStore;
+        const lndDir = selectedNode.lndDir || 'lnd';
+        const isTestnet = selectedNode.embeddedLndNetwork === 'Testnet';
+
+        Alert.alert(
+            localeString('views.Tools.migrateSqlite'),
+            localeString('views.Tools.migrateSqlite.confirm'),
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('general.confirm'),
+                    onPress: async () => {
+                        try {
+                            const success = await migrateBboltToSqlite({
+                                lndDir,
+                                isTestnet,
+                                walletPassword:
+                                    selectedNode.walletPassword || '',
+                                isTorEnabled: selectedNode.enableTor
+                            });
+
+                            if (success) {
+                                await MigrationsUtils.markDatabaseMigrationAttempted(
+                                    lndDir
+                                );
+                                const nodes = settings?.nodes || [];
+                                const nodeIndex = nodes.findIndex(
+                                    (n: Node) =>
+                                        n.implementation === 'embedded-lnd' &&
+                                        (n.lndDir || 'lnd') === lndDir
+                                );
+                                if (nodeIndex !== -1) {
+                                    const updatedNodes = [...nodes];
+                                    updatedNodes[nodeIndex] = {
+                                        ...updatedNodes[nodeIndex],
+                                        isSqlite: true
+                                    };
+                                    await updateSettings({
+                                        nodes: updatedNodes
+                                    });
+                                }
+                                Alert.alert(
+                                    localeString('general.success'),
+                                    localeString(
+                                        'views.Tools.migrateSqlite.success'
+                                    ),
+                                    [
+                                        {
+                                            text: localeString('general.ok'),
+                                            onPress: () => RNRestart.Restart()
+                                        }
+                                    ]
+                                );
+                            } else {
+                                Alert.alert(
+                                    localeString('general.error'),
+                                    localeString(
+                                        'views.Tools.migrateSqlite.failed'
+                                    )
+                                );
+                            }
+                        } catch (error) {
+                            console.error(
+                                'Error during database migration:',
+                                error
+                            );
+                            Alert.alert(
+                                localeString('general.error'),
+                                localeString('views.Tools.migrateSqlite.failed')
+                            );
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     handleClearStorage = () => {
         Alert.alert(
@@ -691,6 +775,51 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {selectedNode &&
+                        selectedNode.implementation === 'embedded-lnd' &&
+                        !selectedNode.isSqlite && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() =>
+                                        this.handleMigrateSqlite(selectedNode)
+                                    }
+                                >
+                                    <View style={styles.icon}>
+                                        <Icon
+                                            name="database"
+                                            type="feather"
+                                            color={themeColor('text')}
+                                            size={20}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Tools.migrateSqlite'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     <View
                         style={{
