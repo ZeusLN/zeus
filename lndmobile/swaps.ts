@@ -77,6 +77,7 @@ export const createReverseClaimTransaction = async ({
     lockupAddress,
     destinationAddress,
     feeRate,
+    receiveAmount,
     isTestnet
 }: {
     endpoint: string;
@@ -90,6 +91,7 @@ export const createReverseClaimTransaction = async ({
     lockupAddress: string;
     destinationAddress: string;
     feeRate: number;
+    receiveAmount: number;
     isTestnet?: boolean;
 }): Promise<string> => {
     try {
@@ -105,6 +107,7 @@ export const createReverseClaimTransaction = async ({
             lockupAddress,
             destinationAddress,
             feeRate,
+            receiveAmount,
             isTestnet
         );
         return error;
