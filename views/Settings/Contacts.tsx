@@ -4,10 +4,14 @@ import {
     View,
     TouchableOpacity,
     FlatList,
-    Image,
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import {
+    SharedImage,
+    SharedView,
+    SharedText
+} from '../../components/SharedTransition';
 import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -139,6 +143,10 @@ export default class Contacts extends React.Component<
                             this.props.navigation.navigate('ContactDetails', {
                                 contactId: item.contactId || item.id,
                                 isNostrContact: false,
+                                contactName: item.name,
+                                contactPhoto: contact.getPhoto,
+                                contactHasOnlyCashuPubkey:
+                                    contact.hasOnlyCashuPubkey,
                                 cashuLockData: {
                                     fromCashuLockSettings: true,
                                     memo,
@@ -209,7 +217,12 @@ export default class Contacts extends React.Component<
                     } else {
                         this.props.navigation.navigate('ContactDetails', {
                             contactId: item.contactId || item.id,
-                            isNostrContact: false
+                            isNostrContact: false,
+                            // Pass data for shared element transition
+                            contactName: item.name,
+                            contactPhoto: contact.getPhoto,
+                            contactHasOnlyCashuPubkey:
+                                contact.hasOnlyCashuPubkey
                         });
                     }
                 }}
@@ -223,7 +236,8 @@ export default class Contacts extends React.Component<
                     }}
                 >
                     {contact.photo ? (
-                        <Image
+                        <SharedImage
+                            tag={`contact-photo-${item.contactId || item.id}`}
                             source={{ uri: contact.getPhoto }}
                             style={{
                                 width: 40,
@@ -233,7 +247,8 @@ export default class Contacts extends React.Component<
                             }}
                         />
                     ) : (
-                        <View
+                        <SharedView
+                            tag={`contact-photo-${item.contactId || item.id}`}
                             style={{
                                 width: 40,
                                 height: 40,
@@ -241,7 +256,8 @@ export default class Contacts extends React.Component<
                                 marginRight: 10,
                                 backgroundColor: themeColor('secondary'),
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                overflow: 'hidden'
                             }}
                         >
                             {contact.getAvatarInitials ? (
@@ -259,14 +275,15 @@ export default class Contacts extends React.Component<
                             ) : (
                                 <Text style={{ fontSize: 20 }}>⚡</Text>
                             )}
-                        </View>
+                        </SharedView>
                     )}
                     <View style={{ flex: 1 }}>
-                        <Text
+                        <SharedText
+                            tag={`contact-name-${item.contactId || item.id}`}
                             style={{ fontSize: 16, color: themeColor('text') }}
                         >
                             {item.name}
-                        </Text>
+                        </SharedText>
                         <Text
                             numberOfLines={1}
                             ellipsizeMode="middle"
@@ -494,8 +511,9 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={favoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(_item, index) => index.toString()}
+                        keyExtractor={(item) => item.contactId || item.id}
                         scrollEnabled={false}
+                        removeClippedSubviews={false}
                     />
 
                     {/* Render non-favorite contacts */}
@@ -524,8 +542,9 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={nonFavoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(_, index) => index.toString()}
+                        keyExtractor={(item) => item.contactId || item.id}
                         scrollEnabled={false}
+                        removeClippedSubviews={false}
                     />
                     {!loading &&
                         filteredContacts.length > 0 &&

@@ -8,6 +8,12 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import {
+    SharedImage,
+    SharedView,
+    SharedText,
+    sharedTransitionEntering
+} from '../components/SharedTransition';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,6 +36,7 @@ import QR from '../assets/images/SVG/QR.svg';
 import Ecash from '../assets/images/SVG/Ecash.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
+import { getAvatarInitials } from '../utils/DisplayUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -66,6 +73,9 @@ interface ContactDetailsProps {
         {
             isNostrContact: boolean;
             contactId: string;
+            contactName?: string;
+            contactPhoto?: string;
+            contactHasOnlyCashuPubkey?: boolean;
             nostrContact: any;
             cashuLockData?: any;
         }
@@ -113,49 +123,42 @@ export default class ContactDetails extends React.Component<
 
     async componentDidMount() {
         try {
+            const isNostrContact = this.props.route.params?.isNostrContact;
+            this.setState({ isNostrContact });
+
             await this.fetchContact();
 
-            const isNostrContact = this.props.route.params?.isNostrContact;
-
-            this.setState({ isNostrContact });
+            this.props.navigation.addListener('focus', () => {
+                this.fetchContact();
+            });
         } catch (error) {
             console.error(error);
         }
     }
 
     fetchContact = async () => {
-        this.props.navigation.addListener('focus', async () => {
-            try {
-                const { contactId, nostrContact, isNostrContact } =
-                    this.props.route.params ?? {};
-                const contactsString: any = await Storage.getItem(CONTACTS_KEY);
+        try {
+            const { contactId, nostrContact, isNostrContact } =
+                this.props.route.params ?? {};
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
-                if (contactsString && contactId) {
-                    const existingContact = JSON.parse(contactsString);
-                    const contact = existingContact.find(
-                        (contact: Contact) =>
-                            contact.contactId === contactId ||
-                            contact.id === contactId
-                    );
+            const storedContact =
+                contactsString && contactId
+                    ? JSON.parse(contactsString).find(
+                          (c: Contact) =>
+                              c.contactId === contactId || c.id === contactId
+                      )
+                    : undefined;
 
-                    // Store the found contact in the component's state
-                    this.setState({
-                        contact,
-                        isNostrContact,
-                        isLoading: false
-                    });
-                } else {
-                    this.setState({
-                        contact: nostrContact,
-                        isNostrContact,
-                        isLoading: false
-                    });
-                }
-            } catch (error) {
-                console.log('Error fetching contact:', error);
-                this.setState({ isLoading: false });
-            }
-        });
+            this.setState({
+                contact: storedContact ?? nostrContact,
+                isNostrContact,
+                isLoading: false
+            });
+        } catch (error) {
+            console.log('Error fetching contact:', error);
+            this.setState({ isLoading: false });
+        }
     };
 
     sendAddress = (address: string) => {
@@ -347,35 +350,12 @@ export default class ContactDetails extends React.Component<
             );
         };
 
-        const avatarCircle = contact.photo ? (
-            <Image
-                source={{ uri: contact.getPhoto }}
-                style={styles.avatarContainer}
-            />
-        ) : (
-            <View
-                style={[
-                    styles.avatarContainer,
-                    styles.avatarView,
-                    { backgroundColor: themeColor('secondary') }
-                ]}
-            >
-                {contact.getAvatarInitials ? (
-                    <Text
-                        style={[
-                            styles.avatarInitials,
-                            { color: themeColor('text') }
-                        ]}
-                    >
-                        {contact.getAvatarInitials}
-                    </Text>
-                ) : contact.hasOnlyCashuPubkey ? (
-                    <Ecash fill="#FACC15" width={64} height={64} />
-                ) : (
-                    <Text style={{ fontSize: 64 }}>⚡</Text>
-                )}
-            </View>
-        );
+        // Get params for shared element transition during loading
+        const contactId = this.props.route.params?.contactId;
+        const contactName = this.props.route.params?.contactName;
+        const contactPhoto = this.props.route.params?.contactPhoto;
+        const contactHasOnlyCashuPubkey =
+            this.props.route.params?.contactHasOnlyCashuPubkey;
 
         return (
             <>
@@ -388,8 +368,74 @@ export default class ContactDetails extends React.Component<
                             }}
                             navigation={navigation}
                         />
-                        <View style={{ marginTop: 60 }}>
-                            <LoadingIndicator />
+                        <View style={{ alignItems: 'center', marginTop: 20 }}>
+                            {contactPhoto ? (
+                                <SharedImage
+                                    tag={`contact-photo-${contactId}`}
+                                    source={{ uri: contactPhoto }}
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20
+                                    }}
+                                />
+                            ) : (
+                                contactId && (
+                                    <SharedView
+                                        tag={`contact-photo-${contactId}`}
+                                        style={{
+                                            width: 150,
+                                            height: 150,
+                                            borderRadius: 75,
+                                            marginBottom: 20,
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            overflow: 'hidden'
+                                        }}
+                                    >
+                                        {contactHasOnlyCashuPubkey ? (
+                                            <Ecash
+                                                fill="#FACC15"
+                                                width={64}
+                                                height={64}
+                                            />
+                                        ) : getAvatarInitials(contactName) ? (
+                                            <Text
+                                                style={{
+                                                    fontSize: 48,
+                                                    fontWeight: 'bold',
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {getAvatarInitials(contactName)}
+                                            </Text>
+                                        ) : (
+                                            <Text style={{ fontSize: 64 }}>
+                                                ⚡
+                                            </Text>
+                                        )}
+                                    </SharedView>
+                                )
+                            )}
+                            {contactName && (
+                                <SharedText
+                                    tag={`contact-name-${contactId}`}
+                                    style={{
+                                        fontSize: 40,
+                                        fontWeight: 'bold',
+                                        marginBottom: 10,
+                                        color: 'white'
+                                    }}
+                                >
+                                    {contactName}
+                                </SharedText>
+                            )}
+                            <View style={{ marginTop: 40 }}>
+                                <LoadingIndicator />
+                            </View>
                         </View>
                     </Screen>
                 ) : (
@@ -414,24 +460,89 @@ export default class ContactDetails extends React.Component<
                         <ScrollView
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {contact.banner ? (
-                                <View style={styles.bannerContainer}>
-                                    <Image
-                                        source={{ uri: contact.getBanner }}
-                                        style={styles.bannerImage}
-                                    />
-                                    <View style={styles.bannerAvatarOverlay}>
-                                        {avatarCircle}
-                                    </View>
-                                </View>
-                            ) : (
-                                <View style={{ marginBottom: 20 }}>
-                                    {avatarCircle}
-                                </View>
+                            {contact.banner && (
+                                <Image
+                                    source={{ uri: contact.getBanner }}
+                                    style={{
+                                        width: '100%',
+                                        height: 150,
+                                        marginBottom: 20
+                                    }}
+                                />
                             )}
-                            <Text style={styles.contactName}>
+                            {contact.photo ? (
+                                <SharedImage
+                                    tag={`contact-photo-${
+                                        contactId ||
+                                        contact.contactId ||
+                                        contact.id
+                                    }`}
+                                    source={{ uri: contact.getPhoto }}
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20,
+                                        marginTop: contact.banner ? -100 : 0
+                                    }}
+                                    entering={sharedTransitionEntering}
+                                />
+                            ) : (
+                                <SharedView
+                                    tag={`contact-photo-${
+                                        contactId ||
+                                        contact.contactId ||
+                                        contact.id
+                                    }`}
+                                    style={{
+                                        width: 150,
+                                        height: 150,
+                                        borderRadius: 75,
+                                        marginBottom: 20,
+                                        marginTop: contact.banner ? -100 : 0,
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        overflow: 'hidden'
+                                    }}
+                                    entering={sharedTransitionEntering}
+                                >
+                                    {contact.getAvatarInitials ? (
+                                        <Text
+                                            style={{
+                                                fontSize: 48,
+                                                fontWeight: 'bold',
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {contact.getAvatarInitials}
+                                        </Text>
+                                    ) : contact.hasOnlyCashuPubkey ? (
+                                        <Ecash
+                                            fill="#FACC15"
+                                            width={64}
+                                            height={64}
+                                        />
+                                    ) : (
+                                        <Text style={{ fontSize: 64 }}>⚡</Text>
+                                    )}
+                                </SharedView>
+                            )}
+                            <SharedText
+                                tag={`contact-name-${
+                                    contactId || contact.contactId || contact.id
+                                }`}
+                                style={{
+                                    fontSize: 40,
+                                    fontWeight: 'bold',
+                                    marginBottom: 10,
+                                    color: 'white'
+                                }}
+                                entering={sharedTransitionEntering}
+                            >
                                 {contact.name}
-                            </Text>
+                            </SharedText>
                             <Text
                                 style={{
                                     ...styles.contactDescription,
