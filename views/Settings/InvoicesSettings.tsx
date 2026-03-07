@@ -23,7 +23,7 @@ import SettingsStore, {
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { expirySecondsFromInput } from '../../utils/ExpiryUtils';
+import { TimePeriod, expirySecondsFromInput } from '../../utils/ExpiryUtils';
 
 import Gear from '../../assets/images/SVG/Gear.svg';
 
@@ -292,23 +292,29 @@ export default class InvoicesSettings extends React.Component<
                                         width: '58%'
                                     }}
                                     onChangeText={async (text: string) => {
+                                        const digits = text.replace(
+                                            /[^0-9]/g,
+                                            ''
+                                        );
                                         const expirySeconds =
                                             expirySecondsFromInput(
-                                                text,
-                                                timePeriod
+                                                digits,
+                                                timePeriod as TimePeriod
                                             );
 
                                         this.setState({
-                                            expiry: text,
+                                            expiry: digits,
                                             expirySeconds
                                         });
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                expiry: text,
-                                                expirySeconds
-                                            }
-                                        });
+                                        if (digits && Number(digits) > 0) {
+                                            await updateSettings({
+                                                invoices: {
+                                                    ...settings.invoices,
+                                                    expiry: digits,
+                                                    expirySeconds
+                                                }
+                                            });
+                                        }
                                     }}
                                 />
                                 <Spacer width={4} />
@@ -329,7 +335,7 @@ export default class InvoicesSettings extends React.Component<
                                             const expirySeconds =
                                                 expirySecondsFromInput(
                                                     expiry,
-                                                    value
+                                                    value as TimePeriod
                                                 );
 
                                             this.setState({

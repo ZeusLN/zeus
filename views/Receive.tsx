@@ -83,7 +83,12 @@ import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
-import { expirySecondsFromInput } from '../utils/ExpiryUtils';
+import {
+    ExpirationPreset,
+    TimePeriod,
+    expirationIndexFromSeconds,
+    expirySecondsFromInput
+} from '../utils/ExpiryUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -142,7 +147,7 @@ interface ReceiveProps {
 
 interface ReceiveState {
     selectedIndex: number;
-    expirationIndex: number | null;
+    expirationIndex: ExpirationPreset | null;
     addressType: string;
     memo: string;
     receiverName: string;
@@ -180,30 +185,6 @@ enum RouteHintMode {
     Automatic = 0,
     Custom = 1
 }
-
-enum ExpirationPreset {
-    TenMinutes = 0,
-    OneHour = 1,
-    OneDay = 2,
-    OneWeek = 3
-}
-
-const expirationIndexFromSeconds = (
-    expirySeconds: string
-): ExpirationPreset | null => {
-    switch (expirySeconds) {
-        case '600':
-            return ExpirationPreset.TenMinutes;
-        case '3600':
-            return ExpirationPreset.OneHour;
-        case '86400':
-            return ExpirationPreset.OneDay;
-        case '604800':
-            return ExpirationPreset.OneWeek;
-        default:
-            return null;
-    }
-};
 
 const LOCKED_EXPIRY = '1';
 const LOCKED_TIME_PERIOD = 'Hours';
@@ -297,7 +278,10 @@ export default class Receive extends React.Component<
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
 
-        const newExpirySeconds = settings?.invoices?.expirySeconds || '3600';
+        const newExpirySeconds =
+            Number(settings?.invoices?.expirySeconds) > 0
+                ? settings!.invoices!.expirySeconds!
+                : '3600';
 
         const expirationIndex = expirationIndexFromSeconds(newExpirySeconds);
 
@@ -2739,14 +2723,19 @@ export default class Receive extends React.Component<
                                                                     onChangeText={(
                                                                         text: string
                                                                     ) => {
+                                                                        const digits =
+                                                                            text.replace(
+                                                                                /[^0-9]/g,
+                                                                                ''
+                                                                            );
                                                                         const expirySeconds =
                                                                             expirySecondsFromInput(
-                                                                                text,
-                                                                                timePeriod
+                                                                                digits,
+                                                                                timePeriod as TimePeriod
                                                                             );
                                                                         this.setState(
                                                                             {
-                                                                                expiry: text,
+                                                                                expiry: digits,
                                                                                 expirySeconds,
                                                                                 expirationIndex:
                                                                                     expirationIndexFromSeconds(
@@ -2777,7 +2766,7 @@ export default class Receive extends React.Component<
                                                                             const expirySeconds =
                                                                                 expirySecondsFromInput(
                                                                                     expiry,
-                                                                                    value
+                                                                                    value as TimePeriod
                                                                                 );
                                                                             this.setState(
                                                                                 {
