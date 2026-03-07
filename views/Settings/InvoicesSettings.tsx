@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -24,6 +23,7 @@ import SettingsStore, {
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { TimePeriod, expirySecondsFromInput } from '../../utils/ExpiryUtils';
 
 import Gear from '../../assets/images/SVG/Gear.svg';
 
@@ -292,38 +292,29 @@ export default class InvoicesSettings extends React.Component<
                                         width: '58%'
                                     }}
                                     onChangeText={async (text: string) => {
-                                        let expirySeconds = '3600';
-                                        if (timePeriod === 'Seconds') {
-                                            expirySeconds = text;
-                                        } else if (timePeriod === 'Minutes') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60)
-                                                .toString();
-                                        } else if (timePeriod === 'Hours') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60 * 60)
-                                                .toString();
-                                        } else if (timePeriod === 'Days') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60 * 60 * 24)
-                                                .toString();
-                                        } else if (timePeriod === 'Weeks') {
-                                            expirySeconds = new BigNumber(text)
-                                                .multipliedBy(60 * 60 * 24 * 7)
-                                                .toString();
-                                        }
+                                        const digits = text.replace(
+                                            /[^0-9]/g,
+                                            ''
+                                        );
+                                        const expirySeconds =
+                                            expirySecondsFromInput(
+                                                digits,
+                                                timePeriod as TimePeriod
+                                            );
 
                                         this.setState({
-                                            expiry: text,
+                                            expiry: digits,
                                             expirySeconds
                                         });
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                expiry: text,
-                                                expirySeconds
-                                            }
-                                        });
+                                        if (digits && Number(digits) > 0) {
+                                            await updateSettings({
+                                                invoices: {
+                                                    ...settings.invoices,
+                                                    expiry: digits,
+                                                    expirySeconds
+                                                }
+                                            });
+                                        }
                                     }}
                                 />
                                 <Spacer width={4} />
@@ -341,42 +332,15 @@ export default class InvoicesSettings extends React.Component<
                                         onValueChange={async (
                                             value: string
                                         ) => {
-                                            let expirySeconds;
-                                            if (value === 'Seconds') {
-                                                expirySeconds = expiry;
-                                            } else if (value === 'Minutes') {
-                                                expirySeconds = new BigNumber(
-                                                    expiry
-                                                )
-                                                    .multipliedBy(60)
-                                                    .toString();
-                                            } else if (value === 'Hours') {
-                                                expirySeconds = new BigNumber(
-                                                    expiry
-                                                )
-                                                    .multipliedBy(60 * 60)
-                                                    .toString();
-                                            } else if (value === 'Days') {
-                                                expirySeconds = new BigNumber(
-                                                    expiry
-                                                )
-                                                    .multipliedBy(60 * 60 * 24)
-                                                    .toString();
-                                            } else if (value === 'Weeks') {
-                                                expirySeconds = new BigNumber(
-                                                    expiry
-                                                )
-                                                    .multipliedBy(
-                                                        60 * 60 * 24 * 7
-                                                    )
-                                                    .toString();
-                                            }
+                                            const expirySeconds =
+                                                expirySecondsFromInput(
+                                                    expiry,
+                                                    value as TimePeriod
+                                                );
 
                                             this.setState({
                                                 timePeriod: value,
-                                                expirySeconds: expirySeconds
-                                                    ? expirySeconds
-                                                    : ''
+                                                expirySeconds
                                             });
 
                                             await updateSettings({
