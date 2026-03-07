@@ -767,10 +767,12 @@ export default class LightningAddressStore {
                 ','
             );
 
-            const title = 'ZEUS Nuts payment received!';
-            const body = `Payment of ${value_commas} ${
-                value_commas === '1' ? 'sat' : 'sats'
-            } automatically accepted`;
+            const title = localeString('zeuspay.paymentReceived.title');
+            const body = localeString('zeuspay.paymentReceived.body', {
+                value: value_commas,
+                unit:
+                    value_commas === '1' ? 'sat' : localeString('general.sats')
+            });
             if (Platform.OS === 'android') {
                 // @ts-ignore:next-line
                 Notifications.postLocalNotification({
@@ -1081,10 +1083,14 @@ export default class LightningAddressStore {
             );
 
             const fireLocalNotification = () => {
-                const title = 'ZEUS Pay payment received!';
-                const body = `Payment of ${value_commas} ${
-                    value_commas === '1' ? 'sat' : 'sats'
-                } automatically accepted`;
+                const title = localeString('zeuspay.paymentReceived.title');
+                const body = localeString('zeuspay.paymentReceived.body', {
+                    value: value_commas,
+                    unit:
+                        value_commas === '1'
+                            ? 'sat'
+                            : localeString('general.sats')
+                });
                 if (Platform.OS === 'android') {
                     // @ts-ignore:next-line
                     Notifications.postLocalNotification({
