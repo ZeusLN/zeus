@@ -22,6 +22,7 @@ import {
 } from '@react-native-documents/picker';
 
 import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
 import Text from '../../components/Text';
@@ -1459,146 +1460,93 @@ export default class NodeConfigExportImport extends React.Component<
         const { isLoading } = this.state;
 
         return (
-            <ScrollView showsVerticalScrollIndicator={false}>
-                <Header
-                    leftComponent="Back"
-                    centerComponent={{
-                        text: localeString(
-                            'views.Tools.nodeConfigExportImport.title'
-                        ),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }
-                    }}
-                    rightComponent={
-                        <TouchableOpacity
-                            style={{ marginRight: 4, marginTop: -4 }}
-                            onPress={() =>
-                                this.setState({ activeModal: 'info' })
+            <Screen>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.Tools.nodeConfigExportImport.title'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
                             }
-                        >
-                            <Text style={{ fontSize: 24 }}>ⓘ</Text>
-                        </TouchableOpacity>
-                    }
-                    navigation={this.props.navigation}
-                />
-                {this.renderNodeSelectionModal()}
-                {this.renderExportModal()}
-                {this.renderInfoModal()}
-                {this.renderPasswordModal()}
-                {this.renderImportNodeSelectionModal()}
-                {this.renderRecoveryModal()}
-                {this.renderRecoveryNodeSelectionModal()}
-
-                <View style={styles.container}>
-                    {isLoading ? (
-                        <LoadingIndicator />
-                    ) : (
-                        <>
+                        }}
+                        rightComponent={
                             <TouchableOpacity
-                                style={[
-                                    styles.optionButton,
-                                    { backgroundColor: themeColor('secondary') }
-                                ]}
+                                style={{ marginRight: 4, marginTop: -4 }}
                                 onPress={() =>
-                                    this.setState({
-                                        activeModal: 'nodeSelection'
-                                    })
+                                    this.setState({ activeModal: 'info' })
                                 }
                             >
-                                <Feather
-                                    name="upload"
-                                    size={24}
-                                    color={themeColor('text')}
-                                />
-                                <Text style={styles.optionText}>
-                                    {localeString(
-                                        'views.Tools.nodeConfigExportImport.exportConfigs'
-                                    )}
-                                </Text>
+                                <Text style={{ fontSize: 24 }}>ⓘ</Text>
                             </TouchableOpacity>
+                        }
+                        navigation={this.props.navigation}
+                    />
+                    {this.renderNodeSelectionModal()}
+                    {this.renderExportModal()}
+                    {this.renderInfoModal()}
+                    {this.renderPasswordModal()}
+                    {this.renderImportNodeSelectionModal()}
+                    {this.renderRecoveryModal()}
+                    {this.renderRecoveryNodeSelectionModal()}
 
-                            <TouchableOpacity
-                                style={[
-                                    styles.optionButton,
-                                    { backgroundColor: themeColor('secondary') }
-                                ]}
-                                onPress={this.handleImport}
-                            >
-                                <Feather
-                                    name="download"
-                                    size={24}
-                                    color={themeColor('text')}
-                                />
-                                <Text style={styles.optionText}>
-                                    {localeString(
-                                        'views.Tools.nodeConfigExportImport.importConfigs'
-                                    )}
-                                </Text>
-                            </TouchableOpacity>
-
-                            {Platform.OS === 'ios' && (
+                    <View style={styles.container}>
+                        {isLoading ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <>
                                 <TouchableOpacity
                                     style={[
                                         styles.optionButton,
                                         {
                                             backgroundColor:
-                                                themeColor('secondary'),
-                                            borderLeftWidth: 4,
-                                            borderLeftColor:
-                                                themeColor('warning')
+                                                themeColor('secondary')
                                         }
                                     ]}
-                                    onPress={this.handleRecoveryScan}
+                                    onPress={() =>
+                                        this.setState({
+                                            activeModal: 'nodeSelection'
+                                        })
+                                    }
                                 >
                                     <Feather
-                                        name="refresh-cw"
+                                        name="upload"
                                         size={24}
-                                        color={themeColor('warning')}
+                                        color={themeColor('text')}
                                     />
-                                    <Text
-                                        style={{
-                                            ...styles.optionText,
-                                            color: themeColor('warning')
-                                        }}
-                                    >
+                                    <Text style={styles.optionText}>
                                         {localeString(
-                                            'views.Tools.nodeConfigExportImport.recovery.restoreLegacy'
+                                            'views.Tools.nodeConfigExportImport.exportConfigs'
                                         )}
                                     </Text>
                                 </TouchableOpacity>
-                            )}
 
-                            {__DEV__ && (
-                                <>
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.optionButton,
-                                            {
-                                                backgroundColor:
-                                                    themeColor('secondary'),
-                                                borderLeftWidth: 4,
-                                                borderLeftColor: '#9C27B0'
-                                            }
-                                        ]}
-                                        onPress={this.handleDevCopyToLegacy}
-                                    >
-                                        <Feather
-                                            name="copy"
-                                            size={24}
-                                            color="#9C27B0"
-                                        />
-                                        <Text
-                                            style={{
-                                                ...styles.optionText,
-                                                color: '#9C27B0'
-                                            }}
-                                        >
-                                            DEV: Copy to legacy locations
-                                        </Text>
-                                    </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.optionButton,
+                                        {
+                                            backgroundColor:
+                                                themeColor('secondary')
+                                        }
+                                    ]}
+                                    onPress={this.handleImport}
+                                >
+                                    <Feather
+                                        name="download"
+                                        size={24}
+                                        color={themeColor('text')}
+                                    />
+                                    <Text style={styles.optionText}>
+                                        {localeString(
+                                            'views.Tools.nodeConfigExportImport.importConfigs'
+                                        )}
+                                    </Text>
+                                </TouchableOpacity>
 
+                                {Platform.OS === 'ios' && (
                                     <TouchableOpacity
                                         style={[
                                             styles.optionButton,
@@ -1607,31 +1555,92 @@ export default class NodeConfigExportImport extends React.Component<
                                                     themeColor('secondary'),
                                                 borderLeftWidth: 4,
                                                 borderLeftColor:
-                                                    themeColor('error')
+                                                    themeColor('warning')
                                             }
                                         ]}
-                                        onPress={this.handleDevClearLegacy}
+                                        onPress={this.handleRecoveryScan}
                                     >
                                         <Feather
-                                            name="trash-2"
+                                            name="refresh-cw"
                                             size={24}
-                                            color={themeColor('error')}
+                                            color={themeColor('warning')}
                                         />
                                         <Text
                                             style={{
                                                 ...styles.optionText,
-                                                color: themeColor('error')
+                                                color: themeColor('warning')
                                             }}
                                         >
-                                            DEV: Clear legacy locations
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.recovery.restoreLegacy'
+                                            )}
                                         </Text>
                                     </TouchableOpacity>
-                                </>
-                            )}
-                        </>
-                    )}
-                </View>
-            </ScrollView>
+                                )}
+
+                                {__DEV__ && (
+                                    <>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.optionButton,
+                                                {
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderLeftWidth: 4,
+                                                    borderLeftColor: '#9C27B0'
+                                                }
+                                            ]}
+                                            onPress={this.handleDevCopyToLegacy}
+                                        >
+                                            <Feather
+                                                name="copy"
+                                                size={24}
+                                                color="#9C27B0"
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.optionText,
+                                                    color: '#9C27B0'
+                                                }}
+                                            >
+                                                DEV: Copy to legacy locations
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.optionButton,
+                                                {
+                                                    backgroundColor:
+                                                        themeColor('secondary'),
+                                                    borderLeftWidth: 4,
+                                                    borderLeftColor:
+                                                        themeColor('error')
+                                                }
+                                            ]}
+                                            onPress={this.handleDevClearLegacy}
+                                        >
+                                            <Feather
+                                                name="trash-2"
+                                                size={24}
+                                                color={themeColor('error')}
+                                            />
+                                            <Text
+                                                style={{
+                                                    ...styles.optionText,
+                                                    color: themeColor('error')
+                                                }}
+                                            >
+                                                DEV: Clear legacy locations
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
+                            </>
+                        )}
+                    </View>
+                </ScrollView>
+            </Screen>
         );
     }
 }
