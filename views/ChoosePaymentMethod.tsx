@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
@@ -20,13 +20,20 @@ import BalanceStore from '../stores/BalanceStore';
 import CashuStore from '../stores/CashuStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import SwapStore, {
+    ReverseSwapInfo,
+    SubmarineSwapInfo
+} from '../stores/SwapStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { feeStore, settingsStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { calculateLimit } from '../utils/SwapUtils';
 import Invoice from '../models/Invoice';
+import SwapIcon from '../assets/images/SVG/Swap.svg';
 
 interface RouteParams {
     value: string;
@@ -44,6 +51,8 @@ interface ChoosePaymentMethodProps {
     CashuStore?: CashuStore;
     UTXOsStore?: UTXOsStore;
     InvoicesStore?: InvoicesStore;
+    SwapStore?: SwapStore;
+    SettingsStore?: SettingsStore;
 }
 
 interface ChoosePaymentMethodState {
@@ -56,7 +65,14 @@ interface ChoosePaymentMethodState {
     feeRate: string;
 }
 
-@inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'InvoicesStore')
+@inject(
+    'BalanceStore',
+    'CashuStore',
+    'UTXOsStore',
+    'InvoicesStore',
+    'SwapStore',
+    'SettingsStore'
+)
 @observer
 export default class ChoosePaymentMethod extends React.Component<
     ChoosePaymentMethodProps,
@@ -141,6 +157,7 @@ export default class ChoosePaymentMethod extends React.Component<
         this.fetchFeeEstimates({ lightning, lnurlParams });
         this.fetchOnchainFees(value);
     }
+
     fetchOnchainFees = (value?: string) => {
         if (
             !value ||
@@ -169,17 +186,136 @@ export default class ChoosePaymentMethod extends React.Component<
         await Promise.all(tasks);
     };
 
+    private getSwapLimits(
+        info: SubmarineSwapInfo | ReverseSwapInfo,
+        reverse: boolean
+    ): { min: number; max: number } {
+        const serviceFeePct = info.fees?.percentage ?? 0;
+        const rawMinerFees = info.fees?.minerFees;
+        const networkFee =
+            typeof rawMinerFees === 'object' && rawMinerFees !== null
+                ? Number(rawMinerFees.claim ?? 0) +
+                  Number(rawMinerFees.lockup ?? 0)
+                : Number(rawMinerFees ?? 0);
+
+        return {
+            min: calculateLimit(
+                info.limits?.minimal ?? 0,
+                serviceFeePct,
+                networkFee,
+                reverse
+            ),
+            max: calculateLimit(
+                info.limits?.maximal ?? 0,
+                serviceFeePct,
+                networkFee,
+                reverse
+            )
+        };
+    }
+    private isValidSwapAmount(
+        satAmount: string | undefined,
+        reverse: boolean
+    ): boolean {
+        const { SwapStore } = this.props;
+        const amount = Number(satAmount ?? this.state.satAmount) || 0;
+        if (!SwapStore || !amount) return false;
+
+        const info: SubmarineSwapInfo | ReverseSwapInfo = reverse
+            ? SwapStore.reverseInfo
+            : SwapStore.subInfo;
+
+        if (!info || Object.keys(info).length === 0) return false;
+
+        const { min, max } = this.getSwapLimits(info, reverse);
+        const rawMinerFees = info.fees?.minerFees;
+        const networkFee =
+            typeof rawMinerFees === 'object' && rawMinerFees !== null
+                ? Number(rawMinerFees.claim ?? 0) +
+                  Number(rawMinerFees.lockup ?? 0)
+                : Number(rawMinerFees ?? 0);
+        const input = reverse
+            ? amount
+            : calculateLimit(
+                  amount,
+                  info.fees?.percentage ?? 0,
+                  networkFee,
+                  false
+              );
+
+        return input >= min && input <= max;
+    }
+
+    navigateToSwaps = () => {
+        const { navigation, BalanceStore, CashuStore, SettingsStore } =
+            this.props;
+        const { value, lightning, satAmount } = this.state;
+        const amountNum = Number(satAmount);
+
+        const onchain = Number(BalanceStore!.totalBlockchainBalance);
+        const lightningBal = Number(BalanceStore!.lightningBalance);
+        const ecashEnabled = SettingsStore?.settings?.ecash?.enableCashu;
+        const ecash = ecashEnabled ? Number(CashuStore!.totalBalanceSats) : 0;
+
+        const hasOnchain = onchain >= amountNum;
+        const hasLightningOrEcash =
+            lightningBal >= amountNum || ecash >= amountNum;
+        const hasLightningPayment = !!lightning;
+        const hasOnchainPayment =
+            !!value && BackendUtils.supportsOnchainReceiving();
+
+        // Submarine: OnChain → Lightning
+        if (
+            hasLightningPayment &&
+            !hasLightningOrEcash &&
+            hasOnchain &&
+            this.isValidSwapAmount(satAmount, false)
+        ) {
+            navigation.navigate('Swaps', {
+                initialInvoice: lightning,
+                initialAmountSats: satAmount,
+                initialReverse: false
+            });
+            return;
+        }
+
+        // Reverse: Lightning → OnChain
+        if (
+            hasOnchainPayment &&
+            !hasOnchain &&
+            hasLightningOrEcash &&
+            this.isValidSwapAmount(satAmount, true)
+        ) {
+            navigation.navigate('Swaps', {
+                initialInvoice: value,
+                initialAmountSats: satAmount,
+                initialReverse: true
+            });
+            return;
+        }
+
+        // Fallback: let user choose swap type
+        navigation.navigate('Swaps');
+    };
+
+    private renderSwapIconButton = () => (
+        <TouchableOpacity onPress={this.navigateToSwaps}>
+            <SwapIcon fill={themeColor('text')} width="36" height="26" />
+        </TouchableOpacity>
+    );
+
     hasInsufficientFunds = () => {
-        const { BalanceStore, CashuStore } = this.props;
+        const { BalanceStore, CashuStore, SettingsStore } = this.props;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats: ecashBalance } = CashuStore!;
+        const { enableCashu } = SettingsStore?.settings?.ecash ?? {};
         const { value, lightning, lightningAddress, offer, lnurlParams } =
             this.state;
         const satAmount = Number(this.state.satAmount);
 
         const onchain = Number(totalBlockchainBalance);
         const lightning_ = Number(lightningBalance);
-        const ecash = Number(ecashBalance);
+        const ecash = enableCashu ? Number(ecashBalance) : 0;
         const total = onchain + lightning_ + ecash;
 
         if (total === 0) return true;
@@ -245,6 +381,10 @@ export default class ChoosePaymentMethod extends React.Component<
             showFees &&
             !!settingsStore?.settings?.privacy?.enableMempoolRates;
 
+        const canSwap =
+            this.isValidSwapAmount(satAmount, false) ||
+            this.isValidSwapAmount(satAmount, true);
+
         return (
             <Screen>
                 <Header
@@ -253,6 +393,9 @@ export default class ChoosePaymentMethod extends React.Component<
                         text: localeString('views.Accounts.select'),
                         style: { color: themeColor('text') }
                     }}
+                    rightComponent={
+                        canSwap ? this.renderSwapIconButton() : undefined
+                    }
                     navigation={navigation}
                 />
 
