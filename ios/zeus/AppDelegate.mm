@@ -53,11 +53,6 @@ static void ClearKeychainIfNecessary() {
   return [super application:application didFinishLaunchingWithOptions:launchOptions];
 }
 
-- (NSURL *)sourceURLForBridge:(RCTBridge *)bridge
-{
-  return [self bundleURL];
-}
-
 - (NSURL *)bundleURL
 {
 #if DEBUG

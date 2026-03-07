@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.util.Base64;
+import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
 
@@ -39,8 +40,14 @@ class MobileTools extends ReactContextBaseJavaModule {
   @ReactMethod
   public void getIntentNfcData(Promise promise) {
     // https://code.tutsplus.com/tutorials/reading-nfc-tags-with-android--mobile-17278
-    Tag tag = getReactApplicationContext()
-      .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+    Tag tag;
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      tag = getReactApplicationContext()
+        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
+    } else {
+      tag = getReactApplicationContext()
+        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+    }
     if (tag == null) {
       promise.resolve(null);
       return;
@@ -102,7 +109,12 @@ class MobileTools extends ReactContextBaseJavaModule {
       if (Intent.ACTION_SEND.equals(intent.getAction()) && 
           intent.getType() != null && intent.getType().startsWith("image/")) {
         
-        Uri imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        Uri imageUri;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+          imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class);
+        } else {
+          imageUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+        }
         android.util.Log.d(TAG, "Image URI: " + imageUri);
         
         if (imageUri != null) {

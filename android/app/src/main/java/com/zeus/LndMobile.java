@@ -19,6 +19,7 @@ import android.os.Environment;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -97,6 +98,10 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   class IncomingHandler extends Handler {
+    IncomingHandler(Looper looper) {
+      super(looper);
+    }
+
     @Override
     public void handleMessage(Message msg) {
       Bundle bundle = msg.getData();
@@ -294,7 +299,7 @@ class LndMobile extends ReactContextBaseJavaModule {
       requests.put(req, promise);
 
       lndMobileServiceConnection = new LndMobileServiceConnection(req);
-      messenger = new Messenger(new IncomingHandler()); // me
+      messenger = new Messenger(new IncomingHandler(Looper.getMainLooper())); // me
       Intent intent = new Intent(getReactApplicationContext(), LndMobileService.class);
       if (getPersistentServicesEnabled(getReactApplicationContext())) {
         getReactApplicationContext().startForegroundService(intent);
@@ -573,7 +578,7 @@ class LndMobile extends ReactContextBaseJavaModule {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
-    ArrayList<String> seedList = new ArrayList();
+    ArrayList<String> seedList = new ArrayList<>();
     for (int i = 0; i < seed.size(); i++) {
       if (seed.getType(i) == ReadableType.String) {
         seedList.add(seed.getString(i));
