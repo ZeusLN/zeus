@@ -494,12 +494,7 @@ export default class NostrContacts extends React.Component<
         );
 
         return (
-            <Screen
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent="Back"
                     centerComponent={{

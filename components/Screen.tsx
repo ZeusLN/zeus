@@ -1,12 +1,11 @@
 import React, { ReactNode } from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View } from 'react-native';
 import LinearGradient from './LinearGradient';
 
 import { themeColor } from '../utils/ThemeUtils';
 
 interface ScreenProps {
     children?: ReactNode;
-    style?: ViewStyle;
 }
 
 const Screen: React.FC<ScreenProps> = ({ children }) => {

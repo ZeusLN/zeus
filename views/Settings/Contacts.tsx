@@ -354,12 +354,7 @@ export default class Contacts extends React.Component<
         );
 
         return (
-            <Screen
-                style={{
-                    flex: 1,
-                    backgroundColor: themeColor('background')
-                }}
-            >
+            <Screen>
                 <Header
                     leftComponent="Back"
                     containerStyle={{ borderBottomWidth: 0 }}
