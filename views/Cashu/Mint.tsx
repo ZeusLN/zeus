@@ -731,6 +731,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         <MintAvatar
                             iconUrl={mintInfo?.icon_url}
                             name={mintInfo?.name}
+                            mintUrl={mint?.mintUrl}
                             size="large"
                             style={{ marginBottom: 15 }}
                         />
