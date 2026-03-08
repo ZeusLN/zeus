@@ -401,6 +401,7 @@ export default class SendingLightning extends React.Component<
                                                         debit
                                                         sensitive
                                                         toggleable
+                                                        forceMsats
                                                     />
                                                     {donationFeePercentage && (
                                                         <Text
@@ -742,6 +743,7 @@ export default class SendingLightning extends React.Component<
                                                             sats={feeAmount}
                                                             sensitive
                                                             toggleable
+                                                            forceMsats
                                                             fontSize={
                                                                 amountFontSize
                                                             }
@@ -1023,7 +1025,9 @@ export default class SendingLightning extends React.Component<
                                             margin: 3
                                         }}
                                     />
-                                    {implementation === 'embedded-lnd' && (
+                                    {(implementation === 'embedded-lnd' ||
+                                        implementation ===
+                                            'embedded-ldk-node') && (
                                         <Button
                                             title={localeString(
                                                 'views.Settings.EmbeddedNode.Troubleshooting.title'

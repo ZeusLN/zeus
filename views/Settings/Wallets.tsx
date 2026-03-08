@@ -199,7 +199,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
         const implementationDisplayValue: { [key: string]: string } = {};
 
-        INTERFACE_KEYS.forEach((item) => {
+        INTERFACE_KEYS.filter((item) => !item.isHeader).forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
 
@@ -372,6 +372,19 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     }
                                     if (!item.isSqlite) {
                                         nodeSubtitle += ' [Bolt]';
+                                    }
+                                }
+
+                                if (
+                                    item.implementation === 'embedded-ldk-node'
+                                ) {
+                                    if (item.embeddedLdkNetwork) {
+                                        nodeSubtitle += ` (${
+                                            item.embeddedLdkNetwork
+                                                .charAt(0)
+                                                .toUpperCase() +
+                                            item.embeddedLdkNetwork.slice(1)
+                                        })`;
                                     }
                                 }
 

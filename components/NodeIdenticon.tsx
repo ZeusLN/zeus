@@ -53,6 +53,9 @@ export default function NodeIdenticon({
                 ? `${title}-${selectedNode.nostrWalletConnectUrl}`
                 : selectedNode && selectedNode.implementation === 'embedded-lnd'
                 ? `${title}-${selectedNode.lndDir || 'lnd'}`
+                : selectedNode &&
+                  selectedNode.implementation === 'embedded-ldk-node'
+                ? `${title}-${selectedNode.ldkNodeDir || 'ldk'}`
                 : title
         ),
         // @ts-ignore:next-line

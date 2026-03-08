@@ -70,7 +70,11 @@ export default class LightningSwipeableRow extends Component<
             if (text === localeString('general.receive')) {
                 navigation.navigate('Receive', { forceLn: true });
             } else if (text === localeString('general.paycodes')) {
-                navigation.navigate('PayCodes');
+                navigation.navigate(
+                    nodeInfoStore.supportsListingOffers
+                        ? 'PayCodes'
+                        : 'CreatePayCode'
+                );
             } else if (text === localeString('general.routing')) {
                 navigation.navigate('Routing');
             } else if (text === localeString('general.send')) {
