@@ -7,7 +7,7 @@ interface LightningIndicatorProps {
     size?: number;
 }
 
-function LoadingIndicator(props: LightningIndicatorProps) {
+function LightningIndicator(props: LightningIndicatorProps) {
     const { size } = props;
 
     return (
@@ -22,4 +22,4 @@ function LoadingIndicator(props: LightningIndicatorProps) {
     );
 }
 
-export default LoadingIndicator;
+export default LightningIndicator;
