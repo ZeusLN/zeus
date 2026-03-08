@@ -3,6 +3,8 @@ import { settingsStore } from '../stores/Stores';
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
+// LDK Node
+import EmbeddedLdkNode from '../backends/EmbeddedLdkNode';
 // Core Lightning
 import CLNRest from '../backends/CLNRest';
 // Custodial
@@ -13,6 +15,7 @@ class BackendUtils {
     lnd: LND;
     lightningNodeConnect: LightningNodeConnect;
     embeddedLND: EmbeddedLND;
+    embeddedLdkNode: EmbeddedLdkNode;
     clnRest: CLNRest;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
@@ -20,6 +23,7 @@ class BackendUtils {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
         this.embeddedLND = new EmbeddedLND();
+        this.embeddedLdkNode = new EmbeddedLdkNode();
         this.clnRest = new CLNRest();
         this.lndHub = new LndHub();
         this.nostrWalletConnect = new NostrWalletConnect();
@@ -34,6 +38,8 @@ class BackendUtils {
                 return this.lightningNodeConnect;
             case 'embedded-lnd':
                 return this.embeddedLND;
+            case 'embedded-ldk-node':
+                return this.embeddedLdkNode;
             case 'cln-rest':
                 return this.clnRest;
             case 'lndhub':
@@ -126,6 +132,23 @@ class BackendUtils {
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
     rescan = (...args: any[]) => this.call('rescan', args);
 
+    // LSPS1 Native (for embedded LDK Node)
+    lsps1RequestChannel = (...args: any[]) =>
+        this.call('lsps1RequestChannel', args);
+    lsps1CheckOrderStatus = (...args: any[]) =>
+        this.call('lsps1CheckOrderStatus', args);
+    requestLsps1Liquidity = (...args: any[]) =>
+        this.call('requestLsps1Liquidity', args);
+    checkLsps1OrderStatus = (...args: any[]) =>
+        this.call('checkLsps1OrderStatus', args);
+
+    // LSPS7 Native (for embedded LDK Node)
+    lsps7GetExtendableChannels = (...args: any[]) =>
+        this.call('lsps7GetExtendableChannels', args);
+    lsps7CreateOrder = (...args: any[]) => this.call('lsps7CreateOrder', args);
+    lsps7CheckOrderStatus = (...args: any[]) =>
+        this.call('lsps7CheckOrderStatus', args);
+
     // BOLT 12 / Offers
     listOffers = (...args: any[]) => this.call('listOffers', args);
     createOffer = (...args: any[]) => this.call('createOffer', args);
@@ -163,7 +186,11 @@ class BackendUtils {
     supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
     supportsLSPS1rest = () => this.call('supportsLSPS1rest');
+    supportsLSPS1native = () => this.call('supportsLSPS1native');
+    supportsLSPS7native = () => this.call('supportsLSPS7native');
     supportsMessageSigning = () => this.call('supportsMessageSigning');
+    supportsMessageVerification = () =>
+        this.call('supportsMessageVerification');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainBalance = () => this.call('supportsOnchainBalance');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
@@ -198,10 +225,13 @@ class BackendUtils {
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsChannelFundMax = () => this.call('supportsChannelFundMax');
     supportsOffers = () => this.call('supportsOffers');
+    supportsListingOffers = () => this.call('supportsListingOffers');
+    supportsBolt12Address = () => this.call('supportsBolt12Address');
     supportsBolt11BlindedRoutes = () =>
         this.call('supportsBolt11BlindedRoutes');
     supportsAddressesWithDerivationPaths = () =>
         this.call('supportsAddressesWithDerivationPaths');
+    supportsCustomFeeLimit = () => this.call('supportsCustomFeeLimit');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
     supportsAddressMessageSigning = () =>
@@ -218,6 +248,15 @@ class BackendUtils {
         return (
             this.isLNDBased() &&
             VersionUtils.isSupportedVersion(nodeInfoVersion, 'v0.20.0')
+        );
+    };
+
+    // Implementation type checks
+    isLocalWallet = () => {
+        const { implementation } = settingsStore;
+        return (
+            implementation === 'embedded-lnd' ||
+            implementation === 'embedded-ldk-node'
         );
     };
 

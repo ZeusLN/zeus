@@ -33,14 +33,16 @@ export interface ValueDisplayProps {
  *
  * @param amount - The amount to process (as string or number)
  * @param roundAmount - Whether to apply rounding logic (default: false)
+ * @param forceMsats - Force showing millisatoshi decimals regardless of setting (e.g. for fees)
  * @returns Object containing the display amount and whether to show rounding indicator
  */
 export function processSatsAmount(
     amount: string | number,
-    roundAmount: boolean = false
+    roundAmount: boolean = false,
+    forceMsats: boolean = false
 ): AmountDisplayResult {
     const amountStr = amount.toString();
-    const hideMsats = shouldHideMillisatoshiAmounts();
+    const hideMsats = forceMsats ? false : shouldHideMillisatoshiAmounts();
 
     // Remove commas from the amount string for processing
     const cleanAmountStr = amountStr.replace(/,/g, '');

@@ -48,6 +48,14 @@ export interface Node {
     embeddedLndNetwork?: string;
     lndDir?: string;
     isSqlite?: boolean;
+    // Embedded LDK Node
+    embeddedLdkNetwork?: string;
+    ldkNodeDir?: string;
+    ldkMnemonic?: string;
+    ldkPassphrase?: string;
+    ldkEsploraServer?: string;
+    ldkRgsServer?: string;
+    ldkVssServer?: string;
 }
 
 interface PrivacySettings {
@@ -360,8 +368,12 @@ export const SPEEDLOADER_KEYS = [
 export const INTERFACE_KEYS: {
     key: string;
     value: string;
+    isHeader?: boolean;
 }[] = [
+    { key: 'On-device', value: '', isHeader: true },
     { key: 'Embedded LND', value: 'embedded-lnd' },
+    { key: 'LDK Node', value: 'embedded-ldk-node' },
+    { key: 'Remote', value: '', isHeader: true },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
@@ -371,6 +383,7 @@ export const INTERFACE_KEYS: {
 
 export type Implementations =
     | 'embedded-lnd'
+    | 'embedded-ldk-node'
     | 'lnd'
     | 'lightning-node-connect'
     | 'cln-rest'
@@ -1369,7 +1382,7 @@ export default class SettingsStore {
             bigKeypadButtons: false,
             showAllDecimalPlaces: false,
             removeDecimalSpaces: false,
-            showMillisatoshiAmounts: true
+            showMillisatoshiAmounts: false
         },
         pos: {
             posEnabled: PosEnabled.Disabled,
@@ -1538,6 +1551,14 @@ export default class SettingsStore {
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
     @observable public lndFolderMissing: boolean = false;
+    // Embedded LDK Node
+    @observable public ldkNodeDir?: string;
+    @observable public ldkMnemonic?: string;
+    @observable public ldkPassphrase?: string;
+    @observable public embeddedLdkNetwork?: string;
+    @observable public ldkEsploraServer?: string;
+    @observable public ldkRgsServer?: string;
+    @observable public ldkVssServer?: string;
     // NWC
     @observable public nostrWalletConnectUrl: string;
     // Favorite currencies
@@ -1732,6 +1753,14 @@ export default class SettingsStore {
             this.embeddedLndNetwork = node.embeddedLndNetwork;
             this.lndDir = node.lndDir || 'lnd';
             this.isSqlite = node.isSqlite;
+            // Embedded LDK Node
+            this.ldkNodeDir = node.ldkNodeDir;
+            this.ldkMnemonic = node.ldkMnemonic;
+            this.ldkPassphrase = node.ldkPassphrase;
+            this.embeddedLdkNetwork = node.embeddedLdkNetwork;
+            this.ldkEsploraServer = node.ldkEsploraServer;
+            this.ldkRgsServer = node.ldkRgsServer;
+            this.ldkVssServer = node.ldkVssServer;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }

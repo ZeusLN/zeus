@@ -469,6 +469,31 @@ export default class ChannelsStore {
 
             this.loading = false;
         });
+
+        if (
+            this.settingsStore.implementation === 'embedded-ldk-node' &&
+            setPendingHtlcs
+        ) {
+            try {
+                const data = await BackendUtils.getPayments();
+                const pendingPayments = (data?.payments || []).filter(
+                    (p: any) => p.status === 'IN_FLIGHT'
+                );
+                runInAction(() => {
+                    for (const p of pendingPayments) {
+                        this.pendingHTLCs.push({
+                            incoming: false,
+                            amount: p.value_sat || p.value || 0,
+                            hash_lock: p.payment_hash || '',
+                            expiration_height: 0
+                        });
+                    }
+                });
+            } catch (e) {
+                console.log('LDK Node: Failed to fetch pending payments', e);
+            }
+        }
+
         return channels;
     };
 
@@ -1046,7 +1071,10 @@ export default class ChannelsStore {
             request?.additionalChannels &&
             request.additionalChannels?.length > 0;
 
-        delete request.host;
+        // LDK Node needs the host for openChannel, other backends don't
+        if (this.settingsStore.implementation !== 'embedded-ldk-node') {
+            delete request.host;
+        }
         if (!multipleChans) delete request.additionalChannels;
 
         this.peerSuccess = false;

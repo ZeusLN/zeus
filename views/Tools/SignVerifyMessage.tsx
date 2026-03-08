@@ -45,6 +45,7 @@ interface SignVerifyMessageState {
     selectedAddress: string;
     signingMode: string;
     supportsAddressMessageSigning: boolean;
+    supportsMessageVerification: boolean;
     loading: boolean;
 }
 
@@ -65,6 +66,7 @@ export default class SignVerifyMessage extends React.Component<
         selectedAddress: '',
         signingMode: 'lightning',
         supportsAddressMessageSigning: false,
+        supportsMessageVerification: true,
         loading: false
     };
 
@@ -85,6 +87,10 @@ export default class SignVerifyMessage extends React.Component<
                     this.checkForAddressSelection();
                 }
             );
+        }
+
+        if (!BackendUtils.supportsMessageVerification()) {
+            this.setState({ supportsMessageVerification: false });
         }
 
         this.handleRouteParams(route?.params || {});
@@ -715,7 +721,8 @@ export default class SignVerifyMessage extends React.Component<
         } = this.state;
         const { signMessage, signature } = MessageSignStore;
 
-        const { supportsAddressMessageSigning } = this.state;
+        const { supportsAddressMessageSigning, supportsMessageVerification } =
+            this.state;
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -781,23 +788,25 @@ export default class SignVerifyMessage extends React.Component<
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <ButtonGroup
-                        onPress={this.updateIndex}
-                        selectedIndex={selectedIndex}
-                        buttons={buttonElements}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('text'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary')
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
+                    {supportsMessageVerification && (
+                        <ButtonGroup
+                            onPress={this.updateIndex}
+                            selectedIndex={selectedIndex}
+                            buttons={buttonElements}
+                            selectedButtonStyle={{
+                                backgroundColor: themeColor('text'),
+                                borderRadius: 12
+                            }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary')
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                        />
+                    )}
 
                     {supportsAddressMessageSigning && (
                         <Text

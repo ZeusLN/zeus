@@ -83,7 +83,10 @@ export default class LSPS1Order extends React.Component<
                             order: temporaryOrder?.order
                         });
 
-                        if (BackendUtils.supportsLSPS1rest()) {
+                        if (temporaryOrder?.native) {
+                            // Native LSPS1 order
+                            LSPStore.lsps1GetOrderNative(id);
+                        } else if (BackendUtils.supportsLSPS1rest()) {
                             LSPStore.lsps1GetOrderREST(
                                 id,
                                 temporaryOrder?.endpoint

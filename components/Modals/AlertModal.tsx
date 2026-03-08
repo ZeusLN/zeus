@@ -1,5 +1,5 @@
 import React, { createRef } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, ScrollView, StyleSheet, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from '../Button';
@@ -46,6 +46,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
         return (
             <ModalBox
                 isOpen={showAlertModal}
+                swipeToClose={false}
                 style={{
                     backgroundColor: 'transparent',
                     minHeight: 200
@@ -65,6 +66,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                             borderRadius: 30,
                             padding: 30,
                             width: '100%',
+                            maxHeight: '80%',
                             shadowColor: '#000',
                             shadowOffset: {
                                 width: 0,
@@ -72,116 +74,232 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                             }
                         }}
                     >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('text'),
-                                fontSize: 20,
-                                marginBottom: 20
-                            }}
-                        >
-                            {localeString('components.AlertModal.zeusDetected')}
-                        </Text>
+                        <ScrollView>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    fontSize: 20,
+                                    marginBottom: 20
+                                }}
+                            >
+                                {localeString(
+                                    'components.AlertModal.zeusDetected'
+                                )}
+                            </Text>
 
-                        {AlertStore.zombieError && (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.header,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'components.AlertModal.highZombieCount'
-                                    )}{' '}
-                                    (
-                                    {NodeInfoStore.networkInfo.num_zombie_chans}
-                                    )
-                                </Text>
-
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'components.AlertModal.zombieExplainer'
-                                    )}
-                                </Text>
-
-                                <View style={styles.button}>
-                                    <Button
-                                        title={localeString(
-                                            'components.AlertModal.resetEGS'
-                                        )}
-                                        onPress={async () => {
-                                            await SettingsStore.updateSettings({
-                                                expressGraphSync: true,
-                                                resetExpressGraphSyncOnStartup:
-                                                    true
-                                            });
-                                            restartNeeded();
+                            {AlertStore.zombieError && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.header,
+                                            color: themeColor('text')
                                         }}
-                                        tertiary
-                                    />
-                                </View>
-                            </>
-                        )}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.highZombieCount'
+                                        )}{' '}
+                                        (
+                                        {
+                                            NodeInfoStore.networkInfo
+                                                .num_zombie_chans
+                                        }
+                                        )
+                                    </Text>
 
-                        {AlertStore.neutrinoPeerError && (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.header,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'components.AlertModal.neutrinoPeers'
-                                    )}{' '}
-                                    (
-                                    {AlertStore.problematicNeutrinoPeers.length}
-                                    )
-                                </Text>
-
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'components.AlertModal.neutrinoExplainer'
-                                    )} (>${NEUTRINO_PING_THRESHOLD_MS}ms)`}
-                                </Text>
-
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {peers.join(', ')}
-                                </Text>
-
-                                <View style={styles.button}>
-                                    <Button
-                                        title={localeString(
-                                            'components.AlertModal.reviewPeers'
-                                        )}
-                                        onPress={() => {
-                                            toggleAlertModal(false);
-                                            NavigationService.navigate(
-                                                'NeutrinoPeers'
-                                            );
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
                                         }}
-                                        tertiary
-                                    />
-                                </View>
-                            </>
-                        )}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.zombieExplainer'
+                                        )}
+                                    </Text>
 
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={localeString(
+                                                'components.AlertModal.resetEGS'
+                                            )}
+                                            onPress={async () => {
+                                                await SettingsStore.updateSettings(
+                                                    {
+                                                        expressGraphSync: true,
+                                                        resetExpressGraphSyncOnStartup:
+                                                            true
+                                                    }
+                                                );
+                                                restartNeeded();
+                                            }}
+                                            tertiary
+                                        />
+                                    </View>
+                                </>
+                            )}
+
+                            {AlertStore.vssError && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.header,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.vssError'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.vssExplainer'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {AlertStore.vssError}
+                                    </Text>
+                                </>
+                            )}
+
+                            {AlertStore.esploraError && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.header,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.esploraError'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.esploraExplainer'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {AlertStore.esploraError}
+                                    </Text>
+                                </>
+                            )}
+
+                            {AlertStore.rgsError && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.header,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.rgsError'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.rgsExplainer'
+                                        )}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {AlertStore.rgsError}
+                                    </Text>
+                                </>
+                            )}
+
+                            {AlertStore.neutrinoPeerError && (
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.header,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'components.AlertModal.neutrinoPeers'
+                                        )}{' '}
+                                        (
+                                        {
+                                            AlertStore.problematicNeutrinoPeers
+                                                .length
+                                        }
+                                        )
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'components.AlertModal.neutrinoExplainer'
+                                        )} (>${NEUTRINO_PING_THRESHOLD_MS}ms)`}
+                                    </Text>
+
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {peers.join(', ')}
+                                    </Text>
+
+                                    <View style={styles.button}>
+                                        <Button
+                                            title={localeString(
+                                                'components.AlertModal.reviewPeers'
+                                            )}
+                                            onPress={() => {
+                                                toggleAlertModal(false);
+                                                NavigationService.navigate(
+                                                    'NeutrinoPeers'
+                                                );
+                                            }}
+                                            tertiary
+                                        />
+                                    </View>
+                                </>
+                            )}
+                        </ScrollView>
                         <Button
                             title={localeString('general.close')}
                             onPress={() => toggleAlertModal(false)}
