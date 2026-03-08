@@ -517,6 +517,16 @@ export default class Lockscreen extends React.Component<
             deletePassword,
             deleteDuressPassword
         } = this.state;
+        const passwordPrompt = localeString(
+            deleteDuressPassword
+                ? 'views.Lockscreen.enterPasswordNoDuress'
+                : 'views.Lockscreen.enterPassword'
+        );
+        const pinPrompt = localeString(
+            deleteDuressPin
+                ? 'views.Lockscreen.pinNoDuress'
+                : 'views.Lockscreen.pin'
+        );
 
         return (
             <Screen>
@@ -553,7 +563,7 @@ export default class Lockscreen extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString('views.Lockscreen.enterPassword')}
+                                {passwordPrompt}
                             </Text>
                         </View>
                         <View style={styles.inputContainer}>
@@ -646,7 +656,7 @@ export default class Lockscreen extends React.Component<
                                         justifyContent: 'flex-end'
                                     }}
                                 >
-                                    {localeString('views.Lockscreen.pin')}
+                                    {pinPrompt}
                                 </Text>
                                 <View
                                     style={{
