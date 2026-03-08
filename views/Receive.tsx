@@ -777,7 +777,8 @@ export default class Receive extends React.Component<
             PosStore,
             SettingsStore,
             NodeInfoStore,
-            BalanceStore
+            BalanceStore,
+            ChannelsStore
         } = this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate, value } =
             this.state;
@@ -824,6 +825,7 @@ export default class Receive extends React.Component<
                                     Number(invoice.amt_paid_sat)
                                 );
                                 BalanceStore.getCombinedBalance();
+                                ChannelsStore.getChannels();
 
                                 if (orderId) {
                                     PosStore.recordPayment({
@@ -943,6 +945,7 @@ export default class Receive extends React.Component<
                                 if (result.settled) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
                                     BalanceStore.getCombinedBalance();
+                                    ChannelsStore.getChannels();
 
                                     if (orderId) {
                                         PosStore.recordPayment({
@@ -1046,6 +1049,7 @@ export default class Receive extends React.Component<
                                 ) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
                                     BalanceStore.getCombinedBalance();
+                                    ChannelsStore.getChannels();
 
                                     if (orderId) {
                                         PosStore.recordPayment({
@@ -1152,6 +1156,8 @@ export default class Receive extends React.Component<
                                     setWatchedInvoicePaid(
                                         result.amount_received_msat / 1000
                                     );
+                                    BalanceStore.getCombinedBalance();
+                                    ChannelsStore.getChannels();
                                     if (orderId) {
                                         PosStore.recordPayment({
                                             orderId,

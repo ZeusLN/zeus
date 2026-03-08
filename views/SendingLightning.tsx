@@ -27,6 +27,7 @@ import Amount from '../components/Amount';
 import ModalBox from '../components/ModalBox';
 
 import BalanceStore from '../stores/BalanceStore';
+import ChannelsStore from '../stores/ChannelsStore';
 import ContactStore from '../stores/ContactStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
@@ -55,6 +56,7 @@ import { getFeePercentage } from '../utils/AmountUtils';
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
+    ChannelsStore: ChannelsStore;
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
@@ -89,6 +91,7 @@ interface SendingLightningState {
 
 @inject(
     'BalanceStore',
+    'ChannelsStore',
     'ContactStore',
     'LnurlPayStore',
     'PaymentsStore',
@@ -150,8 +153,13 @@ export default class SendingLightning extends React.Component<
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
-        const { TransactionsStore, BalanceStore, NodeInfoStore, route } =
-            this.props;
+        const {
+            TransactionsStore,
+            BalanceStore,
+            ChannelsStore,
+            NodeInfoStore,
+            route
+        } = this.props;
 
         const { donationIsPaid } = TransactionsStore;
 
@@ -162,6 +170,9 @@ export default class SendingLightning extends React.Component<
             this.setState({ wasSuccessful: true }, () => {
                 this.fetchPayments();
                 BalanceStore.getCombinedBalance();
+                if (BackendUtils.supportsChannelManagement()) {
+                    ChannelsStore.getChannels();
+                }
             });
         } else if (!wasSuccessful && this.state.wasSuccessful) {
             this.setState({ wasSuccessful: false });
