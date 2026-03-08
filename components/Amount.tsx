@@ -200,6 +200,8 @@ function AmountDisplay({
     };
 
     const renderCurrencyAmount = () => {
+        const isFiatRateLoading = amount === 'N/A' && fiatRatesLoading;
+
         const feeSection = fee && (
             <>
                 <Spacer width={2} />
@@ -228,7 +230,7 @@ function AmountDisplay({
                 accessible={accessible}
             >
                 {negative ? '-' : ''}
-                {amount === 'N/A' && fiatRatesLoading ? (
+                {isFiatRateLoading ? (
                     <LoadingIndicator size={20} />
                 ) : unit === 'BTC' ? (
                     formatBitcoinWithSpaces(amount)
@@ -247,7 +249,9 @@ function AmountDisplay({
         const indicators = (
             <>
                 {unit === 'BTC' && roundAmount && <RoundingIndicator />}
-                {unit === 'fiat' && <ApproximateSymbol accessible />}
+                {unit === 'fiat' && !isFiatRateLoading && (
+                    <ApproximateSymbol accessible />
+                )}
             </>
         );
 
