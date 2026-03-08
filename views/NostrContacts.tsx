@@ -1,16 +1,17 @@
 import * as React from 'react';
 import {
     Alert,
+    Animated,
+    BackHandler,
+    Easing,
     FlatList,
     Image,
     Text,
     TouchableOpacity,
-    View,
-    Animated,
-    Easing
+    View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { CheckBox, Icon } from '@rneui/themed';
+import { CheckBox } from '@rneui/themed';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -47,7 +48,6 @@ interface NostrContactsState {
     loading: boolean;
     isSelectionMode: boolean;
     selectedContacts: any[];
-    fadeAnim: any;
     isValid: boolean;
     isValidNpub: boolean;
     isValidNip05: boolean;
@@ -68,7 +68,6 @@ export default class NostrContacts extends React.Component<
             loading: false,
             isSelectionMode: false,
             selectedContacts: [],
-            fadeAnim: new Animated.Value(0),
             isValid: false,
             isValidNpub: false,
             isValidNip05: false,
@@ -76,21 +75,54 @@ export default class NostrContacts extends React.Component<
         };
     }
 
+    private backHandler: { remove: () => void } | null = null;
+    private checkboxAnim = new Animated.Value(0);
+
+    componentDidMount() {
+        this.backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            this.handleBackPress
+        );
+    }
+
+    componentWillUnmount() {
+        this.backHandler?.remove();
+    }
+
+    handleBackPress = (): boolean => {
+        if (this.state.contactsData.length > 0) {
+            this.resetSearch();
+        } else {
+            this.props.navigation.goBack();
+        }
+        return true;
+    };
+
+    resetSearch = () => {
+        this.checkboxAnim.setValue(0);
+        this.setState({
+            contactsData: [],
+            selectedContacts: [],
+            account: '',
+            isSelectionMode: false,
+            isValid: false,
+            isValidNpub: false,
+            isValidNip05: false
+        });
+    };
+
     toggleSelectionMode = () => {
+        const entering = !this.state.isSelectionMode;
         this.setState((prevState) => ({
             isSelectionMode: !prevState.isSelectionMode,
             selectedContacts: []
         }));
-        Animated.timing(this.state.fadeAnim, {
-            toValue: this.state.isSelectionMode ? 0 : 1,
-            duration: 100,
+        Animated.timing(this.checkboxAnim, {
+            toValue: entering ? 1 : 0,
+            duration: 200,
             easing: Easing.ease,
             useNativeDriver: false
-        }).start(() => {
-            if (!this.state.isSelectionMode) {
-                this.setState({ selectedContacts: [] });
-            }
-        });
+        }).start();
     };
 
     async fetchNostrContacts() {
@@ -226,7 +258,7 @@ export default class NostrContacts extends React.Component<
         this.setState((prevState) => {
             const selectedContacts = [...prevState.selectedContacts];
             const index = selectedContacts.findIndex(
-                (c) => c.banner === contact.banner
+                (c) => c.npub === contact.npub
             );
 
             if (index === -1) {
@@ -251,12 +283,13 @@ export default class NostrContacts extends React.Component<
             lud06: string;
             lud16: string;
             banner: string;
+            npub: string;
         };
     }) => {
         const { isSelectionMode } = this.state;
         const { navigation } = this.props;
         const isSelected = this.state.selectedContacts.some(
-            (c) => c.banner === item.banner && c.isSelected
+            (c) => c.npub === item.npub && c.isSelected
         );
 
         const truncateString = (str: string, maxLength: number) => {
@@ -274,13 +307,9 @@ export default class NostrContacts extends React.Component<
             return null;
         }
 
-        const slideInRight = this.state.fadeAnim.interpolate({
+        const checkboxWidth = this.checkboxAnim.interpolate({
             inputRange: [0, 1],
-            outputRange: [10, 0]
-        });
-        const slideInLeft = this.state.fadeAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [0, 10]
+            outputRange: [0, 40]
         });
 
         return (
@@ -298,33 +327,39 @@ export default class NostrContacts extends React.Component<
                 }}
                 style={{
                     flexDirection: 'row',
-                    alignItems: 'flex-start'
+                    alignItems: 'center',
+                    marginBottom: 20,
+                    paddingHorizontal: 10
                 }}
             >
-                {isSelectionMode && (
-                    // Use Animated.View for the container
-                    <Animated.View
-                        style={{
-                            marginRight: -30,
-                            transform: [{ translateX: slideInRight }]
-                        }}
-                    >
-                        <CheckBox
-                            checked={isSelected}
-                            onPress={() => {
-                                this.toggleContactSelection(item);
-                            }}
-                        />
-                    </Animated.View>
-                )}
-
                 <Animated.View
                     style={{
-                        marginHorizontal: 24,
-                        paddingBottom: 20,
+                        width: checkboxWidth,
+                        overflow: 'hidden',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}
+                >
+                    <CheckBox
+                        checked={isSelected}
+                        onPress={() => {
+                            this.toggleContactSelection(item);
+                        }}
+                        checkedColor={themeColor('highlight')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderColor: 'transparent',
+                            margin: 0,
+                            padding: 0
+                        }}
+                    />
+                </Animated.View>
+                <View
+                    style={{
+                        flex: 1,
                         flexDirection: 'row',
                         alignItems: 'center',
-                        transform: [{ translateX: slideInLeft }]
+                        marginLeft: 10
                     }}
                 >
                     {item.picture && (
@@ -338,7 +373,7 @@ export default class NostrContacts extends React.Component<
                             }}
                         />
                     )}
-                    <View>
+                    <View style={{ flex: 1 }}>
                         <Text
                             style={{
                                 fontSize: 16,
@@ -368,7 +403,7 @@ export default class NostrContacts extends React.Component<
                             </Text>
                         )}
                     </View>
-                </Animated.View>
+                </View>
             </TouchableOpacity>
         );
     };
@@ -467,27 +502,17 @@ export default class NostrContacts extends React.Component<
             >
                 {isSelectionMode ? (
                     <SelectOn
-                        height={36}
-                        width={36}
-                        fill="white"
-                        style={{
-                            borderRadius: 2,
-                            marginRight: 2,
-                            alignSelf: 'center',
-                            marginTop: -12
-                        }}
+                        height={30}
+                        width={30}
+                        fill={themeColor('text')}
+                        style={{ marginRight: 2 }}
                     />
                 ) : (
                     <SelectOff
-                        height={36}
-                        width={36}
-                        fill="white"
-                        style={{
-                            borderRadius: 2,
-                            marginRight: 2,
-                            alignSelf: 'center',
-                            marginTop: -12
-                        }}
+                        height={30}
+                        width={30}
+                        fill={themeColor('text')}
+                        style={{ marginRight: 2 }}
                     />
                 )}
             </TouchableOpacity>
@@ -507,34 +532,14 @@ export default class NostrContacts extends React.Component<
                     rightComponent={
                         <Row>
                             {contactsData.length > 0 && !loading && (
-                                <>
-                                    <SelectButton />
-                                    <Icon
-                                        onPress={() => {
-                                            this.setState({
-                                                contactsData: [],
-                                                selectedContacts: [],
-                                                account: '',
-                                                isSelectionMode: false,
-                                                fadeAnim: new Animated.Value(0),
-                                                isValid: false,
-                                                isValidNpub: false,
-                                                isValidNip05: false
-                                            });
-                                        }}
-                                        name="close"
-                                        type="material"
-                                        size={50}
-                                        color={themeColor('text')}
-                                        containerStyle={{
-                                            marginTop: -10,
-                                            marginRight: -12
-                                        }}
-                                    />
-                                </>
+                                <SelectButton />
                             )}
                         </Row>
                     }
+                    onBack={
+                        contactsData.length > 0 ? this.resetSearch : undefined
+                    }
+                    navigateBackOnBackPress={contactsData.length === 0}
                     navigation={navigation}
                 />
 
@@ -595,6 +600,7 @@ export default class NostrContacts extends React.Component<
                 ) : (
                     <FlatList
                         data={contactsData}
+                        extraData={this.state}
                         style={{ marginTop: 10 }}
                         renderItem={this.renderContactItem}
                         keyExtractor={(_, index) => index.toString()}
