@@ -1,7 +1,10 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+
+import StealthIcon from '../../assets/images/SVG/Hidden.svg';
+import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 
 import SettingsStore, { BLOCK_EXPLORER_KEYS } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
@@ -286,6 +289,44 @@ export default class Privacy extends React.Component<
                             />
                         </View>
                     </View>
+
+                    {Platform.OS === 'android' && (
+                        <TouchableOpacity
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20,
+                                alignItems: 'center'
+                            }}
+                            onPress={() => navigation.navigate('StealthMode')}
+                        >
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <StealthIcon
+                                    fill={themeColor('text')}
+                                    width={24}
+                                    height={24}
+                                    style={{ marginRight: 10 }}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.StealthMode.title'
+                                    )}
+                                </Text>
+                            </View>
+                            <ForwardIcon stroke={themeColor('secondaryText')} />
+                        </TouchableOpacity>
+                    )}
                 </ScrollView>
             </Screen>
         );

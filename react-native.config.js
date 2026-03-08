@@ -3,7 +3,7 @@ module.exports = {
         ios: {
             automaticPodsInstallation: false
         },
-        android: {} // grouped into "project"
+        android: {}
     },
     assets: ['./assets']
 };
