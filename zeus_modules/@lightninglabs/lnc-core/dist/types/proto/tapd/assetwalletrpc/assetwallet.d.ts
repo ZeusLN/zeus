@@ -1,4 +1,5 @@
-import type { OutPoint, KeyDescriptor, ScriptKey, SendAssetResponse } from '../taprootassets';
+import type { AddressWithAmount, KeyDescriptor, ScriptKey, SendAssetResponse } from '../taprootassets';
+import type { OutPoint } from '../tapcommon';
 export declare enum CoinSelectType {
     /**
      * COIN_SELECT_DEFAULT - Use the default coin selection type, which currently allows script keys and
@@ -58,12 +59,25 @@ export interface TxTemplate {
      */
     inputs: PrevId[];
     /**
-     * A map of all Taproot Asset addresses mapped to the anchor transaction's
-     * output index that should be sent to.
+     * DEPRECATED: A map of all Taproot Asset addresses that should be sent to.
+     * The keys are the Taproot Asset addresses in human-readable form, and the
+     * values are IGNORED and should not be set (use the addresses_with_amounts
+     * field below instead). The recipients map and addresses_with_amounts list
+     * are mutually exclusive, meaning that if addresses_with_amounts is set, then
+     * recipients must be empty, and vice versa.
      */
     recipients: {
         [key: string]: string;
     };
+    /**
+     * A list of addresses and the amounts of asset units to send to them. This
+     * must be used for V2 TAP addresses that don't specify an amount in the
+     * address itself and allow the sender to choose the amount to send. The
+     * recipients and addresses_with_amounts lists are mutually exclusive,
+     * meaning that if addresses_with_amounts is set, then recipients must be
+     * empty, and vice versa.
+     */
+    addressesWithAmounts: AddressWithAmount[];
 }
 export interface TxTemplate_RecipientsEntry {
     key: string;
@@ -147,6 +161,23 @@ export interface CommitVirtualPsbtsRequest {
      * BTC level anchor transaction.
      */
     satPerVbyte: string | undefined;
+    /**
+     * The custom lock ID used to identify the lock lease for UTXOs that serve as
+     * inputs in the BTC-level anchor transaction. If left empty, LND's default
+     * lock ID will be used.
+     */
+    customLockId: Uint8Array | string;
+    /**
+     * If set, the UTXOs used as inputs in the BTC-level anchor transaction will be
+     * locked for the specified number of seconds. If unset, LND's default lock
+     * expiration of 10 minutes will be applied.
+     */
+    lockExpirationSeconds: string;
+    /**
+     * If set, the psbt funding step will be skipped. This is useful if the intent
+     * is to create a zero-fee transaction.
+     */
+    skipFunding: boolean;
 }
 export interface CommitVirtualPsbtsResponse {
     /**
@@ -207,17 +238,36 @@ export interface PublishAndLogRequest {
      * inputs that were already present in the PSBT are not locked.
      */
     lndLockedUtxos: OutPoint[];
+    /**
+     * If set, the anchor transaction will not be broadcast to the network. This
+     * is useful when an external system handles broadcasting, such as in custom
+     * transaction packaging workflows.
+     */
+    skipAnchorTxBroadcast: boolean;
+    /**
+     * An optional short label for the transfer. This label can be used to track
+     * the progress of the transfer via the logs or an event subscription.
+     * Multiple transfers can share the same label.
+     */
+    label: string;
 }
 export interface NextInternalKeyRequest {
+    /** The key family to derive the next internal key for. */
     keyFamily: number;
 }
 export interface NextInternalKeyResponse {
+    /** The full key descriptor of the internal key that was derived. */
     internalKey: KeyDescriptor | undefined;
 }
 export interface NextScriptKeyRequest {
+    /** The key family to derive the next script key for. */
     keyFamily: number;
 }
 export interface NextScriptKeyResponse {
+    /**
+     * The full script key information that was derived, including the
+     * internal key and the tweaked script key.
+     */
     scriptKey: ScriptKey | undefined;
 }
 export interface QueryInternalKeyRequest {
@@ -228,6 +278,7 @@ export interface QueryInternalKeyRequest {
     internalKey: Uint8Array | string;
 }
 export interface QueryInternalKeyResponse {
+    /** The full key descriptor of the internal key that was queried. */
     internalKey: KeyDescriptor | undefined;
 }
 export interface QueryScriptKeyRequest {
@@ -239,11 +290,24 @@ export interface QueryScriptKeyRequest {
     tweakedScriptKey: Uint8Array | string;
 }
 export interface QueryScriptKeyResponse {
+    /**
+     * The full script key information that was queried, including the
+     * internal key and the tweaked script key.
+     */
     scriptKey: ScriptKey | undefined;
 }
 export interface ProveAssetOwnershipRequest {
+    /**
+     * The asset ID of the asset to prove ownership of. This is the 32-byte
+     * asset ID that identifies a particular asset or tranche of assets.
+     */
     assetId: Uint8Array | string;
+    /** The script key that is used to spend the asset. */
     scriptKey: Uint8Array | string;
+    /**
+     * The outpoint of the asset UTXO that is being proven to be owned by the
+     * prover.
+     */
     outpoint: OutPoint | undefined;
     /**
      * An optional 32-byte challenge that may be used to bind the generated
@@ -256,6 +320,10 @@ export interface ProveAssetOwnershipResponse {
     proofWithWitness: Uint8Array | string;
 }
 export interface VerifyAssetOwnershipRequest {
+    /**
+     * The full ownership proof that was generated, including the witness data
+     * that contains the proving signature.
+     */
     proofWithWitness: Uint8Array | string;
     /**
      * An optional 32-byte challenge that may be used to check the ownership
@@ -265,6 +333,7 @@ export interface VerifyAssetOwnershipRequest {
     challenge: Uint8Array | string;
 }
 export interface VerifyAssetOwnershipResponse {
+    /** Whether the ownership proof is valid or not. */
     validProof: boolean;
     /** The outpoint the proof commits to. */
     outpoint: OutPoint | undefined;
@@ -284,9 +353,14 @@ export interface RemoveUTXOLeaseRequest {
 export interface RemoveUTXOLeaseResponse {
 }
 export interface DeclareScriptKeyRequest {
+    /** The script key the wallet should be informed about. */
     scriptKey: ScriptKey | undefined;
 }
 export interface DeclareScriptKeyResponse {
+    /**
+     * The script key that was declared, including the internal key and the
+     * tweaked script key.
+     */
     scriptKey: ScriptKey | undefined;
 }
 export interface AssetWallet {
@@ -361,6 +435,7 @@ export interface AssetWallet {
      */
     verifyAssetOwnership(request?: DeepPartial<VerifyAssetOwnershipRequest>): Promise<VerifyAssetOwnershipResponse>;
     /**
+     * `tapcli: assets removelease`
      * RemoveUTXOLease removes the lease/lock/reservation of the given managed
      * UTXO.
      */
