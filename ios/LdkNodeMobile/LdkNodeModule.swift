@@ -698,6 +698,7 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(forceCloseChannel:counterpartyNodeId:reason:resolver:rejecter:)
     func forceCloseChannel(_ userChannelId: String, counterpartyNodeId: String, reason: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.node else {
             reject("error", "Node not initialized", nil)
