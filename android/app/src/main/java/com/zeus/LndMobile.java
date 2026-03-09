@@ -16,6 +16,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Environment;
+import android.os.HandlerThread;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Handler;
@@ -71,10 +72,11 @@ import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 class LndMobile extends ReactContextBaseJavaModule {
   private final String TAG = "LndMobile";
   public static Map<String, String> translationCache = new HashMap<>();
+  private HandlerThread handlerThread;
   Messenger messenger;
   private boolean lndMobileServiceBound = false;
   private Messenger lndMobileServiceMessenger; // The service
-  private HashMap<Integer, Promise> requests = new HashMap<>();
+  private java.util.concurrent.ConcurrentHashMap<Integer, Promise> requests = new java.util.concurrent.ConcurrentHashMap<>();
 
   public enum LndStatus {
       SERVICE_BOUND, PROCESS_STARTED, WALLET_UNLOCKED;
@@ -97,6 +99,10 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   class IncomingHandler extends Handler {
+    IncomingHandler(android.os.Looper looper) {
+      super(looper);
+    }
+
     @Override
     public void handleMessage(Message msg) {
       Bundle bundle = msg.getData();
@@ -294,7 +300,9 @@ class LndMobile extends ReactContextBaseJavaModule {
       requests.put(req, promise);
 
       lndMobileServiceConnection = new LndMobileServiceConnection(req);
-      messenger = new Messenger(new IncomingHandler()); // me
+      handlerThread = new HandlerThread("LndMobile");
+      handlerThread.start();
+      messenger = new Messenger(new IncomingHandler(handlerThread.getLooper())); // me
       Intent intent = new Intent(getReactApplicationContext(), LndMobileService.class);
       if (getPersistentServicesEnabled(getReactApplicationContext())) {
         getReactApplicationContext().startForegroundService(intent);
@@ -332,6 +340,10 @@ class LndMobile extends ReactContextBaseJavaModule {
 
       getReactApplicationContext().unbindService(lndMobileServiceConnection);
       lndMobileServiceBound = false;
+      if (handlerThread != null) {
+        handlerThread.quitSafely();
+        handlerThread = null;
+      }
     }
   }
 
