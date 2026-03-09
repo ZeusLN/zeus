@@ -599,7 +599,7 @@ public class LndMobileService extends Service {
     }
 
     // else noop, instead of calling startService, start will be handled by binding
-    return startid;
+    return persistentServicesEnabled ? START_STICKY : START_NOT_STICKY;
   }
 
   private Notification buildNotification() {
