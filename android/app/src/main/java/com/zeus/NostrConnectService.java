@@ -47,7 +47,7 @@ public class NostrConnectService extends Service {
     public int onStartCommand(Intent intent, int flags, int startid) {
         if (intent != null && intent.getAction() != null) {
             if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP_NOSTR_SERVICE")) {
-                stopForeground(true);
+                stopForeground(STOP_FOREGROUND_REMOVE);
                 stopSelf();
                 return START_NOT_STICKY;
             } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.UPDATE_NOTIFICATION")) {
@@ -96,7 +96,7 @@ public class NostrConnectService extends Service {
     public boolean onUnbind(Intent intent) {
         // Stop the service when no clients are bound, but only if persistent services are disabled
         if (!getPersistentNWCServicesEnabled(this)) {
-            stopForeground(true);
+            stopForeground(STOP_FOREGROUND_REMOVE);
             stopSelf();
         }
         return false;

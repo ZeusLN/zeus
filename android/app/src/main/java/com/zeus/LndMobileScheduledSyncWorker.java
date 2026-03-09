@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.Message;
 import android.os.Messenger;
 import android.os.Process;
@@ -166,7 +167,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
       @SuppressLint("HandlerLeak")
       @Override
       public void run() {
-        incomingHandler = new Handler() {
+        incomingHandler = new Handler(Looper.getMainLooper()) {
           @Override
           public void handleMessage(Message msg) {
             // Hyperlog.d(TAG, "Handling new incoming message from LndMobileService, msg id: " + msg.what);
@@ -255,7 +256,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                         // Hyperlog.i(TAG, "Syncs are done, letting lnd work for 10s before quitting");
                         writeLastScheduledSyncToDb();
 
-                        Handler handler = new Handler();
+                        Handler handler = new Handler(Looper.getMainLooper());
                         handler.postDelayed(new Runnable() {
                           public void run() {
                             stopWorker(true, completer);
@@ -268,7 +269,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
                           stopWorker(false, completer);
                         } else{
                           // Hyperlog.i(TAG, "Sleeping 10s then checking again");
-                          Handler handler = new Handler();
+                          Handler handler = new Handler(Looper.getMainLooper());
                           handler.postDelayed(new Runnable() {
                             public void run() {
                               try {
@@ -335,7 +336,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
 //      }
     }
 
-    new Handler().postDelayed(new Runnable() {
+    new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
       @Override
       public void run() {
         // Hyperlog.i(TAG, "Calling future.set(Result.success());");
