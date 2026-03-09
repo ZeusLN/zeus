@@ -433,7 +433,6 @@ export default class PaymentRequest extends React.Component<
         const { paymentRequest, pay_req } = InvoicesStore;
         const { implementation } = SettingsStore;
 
-        const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
 
         // Zaplocker
@@ -464,7 +463,7 @@ export default class PaymentRequest extends React.Component<
             amount: satAmount ? satAmount.toString() : undefined,
             max_parts: enableMultiPathPayment ? maxParts : '16',
             max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
-            fee_limit_sat: isLnd ? feeLimitSat : '1000',
+            fee_limit_sat: feeLimitSat,
             max_fee_percent: isCLightning ? maxFeePercentFormatted : '5.0',
             outgoing_chan_id: outgoingChanId ?? '',
             last_hop_pubkey: lastHopPubkey ?? '',
@@ -611,7 +610,6 @@ export default class PaymentRequest extends React.Component<
         const enableDonations =
             Platform.OS !== 'ios' && settings?.payments?.enableDonations;
 
-        const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
 
         const isNoAmountInvoice: boolean = !requestAmount;
@@ -1015,7 +1013,8 @@ export default class PaymentRequest extends React.Component<
                                     />
                                 )}
 
-                                {(isLnd || isCLightning) && (
+                                {(BackendUtils.supportsCustomFeeLimit() ||
+                                    isCLightning) && (
                                     <TouchableOpacity
                                         onPress={() => {
                                             this.setState({
@@ -1323,7 +1322,7 @@ export default class PaymentRequest extends React.Component<
                                             </React.Fragment>
                                         )}
 
-                                        {(isLnd ||
+                                        {(BackendUtils.supportsCustomFeeLimit() ||
                                             implementation === 'cln-rest') && (
                                             <>
                                                 <Text

@@ -16,3 +16,9 @@ export const LndMobileToolsEventEmitter =
         ? DeviceEventEmitter
         : // @ts-ignore:next-line
           new NativeEventEmitter(NativeModules.LndMobileTools);
+
+export const LdkNodeEventEmitter =
+    Platform.OS == 'android'
+        ? DeviceEventEmitter
+        : // @ts-ignore:next-line
+          new NativeEventEmitter(NativeModules.LdkNodeModule);

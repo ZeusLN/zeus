@@ -85,6 +85,7 @@ export default class NostrWalletConnect {
 
     supportsPeers = () => false;
     supportsMessageSigning = () => false;
+    supportsMessageVerification = () => false;
     supportsLnurlAuth = () => false;
     supportsOnchainBalance = () => false;
     supportsOnchainSends = () => false;
@@ -120,8 +121,11 @@ export default class NostrWalletConnect {
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
+    supportsListingOffers = () => false;
+    supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
+    supportsCustomFeeLimit = () => false;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;

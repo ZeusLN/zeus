@@ -33,7 +33,7 @@ function TotalRow({
                 <Spacer width={8} />
                 <Body secondary>{kind}</Body>
             </Row>
-            <Amount sats={amount} toggleable />
+            <Amount sats={amount} toggleable forceMsats />
         </Row>
     );
 }
@@ -79,6 +79,7 @@ export function RoutingHeader(props: any) {
                             jumboText
                             toggleable
                             sensitive
+                            forceMsats
                         />
                         <Text
                             style={{

@@ -264,6 +264,7 @@ export default class RoutingEvent extends React.Component<
                                             sats={fee ?? rebalanceFees ?? 0}
                                             toggleable
                                             sensitive
+                                            forceMsats
                                         />
                                     }
                                 />
@@ -334,6 +335,7 @@ export default class RoutingEvent extends React.Component<
                                     toggleable
                                     credit
                                     sensitive
+                                    forceMsats
                                 />
                             </View>
 

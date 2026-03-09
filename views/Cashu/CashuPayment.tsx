@@ -196,6 +196,7 @@ export default class CashuPayment extends React.Component<
                                             debit
                                             sensitive
                                             toggleable
+                                            forceMsats
                                         />
                                         {getFeePercentage && (
                                             <Text

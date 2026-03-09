@@ -86,6 +86,14 @@ interface MintRecommendation {
     url: string;
 }
 
+export interface ScoredMint {
+    url: string;
+    count: number;
+    score: number;
+    avgRating: number;
+    reviewCount: number;
+}
+
 export interface MintReviewRating {
     score: number;
     max: number;
@@ -204,6 +212,7 @@ export default class CashuStore {
     @observable public mintReviews: Map<string, MintReview[]> = new Map();
     @observable public reviewerProfiles: Map<string, ReviewerProfile> =
         new Map();
+    @observable public mintInfoCache: Map<string, any> = new Map();
     @observable public loadingTrustedMints = false;
     @observable public loadingReviews = false;
     @observable public submittingReview = false;
@@ -379,22 +388,30 @@ export default class CashuStore {
             console.warn('CDK: Stored cashu seed is not valid BIP-39');
         }
 
-        // No valid stored cashu seed - derive from LND seed
+        // No valid stored cashu seed - derive from wallet seed
+        // LDK Node stores mnemonic as a single string; LND as a word array
+        const ldkMnemonic = this.settingsStore.ldkMnemonic;
         const lndSeedPhrase = this.settingsStore.seedPhrase;
-        if (!lndSeedPhrase || lndSeedPhrase.length === 0) {
-            console.warn('CDK: No LND seed phrase available');
+
+        let cashuSeedPhrase: string;
+        if (ldkMnemonic) {
+            // LDK Node uses a 12-word mnemonic - use it directly as the
+            // cashu seed since it already has exactly 128 bits of entropy
+            cashuSeedPhrase = ldkMnemonic;
+        } else if (lndSeedPhrase && lndSeedPhrase.length > 0) {
+            // LND uses a 24-word mnemonic - derive a 12-word cashu seed
+            // from bytes [48:64] of the BIP-39 seed (v2-bip39 style)
+            const lndMnemonic = lndSeedPhrase.join(' ');
+            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(lndMnemonic);
+            const entropy = seedFromMnemonic.slice(48, 64);
+            cashuSeedPhrase = bip39scure.entropyToMnemonic(
+                entropy,
+                BIP39_WORD_LIST
+            );
+        } else {
+            console.warn('CDK: No wallet seed phrase available');
             return null;
         }
-
-        const lndMnemonic = lndSeedPhrase.join(' ');
-
-        // Derive cashu seed from LND seed (v2-bip39 style)
-        const seedFromMnemonic = bip39scure.mnemonicToSeedSync(lndMnemonic);
-        const entropy = seedFromMnemonic.slice(48, 64);
-        const cashuSeedPhrase = bip39scure.entropyToMnemonic(
-            entropy,
-            BIP39_WORD_LIST
-        );
 
         // Store derived seed for future use
         const derivedSeedPhrase = cashuSeedPhrase.split(' ');
@@ -406,7 +423,7 @@ export default class CashuStore {
         this.seedVersion = 'v2-bip39';
         Storage.setItem(`${this.getLndDir()}-cashu-seed-version`, 'v2-bip39');
 
-        console.log('CDK: Derived and stored cashu seed from LND seed');
+        console.log('CDK: Derived and stored cashu seed from wallet seed');
         return cashuSeedPhrase;
     };
 
@@ -1133,6 +1150,102 @@ export default class CashuStore {
         return { recommendations, reviews: mintReviewsMap };
     };
 
+    /**
+     * Calculates a time-weighted score for each mint based on reviews and popularity.
+     * Returns the top N mints sorted by score descending.
+     *
+     * - Reviews with ratings are weighted by recency (exponential decay, ~90 day half-life)
+     * - Mints with no rated reviews get a neutral score of 0.5
+     * - Popularity (recommendation count) provides a small boost
+     * - Recent bad reviews will quickly tank a misbehaving mint's score
+     */
+    public getTopScoredMints = (
+        count: number = 5,
+        mode: 'zeus' | 'all' = 'zeus'
+    ): ScoredMint[] => {
+        const recommendations =
+            mode === 'all'
+                ? this.mintRecommendations
+                : this.trustedMintRecommendations;
+
+        if (!recommendations || recommendations.length === 0) return [];
+
+        const now = Date.now() / 1000;
+
+        const scored: ScoredMint[] = recommendations.map((rec) => {
+            const reviews = this.mintReviews.get(rec.url) || [];
+            const ratedReviews = reviews.filter((r) => r.rating);
+
+            let avgRating = 0.5; // neutral default for unrated mints
+
+            if (ratedReviews.length > 0) {
+                let weightedSum = 0;
+                let totalWeight = 0;
+
+                for (const review of ratedReviews) {
+                    const ageDays = (now - review.createdAt) / 86400;
+                    const weight = Math.exp(-ageDays / 90);
+                    const normalizedRating =
+                        review.rating!.score / review.rating!.max;
+
+                    weightedSum += normalizedRating * weight;
+                    totalWeight += weight;
+                }
+
+                if (totalWeight > 0) {
+                    avgRating = weightedSum / totalWeight;
+                }
+            }
+
+            const popularityBoost = Math.log2(1 + rec.count) * 0.05;
+            const finalScore = avgRating + popularityBoost;
+
+            return {
+                url: rec.url,
+                count: rec.count,
+                score: finalScore,
+                avgRating,
+                reviewCount: ratedReviews.length
+            };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        return scored.slice(0, count);
+    };
+
+    /**
+     * Fetches mint info (name, icon_url, etc.) for a list of mint URLs.
+     * Results are cached in mintInfoCache. Skips already-cached URLs.
+     */
+    @action
+    public fetchMintInfoBatch = async (mintUrls: string[]) => {
+        const uncached = mintUrls.filter((url) => !this.mintInfoCache.has(url));
+        if (uncached.length === 0) return;
+
+        const results = await Promise.allSettled(
+            uncached.map(async (mintUrl) => {
+                const info = await Promise.race([
+                    CashuDevKit.fetchMintInfo(mintUrl),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Timeout')), 10000)
+                    )
+                ]);
+                return { mintUrl, info };
+            })
+        );
+
+        runInAction(() => {
+            for (const result of results) {
+                if (result.status === 'fulfilled') {
+                    this.mintInfoCache.set(
+                        result.value.mintUrl,
+                        result.value.info
+                    );
+                }
+            }
+        });
+    };
+
     @action
     public fetchMints = async () => {
         try {
@@ -1558,7 +1671,10 @@ export default class CashuStore {
         try {
             // Ensure CDK is initialized
             if (!this.cdkInitialized) {
-                await this.initializeCDK();
+                const initialized = await this.initializeCDK();
+                if (!initialized) {
+                    throw new Error('CDK wallet not initialized');
+                }
             }
             if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
                 const seedVersion = 'v2-bip39';
@@ -2299,6 +2415,41 @@ export default class CashuStore {
             this.initializing = false;
         });
 
+        // Auto-add initial mints from onboarding
+        try {
+            const settings = this.settingsStore.settings;
+            const initialMintUrls = settings?.ecash?.initialMintUrls;
+            if (
+                initialMintUrls &&
+                initialMintUrls.length > 0 &&
+                this.mintUrls.length === 0
+            ) {
+                console.log(
+                    'Adding initial mints from onboarding:',
+                    initialMintUrls
+                );
+                for (const mintUrl of initialMintUrls) {
+                    try {
+                        await this.addMint(mintUrl);
+                    } catch (e) {
+                        console.error(
+                            `Failed to add initial mint ${mintUrl}:`,
+                            e
+                        );
+                    }
+                }
+                // Clear initialMintUrls from settings
+                await this.settingsStore.updateSettings({
+                    ecash: {
+                        ...settings.ecash,
+                        initialMintUrls: undefined
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Error adding initial mints:', e);
+        }
+
         // Check status of pending items after initialization
         this.checkPendingItems();
 
@@ -3017,7 +3168,10 @@ export default class CashuStore {
         try {
             // Ensure CDK is initialized
             if (!this.cdkInitialized) {
-                await this.initializeCDK();
+                const initialized = await this.initializeCDK();
+                if (!initialized) {
+                    throw new Error('CDK wallet not initialized');
+                }
             }
 
             // Check if token is valid

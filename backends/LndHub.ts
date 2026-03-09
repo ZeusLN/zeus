@@ -116,6 +116,7 @@ export default class LndHub extends LND {
 
     supportsPeers = () => false;
     supportsMessageSigning = () => false;
+    supportsMessageVerification = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => false;
     supportsOnchainSends = () => false;
@@ -167,6 +168,9 @@ export default class LndHub extends LND {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => false;
+    supportsListingOffers = () => false;
+    supportsBolt12Address = () => false;
+    supportsCustomFeeLimit = () => false;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;

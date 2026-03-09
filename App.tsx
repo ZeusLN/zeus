@@ -160,7 +160,11 @@ import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
 import DisasterRecoveryAdvanced from './views/Settings/EmbeddedNode/DisasterRecoveryAdvanced';
 import Pathfinding from './views/Settings/EmbeddedNode/Pathfinding';
 import ExpressGraphSync from './views/Settings/EmbeddedNode/ExpressGraphSync';
+import RapidGossipSync from './views/Settings/EmbeddedNode/RapidGossipSync';
+import EsploraServer from './views/Settings/EmbeddedNode/EsploraServer';
+import VssServer from './views/Settings/EmbeddedNode/VssServer';
 import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
+import LDKLogs from './views/Settings/EmbeddedNode/LDKLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
@@ -196,6 +200,15 @@ import Order from './views/Order';
 
 import Intro from './views/Intro';
 import IntroSplash from './views/IntroSplash';
+
+// Onboarding
+import Onboarding1 from './views/Onboarding/Onboarding1';
+import RecommendedSettings from './views/Onboarding/RecommendedSettings';
+import WalletSetup from './views/Onboarding/WalletSetup';
+import WalletType from './views/Onboarding/WalletType';
+import NodeChoice from './views/Onboarding/NodeChoice';
+import MintDiscovery from './views/Onboarding/MintDiscovery';
+import WalletSettings from './views/Onboarding/WalletSettings';
 
 import EditFee from './views/EditFee';
 
@@ -468,6 +481,40 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="IntroSplash" // @ts-ignore:next-line
                                                         component={IntroSplash}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Onboarding1" // @ts-ignore:next-line
+                                                        component={Onboarding1}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RecommendedSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            RecommendedSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletSetup" // @ts-ignore:next-line
+                                                        component={WalletSetup}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletType" // @ts-ignore:next-line
+                                                        component={WalletType}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NodeChoice" // @ts-ignore:next-line
+                                                        component={NodeChoice}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="MintDiscovery" // @ts-ignore:next-line
+                                                        component={
+                                                            MintDiscovery
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            WalletSettings
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Intro" // @ts-ignore:next-line
@@ -949,8 +996,28 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
+                                                        name="RapidGossipSync" // @ts-ignore:next-line
+                                                        component={
+                                                            RapidGossipSync
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="EsploraServer" // @ts-ignore:next-line
+                                                        component={
+                                                            EsploraServer
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="VssServer" // @ts-ignore:next-line
+                                                        component={VssServer}
+                                                    />
+                                                    <Stack.Screen
                                                         name="LNDLogs" // @ts-ignore:next-line
                                                         component={LNDLogs}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LDKLogs" // @ts-ignore:next-line
+                                                        component={LDKLogs}
                                                     />
                                                     <Stack.Screen
                                                         name="Peers" // @ts-ignore:next-line

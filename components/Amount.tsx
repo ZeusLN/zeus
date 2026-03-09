@@ -44,6 +44,7 @@ interface AmountDisplayProps {
     colorOverride?: string;
     pending?: boolean;
     fee?: boolean;
+    forceMsats?: boolean;
     fiatRatesLoading?: boolean;
     accessible?: boolean;
     accessibilityLabel?: string;
@@ -69,6 +70,7 @@ function AmountDisplay({
     colorOverride = undefined,
     pending = false,
     fee = false,
+    forceMsats = false,
     fiatRatesLoading = false,
     accessible,
     accessibilityLabel,
@@ -302,7 +304,8 @@ function AmountDisplay({
         case 'sats':
             const { displayAmount, shouldShowRounding } = processSatsAmount(
                 amount,
-                roundAmount
+                roundAmount,
+                fee || forceMsats
             );
             return renderSatsAmount(displayAmount, shouldShowRounding);
         case 'BTC':
@@ -339,6 +342,7 @@ interface AmountProps {
     toggleable?: boolean;
     pending?: boolean;
     fee?: boolean;
+    forceMsats?: boolean;
     accessible?: boolean;
     accessibilityLabel?: string;
     negative?: boolean;
@@ -364,6 +368,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             colorOverride = undefined,
             pending = false,
             fee = false,
+            forceMsats = false,
             accessible,
             accessibilityLabel,
             negative = false,
@@ -492,6 +497,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         colorOverride={colorOverride}
                         pending={pending}
                         fee={fee}
+                        forceMsats={forceMsats}
                         fiatRatesLoading={FiatStore.loading}
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
@@ -511,6 +517,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 colorOverride={colorOverride}
                 pending={pending}
                 fee={fee}
+                forceMsats={forceMsats}
                 fiatRatesLoading={FiatStore.loading}
                 accessible={accessible}
                 accessibilityLabel={accessibilityLabel}
