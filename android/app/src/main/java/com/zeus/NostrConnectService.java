@@ -12,6 +12,7 @@ import android.content.pm.ServiceInfo;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
@@ -27,6 +28,7 @@ public class NostrConnectService extends Service {
     
     private static boolean isServiceRunning = false;
     private NotificationManager notificationManager;
+    private HandlerThread connectionMonitorThread;
     private Handler connectionMonitorHandler;
     private Runnable connectionMonitorRunnable;
     
@@ -125,7 +127,9 @@ public class NostrConnectService extends Service {
         
         NostrConnectModule.emitLogEvent("info", "NWC: Starting connection monitoring");
         if (connectionMonitorHandler == null) {
-            connectionMonitorHandler = new Handler(Looper.getMainLooper());
+            connectionMonitorThread = new HandlerThread("NWC-Monitor");
+            connectionMonitorThread.start();
+            connectionMonitorHandler = new Handler(connectionMonitorThread.getLooper());
         }
         connectionMonitorRunnable = new Runnable() {
             @Override
@@ -137,9 +141,11 @@ public class NostrConnectService extends Service {
                 } catch (Exception e) {
                     NostrConnectModule.emitLogEvent("error", "NWC Monitoring error: " + e.getMessage());
                 }
-                
-                if (connectionMonitorHandler != null && connectionMonitorRunnable != null) {
-                    connectionMonitorHandler.postDelayed(connectionMonitorRunnable, CONNECTION_MONITOR_INTERVAL_MS);
+
+                Handler handler = connectionMonitorHandler;
+                Runnable self = connectionMonitorRunnable;
+                if (handler != null && self != null) {
+                    handler.postDelayed(self, CONNECTION_MONITOR_INTERVAL_MS);
                 }
             }
         };
@@ -154,6 +160,11 @@ public class NostrConnectService extends Service {
             NostrConnectModule.emitLogEvent("info", "NWC: Connection monitoring stopped");
         } else {
             NostrConnectModule.emitLogEvent("info", "NWC: No active monitoring to stop");
+        }
+        if (connectionMonitorThread != null) {
+            connectionMonitorThread.quitSafely();
+            connectionMonitorThread = null;
+            connectionMonitorHandler = null;
         }
     }
 
