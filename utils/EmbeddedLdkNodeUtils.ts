@@ -7,8 +7,6 @@
 import RNFS from 'react-native-fs';
 import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
-import { validateMnemonic as bip39Validate } from '@scure/bip39';
-import { BIP39_WORD_LIST } from './Bip39Utils';
 import { localeString } from './LocaleUtils';
 import { deriveVssSigningKey } from './VssAuthUtils';
 
@@ -362,41 +360,6 @@ export async function deleteLdkNodeWallet(nodeDir: string): Promise<void> {
     }
 }
 
-/**
- * Check if LDK Node wallet exists
- */
-export async function ldkNodeWalletExists(nodeDir: string): Promise<boolean> {
-    const storagePath = getLdkNodeStoragePath(nodeDir);
-    return await RNFS.exists(storagePath);
-}
-
-/**
- * Validate a BIP39 mnemonic
- * Checks word count, wordlist membership, and checksum
- */
-export function validateMnemonic(mnemonic: string): {
-    valid: boolean;
-    error?: string;
-} {
-    const words = mnemonic.trim().split(/\s+/);
-
-    if (words.length !== 12 && words.length !== 24) {
-        return {
-            valid: false,
-            error: 'Mnemonic must be 12 or 24 words'
-        };
-    }
-
-    if (!bip39Validate(mnemonic.trim(), BIP39_WORD_LIST)) {
-        return {
-            valid: false,
-            error: 'Invalid mnemonic: words not in BIP39 wordlist or bad checksum'
-        };
-    }
-
-    return { valid: true };
-}
-
 export default {
     getLdkNodeStoragePath,
     createLdkNodeDirectory,
@@ -408,8 +371,6 @@ export default {
     startLdkNodeWallet,
     stopLdkNode,
     deleteLdkNodeWallet,
-    ldkNodeWalletExists,
-    validateMnemonic,
     ESPLORA_SERVERS_MAINNET,
     ESPLORA_SERVERS_TESTNET,
     ESPLORA_SERVERS_SIGNET,
