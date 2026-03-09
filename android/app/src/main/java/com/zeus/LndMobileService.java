@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import android.os.HandlerThread;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,8 +56,9 @@ public class LndMobileService extends Service {
   boolean subscribeInvoicesStreamActive = false;
   Set<String> streamsStarted = new HashSet<String>();
 
-  Messenger messenger = new Messenger(new IncomingHandler());
-  ArrayList<Messenger> mClients = new ArrayList<Messenger>();
+  private HandlerThread handlerThread;
+  Messenger messenger;
+  java.util.concurrent.CopyOnWriteArrayList<Messenger> mClients = new java.util.concurrent.CopyOnWriteArrayList<Messenger>();
 
   static final int MSG_REGISTER_CLIENT = 1;
   static final int MSG_REGISTER_CLIENT_ACK = 2;
@@ -104,6 +106,10 @@ public class LndMobileService extends Service {
   }
 
   class IncomingHandler extends Handler {
+      IncomingHandler(android.os.Looper looper) {
+        super(looper);
+      }
+
       @Override
       public void handleMessage(Message msg) {
         Bundle bundle = msg.getData();
@@ -650,6 +656,9 @@ public class LndMobileService extends Service {
   @Override
   public void onCreate() {
     super.onCreate();
+    handlerThread = new HandlerThread("LndMobileService");
+    handlerThread.start();
+    messenger = new Messenger(new IncomingHandler(handlerThread.getLooper()));
     notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
     if (!getPersistentServicesEnabled(this)) {
       if (notificationManager != null) {
@@ -662,6 +671,10 @@ public class LndMobileService extends Service {
   public void onDestroy() {
     if (notificationManager != null) {
       notificationManager.cancel(ONGOING_NOTIFICATION_ID);
+    }
+    if (handlerThread != null) {
+      handlerThread.quitSafely();
+      handlerThread = null;
     }
     super.onDestroy();
   }
