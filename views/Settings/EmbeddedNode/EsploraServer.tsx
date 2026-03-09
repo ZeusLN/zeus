@@ -127,7 +127,7 @@ export default class EsploraServer extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.EmbeddedNode.EsploraServer.defaultServer'
+                                    'views.Settings.EmbeddedNode.defaultServer'
                                 )}
                                 : {defaultServer || 'None'}
                             </Text>
