@@ -1698,6 +1698,8 @@ class LdkNodeModule: RCTEventEmitter {
             return "Paid"
         case .refunded:
             return "Refunded"
+        @unknown default:
+            return "Unknown"
         }
     }
 
