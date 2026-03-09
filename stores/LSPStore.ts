@@ -16,6 +16,7 @@ const { index, channel } = lndMobile;
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { getClientInfo } from '../utils/ClientInfoUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -171,6 +172,12 @@ export default class LSPStore {
 
     private encodeMessage = (n: any) =>
         Buffer.from(JSON.stringify(n)).toString('hex');
+
+    private getClientInfo = () =>
+        getClientInfo(
+            this.settingsStore.implementation,
+            this.nodeInfoStore?.nodeInfo?.version
+        );
 
     // Flow 2.0
 
@@ -362,7 +369,8 @@ export default class LSPStore {
                 JSON.stringify({
                     bolt11,
                     fee_id: this.feeId,
-                    simpleTaproot: settings.requestSimpleTaproot
+                    simpleTaproot: settings.requestSimpleTaproot,
+                    client_info: this.getClientInfo()
                 })
             )
                 .then(async (response: any) => {
@@ -652,7 +660,8 @@ export default class LSPStore {
             token: state.token,
             refund_onchain_address: state.refundOnchainAddress,
             announce_channel: state.announceChannel,
-            public_key: this.nodeInfoStore.nodeInfo.nodeId
+            public_key: this.nodeInfoStore.nodeInfo.nodeId,
+            client_info: this.getClientInfo()
         });
         this.error = false;
         this.error_msg = '';
@@ -723,7 +732,8 @@ export default class LSPStore {
                     channel_expiry_blocks: state.channelExpiryBlocks,
                     token: state.token,
                     refund_onchain_address: state.refundOnchainAddress,
-                    announce_channel: state.announceChannel
+                    announce_channel: state.announceChannel,
+                    client_info: this.getClientInfo()
                 },
                 id: this.createOrderId
             })
@@ -859,7 +869,8 @@ export default class LSPStore {
                     channel_extension_expiry_blocks:
                         state.channelExtensionBlocks,
                     token: state.token,
-                    refund_onchain_address: state.refundOnchainAddress
+                    refund_onchain_address: state.refundOnchainAddress,
+                    client_info: this.getClientInfo()
                 },
                 id: this.createExtensionOrderId
             })
