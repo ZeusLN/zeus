@@ -115,7 +115,7 @@ export default class VssServer extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.EmbeddedNode.VssServer.defaultServer'
+                                    'views.Settings.EmbeddedNode.defaultServer'
                                 )}
                                 : {DEFAULT_VSS_SERVER}
                             </Text>
