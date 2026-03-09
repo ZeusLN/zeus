@@ -1,5 +1,15 @@
 import * as React from 'react';
-import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import {
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    TouchableOpacity,
+    TouchableWithoutFeedback,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -120,108 +130,129 @@ export default class EditProfile extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <View style={{ flex: 1, margin: 5 }}>
-                        {loading && <LoadingIndicator />}
-                        {!loading && !!error_msg && (
-                            <ErrorMessage message={error_msg} dismissable />
-                        )}
-                        {!loading && (
-                            <>
-                                <View
-                                    style={{
-                                        flex: 1,
-                                        paddingHorizontal: 15,
-                                        paddingTop: 10
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            alignItems: 'center',
-                                            marginVertical: 15
-                                        }}
-                                    >
-                                        <TouchableOpacity
-                                            onPress={
-                                                imageBase64
-                                                    ? this.clearImage
-                                                    : this.selectPhoto
-                                            }
+                    <KeyboardAvoidingView
+                        style={{ flex: 1 }}
+                        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    >
+                        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                            <View style={{ flex: 1, margin: 5 }}>
+                                {loading && <LoadingIndicator />}
+                                {!loading && !!error_msg && (
+                                    <ErrorMessage
+                                        message={error_msg}
+                                        dismissable
+                                    />
+                                )}
+                                {!loading && (
+                                    <>
+                                        <ScrollView
+                                            style={{
+                                                flex: 1,
+                                                paddingHorizontal: 15,
+                                                paddingTop: 10
+                                            }}
+                                            keyboardShouldPersistTaps="handled"
                                         >
                                             <View
                                                 style={{
-                                                    ...styles.photoContainer,
-                                                    backgroundColor:
-                                                        themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                    borderColor:
-                                                        themeColor('separator')
+                                                    alignItems: 'center',
+                                                    marginVertical: 15
                                                 }}
                                             >
-                                                {imageUri ? (
-                                                    <Image
-                                                        source={{
-                                                            uri: imageUri
-                                                        }}
-                                                        style={styles.photo}
-                                                    />
-                                                ) : (
-                                                    <AddIcon
-                                                        fill={themeColor(
-                                                            'background'
-                                                        )}
-                                                        width="30"
-                                                        height="30"
+                                                <TouchableOpacity
+                                                    onPress={
+                                                        imageBase64
+                                                            ? this.clearImage
+                                                            : this.selectPhoto
+                                                    }
+                                                >
+                                                    <View
                                                         style={{
-                                                            alignSelf: 'center'
+                                                            ...styles.photoContainer,
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'secondaryText'
+                                                                ),
+                                                            borderColor:
+                                                                themeColor(
+                                                                    'separator'
+                                                                )
                                                         }}
-                                                    />
-                                                )}
+                                                    >
+                                                        {imageUri ? (
+                                                            <Image
+                                                                source={{
+                                                                    uri: imageUri
+                                                                }}
+                                                                style={
+                                                                    styles.photo
+                                                                }
+                                                            />
+                                                        ) : (
+                                                            <AddIcon
+                                                                fill={themeColor(
+                                                                    'background'
+                                                                )}
+                                                                width="30"
+                                                                height="30"
+                                                                style={{
+                                                                    alignSelf:
+                                                                        'center'
+                                                                }}
+                                                            />
+                                                        )}
+                                                    </View>
+                                                </TouchableOpacity>
                                             </View>
-                                        </TouchableOpacity>
-                                    </View>
 
-                                    <Text
-                                        style={{
-                                            ...styles.label,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.LightningAddress.bio'
-                                        )}
-                                    </Text>
-                                    <TextInput
-                                        value={bio}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                bio: text.slice(
-                                                    0,
-                                                    MAX_BIO_LENGTH
-                                                )
-                                            })
-                                        }
-                                        placeholder={localeString(
-                                            'views.Settings.LightningAddress.bioPlaceholder'
-                                        )}
-                                        multiline
-                                        autoCapitalize="sentences"
-                                        autoCorrect={true}
-                                        style={{ minHeight: 100 }}
-                                    />
-                                </View>
-                                <View style={{ margin: 10, marginBottom: 15 }}>
-                                    <Button
-                                        title={localeString(
-                                            'views.Settings.SetPassword.save'
-                                        )}
-                                        onPress={this.save}
-                                        disabled={!this.hasChanges()}
-                                    />
-                                </View>
-                            </>
-                        )}
-                    </View>
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.bio'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                value={bio}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        bio: text.slice(
+                                                            0,
+                                                            MAX_BIO_LENGTH
+                                                        )
+                                                    })
+                                                }
+                                                placeholder={localeString(
+                                                    'views.Settings.LightningAddress.bioPlaceholder'
+                                                )}
+                                                multiline
+                                                autoCapitalize="sentences"
+                                                autoCorrect={true}
+                                                style={{ minHeight: 100 }}
+                                            />
+                                        </ScrollView>
+                                        <View
+                                            style={{
+                                                margin: 10,
+                                                marginBottom: 15
+                                            }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Settings.SetPassword.save'
+                                                )}
+                                                onPress={this.save}
+                                                disabled={!this.hasChanges()}
+                                            />
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </KeyboardAvoidingView>
                 </View>
             </Screen>
         );
