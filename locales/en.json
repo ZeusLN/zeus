@@ -1749,6 +1749,7 @@
     "views.PayCode.singleUse": "Single use",
     "views.PayCode.multiUse": "Multi use",
     "views.PayCode.internalLabel": "Internal label",
+    "views.PayCode.noChannelsWarning": "You need at least one open channel to create a pay code.",
     "views.PayCodes.noPayCodes": "No pay codes created yet",
     "views.Settings.Bolt12Address": "BOLT 12 address",
     "views.Settings.Bolt12Offer": "BOLT 12 offer",

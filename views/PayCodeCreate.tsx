@@ -10,15 +10,20 @@ import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../components/SuccessErrorMessage';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import ChannelsStore from '../stores/ChannelsStore';
 import OffersStore from '../stores/OffersStore';
 
 interface PayCodeCreateProps {
     navigation: NativeStackNavigationProp<any, any>;
+    ChannelsStore: ChannelsStore;
     OffersStore: OffersStore;
 }
 
@@ -28,7 +33,7 @@ interface PayCodeCreateState {
     singleUse: boolean;
 }
 
-@inject('OffersStore')
+@inject('ChannelsStore', 'OffersStore')
 @observer
 export default class PayCodeCreateView extends React.Component<
     PayCodeCreateProps,
@@ -43,10 +48,16 @@ export default class PayCodeCreateView extends React.Component<
         };
     }
 
+    componentDidMount() {
+        this.props.OffersStore.error_msg = '';
+        this.props.OffersStore.error = false;
+    }
+
     render() {
-        const { navigation, OffersStore } = this.props;
+        const { navigation, ChannelsStore, OffersStore } = this.props;
         const { description, label, singleUse } = this.state;
         const { loading, error_msg } = OffersStore;
+        const hasOpenChannels = ChannelsStore.channels.length > 0;
 
         return (
             <Screen>
@@ -67,6 +78,13 @@ export default class PayCodeCreateView extends React.Component<
                     keyboardShouldPersistTaps="handled"
                 >
                     {error_msg && <ErrorMessage message={error_msg} />}
+                    {!hasOpenChannels && (
+                        <WarningMessage
+                            message={localeString(
+                                'views.PayCode.noChannelsWarning'
+                            )}
+                        />
+                    )}
 
                     <Text
                         style={{
@@ -139,6 +157,7 @@ export default class PayCodeCreateView extends React.Component<
                                     }
                                 });
                             }}
+                            disabled={!hasOpenChannels}
                         />
                     )}
                 </View>
