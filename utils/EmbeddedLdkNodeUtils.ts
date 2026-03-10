@@ -211,7 +211,8 @@ export async function startLdkNodeWallet({
     listeningAddresses,
     lsps1Config,
     trustedPeers0conf,
-    vssServerUrl
+    vssServerUrl,
+    skipInit
 }: {
     nodeDir: string;
     seedMnemonic: string;
@@ -227,32 +228,38 @@ export async function startLdkNodeWallet({
     };
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
+    skipInit?: boolean;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
-    const storagePath = getLdkNodeStoragePath(nodeDir);
-    const networkType = getNetworkType(network);
-    const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
-    const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
+    let vssError: string | undefined;
 
-    // Initialize the node with existing mnemonic
-    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
-    const vssStoreId = Buffer.from(
-        deriveVssSigningKey(seedMnemonic, passphrase).publicKey
-    ).toString('hex');
-    const { vssError } = await LdkNode.utils.initializeNode({
-        network: networkType,
-        storagePath,
-        esploraServerUrl: esploraUrl,
-        mnemonic: seedMnemonic,
-        passphrase: passphrase || null,
-        rgsServerUrl: rgsUrl,
-        listeningAddresses,
-        lsps1Config,
-        trustedPeers0conf,
-        vssConfig: {
-            url: vssUrl,
-            storeId: vssStoreId
-        }
-    });
+    if (!skipInit) {
+        const storagePath = getLdkNodeStoragePath(nodeDir);
+        const networkType = getNetworkType(network);
+        const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
+        const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
+
+        // Initialize the node with existing mnemonic
+        const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
+        const vssStoreId = Buffer.from(
+            deriveVssSigningKey(seedMnemonic, passphrase).publicKey
+        ).toString('hex');
+        const result = await LdkNode.utils.initializeNode({
+            network: networkType,
+            storagePath,
+            esploraServerUrl: esploraUrl,
+            mnemonic: seedMnemonic,
+            passphrase: passphrase || null,
+            rgsServerUrl: rgsUrl,
+            listeningAddresses,
+            lsps1Config,
+            trustedPeers0conf,
+            vssConfig: {
+                url: vssUrl,
+                storeId: vssStoreId
+            }
+        });
+        vssError = result.vssError;
+    }
 
     // Start the node — start() kicks off background tasks (including fee estimation)
     // that can reject asynchronously, so we catch those too
