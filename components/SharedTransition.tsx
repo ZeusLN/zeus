@@ -26,7 +26,7 @@ interface SharedBaseProps {
      */
     entering?: any;
     /** Override the default shared transition style when needed. */
-    transitionStyle?: any;
+    transitionStyle?: SharedTransition;
 }
 
 // ---------------------------------------------------------------------------
