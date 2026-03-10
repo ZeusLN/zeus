@@ -249,31 +249,30 @@ export default class SeedRecovery extends React.PureComponent<
         });
     };
 
-    saveLdkNodeWalletConfiguration = (mnemonic: string) => {
+    saveLdkNodeWalletConfiguration = (
+        mnemonic: string,
+        nodeDir: string,
+        network: string
+    ) => {
         const { SettingsStore, navigation } = this.props;
-        const { embeddedLdkNetwork, ldkNodeDir, ldkPassphrase } = this.state;
+        const { ldkPassphrase } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+
+        const networkType = network as
+            | 'mainnet'
+            | 'testnet'
+            | 'signet'
+            | 'regtest';
 
         const node = {
             implementation: 'embedded-ldk-node',
-            embeddedLdkNetwork,
-            ldkNodeDir,
+            embeddedLdkNetwork: network,
+            ldkNodeDir: nodeDir,
             ldkMnemonic: mnemonic,
             ldkPassphrase,
-            ldkEsploraServer: getDefaultEsploraServer(
-                embeddedLdkNetwork as
-                    | 'mainnet'
-                    | 'testnet'
-                    | 'signet'
-                    | 'regtest'
-            ),
-            ldkRgsServer: getDefaultRgsServer(
-                embeddedLdkNetwork as
-                    | 'mainnet'
-                    | 'testnet'
-                    | 'signet'
-                    | 'regtest'
-            )
+            ldkEsploraServer: getDefaultEsploraServer(networkType),
+            ldkRgsServer: getDefaultRgsServer(networkType),
+            ldkVssServer: DEFAULT_VSS_SERVER
         };
 
         let nodes: any;
@@ -547,12 +546,11 @@ export default class SeedRecovery extends React.PureComponent<
                         vssServerUrl: DEFAULT_VSS_SERVER
                     });
 
-                    this.setState({
-                        ldkNodeDir: nodeDir,
-                        embeddedLdkNetwork: network
-                    });
-
-                    this.saveLdkNodeWalletConfiguration(mnemonic);
+                    this.saveLdkNodeWalletConfiguration(
+                        mnemonic,
+                        nodeDir,
+                        network
+                    );
                 } catch (e: any) {
                     this.setState({
                         errorCreatingWallet: true,
