@@ -1,11 +1,15 @@
 import * as React from 'react';
 import { Platform, TouchableOpacity } from 'react-native';
+import { inject, observer } from 'mobx-react';
+import { checkNfcEnabled } from '../utils/NFCUtils';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
 
 import NfcIcon from '../assets/images/SVG/NFC-alt.svg';
 
 import Button from './../components/Button';
+
+import ModalStore from '../stores/ModalStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -15,12 +19,15 @@ interface NFCButtonProps {
     icon?: any;
     noUppercase?: boolean;
     iconOnly?: boolean;
+    ModalStore?: ModalStore;
 }
 
 interface NFCButtonState {
     nfcBroadcast: boolean;
 }
 
+@inject('ModalStore')
+@observer
 export default class NFCButton extends React.Component<
     NFCButtonProps,
     NFCButtonState
@@ -43,7 +50,13 @@ export default class NFCButton extends React.Component<
             this.stopSimulation();
         }
     }
-    toggleNfc = () => {
+    toggleNfc = async () => {
+        const { ModalStore } = this.props;
+
+        if (!this.state.nfcBroadcast) {
+            if (!(await checkNfcEnabled(ModalStore!))) return;
+        }
+
         if (this.state.nfcBroadcast) {
             this.stopSimulation();
         } else {
