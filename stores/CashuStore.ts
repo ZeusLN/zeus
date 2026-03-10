@@ -10,7 +10,6 @@ import CashuDevKit, {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
-    CDKTransferResult,
     CDKToken,
     CDKSendKind,
     CDKSpendingConditions,
@@ -881,79 +880,6 @@ export default class CashuStore {
         await this.syncCDKBalances();
 
         return result;
-    };
-
-    /**
-     * CDK: Top up a target mint by transferring balance from other mints.
-     * Returns total amount received by the target mint.
-     */
-    private transferToMintCDK = async (
-        targetMintUrl: string,
-        amountNeeded: number
-    ): Promise<number> => {
-        if (amountNeeded <= 0) {
-            return 0;
-        }
-
-        const normalizedTargetMint = this.normalizeMintUrl(targetMintUrl);
-        const balances = await CashuDevKit.getBalances();
-
-        const useSelectedSources =
-            !!this.settingsStore.settings?.ecash?.enableMultiMint &&
-            Array.isArray(this.selectedMintUrls) &&
-            this.selectedMintUrls.length > 0;
-
-        const allowedSources = useSelectedSources
-            ? new Set(
-                  this.selectedMintUrls.map((mint) =>
-                      this.normalizeMintUrl(mint)
-                  )
-              )
-            : null;
-
-        const sourceMints = Object.entries(balances)
-            .filter(([mintUrl, balance]) => {
-                const normalizedSourceMint = this.normalizeMintUrl(mintUrl);
-                return (
-                    normalizedSourceMint !== normalizedTargetMint &&
-                    balance > 0 &&
-                    (!allowedSources ||
-                        allowedSources.has(normalizedSourceMint))
-                );
-            })
-            .sort((a, b) => b[1] - a[1]);
-
-        let totalReceived = 0;
-
-        for (const [sourceMintUrl] of sourceMints) {
-            const remainingNeeded = amountNeeded - totalReceived;
-            if (remainingNeeded <= 0) {
-                break;
-            }
-
-            let transferResult: CDKTransferResult;
-            try {
-                transferResult = await CashuDevKit.transferExactReceive(
-                    sourceMintUrl,
-                    normalizedTargetMint,
-                    remainingNeeded
-                );
-            } catch (e) {
-                try {
-                    transferResult = await CashuDevKit.transferFullBalance(
-                        sourceMintUrl,
-                        normalizedTargetMint
-                    );
-                } catch (fallbackError) {
-                    continue;
-                }
-            }
-
-            totalReceived += transferResult.amount_received || 0;
-        }
-
-        await this.syncCDKBalances();
-        return totalReceived;
     };
 
     private getMintName = (mintUrl: string): string => {
@@ -4022,12 +3948,7 @@ export default class CashuStore {
                 ? this.feeEstimate + paymentAmt
                 : paymentAmt;
 
-            let balance = await CashuDevKit.getMintBalance(mintUrl);
-
-            if (balance < amountToPay) {
-                await this.transferToMintCDK(mintUrl, amountToPay - balance);
-                balance = await CashuDevKit.getMintBalance(mintUrl);
-            }
+            const balance = await CashuDevKit.getMintBalance(mintUrl);
 
             if (balance < amountToPay) {
                 if (!isDonationPayment) {
