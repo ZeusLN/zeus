@@ -520,9 +520,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Initialize and start LDK Node
         if (implementation === 'embedded-ldk-node' && connecting) {
-            console.log('[LDK startup] stopping previous instance');
-            await stopLdkNode();
-            console.log('[LDK startup] stopped');
+            const justCreated = SettingsStore.walletJustCreated;
+
+            if (!justCreated) {
+                console.log('[LDK startup] stopping previous instance');
+                await stopLdkNode();
+                console.log('[LDK startup] stopped');
+            } else {
+                console.log(
+                    '[LDK startup] node already built, skipping stop + init'
+                );
+                SettingsStore.walletJustCreated = false;
+            }
 
             if (ldkMnemonic && ldkNodeDir) {
                 // Get LSPS1 config from settings based on network
@@ -575,7 +584,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     rgsServerUrl: ldkRgsServer,
                     lsps1Config,
                     trustedPeers0conf: trustedPeers,
-                    vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
+                    vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
+                    skipInit: justCreated
                 });
 
                 console.log('[LDK startup] startLdkNodeWallet returned');

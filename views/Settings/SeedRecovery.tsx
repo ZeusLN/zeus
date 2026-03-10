@@ -580,6 +580,9 @@ export default class SeedRecovery extends React.PureComponent<
                         vssServerUrl: DEFAULT_VSS_SERVER
                     });
 
+                    // Node is already built — tell Wallet.tsx to skip re-init
+                    SettingsStore.walletJustCreated = true;
+
                     this.saveLdkNodeWalletConfiguration(
                         mnemonic,
                         nodeDir,

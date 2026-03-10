@@ -1120,6 +1120,9 @@ export default class WalletConfiguration extends React.Component<
                 vssServerUrl: DEFAULT_VSS_SERVER
             });
 
+            // Node is already built — tell Wallet.tsx to skip re-init
+            SettingsStore.walletJustCreated = true;
+
             if (response?.vssError) {
                 console.warn(
                     'LDK Node: VSS unavailable during wallet creation:',
