@@ -124,8 +124,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#273832'
     },
     warningField: {
-        color: '#000',
-        backgroundColor: '#ffe065'
+        color: '#FFD60A',
+        backgroundColor: '#3A3520'
     },
     errorField: {
         color: '#E14C4C',
