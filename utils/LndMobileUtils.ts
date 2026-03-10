@@ -1126,6 +1126,12 @@ export async function createLndWallet({
         channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );
+
+    // Mark that LND is already running from wallet creation,
+    // so Wallet.tsx skips the stop→init→start cycle
+    settingsStore.embeddedLndStarted = true;
+    settingsStore.walletJustCreated = true;
+
     return { wallet, seed, randomBase64 };
 }
 
