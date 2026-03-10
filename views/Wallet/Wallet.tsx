@@ -584,10 +584,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     lsps1Config,
                     trustedPeers0conf: trustedPeers,
                     vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
-                    skipInit: justCreated
+                    skipInit: justCreated,
+                    onSyncStart: () => {
+                        SettingsStore.ldkNodeSyncing = true;
+                    }
                 });
 
                 console.log('[LDK startup] startLdkNodeWallet returned');
+                SettingsStore.ldkNodeSyncing = false;
                 if (ldkResult?.vssError) {
                     AlertStore.setVssError(ldkResult.vssError);
                 }
@@ -1675,6 +1679,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 ? isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'
+                                                      ).replace('Zeus', 'ZEUS')
+                                                    : SettingsStore.ldkNodeSyncing
+                                                    ? localeString(
+                                                          'views.Sync.title'
                                                       ).replace('Zeus', 'ZEUS')
                                                     : localeString(
                                                           'views.Wallet.Wallet.startingNode'
