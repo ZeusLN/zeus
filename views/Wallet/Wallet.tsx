@@ -262,6 +262,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // 1. On initial wallet load to ensure proper initialization
             // 2. When exiting POS to handle potential lockscreen navigation
             // 3. When any settings are updated to refresh the UI state
+            console.log(
+                `[LDK startup] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
+            );
             this.getSettingsAndNavigate(shareIntentData);
             SettingsStore.posWasEnabled = false;
             SettingsStore.triggerSettingsRefresh = false;
@@ -329,6 +332,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (SettingsStore.loginRequired()) {
                 this.props.navigation.navigate('Lockscreen');
             } else {
+                console.log(
+                    `[LDK startup] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
+                );
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
@@ -543,7 +549,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Initialize and start LDK Node
         if (implementation === 'embedded-ldk-node' && connecting) {
+            console.log('[LDK startup] stopping previous instance');
             await stopLdkNode();
+            console.log('[LDK startup] stopped');
 
             if (ldkMnemonic && ldkNodeDir) {
                 // Get LSPS1 config from settings based on network
@@ -582,6 +590,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     trustedPeers.push(lsps1Config.nodeId);
                 }
 
+                console.log('[LDK startup] calling startLdkNodeWallet');
                 const ldkResult = await startLdkNodeWallet({
                     nodeDir: ldkNodeDir,
                     seedMnemonic: ldkMnemonic,
@@ -598,6 +607,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER
                 });
 
+                console.log('[LDK startup] startLdkNodeWallet returned');
                 if (ldkResult?.vssError) {
                     AlertStore.setVssError(ldkResult.vssError);
                 }
@@ -1052,8 +1062,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else if (implementation === 'embedded-ldk-node') {
             try {
+                console.log('[LDK startup] fetching node info');
                 await NodeInfoStore.getNodeInfo();
+                console.log('[LDK startup] fetching balance');
                 await BalanceStore.getCombinedBalance();
+                console.log('[LDK startup] polling channels');
                 ChannelsStore.getChannelsWithPolling().then(() => {
                     // Check for sweep to self-custody threshold after channels are online
                     if (settings?.ecash?.enableCashu) {
@@ -1064,6 +1077,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         );
                     }
                 });
+
+                if (recovery) {
+                    await updateSettings({
+                        recovery: false
+                    });
+                }
             } catch (connectionError) {
                 console.log('LDK Node connection failed:', connectionError);
                 NodeInfoStore.handleGetNodeInfoError();
@@ -1130,7 +1149,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (connecting && start != null) {
             console.log(
-                'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
+                '[LDK startup] connect time: ' +
+                    (new Date().getTime() - start) / 1000 +
+                    's'
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);

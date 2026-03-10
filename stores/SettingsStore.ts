@@ -1776,6 +1776,18 @@ export default class SettingsStore {
             this.ldkVssServer = node.ldkVssServer;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
+        } else {
+            // No node selected — clear all node properties to prevent
+            // stale references to deleted wallets
+            this.implementation = 'lnd';
+            this.certVerification = false;
+            this.ldkNodeDir = undefined;
+            this.ldkMnemonic = undefined;
+            this.ldkPassphrase = undefined;
+            this.embeddedLdkNetwork = undefined;
+            this.ldkEsploraServer = undefined;
+            this.ldkRgsServer = undefined;
+            this.ldkVssServer = undefined;
         }
     };
 
