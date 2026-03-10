@@ -3,7 +3,7 @@
  * Similar pattern to LndMobileInjection
  */
 
-import { NativeModules, Platform } from 'react-native';
+import { NativeModules } from 'react-native';
 import { generateVssAuthHeaders } from '../utils/VssAuthUtils';
 import type {
     Network,
@@ -620,19 +620,6 @@ const verifySignature = async ({
 // ============================================================================
 
 /**
- * Get the default storage directory path for LDK Node data
- */
-const getDefaultStoragePath = (): string => {
-    if (Platform.OS === 'ios') {
-        // On iOS, use Application Support directory
-        return ''; // Will be set by the app using proper iOS paths
-    } else {
-        // On Android, use app's files directory
-        return ''; // Will be set by the app using proper Android paths
-    }
-};
-
-/**
  * Initialize and build a new LDK Node with common defaults
  */
 const initializeNode = async ({
@@ -944,7 +931,6 @@ export interface ILdkNodeInjections {
         }) => Promise<boolean>;
     };
     utils: {
-        getDefaultStoragePath: () => string;
         initializeNode: (params: {
             network: Network;
             storagePath: string;
@@ -1055,7 +1041,6 @@ const LdkNodeInjection: ILdkNodeInjections = {
         verifySignature
     },
     utils: {
-        getDefaultStoragePath,
         initializeNode
     }
 };
