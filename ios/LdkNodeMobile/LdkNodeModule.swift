@@ -268,6 +268,20 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        // Stop and release any existing node before building a new one.
+        // Call stop() on this (non-Tokio) thread, then keep the reference
+        // alive briefly so internal Tokio tasks can drop their Arc refs
+        // before ours — preventing the Runtime-dropped-on-worker panic.
+        if let existingNode = self.node {
+            self.logFileObserver?.stopObserving()
+            self.logFileObserver = nil
+            self.node = nil
+            do { try existingNode.stop() } catch { /* already released */ }
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 2.0) {
+                withExtendedLifetime(existingNode) {}
+            }
+        }
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else {
                 reject("error", "Module deallocated", nil)
@@ -424,14 +438,25 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
-        do {
-            try node.stop()
-            self.logFileObserver?.stopObserving()
-            self.logFileObserver = nil
-            self.node = nil
-            resolve(["status": "ok"])
-        } catch {
-            reject("error", self.errorMessage(error), error)
+        self.logFileObserver?.stopObserving()
+        self.logFileObserver = nil
+        self.node = nil
+
+        // Resolve immediately so the JS side isn't blocked
+        resolve(["status": "ok"])
+
+        // Stop the node on a background (non-Tokio) GCD thread.
+        // After stop() returns, keep the reference alive briefly so that
+        // internal Tokio tasks can drop their Arc references first.
+        // When our reference is finally released here (on this GCD thread),
+        // if it happens to be the last Arc, the Rust Runtime destructor
+        // runs on a non-Tokio thread — avoiding the panic.
+        DispatchQueue.global(qos: .utility).async {
+            do { try node.stop() } catch { /* Node may not have been started */ }
+            // Hold the reference for 2 seconds to let Tokio tasks finish cleanup
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 2.0) {
+                withExtendedLifetime(node) {}
+            }
         }
     }
 
