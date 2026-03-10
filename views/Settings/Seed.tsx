@@ -292,7 +292,13 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     <></>
                                 )}
                                 <DangerouslyCopySeed />
-                                {isRefundRescueKey ? <></> : <QRExport />}
+                                {isRefundRescueKey ||
+                                SettingsStore.implementation ===
+                                    'embedded-ldk-node' ? (
+                                    <></>
+                                ) : (
+                                    <QRExport />
+                                )}
                             </Row>
                         ) : undefined
                     }
