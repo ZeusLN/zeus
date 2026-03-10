@@ -345,6 +345,20 @@ export async function migrateBboltToSqlite({
 
         await sleep(1000);
 
+        // Delete old neutrino bbolt files before switching to sqlite.
+        // Neutrino data (block headers, compact filters) is always
+        // re-downloadable and doesn't contain wallet data.
+        const network = isTestnet ? 'testnet' : 'mainnet';
+        try {
+            await NativeModules.LndMobileTools.DEBUG_deleteNeutrinoFiles(
+                lndDir,
+                network,
+                false // not sqlite yet - delete bbolt files
+            );
+        } catch (e) {
+            console.warn('Failed to delete neutrino files:', e);
+        }
+
         await writeLndConfig({
             lndDir,
             isTestnet,
@@ -1178,7 +1192,7 @@ export async function createLndWallet({
     }
 
     // New wallets always use SQLite
-    await writeLndConfig({ lndDir, isTestnet, isSqlite: true });
+    await writeLndConfig({ lndDir, isTestnet, isSqlite: false });
     await initialize();
 
     await startLnd({
