@@ -5,6 +5,7 @@ import LDKNodeFFI
 class LdkNodeModule: RCTEventEmitter {
 
     private var node: Node?
+    private let nodeLock = NSLock()
     private var builder: Builder?
     private var logFileObserver: LogFileObserver?
 
@@ -44,6 +45,29 @@ class LdkNodeModule: RCTEventEmitter {
     @objc
     override static func requiresMainQueueSetup() -> Bool {
         return false
+    }
+
+    /// Thread-safe read of the current Node reference.
+    private func getNode() -> Node? {
+        nodeLock.lock()
+        defer { nodeLock.unlock() }
+        return node
+    }
+
+    /// Thread-safe write of the Node reference.
+    private func setNode(_ newNode: Node?) {
+        nodeLock.lock()
+        defer { nodeLock.unlock() }
+        node = newNode
+    }
+
+    /// Thread-safe swap: sets node to nil and returns the old value.
+    private func takeNode() -> Node? {
+        nodeLock.lock()
+        defer { nodeLock.unlock() }
+        let old = node
+        node = nil
+        return old
     }
 
     private func resetStoredConfig() {
@@ -272,10 +296,9 @@ class LdkNodeModule: RCTEventEmitter {
         // Call stop() on this (non-Tokio) thread, then keep the reference
         // alive briefly so internal Tokio tasks can drop their Arc refs
         // before ours — preventing the Runtime-dropped-on-worker panic.
-        if let existingNode = self.node {
+        if let existingNode = self.takeNode() {
             self.logFileObserver?.stopObserving()
             self.logFileObserver = nil
-            self.node = nil
             do { try existingNode.stop() } catch { /* already released */ }
             DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 2.0) {
                 withExtendedLifetime(existingNode) {}
@@ -351,19 +374,19 @@ class LdkNodeModule: RCTEventEmitter {
                         vssError = "VSS setup failed: \(error.localizedDescription)"
                         NSLog("LdkNodeModule: \(vssError!)")
                     } else {
-                        self.node = buildResult
+                        self.setNode(buildResult)
                         NSLog("LdkNodeModule: Node built with VSS store successfully")
                     }
                 }
 
                 // Fall back to local filesystem store if VSS failed or was not configured
-                if self.node == nil {
+                if self.getNode() == nil {
                     if vssError != nil {
                         NSLog("LdkNodeModule: Falling back to local filesystem store")
                     }
                     let fsBuilder = Builder.fromConfig(config: config)
                     self.applyBuilderSettings(fsBuilder)
-                    self.node = try fsBuilder.buildWithFsStore(nodeEntropy: nodeEntropy)
+                    self.setNode(try fsBuilder.buildWithFsStore(nodeEntropy: nodeEntropy))
                 }
 
                 self.builder = nil // Builder is consumed
@@ -417,7 +440,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(start:rejecter:)
     func start(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -432,7 +455,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(stop:rejecter:)
     func stop(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.takeNode() else {
             // No node to stop - that's OK
             resolve(["status": "ok"])
             return
@@ -440,19 +463,18 @@ class LdkNodeModule: RCTEventEmitter {
 
         self.logFileObserver?.stopObserving()
         self.logFileObserver = nil
-        self.node = nil
 
-        // Resolve immediately so the JS side isn't blocked
-        resolve(["status": "ok"])
-
-        // Stop the node on a background (non-Tokio) GCD thread.
-        // After stop() returns, keep the reference alive briefly so that
-        // internal Tokio tasks can drop their Arc references first.
-        // When our reference is finally released here (on this GCD thread),
-        // if it happens to be the last Arc, the Rust Runtime destructor
-        // runs on a non-Tokio thread — avoiding the panic.
-        DispatchQueue.global(qos: .utility).async {
+        // Stop the node on a non-Tokio GCD thread and resolve after it
+        // completes. This ensures callers can safely delete wallet files
+        // or start a new node after stop() resolves.
+        // Keep the reference alive briefly after stop() so that internal
+        // Tokio tasks can drop their Arc refs before ours — preventing the
+        // Runtime-dropped-on-worker panic.
+        DispatchQueue.global(qos: .userInitiated).async {
             do { try node.stop() } catch { /* Node may not have been started */ }
+            DispatchQueue.main.async {
+                resolve(["status": "ok"])
+            }
             // Hold the reference for 2 seconds to let Tokio tasks finish cleanup
             DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 2.0) {
                 withExtendedLifetime(node) {}
@@ -462,7 +484,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(syncWallets:rejecter:)
     func syncWallets(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -481,7 +503,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(nodeId:rejecter:)
     func nodeId(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -492,7 +514,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(status:rejecter:)
     func status(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -512,7 +534,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(listBalances:rejecter:)
     func listBalances(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -530,7 +552,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(networkGraphInfo:rejecter:)
     func networkGraphInfo(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -547,7 +569,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(resetNetworkGraph:rejecter:)
     func resetNetworkGraph(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -564,7 +586,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(updateRgsSnapshot:rejecter:)
     func updateRgsSnapshot(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -583,7 +605,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(listChannels:rejecter:)
     func listChannels(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -650,7 +672,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(listClosedChannels:rejecter:)
     func listClosedChannels(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -685,7 +707,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(openChannel:address:channelAmountSats:pushToCounterpartyMsat:announceChannel:resolver:rejecter:)
     func openChannel(_ nodeId: String, address: String, channelAmountSats: NSNumber, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -720,7 +742,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(closeChannel:counterpartyNodeId:resolver:rejecter:)
     func closeChannel(_ userChannelId: String, counterpartyNodeId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -735,7 +757,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(forceCloseChannel:counterpartyNodeId:reason:resolver:rejecter:)
     func forceCloseChannel(_ userChannelId: String, counterpartyNodeId: String, reason: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -752,7 +774,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(newOnchainAddress:rejecter:)
     func newOnchainAddress(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -768,7 +790,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(sendToOnchainAddress:amountSats:resolver:rejecter:)
     func sendToOnchainAddress(_ address: String, amountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -784,7 +806,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(sendAllToOnchainAddress:retainReserve:resolver:rejecter:)
     func sendAllToOnchainAddress(_ address: String, retainReserve: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -816,7 +838,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(receiveBolt11:invoiceDescription:expirySecs:resolver:rejecter:)
     func receiveBolt11(_ amountMsat: Double, invoiceDescription: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -833,7 +855,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(receiveVariableAmountBolt11:expirySecs:resolver:rejecter:)
     func receiveVariableAmountBolt11(_ invoiceDescription: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -850,7 +872,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(sendBolt11:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
     func sendBolt11(_ invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -871,7 +893,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(sendBolt11UsingAmount:amountMsat:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
     func sendBolt11UsingAmount(_ invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -894,7 +916,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(sendSpontaneousPayment:amountMsat:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
     func sendSpontaneousPayment(_ nodeId: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -915,7 +937,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(bolt12Receive:description:expirySecs:resolver:rejecter:)
     func bolt12Receive(_ amountMsat: Double, description: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -931,7 +953,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(bolt12ReceiveVariableAmount:expirySecs:resolver:rejecter:)
     func bolt12ReceiveVariableAmount(_ description: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -947,7 +969,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(bolt12Send:payerNote:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
     func bolt12Send(_ offerStr: String, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -968,7 +990,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(bolt12SendUsingAmount:amountMsat:payerNote:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
     func bolt12SendUsingAmount(_ offerStr: String, amountMsat: Double, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -989,7 +1011,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(bolt12InitiateRefund:expirySecs:maxTotalRoutingFeeMsat:maxPathCount:resolver:rejecter:)
     func bolt12InitiateRefund(_ amountMsat: Double, expirySecs: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1007,7 +1029,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(bolt12RequestRefundPayment:resolver:rejecter:)
     func bolt12RequestRefundPayment(_ refundStr: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1026,7 +1048,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(listPayments:rejecter:)
     func listPayments(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1050,7 +1072,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(connect:address:persist:resolver:rejecter:)
     func connect(_ nodeId: String, address: String, persist: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1065,7 +1087,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(disconnect:resolver:rejecter:)
     func disconnect(_ nodeId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1080,7 +1102,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(listPeers:rejecter:)
     func listPeers(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1100,7 +1122,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(nextEvent:rejecter:)
     func nextEvent(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1114,7 +1136,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(eventHandled:rejecter:)
     func eventHandled(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1131,7 +1153,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(lsps1RequestChannel:clientBalanceSat:channelExpiryBlocks:announceChannel:resolver:rejecter:)
     func lsps1RequestChannel(_ lspBalanceSat: Double, clientBalanceSat: Double, channelExpiryBlocks: Double, announceChannel: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1154,7 +1176,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(lsps1CheckOrderStatus:resolver:rejecter:)
     func lsps1CheckOrderStatus(_ orderId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1175,7 +1197,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(lsps7GetExtendableChannels:rejecter:)
     func lsps7GetExtendableChannels(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1194,7 +1216,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(lsps7CreateOrder:channelExtensionExpiryBlocks:token:refundOnchainAddress:resolver:rejecter:)
     func lsps7CreateOrder(_ shortChannelId: String, channelExtensionExpiryBlocks: Double, token: String?, refundOnchainAddress: String?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1217,7 +1239,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(lsps7CheckOrderStatus:resolver:rejecter:)
     func lsps7CheckOrderStatus(_ orderId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1237,7 +1259,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(signMessage:resolver:rejecter:)
     func signMessage(_ message: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
@@ -1249,7 +1271,7 @@ class LdkNodeModule: RCTEventEmitter {
 
     @objc(verifySignature:signature:publicKey:resolver:rejecter:)
     func verifySignature(_ message: String, signature: String, publicKey: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.node else {
+        guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
         }
