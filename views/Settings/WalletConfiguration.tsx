@@ -155,6 +155,7 @@ interface WalletConfigurationState {
     ldkNodeInitialized?: boolean;
     // NWC
     nostrWalletConnectUrl: string;
+    deletingWallet: boolean;
     // Errors
     lndhubUrlError: boolean;
     usernameError: boolean;
@@ -222,6 +223,7 @@ export default class WalletConfiguration extends React.Component<
         channelBackupsBase64: '',
         creatingWallet: false,
         errorCreatingWallet: false,
+        deletingWallet: false,
         // embedded ldk node
         ldkMnemonic: '',
         ldkPassphrase: '',
@@ -710,70 +712,75 @@ export default class WalletConfiguration extends React.Component<
     };
 
     deleteNodeConfig = async () => {
+        this.setState({ deletingWallet: true });
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
         const { index, implementation, lndDir, ldkNodeDir, active } =
             this.state;
         const { nodes } = settings;
 
-        const newNodes: any = [];
-        for (let i = 0; nodes && i < nodes.length; i++) {
-            if (index !== i) {
-                newNodes.push(nodes[i]);
+        try {
+            const newNodes: any = [];
+            for (let i = 0; nodes && i < nodes.length; i++) {
+                if (index !== i) {
+                    newNodes.push(nodes[i]);
+                }
             }
-        }
 
-        // If deleting active embedded LND wallet, stop it first
-        if (active && implementation === 'embedded-lnd' && embeddedLndStarted) {
-            try {
-                console.log(
-                    'Stopping active LND before deletion:',
-                    lndDir || 'lnd'
-                );
-                this.props.SyncStore.reset(); // Stop sync loop before stopping LND
-                await stopLnd();
-            } catch (error) {
-                console.log('Error stopping LND before deletion:', error);
-                // Continue anyway - stopLnd handles errors gracefully
+            // If deleting active embedded LND wallet, stop it first
+            if (
+                active &&
+                implementation === 'embedded-lnd' &&
+                embeddedLndStarted
+            ) {
+                try {
+                    console.log(
+                        'Stopping active LND before deletion:',
+                        lndDir || 'lnd'
+                    );
+                    this.props.SyncStore.reset(); // Stop sync loop before stopping LND
+                    await stopLnd();
+                } catch (error) {
+                    console.log('Error stopping LND before deletion:', error);
+                }
+                SettingsStore.embeddedLndStarted = false;
             }
-            SettingsStore.embeddedLndStarted = false;
-        }
 
-        // If deleting active LDK Node wallet, stop it first
-        if (active && implementation === 'embedded-ldk-node') {
-            try {
+            // If deleting active LDK Node wallet, stop it first
+            if (active && implementation === 'embedded-ldk-node') {
                 await stopLdkNode();
-            } catch (error) {
-                console.log('Error stopping LDK Node before deletion:', error);
             }
-        }
 
-        // Delete embedded LND wallet data if applicable
-        // Skip stopLnd: already stopped above if active, or inactive wallet (don't stop active)
-        if (implementation === 'embedded-lnd') {
-            await deleteLndWallet(lndDir || 'lnd');
-        }
+            // Update settings first to clear node references before
+            // deleting files — prevents stale references if navigation
+            // triggers a reconnect
+            const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
+                index,
+                settings
+            );
 
-        // Delete LDK Node wallet data if applicable
-        if (implementation === 'embedded-ldk-node' && ldkNodeDir) {
-            await deleteLdkNodeWallet(ldkNodeDir);
-        }
+            await updateSettings({
+                nodes: newNodes,
+                selectedNode: newSelectedNodeIndex,
+                justDeletedWallet: active
+            });
 
-        const newSelectedNodeIndex = this.getNewSelectedNodeIndex(
-            index,
-            settings
-        );
+            // Delete wallet data after settings are updated
+            if (implementation === 'embedded-lnd') {
+                await deleteLndWallet(lndDir || 'lnd');
+            }
+            if (implementation === 'embedded-ldk-node' && ldkNodeDir) {
+                await deleteLdkNodeWallet(ldkNodeDir);
+            }
 
-        await updateSettings({
-            nodes: newNodes,
-            selectedNode: newSelectedNodeIndex,
-            justDeletedWallet: active // Set flag only if active wallet was deleted
-        });
-
-        if (newNodes.length === 0) {
-            navigation.navigate('IntroSplash');
-        } else {
-            navigation.popTo('Wallets');
+            if (newNodes.length === 0) {
+                navigation.navigate('IntroSplash');
+            } else {
+                navigation.popTo('Wallets');
+            }
+        } catch (error) {
+            console.error('Error deleting wallet:', error);
+            this.setState({ deletingWallet: false });
         }
     };
 
@@ -1177,6 +1184,7 @@ export default class WalletConfiguration extends React.Component<
             channelBackupsBase64,
             creatingWallet,
             errorCreatingWallet,
+            deletingWallet,
             // LDK Node
             ldkMnemonic,
             embeddedLdkNetwork,
@@ -1288,7 +1296,7 @@ export default class WalletConfiguration extends React.Component<
                     }}
                     rightComponent={
                         <Row>
-                            {loading && (
+                            {(loading || deletingWallet) && (
                                 <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={30} />
                                 </View>
