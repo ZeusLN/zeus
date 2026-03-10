@@ -105,17 +105,6 @@ RCT_EXTERN_METHOD(melt:(NSString *)mintUrl
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
-RCT_EXTERN_METHOD(transferExactReceive:(NSString *)sourceMint
-                  targetMint:(NSString *)targetMint
-                  amount:(nonnull NSNumber *)amount
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-
-RCT_EXTERN_METHOD(transferFullBalance:(NSString *)sourceMint
-                  targetMint:(NSString *)targetMint
-                  resolver:(RCTPromiseResolveBlock)resolve
-                  rejecter:(RCTPromiseRejectBlock)reject)
-
 // Token Operations
 RCT_EXTERN_METHOD(prepareSend:(NSString *)mintUrl
                   amount:(nonnull NSNumber *)amount

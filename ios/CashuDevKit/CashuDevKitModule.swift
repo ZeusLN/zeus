@@ -103,26 +103,6 @@ class CashuDevKitModule: RCTEventEmitter {
         return wallet
     }
 
-    private func executeTransfer(
-        resolve: @escaping RCTPromiseResolveBlock,
-        reject: @escaping RCTPromiseRejectBlock,
-        operation: @escaping (MultiMintWallet) async throws -> TransferResult
-    ) {
-        guard let wallet = getInitializedWallet(reject: reject) else { return }
-
-        Task {
-            do {
-                let result = try await operation(wallet)
-                resolve(encodeToJson(encodeTransferResult(result)))
-            } catch let error as FfiError {
-                let (code, message) = mapFfiError(error)
-                reject(code, message, error)
-            } catch {
-                reject("TRANSFER_ERROR", error.localizedDescription, error)
-            }
-        }
-    }
-
     private var currentDbPath: String?
 
     private func getDatabasePath(for mnemonic: String) -> String {
@@ -284,16 +264,6 @@ class CashuDevKitModule: RCTEventEmitter {
             result["change"] = change.map { encodeProof($0) }
         }
         return result
-    }
-
-    private func encodeTransferResult(_ result: TransferResult) -> [String: Any] {
-        return [
-            "amount_sent": result.amountSent.value,
-            "amount_received": result.amountReceived.value,
-            "fees_paid": result.feesPaid.value,
-            "source_balance_after": result.sourceBalanceAfter.value,
-            "target_balance_after": result.targetBalanceAfter.value
-        ]
     }
 
     private func encodeProof(_ proof: Proof) -> [String: Any] {
@@ -870,40 +840,6 @@ class CashuDevKitModule: RCTEventEmitter {
             } catch {
                 reject("MELT_ERROR", error.localizedDescription, error)
             }
-        }
-    }
-
-    @objc(transferExactReceive:targetMint:amount:resolver:rejecter:)
-    func transferExactReceive(_ sourceMint: String, targetMint: String, amount: NSNumber,
-                              resolve: @escaping RCTPromiseResolveBlock,
-                              reject: @escaping RCTPromiseRejectBlock) {
-        executeTransfer(resolve: resolve, reject: reject) { wallet in
-                let sourceMintUrl = MintUrl(url: sourceMint)
-                let targetMintUrl = MintUrl(url: targetMint)
-                let transferMode = TransferMode.exactReceive(
-                    amount: Amount(value: amount.uint64Value)
-                )
-
-                return try await wallet.transfer(
-                    sourceMint: sourceMintUrl,
-                    targetMint: targetMintUrl,
-                    transferMode: transferMode
-                )
-        }
-    }
-
-    @objc(transferFullBalance:targetMint:resolver:rejecter:)
-    func transferFullBalance(_ sourceMint: String, targetMint: String,
-                             resolve: @escaping RCTPromiseResolveBlock,
-                             reject: @escaping RCTPromiseRejectBlock) {
-        executeTransfer(resolve: resolve, reject: reject) { wallet in
-                let sourceMintUrl = MintUrl(url: sourceMint)
-                let targetMintUrl = MintUrl(url: targetMint)
-                return try await wallet.transfer(
-                    sourceMint: sourceMintUrl,
-                    targetMint: targetMintUrl,
-                    transferMode: .fullBalance
-                )
         }
     }
 
