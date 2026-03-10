@@ -12,7 +12,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     private val moduleScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private var builder: Builder? = null
-    private var node: Node? = null
+    @Volatile private var node: Node? = null
+    private val nodeLock = Any()
     private var logFileObserver: LogFileObserver? = null
 
     // Stored config values for building with custom Config
@@ -274,16 +275,18 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         // Call stop() on this (non-Tokio) thread, then keep the reference
         // alive briefly so internal Tokio tasks can drop their Arc refs
         // before ours — preventing the Runtime-dropped-on-worker panic.
-        this@LdkNodeModule.node?.let { existingNode ->
-            this@LdkNodeModule.logFileObserver?.stopObserving()
-            this@LdkNodeModule.logFileObserver = null
-            this@LdkNodeModule.node = null
-            try { existingNode.stop() } catch (_: Exception) { /* already released */ }
-            val existingRef = existingNode // prevent lambda capture optimization
-            Thread {
-                Thread.sleep(2000)
-                existingRef.hashCode() // prevent GC before sleep finishes
-            }.start()
+        synchronized(nodeLock) {
+            this@LdkNodeModule.node?.let { existingNode ->
+                this@LdkNodeModule.logFileObserver?.stopObserving()
+                this@LdkNodeModule.logFileObserver = null
+                this@LdkNodeModule.node = null
+                try { existingNode.stop() } catch (_: Exception) { /* already released */ }
+                val existingRef = existingNode // prevent lambda capture optimization
+                Thread {
+                    Thread.sleep(2000)
+                    existingRef.hashCode() // prevent GC before sleep finishes
+                }.start()
+            }
         }
 
         moduleScope.launch {
@@ -345,7 +348,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         } else if (vssBuildError != null) {
                             throw vssBuildError!!
                         } else {
-                            this@LdkNodeModule.node = vssNode
+                            synchronized(nodeLock) { this@LdkNodeModule.node = vssNode }
                             Log.d("LdkNodeModule", "Node built with VSS store successfully")
                         }
                     } catch (e: Exception) {
@@ -361,7 +364,9 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     }
                     val fsBuilder = Builder.fromConfig(config)
                     applyBuilderSettings(fsBuilder)
-                    this@LdkNodeModule.node = fsBuilder.buildWithFsStore(nodeEntropy)
+                    synchronized(nodeLock) {
+                        this@LdkNodeModule.node = fsBuilder.buildWithFsStore(nodeEntropy)
+                    }
                 }
 
                 this@LdkNodeModule.builder = null // Builder is consumed
@@ -443,7 +448,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     @ReactMethod
     fun stop(promise: Promise) {
-        val node = this@LdkNodeModule.node
+        val node = synchronized(nodeLock) {
+            val n = this@LdkNodeModule.node
+            if (n != null) {
+                this@LdkNodeModule.node = null
+            }
+            n
+        }
         if (node == null) {
             promise.resolve(null)
             return
@@ -451,20 +462,20 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
         this@LdkNodeModule.logFileObserver?.stopObserving()
         this@LdkNodeModule.logFileObserver = null
-        this@LdkNodeModule.node = null
 
-        // Resolve immediately so the JS side isn't blocked
-        promise.resolve(null)
-
-        // Stop the node on a dedicated (non-Tokio) thread.
-        // After stop() returns, keep the reference alive briefly so that
-        // internal Tokio tasks can drop their Arc references first.
-        // When our reference is finally released here (on this thread),
-        // if it happens to be the last Arc, the Rust Runtime destructor
-        // runs on a non-Tokio thread — avoiding the panic.
-        val nodeRef = node // prevent lambda capture optimization
+        // Stop the node on a dedicated (non-Tokio) thread and resolve
+        // after it completes. This ensures callers can safely delete wallet
+        // files or start a new node after stop() resolves.
+        // Keep the reference alive briefly after stop() so that internal
+        // Tokio tasks can drop their Arc refs before ours — preventing the
+        // Runtime-dropped-on-worker panic.
+        val nodeRef = node
         Thread {
             try { nodeRef.stop() } catch (_: Exception) { /* may not have been started */ }
+            // Resolve on main thread after stop completes
+            reactApplicationContext.runOnUiQueueThread {
+                promise.resolve(null)
+            }
             // Hold the reference for 2s to let Tokio tasks finish cleanup
             Thread.sleep(2000)
             nodeRef.hashCode() // prevent GC from collecting before sleep finishes
