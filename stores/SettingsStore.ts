@@ -1549,6 +1549,7 @@ export default class SettingsStore {
     @observable public isSqlite?: boolean;
     @observable public initialStart: boolean = true;
     @observable public embeddedLndStarted: boolean = false;
+    @observable public walletJustCreated: boolean = false;
     @observable public lndFolderMissing: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;

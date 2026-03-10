@@ -536,139 +536,164 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     );
                 };
 
-                try {
-                    AlertStore.checkNeutrinoPeers();
+                // If LND is already running (e.g. just created via Quick Start),
+                // skip the stop→init→start cycle entirely
+                if (!SettingsStore.walletJustCreated) {
+                    try {
+                        AlertStore.checkNeutrinoPeers();
 
-                    // Skip stopLnd when wallet is already closed (e.g. after delete)
-                    if (!recovery && SettingsStore.embeddedLndStarted) {
-                        await stopLnd();
+                        // Skip stopLnd when wallet is already closed (e.g. after delete)
+                        if (!recovery && SettingsStore.embeddedLndStarted) {
+                            await stopLnd();
+                        }
+
+                        if (settings?.ecash?.enableCashu)
+                            await CashuStore.initializeWallets();
+
+                        console.log('lndDir', lndDir);
+
+                        try {
+                            await initializeLnd({
+                                lndDir: lndDir || 'lnd',
+                                isTestnet: embeddedLndNetwork === 'Testnet',
+                                rescan,
+                                compactDb,
+                                isSqlite
+                            });
+                        } catch (initError: any) {
+                            // During recovery, initializeLnd may fail because createLndWallet
+                            // already set up the directories and config - that's OK, continue
+                            if (recovery) {
+                                console.log(
+                                    'initializeLnd failed during recovery (expected):',
+                                    initError?.message
+                                );
+                            } else {
+                                throw initError;
+                            }
+                        }
+                    } catch (error: any) {
+                        console.log(
+                            'embedded-lnd startup error:',
+                            error?.message,
+                            error
+                        );
+                        if (
+                            !recovery &&
+                            matchesLndErrorCode(
+                                error?.message || String(error),
+                                LndErrorCode.LND_FOLDER_MISSING
+                            )
+                        ) {
+                            showFolderMissingAlert();
+                            return;
+                        }
+                        throw error;
                     }
 
-                    if (settings?.ecash?.enableCashu)
-                        await CashuStore.initializeWallets();
+                    // on initial load, do not run EGS
+                    if (initialLoad) {
+                        await updateSettings({
+                            initialLoad: false
+                        });
+                    } else {
+                        if (expressGraphSyncEnabled) {
+                            const expressGraphSyncStart = new Date().getTime();
+                            console.log(
+                                '[Performance] Express Graph Sync starting...'
+                            );
 
-                    console.log('lndDir', lndDir);
+                            await expressGraphSync();
+
+                            const expressGraphSyncDuration =
+                                new Date().getTime() - expressGraphSyncStart;
+                            console.log(
+                                `[Performance] Express Graph Sync completed in ${expressGraphSyncDuration}ms`
+                            );
+
+                            if (settings.resetExpressGraphSyncOnStartup) {
+                                await updateSettings({
+                                    resetExpressGraphSyncOnStartup: false
+                                });
+                            }
+                        } else {
+                            console.log(
+                                '[Performance] Express Graph Sync skipped (disabled) - faster startup'
+                            );
+                        }
+                    }
 
                     try {
-                        await initializeLnd({
+                        await startLnd({
                             lndDir: lndDir || 'lnd',
+                            walletPassword: walletPassword || '',
+                            isTorEnabled: embeddedTor,
                             isTestnet: embeddedLndNetwork === 'Testnet',
-                            rescan,
-                            compactDb,
-                            isSqlite
+                            isRecovery: recovery
                         });
-                    } catch (initError: any) {
-                        // During recovery, initializeLnd may fail because createLndWallet
-                        // already set up the directories and config - that's OK, continue
-                        if (recovery) {
-                            console.log(
-                                'initializeLnd failed during recovery (expected):',
-                                initError?.message
+                    } catch (error: any) {
+                        const errorMessage = error?.message ?? '';
+                        console.log('startLnd error:', errorMessage);
+
+                        // Handle folder missing error
+                        if (
+                            matchesLndErrorCode(
+                                errorMessage,
+                                LndErrorCode.LND_FOLDER_MISSING
+                            )
+                        ) {
+                            showFolderMissingAlert();
+                            return;
+                        }
+
+                        // Handle LND start failed after max retries - restart app
+                        if (isLndError(error, LndErrorCode.LND_START_FAILED)) {
+                            restartNeeded(true);
+                            return;
+                        }
+
+                        // Handle transient errors - attempt restart with exponential backoff
+                        if (isTransientRpcError(errorMessage)) {
+                            await retryOnTransientError(
+                                error,
+                                errorMessage,
+                                'startLnd error',
+                                transientRetryCount,
+                                setConnectingStatus,
+                                () =>
+                                    this.getSettingsAndNavigate(
+                                        transientRetryCount + 1
+                                    )
                             );
-                        } else {
-                            throw initError;
+                            return;
                         }
-                    }
-                } catch (error: any) {
-                    console.log(
-                        'embedded-lnd startup error:',
-                        error?.message,
-                        error
-                    );
-                    if (
-                        !recovery &&
-                        matchesLndErrorCode(
-                            error?.message || String(error),
-                            LndErrorCode.LND_FOLDER_MISSING
-                        )
-                    ) {
-                        showFolderMissingAlert();
-                        return;
-                    }
-                    throw error;
-                }
 
-                // on initial load, do not run EGS
-                if (initialLoad) {
-                    await updateSettings({
-                        initialLoad: false
-                    });
+                        // Fatal error - throw to outer handler
+                        console.error('Fatal startLnd error:', error);
+                        setConnectingStatus(false);
+                        throw error;
+                    }
                 } else {
-                    if (expressGraphSyncEnabled) {
-                        const expressGraphSyncStart = new Date().getTime();
-                        console.log(
-                            '[Performance] Express Graph Sync starting...'
-                        );
+                    try {
+                        // LND was just created and is already running — skip stop→init→start
+                        AlertStore.checkNeutrinoPeers();
+                        SettingsStore.walletJustCreated = false;
 
-                        await expressGraphSync();
+                        if (settings?.ecash?.enableCashu)
+                            await CashuStore.initializeWallets();
 
-                        const expressGraphSyncDuration =
-                            new Date().getTime() - expressGraphSyncStart;
-                        console.log(
-                            `[Performance] Express Graph Sync completed in ${expressGraphSyncDuration}ms`
-                        );
-
-                        if (settings.resetExpressGraphSyncOnStartup) {
-                            await updateSettings({
-                                resetExpressGraphSyncOnStartup: false
-                            });
+                        await waitForRpcReady();
+                        if (!SyncStore.isSyncing) {
+                            SyncStore.startSyncing();
                         }
-                    } else {
-                        console.log(
-                            '[Performance] Express Graph Sync skipped (disabled) - faster startup'
+                    } catch (error: any) {
+                        console.error(
+                            'Fatal error during post-wallet creation setup:',
+                            error
                         );
+                        setConnectingStatus(false);
+                        throw error;
                     }
-                }
-
-                try {
-                    await startLnd({
-                        lndDir: lndDir || 'lnd',
-                        walletPassword: walletPassword || '',
-                        isTorEnabled: embeddedTor,
-                        isTestnet: embeddedLndNetwork === 'Testnet',
-                        isRecovery: recovery
-                    });
-                } catch (error: any) {
-                    const errorMessage = error?.message ?? '';
-                    console.log('startLnd error:', errorMessage);
-
-                    // Handle folder missing error
-                    if (
-                        matchesLndErrorCode(
-                            errorMessage,
-                            LndErrorCode.LND_FOLDER_MISSING
-                        )
-                    ) {
-                        showFolderMissingAlert();
-                        return;
-                    }
-
-                    // Handle LND start failed after max retries - restart app
-                    if (isLndError(error, LndErrorCode.LND_START_FAILED)) {
-                        restartNeeded(true);
-                        return;
-                    }
-
-                    // Handle transient errors - attempt restart with exponential backoff
-                    if (isTransientRpcError(errorMessage)) {
-                        await retryOnTransientError(
-                            error,
-                            errorMessage,
-                            'startLnd error',
-                            transientRetryCount,
-                            setConnectingStatus,
-                            () =>
-                                this.getSettingsAndNavigate(
-                                    transientRetryCount + 1
-                                )
-                        );
-                        return;
-                    }
-
-                    // Fatal error - throw to outer handler
-                    console.error('Fatal startLnd error:', error);
-                    setConnectingStatus(false);
-                    throw error;
                 }
 
                 try {
