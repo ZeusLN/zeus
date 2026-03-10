@@ -212,7 +212,8 @@ export async function startLdkNodeWallet({
     lsps1Config,
     trustedPeers0conf,
     vssServerUrl,
-    skipInit
+    skipInit,
+    onSyncStart
 }: {
     nodeDir: string;
     seedMnemonic: string;
@@ -229,6 +230,7 @@ export async function startLdkNodeWallet({
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     skipInit?: boolean;
+    onSyncStart?: () => void;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
     let vssError: string | undefined;
 
@@ -287,46 +289,28 @@ export async function startLdkNodeWallet({
 
     // Only sync if the node actually started
     if (nodeStarted) {
-        // Sync wallets (on-chain via Esplora, network graph via RGS).
-        // syncWallets() throws the first error it encounters, so we call
-        // it twice: the first failure may be RGS, the second may be Esplora
-        // (or vice versa).
-        for (let attempt = 0; attempt < 2; attempt++) {
-            try {
-                await LdkNode.node.syncWallets();
-                console.log('LDK Node: Sync complete');
-                break;
-            } catch (e: any) {
-                const errorMsg = e?.message || e?.toString?.() || String(e);
-                console.warn(
-                    `LDK Node: Sync error (attempt ${attempt + 1}):`,
-                    errorMsg
-                );
+        onSyncStart?.();
+        try {
+            await LdkNode.node.syncWallets();
+            console.log('LDK Node: Sync complete');
+        } catch (e: any) {
+            const errorMsg = e?.message || e?.toString?.() || String(e);
+            console.warn('LDK Node: Sync error:', errorMsg);
 
-                if (
-                    errorMsg.includes('FeerateEstimation') ||
-                    errorMsg.includes('Esplora') ||
-                    errorMsg.includes('fee rate')
-                ) {
-                    esploraError = esploraError || errorMsg;
-                }
-
-                if (
-                    errorMsg.includes('RapidGossipSync') ||
-                    errorMsg.includes('Rgs') ||
-                    errorMsg.includes('gossip')
-                ) {
-                    rgsError = rgsError || errorMsg;
-                }
-
-                // Unknown sync error — attribute to esplora if not already set
-                if (
-                    !esploraError &&
-                    !rgsError &&
-                    !errorMsg.includes('NotRunning')
-                ) {
-                    esploraError = errorMsg;
-                }
+            if (
+                errorMsg.includes('FeerateEstimation') ||
+                errorMsg.includes('Esplora') ||
+                errorMsg.includes('fee rate')
+            ) {
+                esploraError = errorMsg;
+            } else if (
+                errorMsg.includes('RapidGossipSync') ||
+                errorMsg.includes('Rgs') ||
+                errorMsg.includes('gossip')
+            ) {
+                rgsError = errorMsg;
+            } else if (!errorMsg.includes('NotRunning')) {
+                esploraError = errorMsg;
             }
         }
 

@@ -1572,6 +1572,7 @@ export default class SettingsStore {
     @observable public ldkEsploraServer?: string;
     @observable public ldkRgsServer?: string;
     @observable public ldkVssServer?: string;
+    @observable public ldkNodeSyncing: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;
     // Favorite currencies
