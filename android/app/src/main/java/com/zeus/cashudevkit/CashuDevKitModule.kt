@@ -116,34 +116,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         return wallet
     }
 
-    private fun executeTransferOperation(
-        promise: Promise,
-        operationName: String,
-        transferOperation: suspend (MultiMintWallet) -> TransferResult
-    ) {
-        val initializedWallet = getInitializedWallet(promise) ?: return
-
-        scope.launch {
-            try {
-                val result = transferOperation(initializedWallet)
-                withContext(Dispatchers.Main) {
-                    promise.resolve(encodeTransferResult(result).toString())
-                }
-            } catch (e: FfiException) {
-                val (code, message) = mapFfiException(e)
-                Log.e(TAG, "$operationName error: $message", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject(code, message, e)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "$operationName error", e)
-                withContext(Dispatchers.Main) {
-                    promise.reject("TRANSFER_ERROR", e.message, e)
-                }
-            }
-        }
-    }
-
     private var currentDbPath: String? = null
 
     private fun getDatabasePath(mnemonic: String): String {
@@ -256,16 +228,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     change.forEach { proof -> put(encodeProof(proof)) }
                 })
             }
-        }
-    }
-
-    private fun encodeTransferResult(result: TransferResult): JSONObject {
-        return JSONObject().apply {
-            put("amount_sent", result.amountSent.value)
-            put("amount_received", result.amountReceived.value)
-            put("fees_paid", result.feesPaid.value)
-            put("source_balance_after", result.sourceBalanceAfter.value)
-            put("target_balance_after", result.targetBalanceAfter.value)
         }
     }
 
@@ -952,33 +914,6 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     promise.reject("MELT_ERROR", e.message, e)
                 }
             }
-        }
-    }
-
-    @ReactMethod
-    fun transferExactReceive(sourceMint: String, targetMint: String, amount: Double, promise: Promise) {
-        executeTransferOperation(
-            promise = promise,
-            operationName = "transferExactReceive"
-        ) { wallet ->
-                val sourceUrl = MintUrl(sourceMint)
-                val targetUrl = MintUrl(targetMint)
-                val transferMode = TransferMode.ExactReceive(Amount(amount.toLong().toULong()))
-
-                wallet.transfer(sourceUrl, targetUrl, transferMode)
-        }
-    }
-
-    @ReactMethod
-    fun transferFullBalance(sourceMint: String, targetMint: String, promise: Promise) {
-        executeTransferOperation(
-            promise = promise,
-            operationName = "transferFullBalance"
-        ) { wallet ->
-                val sourceUrl = MintUrl(sourceMint)
-                val targetUrl = MintUrl(targetMint)
-
-                wallet.transfer(sourceUrl, targetUrl, TransferMode.FullBalance)
         }
     }
 
