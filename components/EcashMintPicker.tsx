@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     field: {
-        justifyContent: 'center',
+        justifyContent: 'center', // Centered vertically
         width: '100%',
         height: 42,
         borderRadius: 6,
