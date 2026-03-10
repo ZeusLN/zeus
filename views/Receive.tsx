@@ -79,7 +79,7 @@ import BalanceStore from '../stores/BalanceStore';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
-import NFCUtils from '../utils/NFCUtils';
+import NFCUtils, { checkNfcEnabled } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
@@ -193,6 +193,7 @@ const LOCKED_EXPIRY_SECONDS = '3600';
 @inject(
     'ChannelsStore',
     'InvoicesStore',
+    'ModalStore',
     'SettingsStore',
     'UnitsStore',
     'PosStore',
@@ -659,6 +660,9 @@ export default class Receive extends React.Component<
 
     enableNfc = async () => {
         const { ModalStore } = this.props;
+
+        if (!(await checkNfcEnabled(ModalStore))) return;
+
         this.disableNfc();
         await NfcManager.start().catch((e) => console.warn(e.message));
 
