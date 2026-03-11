@@ -599,6 +599,7 @@ export default class CLNRest {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsForceClose = () => false;
     supportsPendingChannels = () => false;
     supportsClosedChannels = () => true;
     supportsMPP = () => false;

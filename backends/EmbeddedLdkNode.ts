@@ -269,11 +269,16 @@ export default class EmbeddedLdkNode {
      * Get lightning balance
      */
     getLightningBalance = async (): Promise<any> => {
-        const channels = await LdkNode.channel.listChannels();
+        const [channels, balances] = await Promise.all([
+            LdkNode.channel.listChannels(),
+            LdkNode.node.listBalances()
+        ]);
 
         let localBalance = new BigNumber(0);
         let remoteBalance = new BigNumber(0);
         let pendingOpenBalance = new BigNumber(0);
+
+        const activeChannelIds = new Set(channels.map((c) => c.channelId));
 
         for (const channel of channels) {
             if (channel.isChannelReady) {
@@ -294,6 +299,22 @@ export default class EmbeddedLdkNode {
             }
         }
 
+        // Include pending close balances (force closes awaiting timelock,
+        // cooperative closes awaiting confirmation)
+        let pendingCloseBalance = new BigNumber(0);
+        for (const lb of balances.lightningBalances) {
+            if (lb.type === 'claimableOnChannelClose') continue;
+            if (activeChannelIds.has(lb.channelId)) continue;
+            pendingCloseBalance = pendingCloseBalance.plus(lb.amountSatoshis);
+        }
+        for (const sb of balances.pendingBalancesFromChannelClosures) {
+            if (sb.channelId && activeChannelIds.has(sb.channelId)) continue;
+            pendingCloseBalance = pendingCloseBalance.plus(sb.amountSatoshis);
+        }
+
+        const totalPendingBalance =
+            pendingOpenBalance.plus(pendingCloseBalance);
+
         return {
             balance: localBalance.toString(),
             local_balance: {
@@ -304,10 +325,10 @@ export default class EmbeddedLdkNode {
                 sat: remoteBalance.toString(),
                 msat: remoteBalance.times(1000).toString()
             },
-            pending_open_balance: pendingOpenBalance.toString(),
+            pending_open_balance: totalPendingBalance.toString(),
             pending_open_local_balance: {
-                sat: pendingOpenBalance.toString(),
-                msat: pendingOpenBalance.times(1000).toString()
+                sat: totalPendingBalance.toString(),
+                msat: totalPendingBalance.times(1000).toString()
             }
         };
     };
@@ -356,11 +377,14 @@ export default class EmbeddedLdkNode {
      * Force closes with settled balances go to getClosedChannels().
      */
     getPendingChannels = async (): Promise<any> => {
-        const [channels, balances, closedChannels] = await Promise.all([
+        const [channels, balances, closedChannels, status] = await Promise.all([
             LdkNode.channel.listChannels(),
             LdkNode.node.listBalances(),
-            LdkNode.channel.listClosedChannels()
+            LdkNode.channel.listClosedChannels(),
+            LdkNode.node.status()
         ]);
+
+        const currentBlockHeight = status.currentBestBlock_height;
 
         // Pending open: channels not yet ready
         const pendingOpen = channels.filter((c) => !c.isChannelReady);
@@ -400,6 +424,7 @@ export default class EmbeddedLdkNode {
         }
 
         const pendingClosing: any[] = [];
+        const pendingForceClosing: any[] = [];
         const waitingClose: any[] = [];
 
         // Cooperative closes with balance entries (claimableAwaitingConfirmations
@@ -435,6 +460,65 @@ export default class EmbeddedLdkNode {
                     local_balance: totalSats.toString(),
                     remote_balance: '0'
                 },
+                closing_txid: closingTxid
+            });
+        });
+
+        // Force closes with pending lightning balances (awaiting timelock)
+        channelLightningBalances.forEach((lbs, channelId) => {
+            // Skip coop closes (already handled above)
+            const isCoopClose = lbs.every(
+                (lb) =>
+                    lb.type === 'claimableAwaitingConfirmations' &&
+                    lb.source === 'coopClose'
+            );
+            if (isCoopClose) return;
+
+            // Check for pending timelock
+            let blocksTilMaturity = 0;
+            for (const lb of lbs) {
+                if (
+                    lb.type === 'claimableAwaitingConfirmations' &&
+                    lb.confirmationHeight != null
+                ) {
+                    const remaining =
+                        lb.confirmationHeight - currentBlockHeight;
+                    if (remaining > blocksTilMaturity) {
+                        blocksTilMaturity = remaining;
+                    }
+                }
+            }
+            if (blocksTilMaturity <= 0) return;
+
+            const totalSats = lbs.reduce(
+                (sum, lb) => sum + lb.amountSatoshis,
+                0
+            );
+            const closed = closedChannelMap.get(channelId);
+            const counterpartyNodeId =
+                lbs[0]?.counterpartyNodeId || closed?.counterpartyNodeId || '';
+
+            const sweeps = channelSweeps.get(channelId) || [];
+            const closingTxid =
+                sweeps.find((s) => s.latestSpendingTxid)?.latestSpendingTxid ||
+                '';
+
+            pendingForceClosing.push({
+                channel: {
+                    remote_pubkey: counterpartyNodeId,
+                    channel_point: closed?.fundingTxo_txid
+                        ? `${closed.fundingTxo_txid}:${
+                              closed.fundingTxo_vout || 0
+                          }`
+                        : '',
+                    capacity: (
+                        closed?.channelCapacitySats || totalSats
+                    ).toString(),
+                    local_balance: totalSats.toString(),
+                    remote_balance: '0',
+                    pendingClose: true
+                },
+                blocks_til_maturity: blocksTilMaturity,
                 closing_txid: closingTxid
             });
         });
@@ -516,7 +600,7 @@ export default class EmbeddedLdkNode {
                 channel: this.formatChannel(channel)
             })),
             pending_closing_channels: pendingClosing,
-            pending_force_closing_channels: [],
+            pending_force_closing_channels: pendingForceClosing,
             waiting_close_channels: waitingClose
         };
     };
@@ -651,6 +735,10 @@ export default class EmbeddedLdkNode {
             }
 
             const hasTimelock = blocksTilMaturity > 0;
+
+            // Force closes with pending timelock belong in pending list
+            if (hasTimelock) continue;
+
             const closeType = isCoop ? 'COOPERATIVE_CLOSE' : 'FORCE_CLOSE';
 
             closedChannels.push({
@@ -665,9 +753,9 @@ export default class EmbeddedLdkNode {
                 close_type: closeType,
                 closing_txid: closingTxid,
                 closing_tx_hash: closingTxid,
-                forceClose: hasTimelock,
-                blocks_til_maturity: hasTimelock ? blocksTilMaturity : 0,
-                time_locked_balance: hasTimelock ? balanceSats.toString() : '0'
+                forceClose: !isCoop,
+                blocks_til_maturity: 0,
+                time_locked_balance: '0'
             });
         }
 
@@ -1759,6 +1847,7 @@ export default class EmbeddedLdkNode {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsForceClose = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => true;

@@ -879,6 +879,7 @@ export default class LND {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsForceClose = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
