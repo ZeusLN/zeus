@@ -210,7 +210,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             );
             return;
         }
-        const { isSqlite }: any = SettingsStore;
         const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
         const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
         const lndDir = () => this.props.SettingsStore.lndDir || 'lnd';
@@ -233,7 +232,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         await uploadChannelBackupToOlympus(
                             lndDir(),
                             isTestnet,
-                            isSqlite,
                             pubkey,
                             seedPhrase,
                             (loading) =>
@@ -245,12 +243,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     text: localeString('views.Tools.migration.export.local'),
                     style: 'default',
                     onPress: async () => {
-                        await exportChannelDb(
-                            lndDir(),
-                            isTestnet,
-                            isSqlite,
-                            (loading) =>
-                                this.setState({ isChannelExporting: loading })
+                        await exportChannelDb(lndDir(), isTestnet, (loading) =>
+                            this.setState({ isChannelExporting: loading })
                         );
                     }
                 }

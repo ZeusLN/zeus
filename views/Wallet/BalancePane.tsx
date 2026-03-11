@@ -381,9 +381,7 @@ export default class BalancePane extends React.PureComponent<
                                                 }
                                             ]}
                                         >
-                                            <Text
-                                                style={styles.errorTitleText}
-                                            >
+                                            <Text style={styles.errorTitleText}>
                                                 {localeString(
                                                     'views.Wallet.lndFolderMissing.title'
                                                 )}

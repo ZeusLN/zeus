@@ -43,14 +43,13 @@ import {
     validateChannelBackupFile
 } from '../../utils/ChannelMigrationUtils';
 
-import lndMobile from '../../lndmobile/LndMobileInjection';
-
 import ModalStore from '../../stores/ModalStore';
 
 import {
     createLndWallet,
     optimizeNeutrinoPeers,
-    stopLnd
+    stopLnd,
+    waitForRpcReady
 } from '../../utils/LndMobileUtils';
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
@@ -218,7 +217,7 @@ export default class SeedRecovery extends React.PureComponent<
                 mode: 'import'
             });
             if (result.uri) {
-                const fileName = result.name ?? 'channel.sqlite';
+                const fileName = result.name ?? 'graph-backup';
                 const validation = await validateChannelBackupFile(
                     result.uri,
                     fileName
@@ -494,68 +493,35 @@ export default class SeedRecovery extends React.PureComponent<
                     if (this.state.olympusRestorePending) {
                         try {
                             this.setState({
-                                successMsg: 'Waiting for LND to start...'
+                                successMsg: localeString(
+                                    'views.Tools.migration.import.waitingForLnd'
+                                )
                             });
 
-                            const { getInfo } = lndMobile.index;
-                            let nodeInfo;
-                            let retries = 10;
-
-                            while (retries > 0) {
-                                try {
-                                    nodeInfo = await getInfo();
-                                    break;
-                                } catch (rpcError: any) {
-                                    const errorStr =
-                                        rpcError?.message || String(rpcError);
-                                    if (
-                                        errorStr.includes('starting up') ||
-                                        errorStr.includes('not yet ready')
-                                    ) {
-                                        await new Promise((resolve) =>
-                                            setTimeout(resolve, 2000)
-                                        );
-                                        retries--;
-                                    } else {
-                                        throw rpcError;
-                                    }
-                                }
-                            }
-
-                            if (!nodeInfo) {
-                                throw new Error(
-                                    'Timed out waiting for LND to become ready.'
-                                );
-                            }
+                            const nodeInfo = await waitForRpcReady();
 
                             this.setState({
-                                successMsg:
-                                    'Downloading channel backup from Olympus...'
+                                successMsg: localeString(
+                                    'views.Tools.migration.import.downloadingFromOlympus'
+                                )
                             });
 
-                            const pubkey = nodeInfo.identity_pubkey;
-                            const isTestnet = nodeInfo.testnet;
-
-                            const restored =
-                                await restoreChannelBackupFromOlympus(
-                                    lndDir,
-                                    isTestnet,
-                                    true,
-                                    pubkey,
-                                    recoveryCipherSeed,
-                                    undefined,
-                                    true
-                                );
-                            if (!restored) {
-                                olympusRestoreSuccess = true;
-                            }
+                            await restoreChannelBackupFromOlympus(
+                                lndDir,
+                                nodeInfo.testnet,
+                                nodeInfo.identity_pubkey,
+                                recoveryCipherSeed
+                            );
                         } catch (e: any) {
                             olympusRestoreSuccess = false;
                             this.setState({
                                 errorCreatingWallet: true,
-                                errorMsg:
-                                    'Failed to restore from Olympus: ' +
-                                    (e.message || e.toString()),
+                                errorMsg: localeString(
+                                    'views.Tools.migration.import.olympusRestoreFailed',
+                                    {
+                                        error: e.message || e.toString()
+                                    }
+                                ),
                                 loading: false
                             });
                         }
