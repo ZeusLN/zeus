@@ -139,6 +139,7 @@ export default class LndHub extends LND {
     supportsWatchtowerClient = () => false;
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
+    supportsForceClose = () => false;
     supportsPendingChannels = () => false;
     supportsClosedChannels = () => false;
     supportsMPP = () => false;
