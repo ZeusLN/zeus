@@ -216,7 +216,8 @@ export enum CDKErrorType {
     InvalidUrl = 'InvalidUrl',
     MintNotFound = 'MintNotFound',
     QuoteExpired = 'QuoteExpired',
-    QuoteNotPaid = 'QuoteNotPaid'
+    QuoteNotPaid = 'QuoteNotPaid',
+    MultiMintQuoteRejected = 'MultiMintQuoteRejected'
 }
 
 export interface CDKError {
