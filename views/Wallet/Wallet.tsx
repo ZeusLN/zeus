@@ -911,6 +911,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         await ChannelsStore.getChannels();
                 } catch (connectionError) {
                     console.log('LNC connection failed:', connectionError);
+                    setConnectingStatus(false);
                     return;
                 }
             }
