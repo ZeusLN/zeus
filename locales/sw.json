@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Hii ina maana ya faragha kwamba itafunua vituo vyako visivyotangazwa kwa LSP.",
     "views.Settings.LightningAddress.deleteAddress": "Delete Address",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Are you sure you want to delete your ZEUS Pay Lightning address? This action cannot be undone.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Maelezo ya anwani ya umeme",
     "views.Settings.LightningAddressInfo.explainer1": "Anwani hii ya umeme inahifadhiwa na kuendeshwa na LSP yetu, OLYMPUS by ZEUS. Inakuruhusu kupokea malipo hata wakati uko nje ya mtandao.",
     "views.Settings.LightningAddressInfo.explainer2": "Inatumia hashi za malipo zilizozalishwa kwenye kifaa chako, na ankara za hodl, ambayo inamaanisha LSP inaweza kushikilia pesa kwa muda tu na kuzisambaza kwako, au kuzirudisha kwa mtumaji (baada ya kipindi cha muda wa saa 24), kwa ufanisi kufanya kuwa wa kujitunza.",
