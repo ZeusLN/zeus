@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "This has a privacy tradeoff in that it will expose your unannounced channels to the LSP.",
     "views.Settings.LightningAddress.deleteAddress": "Delete Address",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Are you sure you want to delete your ZEUS Pay Lightning address? This action cannot be undone.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "מידע כתובת ברק",
     "views.Settings.LightningAddressInfo.explainer1": "This lightning address is hosted and powered by our LSP, OLYMPUS by ZEUS. It allows you to accept payments even when you're offline.",
     "views.Settings.LightningAddressInfo.explainer2": "It uses payment hashes generated on your device, and hodl invoices, which means the LSP can only temporarily hold the funds and forward them along to you, or return them to the sender (after a 24 hour expiry period), effectively making it self-custodial.",
