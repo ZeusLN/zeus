@@ -2194,13 +2194,30 @@ export default class CashuStore {
     @action
     public setReceiveMint = async (mintUrl: string) => {
         this.clearInvoice();
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-selectedMintUrl`,
-            mintUrl
-        );
+
+        const storageWrites = [
+            Storage.setItem(
+                `${this.getLndDir()}-cashu-selectedMintUrl`,
+                mintUrl
+            )
+        ];
+
+        if (this.randomizeMintSelection) {
+            storageWrites.push(
+                Storage.setItem(
+                    `${this.getLndDir()}-cashu-randomizeMintSelection`,
+                    'false'
+                )
+            );
+        }
+
+        await Promise.all(storageWrites);
 
         runInAction(() => {
             this.selectedMintUrl = mintUrl;
+            if (this.randomizeMintSelection) {
+                this.randomizeMintSelection = false;
+            }
         });
 
         return mintUrl;
