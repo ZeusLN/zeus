@@ -37,47 +37,71 @@ const { CashuDevKitModule } = NativeModules as unknown as {
  */
 function mapCDKError(error: any): CDKError {
     const message = error?.message || String(error);
+    const normalizedMessage = message.toLowerCase();
+
+    if (
+        normalizedMessage.includes('11000') &&
+        normalizedMessage.includes('quote amount not as requested')
+    ) {
+        return {
+            type: CDKErrorType.MultiMintQuoteRejected,
+            message:
+                'A selected mint rejected the split amount; try fewer mints.'
+        };
+    }
 
     if (
         message.includes('Insufficient funds') ||
-        message.includes('insufficient')
+        normalizedMessage.includes('insufficient')
     ) {
         return { type: CDKErrorType.InsufficientFunds, message };
     }
     if (message.includes('Payment failed')) {
         return { type: CDKErrorType.PaymentFailed, message };
     }
-    if (message.includes('Payment pending') || message.includes('pending')) {
+    if (
+        message.includes('Payment pending') ||
+        normalizedMessage.includes('pending')
+    ) {
         return { type: CDKErrorType.PaymentPending, message };
     }
     if (
         message.includes('Invalid token') ||
-        message.includes('invalid token')
+        normalizedMessage.includes('invalid token')
     ) {
         return { type: CDKErrorType.InvalidToken, message };
     }
-    if (message.includes('network') || message.includes('connection')) {
+    if (
+        normalizedMessage.includes('network') ||
+        normalizedMessage.includes('connection')
+    ) {
         return { type: CDKErrorType.Network, message };
     }
-    if (message.includes('database') || message.includes('sqlite')) {
+    if (
+        normalizedMessage.includes('database') ||
+        normalizedMessage.includes('sqlite')
+    ) {
         return { type: CDKErrorType.Database, message };
     }
-    if (message.includes('mnemonic')) {
+    if (normalizedMessage.includes('mnemonic')) {
         return { type: CDKErrorType.InvalidMnemonic, message };
     }
-    if (message.includes('url') || message.includes('URL')) {
+    if (normalizedMessage.includes('url')) {
         return { type: CDKErrorType.InvalidUrl, message };
     }
-    if (message.includes('keyset')) {
+    if (normalizedMessage.includes('keyset')) {
         return { type: CDKErrorType.KeysetUnknown, message };
     }
-    if (message.includes('unit')) {
+    if (normalizedMessage.includes('unit')) {
         return { type: CDKErrorType.UnitNotSupported, message };
     }
-    if (message.includes('expired')) {
+    if (normalizedMessage.includes('expired')) {
         return { type: CDKErrorType.QuoteExpired, message };
     }
-    if (message.includes('not paid') || message.includes('unpaid')) {
+    if (
+        normalizedMessage.includes('not paid') ||
+        normalizedMessage.includes('unpaid')
+    ) {
         return { type: CDKErrorType.QuoteNotPaid, message };
     }
 
