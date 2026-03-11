@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "ส่วนนี้จะแลกมาด้วยการเปิดเผยแชนแนลให้เพียงผู้บริการ LSP เท่านั้น",
     "views.Settings.LightningAddress.deleteAddress": "Delete Address",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Are you sure you want to delete your ZEUS Pay Lightning address? This action cannot be undone.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "ข้อมูลที่อยู่ Lightning",
     "views.Settings.LightningAddressInfo.explainer1": "ที่อยู่ Lightning นี้โฮสจากบริการของ LSP, OLYMPUS โดย ZEUS. ช่วยให้คุณสามารถรับเงินได้แม้ตอนออฟไลน์",
     "views.Settings.LightningAddressInfo.explainer2": "มันใช้แฮชจากใบแจ้งหนี้ของคุณบนเครื่องนี้ เพื่อสร้างสัญญาใบแจ้งหนี้ ที่จะมีผลในการถือเงินนั้น ๆ ไว้ 24 ชั่วโมง ก่อนที่คุณจะเปิดแอพมารับเงิน(หรือถูกส่งเงินคืนหากเกินระยะเวลาดังกล่าว) ทำให้เราเก็บ Bitcoin โดยไร้ตัวกลางอย่างง่ายดาย",
