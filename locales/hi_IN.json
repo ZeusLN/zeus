@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "इसमें गोपनीयता का समझौता है क्योंकि यह आपके अघोषित चैनल्स को LSP के सामने उजागर करेगा।",
     "views.Settings.LightningAddress.deleteAddress": "पता हटाएं",
     "views.Settings.LightningAddress.deleteAddressConfirm": "क्या आप वाकई अपना ZEUS Pay लाइटनिंग पता हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती है।",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "लाइटनिंग पता जानकारी",
     "views.Settings.LightningAddressInfo.explainer1": "यह लाइटनिंग पता हमारे LSP, OLYMPUS by ZEUS द्वारा होस्ट और संचालित किया जाता है। यह आपको ऑफलाइन होने पर भी भुगतान स्वीकार करने की अनुमति देता है।",
     "views.Settings.LightningAddressInfo.explainer2": "यह आपके डिवाइस पर जेनरेट किए गए भुगतान हैश और होडल इनवॉइस का उपयोग करता है, जिसका अर्थ है कि LSP केवल अस्थायी रूप से फंड रख सकता है और उन्हें आपको फॉरवर्ड कर सकता है, या उन्हें भेजने वाले को वापस कर सकता है (24 घंटे की अवधि समाप्त होने के बाद), जिससे यह प्रभावी रूप से सेल्फ-कस्टोडियल बन जाता है।",
