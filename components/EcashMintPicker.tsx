@@ -18,7 +18,6 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Dice from '../assets/images/SVG/Dice.svg';
 
 interface EcashMintPickerProps {
-    title?: string;
     CashuStore?: CashuStore;
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
@@ -57,6 +56,12 @@ export default class EcashMintPicker extends React.Component<
         } = CashuStore!!;
         const multiMintEnabled =
             !!SettingsStore?.settings?.ecash?.enableMultiMint;
+        const openMints = () => navigation.navigate('Mints');
+        const pickerTouchableStyle = {
+            opacity: disabled ? 0.25 : 1,
+            backgroundColor: themeColor('secondary'),
+            ...styles.field
+        };
 
         const displayMintUrl = overrideMintUrl || selectedMintUrl;
         const showRandom =
@@ -78,24 +83,12 @@ export default class EcashMintPicker extends React.Component<
         });
 
         const getRow = (mintUrl: string, key: string | number = mintUrl) => (
-            <Row
-                key={key}
-                style={{
-                    height: 42,
-                    alignItems: 'center',
-                    paddingRight: 34,
-                    marginBottom: 0,
-                    backgroundColor: 'transparent'
-                }}
-            >
+            <Row key={key} style={styles.pickerRow}>
                 <MintAvatar
                     iconUrl={mints[mintUrl]?.icon_url}
                     name={mints[mintUrl]?.name}
                     size="small"
-                    style={{
-                        marginRight: 10,
-                        flexShrink: 0
-                    }}
+                    style={styles.leadingIcon}
                 />
                 <Text
                     style={{
@@ -115,12 +108,7 @@ export default class EcashMintPicker extends React.Component<
                         : localeString('cashu.tapToConfigure.short')}
                 </Text>
                 {!hideAmount && (
-                    <View
-                        style={{
-                            marginRight: 8,
-                            flexShrink: 0
-                        }}
-                    >
+                    <View style={styles.amountContainer}>
                         <Amount sats={mints[mintUrl]?.mintBalance} sensitive />
                     </View>
                 )}
@@ -128,27 +116,63 @@ export default class EcashMintPicker extends React.Component<
         );
 
         const selectedMints = selectedMintUrls || [];
+        const selectedMintBalance = selectedMints.reduce(
+            (total: number, mintUrl: string) =>
+                total + (mints[mintUrl]?.mintBalance || 0),
+            0
+        );
+        const multiMintLabel =
+            selectedMints.length >= 3
+                ? '...'
+                : `${selectedMints.length} ${localeString('cashu.mints')}`;
+
+        const getMintIcons = (mintList: string[]) => {
+            const displayMints = mintList.slice(0, 3);
+            const remainingCount = mintList.length - displayMints.length;
+
+            return (
+                <View style={styles.mintIconsContainer}>
+                    {displayMints.map((mintUrl, index) => (
+                        <View
+                            key={mintUrl}
+                            style={[
+                                styles.mintIconWrapper,
+                                {
+                                    marginLeft: index > 0 ? -8 : 0,
+                                    zIndex: 3 - index
+                                }
+                            ]}
+                        >
+                            <MintAvatar
+                                iconUrl={mints[mintUrl]?.icon_url}
+                                name={mints[mintUrl]?.name}
+                                size="small"
+                            />
+                        </View>
+                    ))}
+                    {remainingCount > 0 && (
+                        <Text
+                            style={{
+                                ...styles.moreMintsText,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            +{remainingCount}
+                        </Text>
+                    )}
+                </View>
+            );
+        };
 
         if (multiMintEnabled && !isReceiveView) {
             if (selectedMints.length === 0) {
                 return (
-                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                    <View style={styles.wrapperRow}>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Mints')}
-                            style={{
-                                opacity: disabled ? 0.25 : 1,
-                                backgroundColor: themeColor('secondary'),
-                                ...styles.field
-                            }}
+                            onPress={openMints}
+                            style={pickerTouchableStyle}
                         >
-                            <Row
-                                style={{
-                                    height: 42,
-                                    alignItems: 'center',
-                                    paddingRight: 34,
-                                    backgroundColor: 'transparent'
-                                }}
-                            >
+                            <Row style={styles.pickerRow}>
                                 <Text
                                     style={{
                                         ...styles.text,
@@ -176,14 +200,10 @@ export default class EcashMintPicker extends React.Component<
 
             if (selectedMints.length === 1) {
                 return (
-                    <View style={{ flex: 1, flexDirection: 'row' }}>
+                    <View style={styles.wrapperRow}>
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Mints')}
-                            style={{
-                                opacity: disabled ? 0.25 : 1,
-                                backgroundColor: themeColor('secondary'),
-                                ...styles.field
-                            }}
+                            onPress={openMints}
+                            style={pickerTouchableStyle}
                         >
                             {getRow(selectedMints[0], 'single')}
                             <View style={styles.caretContainer}>
@@ -199,44 +219,38 @@ export default class EcashMintPicker extends React.Component<
                 );
             }
 
-            const shown = selectedMints.slice(0, 2);
-            const more = selectedMints.length - shown.length;
-            const totalRows = shown.length + (more > 0 ? 1 : 0);
-
             return (
-                <View style={{ flex: 1, flexDirection: 'row' }}>
+                <View style={styles.wrapperRow}>
                     <TouchableOpacity
-                        onPress={() => navigation.navigate('Mints')}
-                        style={{
-                            opacity: disabled ? 0.25 : 1,
-                            backgroundColor: themeColor('secondary'),
-                            ...styles.field,
-                            height: 42 * totalRows,
-                            marginBottom: 12
-                        }}
+                        onPress={openMints}
+                        style={pickerTouchableStyle}
                     >
-                        <View style={{ flex: 1 }}>
-                            {shown.map((mintUrl) => getRow(mintUrl))}
-                            {more > 0 && (
-                                <Row
-                                    style={{
-                                        height: 42,
-                                        alignItems: 'center',
-                                        paddingRight: 34,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize: 15,
-                                            flex: 1
-                                        }}
-                                    >{`+${more} more`}</Text>
-                                </Row>
+                        <Row style={[styles.pickerRow, styles.multiMintRow]}>
+                            {getMintIcons(selectedMints)}
+                            <Text
+                                style={{
+                                    ...styles.multiMintText,
+                                    color: themeColor('text'),
+                                    flex: 1,
+                                    flexShrink: 1,
+                                    minWidth: 0,
+                                    marginLeft: 10,
+                                    marginRight: 8
+                                }}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                {multiMintLabel}
+                            </Text>
+                            {!hideAmount && (
+                                <View style={styles.amountContainer}>
+                                    <Amount
+                                        sats={selectedMintBalance}
+                                        sensitive
+                                    />
+                                </View>
                             )}
-                            <View style={styles.caretContainer}>
+                            <View style={styles.inlineCaretContainer}>
                                 <CaretRight
                                     stroke={themeColor('text')}
                                     fill={themeColor('text')}
@@ -244,14 +258,14 @@ export default class EcashMintPicker extends React.Component<
                                     height={20}
                                 />
                             </View>
-                        </View>
+                        </Row>
                     </TouchableOpacity>
                 </View>
             );
         }
 
         return (
-            <View style={{ flex: 1, flexDirection: 'row' }}>
+            <View style={styles.wrapperRow}>
                 <TouchableOpacity
                     onPress={() => {
                         navigation.navigate('Mints', {
@@ -259,11 +273,7 @@ export default class EcashMintPicker extends React.Component<
                             forceSingleMint: multiMintEnabled && isReceiveView
                         });
                     }}
-                    style={{
-                        opacity: disabled ? 0.25 : 1,
-                        backgroundColor: themeColor('secondary'),
-                        ...styles.field
-                    }}
+                    style={pickerTouchableStyle}
                 >
                     <Row style={{ flex: 1 }}>
                         {showRandom ? (
@@ -271,10 +281,7 @@ export default class EcashMintPicker extends React.Component<
                                 fill={themeColor('text')}
                                 width={30}
                                 height={30}
-                                style={{
-                                    marginRight: 10,
-                                    flexShrink: 0
-                                }}
+                                style={styles.leadingIcon}
                             />
                         ) : (
                             <MintAvatar
@@ -282,10 +289,7 @@ export default class EcashMintPicker extends React.Component<
                                 name={mints[displayMintUrl]?.name}
                                 mintUrl={displayMintUrl}
                                 size="small"
-                                style={{
-                                    marginRight: 10,
-                                    flexShrink: 0
-                                }}
+                                style={styles.leadingIcon}
                             />
                         )}
                         <Text
@@ -312,12 +316,7 @@ export default class EcashMintPicker extends React.Component<
                                 : localeString('cashu.tapToConfigure.short')}
                         </Text>
                         {!hideAmount && !showRandom && (
-                            <View
-                                style={{
-                                    marginRight: 8,
-                                    flexShrink: 0
-                                }}
-                            >
+                            <View style={styles.amountContainer}>
                                 <Amount
                                     sats={mints[displayMintUrl]?.mintBalance}
                                     sensitive
@@ -340,8 +339,26 @@ export default class EcashMintPicker extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    wrapperRow: {
+        flex: 1,
+        flexDirection: 'row'
+    },
+    pickerRow: {
+        height: 42,
+        alignItems: 'center',
+        paddingRight: 34,
+        backgroundColor: 'transparent'
+    },
+    multiMintRow: {
+        flex: 1,
+        paddingRight: 8
+    },
     text: {
         fontSize: 18,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    multiMintText: {
+        fontSize: 15,
         fontFamily: 'PPNeueMontreal-Book'
     },
     field: {
@@ -352,6 +369,20 @@ const styles = StyleSheet.create({
         paddingLeft: 10,
         overflow: 'hidden'
     },
+    leadingIcon: {
+        marginRight: 10,
+        flexShrink: 0
+    },
+    amountContainer: {
+        marginRight: 8,
+        flexShrink: 0
+    },
+    inlineCaretContainer: {
+        width: 24,
+        flexShrink: 0,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
     caretContainer: {
         position: 'absolute',
         right: 5,
@@ -361,5 +392,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         width: 24,
         pointerEvents: 'none'
+    },
+    mintIconsContainer: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    mintIconWrapper: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)'
+    },
+    moreMintsText: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 15,
+        marginLeft: 4
     }
 });
