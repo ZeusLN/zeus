@@ -13,7 +13,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import cloneDeep from 'lodash/cloneDeep';
 
 import Amount from '../../components/Amount';
-import ZeusButton from '../../components/Button';
 import Header from '../../components/Header';
 import MintAvatar from '../../components/MintAvatar';
 import Screen from '../../components/Screen';
@@ -434,26 +433,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
                     />
-                )}
-                {multiMintEnabled && (
-                    <View
-                        style={{
-                            position: 'absolute',
-                            left: 0,
-                            right: 0,
-                            bottom: 15,
-                            paddingHorizontal: 16,
-                            backgroundColor: 'transparent',
-                            zIndex: 20
-                        }}
-                    >
-                        <ZeusButton
-                            title={localeString('general.confirm')}
-                            onPress={() => navigation.goBack()}
-                            containerStyle={{ marginTop: 15 }}
-                            noUppercase
-                        />
-                    </View>
                 )}
             </Screen>
         );
