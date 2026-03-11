@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ListItem, Divider } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import Screen from '../../../components/Screen';
@@ -26,7 +26,7 @@ import Storage from '../../../storage';
 import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
 interface DisasterRecoveryProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 interface DisasterRecoveryState {

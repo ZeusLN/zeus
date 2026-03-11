@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Chip, Icon, ButtonGroup } from '@rneui/themed';
 import Header from '../../components/Header';
@@ -31,7 +31,7 @@ export interface CashuLockSettingsParams extends SendEcashParams {
     selectedDurationIndex?: number;
 }
 interface CashuLockSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ContactStore: ContactStore;
     route: Route<'CashuLockSettings', CashuLockSettingsParams>;
 }

@@ -11,7 +11,7 @@ import {
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import cloneDeep from 'lodash/cloneDeep';
 
 import Button from '../../components/Button';
@@ -43,7 +43,7 @@ interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
 
 interface NodesProps {
     nodes: any[];
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;

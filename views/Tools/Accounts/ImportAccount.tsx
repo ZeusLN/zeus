@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import DropdownSetting from '../../../components/DropdownSetting';
@@ -44,7 +44,7 @@ const AddressTypes = [
 
 interface ImportAccountProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;

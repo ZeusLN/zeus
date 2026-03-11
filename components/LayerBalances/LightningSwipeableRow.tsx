@@ -9,7 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -33,7 +33,7 @@ import Routing from './../../assets/images/SVG/Routing.svg';
 import Send from './../../assets/images/SVG/Send.svg';
 
 interface LightningSwipeableRowProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     lightning?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     lightningAddress?: string;

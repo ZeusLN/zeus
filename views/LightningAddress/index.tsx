@@ -13,7 +13,7 @@ import {
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ZaplockerPayment from './ZaplockerPayment';
 import CashuPayment from './CashuPayment';
@@ -48,7 +48,7 @@ import Gear from '../../assets/images/SVG/Gear.svg';
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
 interface LightningAddressProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;

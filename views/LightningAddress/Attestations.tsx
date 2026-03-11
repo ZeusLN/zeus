@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../../components/Amount';
 import Screen from '../../components/Screen';
@@ -14,7 +14,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface AttestationProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'Attestations', { attestations: any[] }>;
 }
 

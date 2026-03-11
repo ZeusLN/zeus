@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -33,7 +33,7 @@ import SettingsStore from './../stores/SettingsStore';
 interface EditFeeProps {
     FeeStore: FeeStore;
     SettingsStore: SettingsStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     displayOnly?: boolean;
     route: Route<
         'EditFee',

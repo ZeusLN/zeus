@@ -8,7 +8,7 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { getRouteStack } from '../NavigationService';
 
 import Button from '../components/Button';
@@ -31,7 +31,7 @@ import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface SendingOnChainProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
 }

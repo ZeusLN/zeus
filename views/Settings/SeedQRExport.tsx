@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Tab } from '@rneui/themed';
 
 import BIP32Factory from 'bip32';
@@ -35,7 +35,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import Storage from '../../storage';
 
 interface SeedQRExportProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }

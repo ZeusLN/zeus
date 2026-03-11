@@ -2,7 +2,7 @@ import * as React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -23,7 +23,7 @@ import Add from '../../../assets/images/SVG/Add.svg';
 import Filter from '../../../assets/images/SVG/Filter On.svg';
 
 interface AccountsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     UTXOsStore: UTXOsStore;
     UnitsStore: UnitsStore;

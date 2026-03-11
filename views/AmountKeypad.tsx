@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Animated, View, StyleSheet } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import CurrencySelectorModal from '../components/CurrencySelectorModal';
@@ -27,7 +27,7 @@ import { getDecimalPlaceholder } from '../utils/UnitsUtils';
 import { localeString } from '../utils/LocaleUtils';
 
 interface AmountKeypadProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'AmountKeypad',
         {

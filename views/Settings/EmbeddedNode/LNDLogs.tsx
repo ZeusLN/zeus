@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { NativeModules, Platform, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import CopyButton from '../../../components/CopyButton';
 import Screen from '../../../components/Screen';
@@ -15,7 +15,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { LndMobileToolsEventEmitter } from '../../../utils/EventListenerUtils';
 
 interface LNDLogsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Dimensions, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import CircularProgress from 'react-native-circular-progress-indicator';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import Screen from '../components/Screen';
@@ -15,7 +15,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface SyncRecoveryProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SyncStore: SyncStore;
 }
 

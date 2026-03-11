@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -16,7 +16,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
 
 interface SetPassphraseProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
     route: { params?: { forBiometrics?: boolean } };

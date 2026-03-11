@@ -2659,15 +2659,6 @@
   dependencies:
     nanoid "^3.3.11"
 
-"@react-navigation/stack@7.6.13":
-  version "7.6.13"
-  resolved "https://registry.yarnpkg.com/@react-navigation/stack/-/stack-7.6.13.tgz#7c321b4de3f6993ba2eafdd36a8d249d9f5ca4ad"
-  integrity sha512-Zs8W2k9AGltBVkUw0QXU97rTDLbfTikCWA3fstzpjVDVTXp+h0irXm1MTnAl79D3B1wcyZasUIwMZdyUqwMT6g==
-  dependencies:
-    "@react-navigation/elements" "^2.9.3"
-    color "^4.2.3"
-    use-latest-callback "^0.2.4"
-
 "@rneui/base@5.0.0-beta.1":
   version "5.0.0-beta.1"
   resolved "https://registry.yarnpkg.com/@rneui/base/-/base-5.0.0-beta.1.tgz#79b97ca2b629322a7a6d6728ba4d224a2a5ba45c"

@@ -16,7 +16,7 @@ import { Icon, Divider } from '@rneui/themed';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
@@ -52,7 +52,7 @@ interface ContactInputFieldProps {
 }
 
 interface AddContactProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'AddContact', { isEdit: boolean; isNostrContact: boolean }>;
     ContactStore: ContactStore;
 }
@@ -801,7 +801,7 @@ export default class AddContact extends React.Component<
         const ScanBadge = ({
             navigation
         }: {
-            navigation: StackNavigationProp<any, any>;
+            navigation: NativeStackNavigationProp<any, any>;
         }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('HandleAnythingQRScanner')}

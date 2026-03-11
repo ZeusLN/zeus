@@ -12,7 +12,7 @@ import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from '@rneui/themed';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { SharedImage, SharedText } from '../components/SharedTransition';
 
@@ -38,7 +38,7 @@ import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
 
 interface NostrContactsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ContactStore: ContactStore;
 }
 

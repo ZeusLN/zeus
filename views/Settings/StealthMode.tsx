@@ -8,7 +8,7 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -59,7 +59,7 @@ const QRScannerIcon = require('../../assets/images/stealth/qrscanner.png');
 const NotepadIcon = require('../../assets/images/stealth/notepad.png');
 
 interface StealthModeProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import Globe from '../assets/images/SVG/Globe.svg';
@@ -32,7 +32,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import TresArrows from '../assets/images/SVG/TresArrows.svg';
 
 interface IntroSplashProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

@@ -8,7 +8,7 @@ import {
     View
 } from 'react-native';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearProgress } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
@@ -40,7 +40,7 @@ import CashuStore from '../../stores/CashuStore';
 import MintAvatar from '../../components/MintAvatar';
 
 interface MintProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'Mint', { mint: any; lookup?: boolean }>;
     CashuStore: CashuStore;
 }

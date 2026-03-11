@@ -2,7 +2,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -22,7 +22,7 @@ import DropdownSetting from '../../components/DropdownSetting';
 import Switch from '../../components/Switch';
 
 interface CurrencyProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }

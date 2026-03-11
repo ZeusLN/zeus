@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { Divider, SearchBar, ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -37,7 +37,7 @@ import NWCLogo from '../../../assets/images/SVG/nwc-logo.svg';
 import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionsListProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }

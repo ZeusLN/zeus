@@ -8,7 +8,7 @@ import {
     I18nManager
 } from 'react-native';
 import LinearGradient from '../LinearGradient';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import BigNumber from 'bignumber.js';
 
 import { inject, observer } from 'mobx-react';
@@ -47,7 +47,7 @@ interface LayerBalancesProps {
     SettingsStore?: SettingsStore;
     UTXOsStore?: UTXOsStore;
     UnitsStore?: UnitsStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     onRefresh?: any;
     value?: string;
     satAmount?: string;
@@ -321,7 +321,7 @@ const SwipeableRow = ({
     editMode
 }: {
     item: DataRow;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     value?: string;
     satAmount?: string;
     lightning?: string;

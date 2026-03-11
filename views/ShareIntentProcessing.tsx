@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, Text, NativeModules, Alert } from 'react-native';
 import { observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import QRKit from 'react-native-qr-kit';
 
@@ -15,7 +15,7 @@ import handleAnything from '../utils/handleAnything';
 const { MobileTools } = NativeModules;
 
 interface ShareIntentProcessingProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'ShareIntentProcessing',
         {

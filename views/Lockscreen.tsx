@@ -10,7 +10,7 @@ import {
     View
 } from 'react-native';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -28,7 +28,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface LockscreenProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     route: Route<
         'Lockscreen',

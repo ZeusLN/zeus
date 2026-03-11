@@ -7,7 +7,7 @@ import { inject, observer } from 'mobx-react';
 import { crypto } from 'bitcoinjs-lib';
 import BigNumber from 'bignumber.js';
 import bolt11 from 'bolt11';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
@@ -43,7 +43,7 @@ import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
 interface SwapDetailsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'SwapDetails',
         {

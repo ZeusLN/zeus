@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import Slider from '@react-native-community/slider';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -50,7 +50,7 @@ interface LSPS1Props {
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 interface LSPS1State {

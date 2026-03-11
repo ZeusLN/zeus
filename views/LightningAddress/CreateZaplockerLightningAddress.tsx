@@ -5,7 +5,7 @@ import { inject, observer } from 'mobx-react';
 // @ts-ignore:next-line
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
@@ -30,7 +30,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
 interface CreateZaplockerLightningAddressProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
     route: Route<

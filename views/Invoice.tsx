@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import SettingsStore from '../stores/SettingsStore';
 import InvoicesStore from '../stores/InvoicesStore';
@@ -34,7 +34,7 @@ import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
 
 interface InvoiceProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
     InvoicesStore?: InvoicesStore;
     ChannelsStore?: ChannelsStore;

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../components/Header';
 import PaymentPath from '../components/PaymentPath';
@@ -13,7 +13,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface PaymentPathsViewProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     route: Route<'PaymentPaths', { enhancedPath: any[] }>;
 }

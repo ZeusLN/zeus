@@ -13,7 +13,7 @@ import { Button, Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import isEqual from 'lodash/isEqual';
 
 import Amount from '../../components/Amount';
@@ -51,7 +51,7 @@ import { SwapType } from '../../models/Swap';
 import { LSPOrderState } from '../../models/LSP';
 
 interface ActivityProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     FiatStore: FiatStore;
     PosStore: PosStore;

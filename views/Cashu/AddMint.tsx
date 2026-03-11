@@ -12,7 +12,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import CashuDevKit from '../../cashu-cdk';
 
@@ -40,7 +40,7 @@ import CashuStore, {
 type DiscoverMode = 'zeus' | 'all' | 'custom';
 
 interface AddMintProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     route: Route<'AddMint'>;
 }

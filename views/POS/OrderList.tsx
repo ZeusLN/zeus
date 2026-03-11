@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { FlatList, Text, TouchableOpacity } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Spacer } from '../../components/layout/Spacer';
 import SwipeableOrderItem from '../Wallet/SwipeableOrderItem';
@@ -18,7 +18,7 @@ interface OrderListProps {
     onRefresh: () => void;
     onHideOrder: (orderId: string) => void;
     onOrderClick: (order: Order) => void;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     fiatStore: FiatStore;
     emptyText: string;
 }

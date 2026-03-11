@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Row } from '../../../../components/layout/Row';
 import Button from '../../../../components/Button';
@@ -17,7 +17,7 @@ import { themeColor } from '../../../../utils/ThemeUtils';
 import ValidationUtils from '../../../../utils/ValidationUtils';
 
 interface ZeroConfPeersProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

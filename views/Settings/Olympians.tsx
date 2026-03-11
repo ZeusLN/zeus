@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Dimensions, FlatList, Text } from 'react-native';
 import { Avatar, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -16,7 +16,7 @@ import UrlUtils from '../../utils/UrlUtils';
 import SettingsStore from '../../stores/SettingsStore';
 
 interface OlympiansProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

@@ -20,7 +20,7 @@ import {
     errorCodes
 } from '@react-native-documents/picker';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -57,7 +57,7 @@ import { SWAPS_RESCUE_KEY } from '../../utils/SwapUtils';
 import Storage from '../../storage';
 
 interface SeedRecoveryProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     SwapStore: SwapStore;

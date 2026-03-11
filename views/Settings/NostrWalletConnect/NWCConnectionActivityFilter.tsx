@@ -2,7 +2,7 @@ import React from 'react';
 import { observer } from 'mobx-react';
 import { View, ScrollView, Platform, KeyboardAvoidingView } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
@@ -14,7 +14,7 @@ import Switch from '../../../components/Switch';
 import { NWC_DEFAULT_FILTERS, NWCFilterState } from './NWCConnectionActivity';
 
 interface NWCConnectionActivityFilterProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'NWCConnectionActivityFilter',
         {

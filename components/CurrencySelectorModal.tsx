@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { View, Dimensions } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ModalBox from './ModalBox';
 import ToggleButton from './ToggleButton';
@@ -13,7 +13,7 @@ import { themeColor } from '../utils/ThemeUtils';
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface CurrencySelectorModalProps {
-    navigation?: StackNavigationProp<any, any>;
+    navigation?: NativeStackNavigationProp<any, any>;
     onClose?: () => void;
 }
 

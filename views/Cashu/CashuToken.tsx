@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, StyleSheet, ScrollView, View, Share } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ButtonGroup } from '@rneui/themed';
 
 import CashuStore from '../../stores/CashuStore';
@@ -33,7 +33,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface CashuTokenProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
     route: Route<

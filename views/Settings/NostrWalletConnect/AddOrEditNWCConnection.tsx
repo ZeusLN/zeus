@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import isEqual from 'lodash/isEqual';
 import Slider from '@react-native-community/slider';
@@ -46,7 +46,7 @@ import NWCConnection, {
 import ForwardIcon from '../../../assets/images/SVG/Caret Right-3.svg';
 
 interface AddOrEditNWCConnectionProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'AddOrEditNWCConnection',
         { connectionId?: string; isEdit?: boolean }

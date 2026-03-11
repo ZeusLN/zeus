@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 import BigNumber from 'bignumber.js';
 
@@ -56,7 +56,7 @@ import ModalBox from '../../components/ModalBox';
 import { reaction } from 'mobx';
 
 interface ChannelsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
     LSPStore?: LSPStore;
     NodeInfoStore?: NodeInfoStore;

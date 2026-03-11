@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -16,7 +16,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface AttestationProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'Attestation', { attestation: any }>;
 }
 

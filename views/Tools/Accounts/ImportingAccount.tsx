@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearProgress } from '@rneui/themed';
 
 import Button from '../../../components/Button';
@@ -24,7 +24,7 @@ import { walletrpc } from '../../../proto/lightning';
 
 interface ImportingAccountProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
 }
 

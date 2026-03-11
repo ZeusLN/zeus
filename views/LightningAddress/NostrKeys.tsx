@@ -4,7 +4,7 @@ import { inject, observer } from 'mobx-react';
 // @ts-ignore:next-line
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
@@ -34,7 +34,7 @@ import VisibleSVG from '../../assets/images/SVG/eye_opened.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 
 interface NostrKeyProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
     route: Route<'NostrKey', { setup: boolean; nostrPrivateKey: string }>;

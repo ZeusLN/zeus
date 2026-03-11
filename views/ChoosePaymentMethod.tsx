@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Route } from '@react-navigation/native';
 import { StyleSheet, Text, View } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { inject, observer } from 'mobx-react';
 import bolt11 from 'bolt11';
@@ -38,7 +38,7 @@ interface RouteParams {
 }
 
 interface ChoosePaymentMethodProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'ChoosePaymentMethod', RouteParams>;
     BalanceStore?: BalanceStore;
     CashuStore?: CashuStore;

@@ -14,7 +14,7 @@ import {
 } from '../../components/SharedTransition';
 import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
@@ -41,7 +41,7 @@ export interface ContactsParams extends CashuLockSettingsParams {
     CashuLockSettingsScreen?: boolean;
 }
 interface ContactsSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'Contacts', ContactsParams>;
     ContactStore: ContactStore;
 }

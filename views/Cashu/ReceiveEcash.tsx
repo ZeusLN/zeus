@@ -16,7 +16,7 @@ import NfcManager, {
     Ndef
 } from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
@@ -67,7 +67,7 @@ import NfcIcon from '../../assets/images/SVG/NFC-alt.svg';
 
 interface ReceiveEcashProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     PosStore: PosStore;
     ModalStore: ModalStore;

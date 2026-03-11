@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -15,7 +15,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface ChannelsSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

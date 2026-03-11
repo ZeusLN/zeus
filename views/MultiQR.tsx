@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Dimensions, View } from 'react-native';
 import Screen from '../components/Screen';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useSharedValue } from 'react-native-reanimated';
 import Carousel, {
@@ -15,7 +15,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
 interface MultiQRProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'MultiQR',
         {

@@ -11,7 +11,7 @@ import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
@@ -38,7 +38,7 @@ import PosStore from '../stores/PosStore';
 const DEFAULT_CUSTOM_TIP_PERCENTAGE = '21';
 
 interface OrderProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     FiatStore: FiatStore;
     UnitsStore: UnitsStore;

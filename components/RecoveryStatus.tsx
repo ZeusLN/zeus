@@ -2,7 +2,7 @@ import * as React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ParamListBase } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import SyncStore from '../stores/SyncStore';
 import StatusCard from './StatusCard';
@@ -10,7 +10,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface RecoveryStatusProps {
-    navigation: StackNavigationProp<ParamListBase>;
+    navigation: NativeStackNavigationProp<ParamListBase>;
     SyncStore?: SyncStore;
     style?: StyleProp<ViewStyle>;
 }

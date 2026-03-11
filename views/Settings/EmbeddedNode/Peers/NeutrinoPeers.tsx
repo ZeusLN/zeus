@@ -4,7 +4,7 @@ import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 // @ts-ignore:next-line
 import Ping from 'react-native-ping';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../../components/Button';
 import Header from '../../../../components/Header';
@@ -37,7 +37,7 @@ import { themeColor } from '../../../../utils/ThemeUtils';
 import Stopwatch from '../../../../assets/images/SVG/Stopwatch.svg';
 
 interface NeutrinoPeersProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

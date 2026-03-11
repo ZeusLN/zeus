@@ -2,7 +2,7 @@ import * as React from 'react';
 import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import {
     SuccessMessage,
@@ -22,7 +22,7 @@ import { nodeInfoStore } from '../stores/Stores';
 import TransactionsStore from '../stores/TransactionsStore';
 
 interface RawTxHexProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
     route: Route<
         'RawTxHex',

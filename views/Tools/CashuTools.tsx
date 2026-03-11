@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -15,7 +15,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface CashuToolsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
 }
 

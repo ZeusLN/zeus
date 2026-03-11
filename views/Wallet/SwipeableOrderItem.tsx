@@ -9,12 +9,12 @@ import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Order from '../../models/Order';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FiatStore from '../../stores/FiatStore';
 
 interface SwipeableOrderItemProps {
     item: Order;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     fiatStore?: FiatStore;
     onClickPaid: () => void;
     onClickHide: () => void;

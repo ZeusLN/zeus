@@ -12,7 +12,7 @@ import {
 import Feather from '@react-native-vector-icons/feather';
 import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from '@rneui/themed';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RNFS from 'react-native-fs';
 import {
     pick,
@@ -60,7 +60,7 @@ const getImplementationDisplayName = (
 };
 
 interface NodeConfigExportImportProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -26,7 +26,7 @@ import { LSPOrderState } from '../../models/LSP';
 import { Order } from './OrdersPane';
 
 interface OrderProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'LSPS1Order', { orderId: string; orderShouldUpdate: boolean }>;
     LSPStore: LSPStore;
     SettingsStore: SettingsStore;

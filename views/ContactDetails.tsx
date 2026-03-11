@@ -15,7 +15,7 @@ import {
     sharedTransitionEntering
 } from '../components/SharedTransition';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import Screen from '../components/Screen';
@@ -67,7 +67,7 @@ const AddressRow: React.FC<{
 );
 
 interface ContactDetailsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'ContactDetails',
         {

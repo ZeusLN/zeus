@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, ScrollView, Text, Platform } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -17,7 +17,7 @@ import BackendUtils from '../../../utils/BackendUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 
 interface NWCSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }

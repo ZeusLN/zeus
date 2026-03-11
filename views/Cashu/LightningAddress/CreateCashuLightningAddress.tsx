@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import DropdownSetting from '../../../components/DropdownSetting';
@@ -23,7 +23,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import ZeusPayIcon from '../../../assets/images/SVG/zeus-pay.svg';
 
 interface CreateCashuLightningAddressProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;

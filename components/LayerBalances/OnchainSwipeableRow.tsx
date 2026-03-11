@@ -8,7 +8,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from './../../utils/BackendUtils';
@@ -23,7 +23,7 @@ import Receive from './../../assets/images/SVG/Receive.svg';
 import Send from './../../assets/images/SVG/Send.svg';
 
 interface OnchainSwipeableRowProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     value?: string;
     satAmount?: number;
     feeRate?: string;

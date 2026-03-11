@@ -11,7 +11,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import Slider from '@react-native-community/slider';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ButtonGroup } from '@rneui/themed';
 
 import Amount from '../components/Amount';
@@ -68,7 +68,7 @@ const zaplockerDestinations = [
 
 interface InvoiceProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'PaymentRequest', { fromGraphSync?: boolean }>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;

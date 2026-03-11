@@ -3,7 +3,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -30,7 +30,7 @@ import ZeusPayPlusSettings from './ZeusPayPlusSettings';
 import ZeusPayPlusPerksList from './ZeusPayPlusPerksList';
 
 interface ZeusPayPlusProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
     route: Route<'ZeusPayPlus'>;

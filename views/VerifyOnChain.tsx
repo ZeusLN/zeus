@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
 import { AdditionalOutput } from '../models/TransactionRequest';
@@ -35,7 +35,7 @@ interface VerifyOnChainParams {
 }
 
 interface VerifyOnChainProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'VerifyOnChain', VerifyOnChainParams>;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;

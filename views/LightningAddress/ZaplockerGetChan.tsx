@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Screen from '../../components/Screen';
@@ -18,7 +18,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface ZaplockerGetChanProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     UnitsStore: UnitsStore;
     route: Route<

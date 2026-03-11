@@ -3,7 +3,7 @@ import { FlatList, View, StyleSheet } from 'react-native';
 import { Button, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -16,7 +16,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import CashuStore from '../../stores/CashuStore';
 
 interface UnspentTokensProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     route: Route<'UnspentTokens'>;
 }

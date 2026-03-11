@@ -2,7 +2,7 @@ import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { FlatList, View, Text } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -28,7 +28,7 @@ import SettingsStore, {
 import Olympus from '../../assets/images/SVG/Olympus.svg';
 
 interface LSPS1SettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     LSPStore: LSPStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
