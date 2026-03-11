@@ -747,6 +747,52 @@ export default class LightningAddressStore {
         }
     };
 
+    private callRedeemEndpoint = async (quote_id: string) => {
+        const { verification, signature } = await this.getAuthData();
+
+        const redeemResponse = await ReactNativeBlobUtil.fetch(
+            'POST',
+            `${LNURL_HOST}/api/lnurl/nuts/redeem`,
+            { 'Content-Type': 'application/json' },
+            JSON.stringify({
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                message: verification,
+                signature,
+                quoteId: quote_id
+            })
+        );
+
+        const redeemData = redeemResponse.json();
+
+        if (redeemResponse.info().status !== 200 || !redeemData.success) {
+            throw redeemData.error;
+        }
+
+        return redeemData;
+    };
+
+    @action
+    public deletePayment = async (quote_id: string) => {
+        this.error = false;
+        this.error_msg = '';
+        this.redeeming = true;
+
+        try {
+            await this.callRedeemEndpoint(quote_id);
+            runInAction(() => {
+                this.redeeming = false;
+            });
+            this.status(true);
+        } catch (error) {
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.redeeming = false;
+                this.error = true;
+                this.error_msg = error_msg;
+            });
+        }
+    };
+
     @action
     public redeemCashu = async (
         quote_id: string,
@@ -804,29 +850,7 @@ export default class LightningAddressStore {
                 response?.updatedInvoice?.state === 'ISSUED'
             ) {
                 try {
-                    const { verification, signature } =
-                        await this.getAuthData();
-
-                    const redeemResponse = await ReactNativeBlobUtil.fetch(
-                        'POST',
-                        `${LNURL_HOST}/api/lnurl/nuts/redeem`,
-                        { 'Content-Type': 'application/json' },
-                        JSON.stringify({
-                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-                            message: verification,
-                            signature,
-                            quoteId: quote_id
-                        })
-                    );
-
-                    const redeemData = redeemResponse.json();
-
-                    if (
-                        redeemResponse.info().status !== 200 ||
-                        !redeemData.success
-                    ) {
-                        throw redeemData.error;
-                    }
+                    const redeemData = await this.callRedeemEndpoint(quote_id);
 
                     // If server returns a token, receive it
                     if (redeemData.token) {
