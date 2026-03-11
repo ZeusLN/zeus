@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Tämä aiheuttaa yksityisyysriskin, koska se paljastaa ilmoittamattomat kanavasi LSP:lle.",
     "views.Settings.LightningAddress.deleteAddress": "Poista osoite",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Haluatko varmasti poistaa ZEUS Pay Lightning -osoitteesi? Tätä toimenpidettä ei voi perua.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Salamaosoitetiedot",
     "views.Settings.LightningAddressInfo.explainer1": "Tämä salamaosoite on ylläpidetty ja käyttövoimana meidän LSP:llä, OLYMPUS by ZEUS. Se mahdollistaa maksujen vastaanottamisen jopa silloin, kun olet offline-tilassa.",
     "views.Settings.LightningAddressInfo.explainer2": "Se käyttää laitteellasi luotuja maksutunnisteita ja hodl-laskuja, mikä tarkoittaa, että LSP voi vain tilapäisesti pitää varoja ja välittää ne sinulle tai palauttaa ne lähettäjälle (24 tunnin vanhenemisajan jälkeen), tehden siitä itse-säilytettävän.",
