@@ -573,6 +573,7 @@
     "views.Channel.chainHash": "Chain hash",
     "views.Channel.settledBalance": "Settled balance",
     "views.Channel.timeLockedBalance": "Time locked balance",
+    "views.Channel.blocksTilMaturity": "Blocks until settlement",
     "views.Channel.closed": "Closed",
     "views.Channel.pendingClose": "Pending close",
     "views.Channel.pendingOpen": "Pending open",

@@ -198,6 +198,7 @@ class BackendUtils {
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
+    supportsForceClose = () => this.call('supportsForceClose');
     supportsPendingChannels = () => this.call('supportsPendingChannels');
     supportsClosedChannels = () => this.call('supportsClosedChannels');
     supportsMPP = () => this.call('supportsMPP');
