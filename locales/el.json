@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Αυτό είναι ένας συμβιβασμός ιδιωτικότητας που θα εκθέσει τα μη δημόσια κανάλια σας στο LSP.",
     "views.Settings.LightningAddress.deleteAddress": "Διαγραφή Διεύθυνσης",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Are you sure you want to delete your ZEUS Pay Lightning address? This action cannot be undone.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Πληροφορίες διεύθυνσης Lightning",
     "views.Settings.LightningAddressInfo.explainer1": "Αυτή η lightning διεύθυνση φιλοξενείται και τροφοδοτείται από τον LSP μας, OLYMPUS by ZEUS. Σας επιτρέπει να δέχεστε πληρωμές ακόμη και όταν είστε εκτός σύνδεσης.",
     "views.Settings.LightningAddressInfo.explainer2": "Χρησιμοποιεί κατακερματισμούς πληρωμών που δημιουργούνται στη συσκευή σας και τιμολόγια hodl, πράγμα που σημαίνει ότι το LSP μπορεί μόνο προσωρινά να κρατήσει τα χρήματα και να τα προωθήσει σε εσάς ή να τα επιστρέψει στον αποστολέα (μετά από μια περίοδο λήξης 24 ωρών), καθιστώντας ουσιαστικά αυτοδιαχείριση.",

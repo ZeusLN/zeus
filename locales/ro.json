@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Aceasta are un compromis de confidențialitate prin faptul că va expune canalele dvs. neanunțate la LSP.",
     "views.Settings.LightningAddress.deleteAddress": "Ștergeți adresa",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Sigur doriți să ștergeți adresa dvs. Lightning ZEUS Pay ? Această acțiune nu poate fi anulată.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Informații despre Adresa Lightning",
     "views.Settings.LightningAddressInfo.explainer1": "Această adresă Lightning este găzduită și alimentată de LSP -ul nostru, Olympus de Zeus. Vă permite să acceptați plăți chiar și atunci când sunteți offline.",
     "views.Settings.LightningAddressInfo.explainer2": "Folosește hashes de plată generate pe dispozitivul dvs. și facturile HODL, ceea ce înseamnă că LSP poate deține temporar fondurile și le poate transmite către dvs. sau le poate returna expeditorului (după o perioadă de expirare de 24 de ore), făcându-l efectiv să se auto-custodie.",

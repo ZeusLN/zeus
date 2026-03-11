@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "这存在隐私权衡，因为它会将您未公开的通道暴露给闪电网络服务提供方（LSP）。",
     "views.Settings.LightningAddress.deleteAddress": "删除地址",
     "views.Settings.LightningAddress.deleteAddressConfirm": "您确定要删除您的 ZEUS Pay 闪电网络地址吗？此操作无法撤销。",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "闪电网络地址信息",
     "views.Settings.LightningAddressInfo.explainer1": "此闪电网络地址由我们的闪电网络服务提供方（LSP）——ZEUS 的 OLYMPUS 托管并支持。它使您即使在离线时也能接收付款。",
     "views.Settings.LightningAddressInfo.explainer2": "它使用在您设备上生成的支付哈希和 hodl 发票，这意味着闪电网络服务提供方（LSP）只能暂时保管资金并将其转发给您，或在 24 小时到期后退还给发送方，从而实质上实现了自托管。",

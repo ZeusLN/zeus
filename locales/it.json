@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Questo ha un compromesso sulla privacy in quanto esporrà i tuoi canali senza preavviso all'LSP",
     "views.Settings.LightningAddress.deleteAddress": "Elimina indirizzo",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Vuoi davvero eliminare il tuo indirizzo Lightning ZEUS Pay ? Questa azione non può essere annullata.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Informazioni sull'indirizzo Lightning",
     "views.Settings.LightningAddressInfo.explainer1": "Questo indirizzo fulmine è ospitato e alimentato dal nostro LSP, Olympus da Zeus. Ti consente di accettare pagamenti anche quando sei offline.",
     "views.Settings.LightningAddressInfo.explainer2": "Utilizza hash di pagamento generati sul tuo dispositivo e fatture Hodl, il che significa che l'LSP può solo trattenere i fondi e inoltrarli a te o restituirli al mittente (dopo un periodo di scadenza di 24 ore), rendendolo effettivamente custodia.",

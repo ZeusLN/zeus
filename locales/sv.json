@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Detta har en integritetskompromiss i det att det kommer att exponera dina oanmälda kanaler för LSP.",
     "views.Settings.LightningAddress.deleteAddress": "Delete Address",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Are you sure you want to delete your ZEUS Pay Lightning address? This action cannot be undone.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Lightning adress info",
     "views.Settings.LightningAddressInfo.explainer1": "Denna lightning adress är värd och drivs av vår LSP, OLYMPUS by ZEUS. Det låter dig acceptera betalningar även när du är offline.",
     "views.Settings.LightningAddressInfo.explainer2": "Den använder betalningshashar genererade på din enhet och hodl-fakturor, vilket innebär att LSP endast tillfälligt kan hålla pengarna och vidarebefordra dem till dig, eller returnera dem till avsändaren (efter en 24 timmars utgångsperiod), vilket i praktiken gör det self-custodial.",

@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "但會犧牲你部分的隱私，因為就會將原本不公開的管道讓 LSP 知道。",
     "views.Settings.LightningAddress.deleteAddress": "刪除位址",
     "views.Settings.LightningAddress.deleteAddressConfirm": "確定要刪掉你的 ZEUS Pay 閃電網位址嗎？這項操作將沒辦法取消。",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "閃電網位址資訊",
     "views.Settings.LightningAddressInfo.explainer1": "這個閃電網位址是由名叫 OLYMPUS 的 LSP 所運作維護的，管理員是我們 ZEUS ，允許你即使在離線的狀態下都可以接受付款。",
     "views.Settings.LightningAddressInfo.explainer2": "原理是透過在你的裝置上產生的支付雜湊值，來衍生滯留型帳單。也就是說  LSP 只能夠暫時保管資金，並且轉送給你，否則就會在 24 期限過後，退還給給原付款人。因此作用上相當於自主管理。",
