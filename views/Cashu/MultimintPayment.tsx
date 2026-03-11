@@ -71,14 +71,14 @@ export default class MultimintPayment extends React.Component<
             selectedMints.length > 0 ? selectedMints : availableMints;
 
         const totalSelectedBalance = effectiveMints.reduce(
-            (sum, mint) => sum + mint.balance,
+            (sum, mint) => sum + Number(mint.balance || 0),
             0
         );
 
         const requestAmount =
             CashuStore?.payReq?.getRequestAmount ||
             Number(route.params?.paymentAmount || 0);
-        const feeEstimate = CashuStore?.feeEstimate || 0;
+        const feeEstimate = Number(CashuStore?.feeEstimate) || 0;
         const totalNeeded = requestAmount + feeEstimate;
 
         const hasNoMintsSelected = effectiveMints.length === 0;
