@@ -1637,6 +1637,8 @@
     "views.Settings.LightningAddressSettings.routeHintsExplainer2": "Aksi ini memiliki konsekuensi privasi karena akan mengekspos saluran Anda yang tidak diumumkan ke LSP.",
     "views.Settings.LightningAddress.deleteAddress": "Hapus Alamat",
     "views.Settings.LightningAddress.deleteAddressConfirm": "Apakah Anda yakin ingin menghapus alamat ZEUS Pay Lightning Anda? Tindakan ini tidak dapat dibatalkan.",
+    "views.Settings.LightningAddress.deletePayment": "Delete payment",
+    "views.Settings.LightningAddress.deletePaymentConfirm": "Are you sure you want to delete this payment? This action cannot be undone.",
     "views.Settings.LightningAddressInfo.title": "Info alamat Lightning",
     "views.Settings.LightningAddressInfo.explainer1": "Alamat Lightning ini dihosting dan didukung oleh LSP kami, OLYMPUS by ZEUS, yang memungkinkan Anda menerima pembayaran bahkan saat Anda sedang offline.",
     "views.Settings.LightningAddressInfo.explainer2": "Ini menggunakan hash pembayaran yang dihasilkan pada perangkat Anda, dan faktur hodl, yang berarti LSP hanya dapat menyimpan dana untuk sementara dan meneruskannya kepada Anda, atau mengembalikannya ke pengirim (setelah masa kedaluwarsa 24 jam). Dengan begitu, dana tetap berada di bawah kontrol mandiri.",
