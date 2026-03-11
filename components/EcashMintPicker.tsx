@@ -74,10 +74,14 @@ export default class EcashMintPicker extends React.Component<
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
             const mintInfo = mintInfos[mintUrl];
+            const mintBalance = Number(mintBalances[mintUrl]);
             mints[mintUrl] = {
                 ...mintInfo,
                 mintUrl,
-                mintBalance: mintBalances[mintUrl] || 0,
+                mintBalance:
+                    Number.isFinite(mintBalance) && mintBalance > 0
+                        ? mintBalance
+                        : 0,
                 errorConnecting: wallet?.errorConnecting
             };
         });
@@ -118,7 +122,7 @@ export default class EcashMintPicker extends React.Component<
         const selectedMints = selectedMintUrls || [];
         const selectedMintBalance = selectedMints.reduce(
             (total: number, mintUrl: string) =>
-                total + (mints[mintUrl]?.mintBalance || 0),
+                total + Number(mints[mintUrl]?.mintBalance || 0),
             0
         );
         const multiMintLabel =
