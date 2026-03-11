@@ -45,14 +45,13 @@ import {
     validateChannelBackupFile
 } from '../../utils/ChannelMigrationUtils';
 
-import lndMobile from '../../lndmobile/LndMobileInjection';
-
 import ModalStore from '../../stores/ModalStore';
 
 import {
     createLndWallet,
     optimizeNeutrinoPeers,
-    stopLnd
+    stopLnd,
+    waitForRpcReady
 } from '../../utils/LndMobileUtils';
 
 import {
@@ -266,7 +265,7 @@ export default class SeedRecovery extends React.PureComponent<
                 mode: 'import'
             });
             if (result.uri) {
-                const fileName = result.name ?? 'channel.sqlite';
+                const fileName = result.name ?? 'graph-backup';
                 const validation = await validateChannelBackupFile(
                     result.uri,
                     fileName
