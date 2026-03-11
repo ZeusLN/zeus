@@ -793,8 +793,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SyncStore.checkRecoveryStatus();
                 await NodeInfoStore.getNodeInfo();
                 NodeInfoStore.getNetworkInfo();
-                await UTXOsStore.listAccounts();
-                await BalanceStore.getCombinedBalance(false);
+                if (BackendUtils.supportsAccounts())
+                    await UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance();
                 ChannelsStore.getChannelsWithPolling().then(() => {
                     // Check for sweep to self-custody threshold after channels are online
                     if (settings?.ecash?.enableCashu) {
@@ -934,7 +935,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await UTXOsStore.listAccounts();
                 }
                 await BalanceStore.getCombinedBalance();
-                await ChannelsStore.getChannels();
+                if (BackendUtils.supportsChannelManagement())
+                    await ChannelsStore.getChannels();
             } catch (connectionError) {
                 console.log('Node connection failed:', connectionError);
                 NodeInfoStore.handleGetNodeInfoError();
