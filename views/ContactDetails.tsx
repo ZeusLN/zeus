@@ -9,8 +9,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import {
-    SharedImage,
-    SharedView,
     SharedText,
     sharedTransitionEntering
 } from '../components/SharedTransition';
@@ -23,6 +21,7 @@ import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 import { Row } from '../components/layout/Row';
+import { ContactAvatar } from '../components/ContactAvatar';
 
 import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
@@ -36,7 +35,6 @@ import QR from '../assets/images/SVG/QR.svg';
 import Ecash from '../assets/images/SVG/Ecash.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
-import { getAvatarInitials } from '../utils/DisplayUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -128,8 +126,8 @@ export default class ContactDetails extends React.Component<
 
             await this.fetchContact();
 
-            this.props.navigation.addListener('focus', () => {
-                this.fetchContact();
+            this.props.navigation.addListener('focus', async () => {
+                await this.fetchContact();
             });
         } catch (error) {
             console.error(error);
@@ -369,57 +367,15 @@ export default class ContactDetails extends React.Component<
                             navigation={navigation}
                         />
                         <View style={{ alignItems: 'center', marginTop: 20 }}>
-                            {contactPhoto ? (
-                                <SharedImage
-                                    tag={`contact-photo-${contactId}`}
-                                    source={{ uri: contactPhoto }}
-                                    style={{
-                                        width: 150,
-                                        height: 150,
-                                        borderRadius: 75,
-                                        marginBottom: 20
-                                    }}
-                                />
-                            ) : (
-                                contactId && (
-                                    <SharedView
-                                        tag={`contact-photo-${contactId}`}
-                                        style={{
-                                            width: 150,
-                                            height: 150,
-                                            borderRadius: 75,
-                                            marginBottom: 20,
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            overflow: 'hidden'
-                                        }}
-                                    >
-                                        {contactHasOnlyCashuPubkey ? (
-                                            <Ecash
-                                                fill="#FACC15"
-                                                width={64}
-                                                height={64}
-                                            />
-                                        ) : getAvatarInitials(contactName) ? (
-                                            <Text
-                                                style={{
-                                                    fontSize: 48,
-                                                    fontWeight: 'bold',
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {getAvatarInitials(contactName)}
-                                            </Text>
-                                        ) : (
-                                            <Text style={{ fontSize: 64 }}>
-                                                ⚡
-                                            </Text>
-                                        )}
-                                    </SharedView>
-                                )
-                            )}
+                            <ContactAvatar
+                                contactId={contactId}
+                                imageUrl={contactPhoto}
+                                name={contactName}
+                                size="large"
+                                contactHasOnlyCashuPubkey={
+                                    contactHasOnlyCashuPubkey
+                                }
+                            />
                             {contactName && (
                                 <SharedText
                                     tag={`contact-name-${contactId}`}
@@ -470,65 +426,19 @@ export default class ContactDetails extends React.Component<
                                     }}
                                 />
                             )}
-                            {contact.photo ? (
-                                <SharedImage
-                                    tag={`contact-photo-${
-                                        contactId ||
-                                        contact.contactId ||
-                                        contact.id
-                                    }`}
-                                    source={{ uri: contact.getPhoto }}
-                                    style={{
-                                        width: 150,
-                                        height: 150,
-                                        borderRadius: 75,
-                                        marginBottom: 20,
-                                        marginTop: contact.banner ? -100 : 0
-                                    }}
-                                    entering={sharedTransitionEntering}
-                                />
-                            ) : (
-                                <SharedView
-                                    tag={`contact-photo-${
-                                        contactId ||
-                                        contact.contactId ||
-                                        contact.id
-                                    }`}
-                                    style={{
-                                        width: 150,
-                                        height: 150,
-                                        borderRadius: 75,
-                                        marginBottom: 20,
-                                        marginTop: contact.banner ? -100 : 0,
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        overflow: 'hidden'
-                                    }}
-                                    entering={sharedTransitionEntering}
-                                >
-                                    {contact.getAvatarInitials ? (
-                                        <Text
-                                            style={{
-                                                fontSize: 48,
-                                                fontWeight: 'bold',
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {contact.getAvatarInitials}
-                                        </Text>
-                                    ) : contact.hasOnlyCashuPubkey ? (
-                                        <Ecash
-                                            fill="#FACC15"
-                                            width={64}
-                                            height={64}
-                                        />
-                                    ) : (
-                                        <Text style={{ fontSize: 64 }}>⚡</Text>
-                                    )}
-                                </SharedView>
-                            )}
+                            <ContactAvatar
+                                size="large"
+                                sharedTransitionEntering={
+                                    sharedTransitionEntering
+                                }
+                                style={{ marginTop: contact.banner ? -100 : 0 }}
+                                contactId={contactId}
+                                contactHasOnlyCashuPubkey={
+                                    contactHasOnlyCashuPubkey
+                                }
+                                name={contactName || contact.name}
+                                imageUrl={contactPhoto || contact.getPhoto}
+                            />
                             <SharedText
                                 tag={`contact-name-${
                                     contactId || contact.contactId || contact.id
@@ -537,7 +447,7 @@ export default class ContactDetails extends React.Component<
                                     fontSize: 40,
                                     fontWeight: 'bold',
                                     marginBottom: 10,
-                                    color: 'white'
+                                    color: themeColor('text')
                                 }}
                                 entering={sharedTransitionEntering}
                             >
@@ -755,12 +665,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 75,
         alignSelf: 'center'
-    },
-    contactName: {
-        fontSize: 40,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: 'white'
     },
     contactDescription: {
         fontSize: 20,

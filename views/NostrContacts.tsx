@@ -14,7 +14,7 @@ import { CheckBox, Icon } from '@rneui/themed';
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import { SharedImage, SharedText } from '../components/SharedTransition';
+import { SharedText } from '../components/SharedTransition';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -36,6 +36,7 @@ import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
+import { ContactAvatar } from '../components/ContactAvatar';
 
 interface NostrContactsProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -333,13 +334,10 @@ export default class NostrContacts extends React.Component<
                     }}
                 >
                     {item.picture && (
-                        <SharedImage
-                            tag={`contact-photo-${item.npub}`}
-                            source={{ uri: item.picture }}
+                        <ContactAvatar
+                            contactId={`${item.npub}`}
+                            imageUrl={item.picture}
                             style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 20,
                                 marginRight: 10
                             }}
                         />

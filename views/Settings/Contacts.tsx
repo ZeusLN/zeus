@@ -7,11 +7,7 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import {
-    SharedImage,
-    SharedView,
-    SharedText
-} from '../../components/SharedTransition';
+import { SharedText } from '../../components/SharedTransition';
 import { SearchBar, Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -20,6 +16,7 @@ import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
+import { ContactAvatar } from '../../components/ContactAvatar';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -33,7 +30,6 @@ import ContactStore, { CONTACTS_KEY } from '../../stores/ContactStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
-import Ecash from '../../assets/images/SVG/Ecash.svg';
 import { CashuLockSettingsParams } from '../Cashu/CashuLockSettings';
 
 export interface ContactsParams extends CashuLockSettingsParams {
@@ -235,48 +231,13 @@ export default class Contacts extends React.Component<
                         alignItems: 'center'
                     }}
                 >
-                    {contact.photo ? (
-                        <SharedImage
-                            tag={`contact-photo-${item.contactId || item.id}`}
-                            source={{ uri: contact.getPhoto }}
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 20,
-                                marginRight: 10
-                            }}
-                        />
-                    ) : (
-                        <SharedView
-                            tag={`contact-photo-${item.contactId || item.id}`}
-                            style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 20,
-                                marginRight: 10,
-                                backgroundColor: themeColor('secondary'),
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                overflow: 'hidden'
-                            }}
-                        >
-                            {contact.getAvatarInitials ? (
-                                <Text
-                                    style={{
-                                        fontSize: 16,
-                                        fontWeight: 'bold',
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {contact.getAvatarInitials}
-                                </Text>
-                            ) : contact.hasOnlyCashuPubkey ? (
-                                <Ecash fill="#FACC15" width={24} height={24} />
-                            ) : (
-                                <Text style={{ fontSize: 20 }}>⚡</Text>
-                            )}
-                        </SharedView>
-                    )}
+                    <ContactAvatar
+                        contactId={item.contactId || item.id}
+                        size="medium"
+                        imageUrl={contact.getPhoto}
+                        style={{ marginRight: 10 }}
+                        contactHasOnlyCashuPubkey={contact.hasOnlyCashuPubkey}
+                    />
                     <View style={{ flex: 1 }}>
                         <SharedText
                             tag={`contact-name-${item.contactId || item.id}`}

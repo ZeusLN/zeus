@@ -12,7 +12,6 @@ import Animated, {
 } from 'react-native-reanimated';
 
 export const sharedTransition = SharedTransition.springify(400).dampingRatio(1);
-
 export const sharedTransitionEntering = FadeIn.delay(350)
     .duration(220)
     .easing(Easing.out(Easing.cubic));
@@ -24,7 +23,7 @@ interface SharedBaseProps {
      * Optional entering animation. Pass `sharedTransitionEntering` on
      * destination screens to fade content in after the transition lands.
      */
-    entering?: any;
+    entering?: FadeIn;
     /** Override the default shared transition style when needed. */
     transitionStyle?: SharedTransition;
 }

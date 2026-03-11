@@ -5,8 +5,7 @@ import {
     ScrollView,
     StyleSheet,
     TouchableOpacity,
-    View,
-    Image
+    View
 } from 'react-native';
 
 import {
@@ -23,6 +22,7 @@ import BigNumber from 'bignumber.js';
 
 import Channel from '../../models/Channel';
 import ClosedChannel from '../../models/ClosedChannel';
+import Contact from '../../models/Contact';
 
 import Amount from '../../components/Amount';
 import BalanceSlider from '../../components/BalanceSlider';
@@ -38,6 +38,8 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
+import { ContactAvatar } from '../../components/ContactAvatar';
+import { SharedText } from '../../components/SharedTransition';
 
 import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -45,8 +47,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
-import { getPhoto } from '../../utils/PhotoUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import ContactStore from '../../stores/ContactStore';
@@ -185,7 +187,9 @@ export default class ChannelView extends React.Component<
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
-        return contacts.find((contact: any) => contact.pubkey.includes(pubkey));
+        return contacts.find((contact: Contact) =>
+            contact.pubkey.includes(pubkey)
+        );
     };
 
     renderContactLink = (remotePubkey: string) => {
@@ -200,27 +204,28 @@ export default class ChannelView extends React.Component<
                     onPress={() => {
                         this.props.navigation.navigate('ContactDetails', {
                             contactId: contact.contactId || contact.id,
+                            contactPhoto: getPhoto(contact.photo),
+                            contactName: contact.name,
                             isNostrContact: false
                         });
                     }}
                 >
-                    {contact.photo && (
-                        <Image
-                            source={{ uri: getPhoto(contact.photo) }}
-                            style={styles.image}
-                        />
-                    )}
-                    <View>
-                        <Text
-                            style={{
-                                fontSize: 18,
-                                color: themeColor('highlight'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {contact.name}
-                        </Text>
-                    </View>
+                    <ContactAvatar
+                        size="small"
+                        contactId={contact.contactId}
+                        imageUrl={getPhoto(contact.photo)}
+                        style={{ marginRight: 10 }}
+                    />
+                    <SharedText
+                        tag={`contact-name-${contact.contactId}`}
+                        style={{
+                            fontSize: 18,
+                            color: themeColor('highlight'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {contact.name}
+                    </SharedText>
                 </TouchableOpacity>
             );
         }
