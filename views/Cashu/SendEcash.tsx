@@ -299,7 +299,8 @@ export default class SendEcash extends React.Component<
                         this.resetForm();
                         navigation.navigate('CashuToken', {
                             token,
-                            decoded
+                            decoded,
+                            startOnQrTab: true
                         });
                     }
                 }

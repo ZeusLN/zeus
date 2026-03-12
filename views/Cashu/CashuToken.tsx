@@ -35,7 +35,10 @@ interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
-    route: Route<'CashuToken', { token?: string; decoded: CashuToken }>;
+    route: Route<
+        'CashuToken',
+        { token?: string; decoded: CashuToken; startOnQrTab?: boolean }
+    >;
 }
 
 interface CashuTokenState {
@@ -88,6 +91,10 @@ export default class CashuTokenView extends React.Component<
 
         if (token) {
             this.setState({ isTokenTooLarge: token.length > MAX_TOKEN_LENGTH });
+        }
+
+        if (route.params?.startOnQrTab) {
+            this.setState({ infoIndex: 1 });
         }
 
         if (!spent) {
