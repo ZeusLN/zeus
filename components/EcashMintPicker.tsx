@@ -70,18 +70,14 @@ export default class EcashMintPicker extends React.Component<
             !overrideMintUrl &&
             mintUrls.length > 1;
 
-        const mints: any = {};
+        let mints: any = {};
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
             const mintInfo = mintInfos[mintUrl];
-            const mintBalance = Number(mintBalances[mintUrl]);
             mints[mintUrl] = {
                 ...mintInfo,
                 mintUrl,
-                mintBalance:
-                    Number.isFinite(mintBalance) && mintBalance > 0
-                        ? mintBalance
-                        : 0,
+                mintBalance: mintBalances[mintUrl] || 0,
                 errorConnecting: wallet?.errorConnecting
             };
         });
@@ -126,8 +122,8 @@ export default class EcashMintPicker extends React.Component<
             0
         );
         const multiMintLabel =
-            selectedMints.length >= 3
-                ? '...'
+            selectedMints.length === 1
+                ? mints[selectedMints[0]]?.name
                 : `${selectedMints.length} ${localeString('cashu.mints')}`;
 
         const getMintIcons = (mintList: string[]) => {
