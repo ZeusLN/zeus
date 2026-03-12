@@ -134,15 +134,6 @@ export default class MultimintPayment extends React.Component<
     executePayment = async () => {
         const { CashuStore, route } = this.props;
 
-        if (!CashuStore) {
-            this.setState({
-                step: MultinutPaymentStep.FAILED,
-                isProcessing: false,
-                error: 'CashuStore not available'
-            });
-            return;
-        }
-
         try {
             this.setState((prev) => ({
                 step: MultinutPaymentStep.PROCESSING,
@@ -155,17 +146,17 @@ export default class MultimintPayment extends React.Component<
                 }))
             }));
 
-            const payment = await CashuStore.payLnInvoiceFromEcash({
+            const payment = await CashuStore!!.payLnInvoiceFromEcash({
                 amount: route.params?.paymentAmount,
                 onProgress: this.onProgressUpdate
             });
 
-            if (!payment || CashuStore.paymentError) {
+            if (!payment || CashuStore!!.paymentError) {
                 this.setState({
                     step: MultinutPaymentStep.FAILED,
                     isProcessing: false,
                     error:
-                        CashuStore.paymentErrorMsg ||
+                        CashuStore!!.paymentErrorMsg ||
                         localeString('stores.CashuStore.errorPayingInvoice')
                 });
                 return;
@@ -367,7 +358,8 @@ export default class MultimintPayment extends React.Component<
                                     <Text
                                         style={{
                                             color: themeColor('text'),
-                                            paddingTop: 12,
+                                            marginTop: 8,
+                                            marginBottom: 16,
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize: 18
                                         }}
@@ -379,7 +371,7 @@ export default class MultimintPayment extends React.Component<
                                 </>
                             )}
 
-                            <View style={{ marginTop: 10, marginBottom: 8 }}>
+                            <View style={{ marginBottom: 8 }}>
                                 <Amount
                                     sats={paymentAmount}
                                     sensitive
@@ -388,29 +380,32 @@ export default class MultimintPayment extends React.Component<
                                 />
                             </View>
 
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Text
+                            {step !== MultinutPaymentStep.COMPLETE && (
+                                <View
                                     style={{
-                                        color: themeColor('secondaryText'),
-                                        marginRight: 6,
-                                        fontFamily: 'PPNeueMontreal-Book'
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        marginTop: 8
                                     }}
                                 >
-                                    {localeString(
-                                        'views.Cashu.MultimintPayment.totalAvailable'
-                                    )}
-                                </Text>
-                                <Amount
-                                    sats={totalSelectedBalance}
-                                    sensitive
-                                    color="secondaryText"
-                                />
-                            </View>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            marginRight: 6,
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.MultimintPayment.totalAvailable'
+                                        )}
+                                    </Text>
+                                    <Amount
+                                        sats={totalSelectedBalance}
+                                        sensitive
+                                        color="secondaryText"
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
 
