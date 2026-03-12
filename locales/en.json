@@ -957,6 +957,7 @@
     "views.Tools.migration.export.backupFound": "backup found",
     "views.Tools.migration.import.success": "Import Successful",
     "views.Tools.migration.export.success.text": "Your channel database has been exported. Please restart the app to apply the configuration and lock the wallet.",
+    "views.Tools.migration.export.success.text.android": "Your channel database has been saved to your Downloads folder. Please restart the app to apply the configuration and lock the wallet.",
     "views.Tools.migration.import.success.text1": "Your channel database has been restored. Please restart the app to initialize your channels.",
     "views.Tools.migration.import.success.text2": "Please note: It may take several minutes for your channels to sync and come back online.",
     "views.Tools.migration.import.message1": "Do you have a channel database backup from your old device?",

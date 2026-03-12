@@ -42,6 +42,10 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
     return tempPath;
 };
 
+/**
+ * Validates a channel backup file before import
+ * Checks extension, file existence, and non-empty size
+ */
 export const validateChannelBackupFile = async (
     fileUri: string,
     fileName: string
@@ -456,6 +460,10 @@ export const restoreChannelBackupFromOlympus = async (
     }
 };
 
+/**
+ * Exports the graph data bundle to a local .zeusbackup file
+ * On Android, saves directly to Downloads; on iOS, opens share sheet
+ */
 export const exportChannelDb = async (
     lndDir: string,
     isTestnet: boolean,
@@ -528,7 +536,11 @@ export const exportChannelDb = async (
             );
             Alert.alert(
                 localeString('views.Tools.migration.export.success'),
-                localeString('views.Tools.migration.export.success.text'),
+                localeString(
+                    Platform.OS === 'android'
+                        ? 'views.Tools.migration.export.success.text.android'
+                        : 'views.Tools.migration.export.success.text'
+                ),
                 [
                     {
                         text: localeString('views.Wallet.restart'),
@@ -588,6 +600,10 @@ export const exportChannelDb = async (
     }
 };
 
+/**
+ * Imports a graph data bundle from a local .zeusbackup file
+ * Validates the file, cleans the destination directory, and writes all files
+ */
 export const importChannelDb = async (
     sourceUri: string,
     fileName: string,
