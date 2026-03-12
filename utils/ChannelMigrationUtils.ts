@@ -29,6 +29,19 @@ interface ChannelBackupBundle {
     files: Record<string, string>;
 }
 
+/**
+ * On Android, DocumentPicker returns content:// URIs which RNFS cannot
+ * read directly. Copy the file to a temp path and return that path instead.
+ */
+const resolveToLocalPath = async (uri: string): Promise<string> => {
+    if (Platform.OS !== 'android' || !uri.startsWith('content://')) {
+        return uri;
+    }
+    const tempPath = `${RNFS.CachesDirectoryPath}/zeus-import-temp.zeusbackup`;
+    await RNFS.copyFile(uri, tempPath);
+    return tempPath;
+};
+
 export const validateChannelBackupFile = async (
     fileUri: string,
     fileName: string
@@ -46,7 +59,8 @@ export const validateChannelBackupFile = async (
     }
 
     try {
-        const stat = await RNFS.stat(fileUri);
+        const localPath = await resolveToLocalPath(fileUri);
+        const stat = await RNFS.stat(localPath);
         if (!stat.size || stat.size === 0) {
             return {
                 valid: false,
@@ -306,7 +320,7 @@ export const restoreChannelBackupFromOlympus = async (
                     { cancelable: false }
                 );
             });
-            return false;
+            return;
         }
 
         const userConfirmed = await new Promise<boolean>((resolve) => {
@@ -507,6 +521,32 @@ export const exportChannelDb = async (
 
         if (setLoading) setLoading(false);
 
+        const finishExport = async () => {
+            await Storage.setItem(
+                CHANNEL_MIGRATION_ACTIVE,
+                JSON.stringify({ migrationStatus: true, lndDir })
+            );
+            Alert.alert(
+                localeString('views.Tools.migration.export.success'),
+                localeString('views.Tools.migration.export.success.text'),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+        };
+
+        if (Platform.OS === 'android') {
+            const downloadPath = `${RNFS.DownloadDirectoryPath}/${backupFileName}`;
+            await RNFS.copyFile(stagingPath, downloadPath);
+            await RNFS.unlink(stagingPath);
+            await finishExport();
+            return;
+        }
+
         try {
             const shareResult = await Share.open({
                 title: localeString('views.Tools.migration.export.title'),
@@ -524,23 +564,8 @@ export const exportChannelDb = async (
                 return;
             }
 
-            await Storage.setItem(
-                CHANNEL_MIGRATION_ACTIVE,
-                JSON.stringify({ migrationStatus: true, lndDir })
-            );
             await RNFS.unlink(stagingPath);
-
-            Alert.alert(
-                localeString('views.Tools.migration.export.success'),
-                localeString('views.Tools.migration.export.success.text'),
-                [
-                    {
-                        text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
-                    }
-                ],
-                { cancelable: false }
-            );
+            await finishExport();
         } catch (err: any) {
             if (await RNFS.exists(stagingPath)) {
                 await RNFS.unlink(stagingPath);
@@ -587,32 +612,25 @@ export const importChannelDb = async (
         await RNFS.mkdir(destFolder);
     }
 
-    const isBundle = fileName.toLowerCase().endsWith('.zeusbackup');
+    const localPath = await resolveToLocalPath(sourceUri);
+    const content = await RNFS.readFile(localPath, 'utf8');
+    const bundle: ChannelBackupBundle = JSON.parse(content);
 
-    if (isBundle) {
-        const content = await RNFS.readFile(sourceUri, 'utf8');
-        const bundle: ChannelBackupBundle = JSON.parse(content);
+    if (!bundle.files) {
+        throw new Error('Invalid backup bundle format');
+    }
 
-        if (!bundle.files) {
-            throw new Error('Invalid backup bundle format');
-        }
-
-        try {
-            const existing = await RNFS.readDir(destFolder);
-            for (const item of existing) {
-                if (item.isFile()) {
-                    await RNFS.unlink(item.path);
-                }
+    try {
+        const existing = await RNFS.readDir(destFolder);
+        for (const item of existing) {
+            if (item.isFile()) {
+                await RNFS.unlink(item.path);
             }
-        } catch (e) {}
-
-        for (const [name, base64Data] of Object.entries(bundle.files)) {
-            const destPath = `${destFolder}/${name}`;
-            await ReactNativeBlobUtil.fs.writeFile(
-                destPath,
-                base64Data,
-                'base64'
-            );
         }
+    } catch (e) {}
+
+    for (const [name, base64Data] of Object.entries(bundle.files)) {
+        const destPath = `${destFolder}/${name}`;
+        await ReactNativeBlobUtil.fs.writeFile(destPath, base64Data, 'base64');
     }
 };
