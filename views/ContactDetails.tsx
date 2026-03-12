@@ -93,6 +93,7 @@ export default class ContactDetails extends React.Component<
     ContactDetailsProps,
     ContactDetailsState
 > {
+    private focusListener?: () => void;
     constructor(props: ContactDetailsProps) {
         super(props);
 
@@ -126,11 +127,20 @@ export default class ContactDetails extends React.Component<
 
             await this.fetchContact();
 
-            this.props.navigation.addListener('focus', async () => {
-                await this.fetchContact();
-            });
+            this.focusListener = this.props.navigation.addListener(
+                'focus',
+                async () => {
+                    await this.fetchContact();
+                }
+            );
         } catch (error) {
             console.error(error);
+        }
+    }
+
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
         }
     }
 
