@@ -115,9 +115,7 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
         'error reading from server: EOF',
         'channel event store shutting down'
     ],
-    [LndErrorCode.WALLET_RECOVERY_IN_PROGRESS]: [
-        'wallet recovery in progress'
-    ]
+    [LndErrorCode.WALLET_RECOVERY_IN_PROGRESS]: ['wallet recovery in progress']
 };
 
 /**

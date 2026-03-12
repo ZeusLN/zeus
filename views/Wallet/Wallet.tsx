@@ -716,23 +716,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     try {
                         AlertStore.checkNeutrinoPeers();
 
-                    const isChannelMigrating =
-                        this.state.isChannelMigrating ||
-                        SettingsStore.isChannelMigrating;
+                        const isChannelMigrating =
+                            this.state.isChannelMigrating ||
+                            SettingsStore.isChannelMigrating;
 
-                    if (isChannelMigrating) {
-                        try {
-                            await stopLnd();
-                        } catch (e) {
-                            console.log('stopLnd in migration mode:', e);
+                        if (isChannelMigrating) {
+                            try {
+                                await stopLnd();
+                            } catch (e) {
+                                console.log('stopLnd in migration mode:', e);
+                            }
+                            console.log(
+                                'Wallet is in migration lock mode - skipping LND startup'
+                            );
+                            this.setState({ loading: false });
+                            setConnectingStatus(false);
+                            return;
                         }
-                        console.log(
-                            'Wallet is in migration lock mode - skipping LND startup'
-                        );
-                        this.setState({ loading: false });
-                        setConnectingStatus(false);
-                        return;
-                    }
 
                         // Skip stopLnd when wallet is already closed (e.g. after delete)
                         if (!recovery && SettingsStore.embeddedLndStarted) {
