@@ -132,17 +132,13 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.migration.export.confirm'),
                     style: 'default',
                     onPress: async () => {
-                        const { SettingsStore, NodeInfoStore } = this.props;
-                        const { isSqlite }: any = SettingsStore;
+                        const { NodeInfoStore } = this.props;
                         const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
                         const lndDir = () =>
                             this.props.SettingsStore.lndDir || 'lnd';
 
-                        await exportChannelDb(
-                            lndDir(),
-                            isTestnet,
-                            isSqlite,
-                            (loading) => this.setState({ isLoading: loading })
+                        await exportChannelDb(lndDir(), isTestnet, (loading) =>
+                            this.setState({ isLoading: loading })
                         );
                     }
                 }
