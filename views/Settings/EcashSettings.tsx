@@ -207,7 +207,8 @@ export default class EcashSettings extends React.Component<
                         <View
                             style={{
                                 flex: 1,
-                                justifyContent: 'center'
+                                justifyContent: 'center',
+                                marginRight: 10
                             }}
                         >
                             <Text
