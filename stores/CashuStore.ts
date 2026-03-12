@@ -928,14 +928,29 @@ export default class CashuStore {
             new Set(selectedMints.map((mint) => this.normalizeMintUrl(mint)))
         );
 
-        const supportedMints = uniqueSelectedMints.filter((mintUrl) =>
-            this.mintSupportsMpp(mintUrl)
-        );
+        const supportedMints = uniqueSelectedMints.filter((mintUrl) => {
+            const normalizedUrl = this.normalizeMintUrl(mintUrl);
+            const mintInfo =
+                this.mintInfos[normalizedUrl] || this.mintInfos[mintUrl];
+            const hasNuts15 = !!mintInfo?.nuts?.['15'];
+            const supports =
+                hasNuts15 &&
+                (mintInfo?.nuts?.['15']?.methods || []).some(
+                    (m: any) =>
+                        m.method?.toLowerCase() === 'bolt11' &&
+                        m.unit?.toLowerCase() === 'sat'
+                );
+            return supports;
+        });
 
         const balances = await CashuDevKit.getBalances();
         const normalizedBalances = Object.entries(balances).reduce(
             (acc, [mintUrl, balance]) => {
-                acc[this.normalizeMintUrl(mintUrl)] = balance;
+                const parsedBalance = Number(balance);
+                acc[this.normalizeMintUrl(mintUrl)] =
+                    Number.isFinite(parsedBalance) && parsedBalance > 0
+                        ? parsedBalance
+                        : 0;
                 return acc;
             },
             {} as Record<string, number>
@@ -980,10 +995,11 @@ export default class CashuStore {
                     mpp: { amount: initialAllocation * 1000 }
                 });
 
-                let totalNeeded = quote.amount + quote.fee_reserve;
+                let totalNeeded =
+                    Number(quote.amount) + Number(quote.fee_reserve);
 
                 if (totalNeeded > mintBalance) {
-                    const maxPayable = mintBalance - quote.fee_reserve;
+                    const maxPayable = mintBalance - Number(quote.fee_reserve);
 
                     if (maxPayable <= 0) {
                         continue;
@@ -995,7 +1011,8 @@ export default class CashuStore {
                         mpp: { amount: amount * 1000 }
                     });
 
-                    totalNeeded = quote.amount + quote.fee_reserve;
+                    totalNeeded =
+                        Number(quote.amount) + Number(quote.fee_reserve);
 
                     if (totalNeeded > mintBalance) {
                         continue;
@@ -1043,10 +1060,11 @@ export default class CashuStore {
         return uniqueMintUrls.map((mintUrl) => ({
             mintUrl,
             mintName: this.getMintName(mintUrl),
-            balance:
+            balance: Number(
                 this.mintBalances[mintUrl] ||
-                this.mintBalances[this.normalizeMintUrl(mintUrl)] ||
-                0,
+                    this.mintBalances[this.normalizeMintUrl(mintUrl)] ||
+                    0
+            ),
             selected: selectedMintSet.has(mintUrl),
             status: MintPaymentStatus.IDLE,
             allocatedAmount: 0

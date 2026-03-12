@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Icon, ListItem } from '@rneui/themed';
 
 import Amount from '../../components/Amount';
@@ -34,7 +34,7 @@ import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
 interface MultimintPaymentProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'MultimintPayment', { paymentAmount?: string }>;
     CashuStore?: CashuStore;
 }
