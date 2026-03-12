@@ -57,6 +57,7 @@ interface SeedProps {
         'Seed',
         {
             seedPhrase?: string[];
+            skipWarning?: boolean;
         }
     >;
 }
@@ -120,7 +121,7 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
-        understood: false,
+        understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
         isDeleteModalVisible: false,
         isChannelExporting: false
