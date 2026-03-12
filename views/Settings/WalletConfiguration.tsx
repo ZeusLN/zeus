@@ -817,7 +817,7 @@ export default class WalletConfiguration extends React.Component<
 
     private performDelete = () => {
         const { implementation, active } = this.state;
-        const { ChannelsStore, BalanceStore } = this.props;
+        const { ChannelsStore, BalanceStore, navigation } = this.props;
 
         if (implementation === 'embedded-lnd' && !active) {
             Alert.alert(
@@ -858,9 +858,16 @@ export default class WalletConfiguration extends React.Component<
                         onPress: () => this.deleteNodeConfig()
                     },
                     {
-                        text: localeString('general.cancel'),
-                        onPress: () => void 0,
+                        text: localeString(
+                            'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                        ),
+                        onPress: () =>
+                            navigation.navigate('Seed', { skipWarning: true }),
                         isPreferred: true
+                    },
+                    {
+                        text: localeString('general.cancel'),
+                        onPress: () => void 0
                     }
                 ],
                 { cancelable: false }
