@@ -67,8 +67,6 @@ import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 import NavigationService from '../NavigationService';
 
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
-const MULTIMINT_SPLIT_REJECTED_MESSAGE =
-    'A selected mint rejected the split amount; try fewer mints.';
 
 const UPGRADE_THRESHOLDS = [10000, 25000, 50000, 100000];
 const UPGRADE_MESSAGES: { [key: number]: string } = {
@@ -224,7 +222,6 @@ export default class CashuStore {
     @observable public paymentStartTime?: number;
     @observable public paymentDuration?: number;
     @observable public paymentFee?: number;
-    @observable public lastMultiMintUsedMints: string[] = [];
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable public trustedMintRecommendations?: MintRecommendation[];
@@ -307,7 +304,6 @@ export default class CashuStore {
         this.paymentErrorMsg = '';
         this.paymentStartTime = undefined;
         this.noteKey = undefined;
-        this.lastMultiMintUsedMints = [];
     };
 
     /**
@@ -917,15 +913,12 @@ export default class CashuStore {
         return Number.isInteger(value) && value >= min ? value : undefined;
     };
 
-    private isMultimintSplitRejectedError = (error: any): boolean => {
-        const errorType = String(error?.type || '').toLowerCase();
-        const message = String(error?.message || error || '').toLowerCase();
-
-        return (
-            errorType === 'multimintquoterejected' ||
-            message.includes('quote amount not as requested') ||
-            message.includes('11000') ||
-            message.includes('selected mint rejected the split amount')
+    private getTotalAllocatedFromMeltQuotes = (
+        quotes: { mintUrl: string; meltQuote: CDKMeltQuote }[]
+    ): number => {
+        return quotes.reduce(
+            (sum, { meltQuote }) => sum + (Number(meltQuote.amount) || 0),
+            0
         );
     };
 
@@ -951,7 +944,6 @@ export default class CashuStore {
                 : this.selectedMintUrl
                 ? [this.selectedMintUrl]
                 : [];
-
         const uniqueSelectedMints = Array.from(
             new Set(selectedMints.map((mint) => this.normalizeMintUrl(mint)))
         );
@@ -969,15 +961,15 @@ export default class CashuStore {
             {} as Record<string, number>
         );
 
-        const mintsByLargestBalance = supportedMints
+        const mintsBySmallestBalance = supportedMints
             .map((mintUrl) => ({
                 mintUrl,
                 balance: normalizedBalances[mintUrl] || 0
             }))
             .filter(({ balance }) => balance > 0)
-            .sort((a, b) => b.balance - a.balance);
+            .sort((a, b) => a.balance - b.balance);
 
-        if (mintsByLargestBalance.length === 0 || amountToPay <= 0) {
+        if (mintsBySmallestBalance.length === 0 || amountToPay <= 0) {
             this.meltQuotes = [];
             return [];
         }
@@ -986,7 +978,7 @@ export default class CashuStore {
             [];
         let remainingAmount = amountToPay;
 
-        for (const { mintUrl } of mintsByLargestBalance) {
+        for (const { mintUrl } of mintsBySmallestBalance) {
             if (remainingAmount <= 0) {
                 break;
             }
@@ -1008,10 +1000,11 @@ export default class CashuStore {
                     mpp: { amount: initialAllocation * 1000 }
                 });
 
-                let totalNeeded = quote.amount + quote.fee_reserve;
+                let totalNeeded =
+                    Number(quote.amount) + Number(quote.fee_reserve);
 
                 if (totalNeeded > mintBalance) {
-                    const maxPayable = mintBalance - quote.fee_reserve;
+                    const maxPayable = mintBalance - Number(quote.fee_reserve);
 
                     if (maxPayable <= 0) {
                         continue;
@@ -1023,7 +1016,8 @@ export default class CashuStore {
                         mpp: { amount: amount * 1000 }
                     });
 
-                    totalNeeded = quote.amount + quote.fee_reserve;
+                    totalNeeded =
+                        Number(quote.amount) + Number(quote.fee_reserve);
 
                     if (totalNeeded > mintBalance) {
                         continue;
@@ -1042,7 +1036,7 @@ export default class CashuStore {
                 continue;
             }
         }
-
+        console.log(JSON.stringify(this.meltQuotes));
         this.meltQuotes = nextMeltQuotes;
         return nextMeltQuotes;
     };
@@ -1071,348 +1065,15 @@ export default class CashuStore {
         return uniqueMintUrls.map((mintUrl) => ({
             mintUrl,
             mintName: this.getMintName(mintUrl),
-            balance:
+            balance: Number(
                 this.mintBalances[mintUrl] ||
-                this.mintBalances[this.normalizeMintUrl(mintUrl)] ||
-                0,
+                    this.mintBalances[this.normalizeMintUrl(mintUrl)] ||
+                    0
+            ),
             selected: selectedMintSet.has(mintUrl),
             status: MintPaymentStatus.IDLE,
             allocatedAmount: 0
         }));
-    };
-
-    private payLnInvoiceFromEcashMultiMint = async ({
-        paymentAmt,
-        isDonationPayment,
-        onProgress
-    }: {
-        paymentAmt: number;
-        isDonationPayment: boolean;
-        onProgress?: MultimintProgressCallback;
-    }): Promise<CashuPayment | undefined> => {
-        const paymentRequest = this.paymentRequest;
-        const emptyMints: MintProgressInfo[] = [];
-
-        if (!paymentRequest) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = 'No payment request available';
-                this.loading = false;
-            });
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: emptyMints,
-                totalSelectedBalance: 0,
-                isProcessing: false
-            });
-            return;
-        }
-
-        const selectedMints =
-            this.selectedMintUrls.length > 0
-                ? this.selectedMintUrls
-                : this.selectedMintUrl
-                ? [this.selectedMintUrl]
-                : [];
-
-        const uniqueSelectedMints = Array.from(
-            new Set(selectedMints.map((mint) => this.normalizeMintUrl(mint)))
-        );
-
-        const supportedMints = uniqueSelectedMints.filter((mintUrl) =>
-            this.mintSupportsMpp(mintUrl)
-        );
-
-        if (supportedMints.length === 0) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.notEnoughFunds'
-                );
-                this.loading = false;
-            });
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: emptyMints,
-                totalSelectedBalance: 0,
-                isProcessing: false
-            });
-            return;
-        }
-
-        let plannedMeltQuotes: { mintUrl: string; meltQuote: CDKMeltQuote }[];
-
-        try {
-            plannedMeltQuotes = await this.prepareMultiMintMeltQuotesCDK({
-                invoice: paymentRequest,
-                amountToPay: paymentAmt,
-                mintUrls: supportedMints
-            });
-        } catch (error: any) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg =
-                    error?.message ||
-                    localeString('stores.CashuStore.errorPayingInvoice');
-                this.loading = false;
-            });
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: emptyMints,
-                totalSelectedBalance: 0,
-                isProcessing: false
-            });
-            return;
-        }
-
-        if (!plannedMeltQuotes.length) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.notEnoughFunds'
-                );
-                this.loading = false;
-            });
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: emptyMints,
-                totalSelectedBalance: 0,
-                isProcessing: false
-            });
-            return;
-        }
-
-        const totalPlannedAmount = plannedMeltQuotes.reduce(
-            (sum, { meltQuote }) => sum + (meltQuote.amount || 0),
-            0
-        );
-
-        if (totalPlannedAmount < paymentAmt) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.notEnoughFunds'
-                );
-                this.loading = false;
-            });
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: emptyMints,
-                totalSelectedBalance: 0,
-                isProcessing: false
-            });
-            return;
-        }
-
-        const mintProgressInfo: MintProgressInfo[] = plannedMeltQuotes.map(
-            ({ mintUrl, meltQuote }) => ({
-                mintUrl,
-                mintName: this.getMintName(mintUrl),
-                balance: this.mintBalances[mintUrl] || 0,
-                selected: true,
-                status: MintPaymentStatus.IDLE,
-                allocatedAmount: meltQuote.amount,
-                error: undefined
-            })
-        );
-
-        const totalSelectedBalance = mintProgressInfo.reduce(
-            (sum, mint) => sum + mint.balance,
-            0
-        );
-
-        onProgress?.({
-            step: MultinutPaymentStep.PROCESSING,
-            mints: [...mintProgressInfo],
-            totalSelectedBalance,
-            isProcessing: true
-        });
-
-        const meltResults = await Promise.all(
-            plannedMeltQuotes.map(async ({ mintUrl, meltQuote }, index) => {
-                try {
-                    mintProgressInfo[index].status =
-                        MintPaymentStatus.REQUESTING;
-                    mintProgressInfo[index].error = undefined;
-
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
-
-                    await this.ensureMintAdded(mintUrl);
-
-                    mintProgressInfo[index].status = MintPaymentStatus.PAYING;
-
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
-
-                    const meltResult = await CashuDevKit.melt(
-                        mintUrl,
-                        meltQuote.id
-                    );
-                    const meltState = (
-                        meltResult.state ||
-                        meltQuote.state ||
-                        ''
-                    ).toString();
-                    const normalizedMeltState =
-                        meltState.length > 0 ? meltState.toUpperCase() : 'PAID';
-
-                    if (normalizedMeltState !== 'PAID') {
-                        throw new Error(
-                            localeString('stores.CashuStore.errorPayingInvoice')
-                        );
-                    }
-
-                    const paymentPreimage =
-                        meltResult.preimage || meltQuote.payment_preimage || '';
-
-                    const payment = new CashuPayment({
-                        ...this.payReq,
-                        bolt11: this.paymentRequest,
-                        meltResponse: {
-                            quote: {
-                                quote: meltQuote.id,
-                                amount: meltQuote.amount,
-                                fee_reserve: meltQuote.fee_reserve,
-                                state: normalizedMeltState,
-                                expiry: meltQuote.expiry,
-                                payment_preimage: paymentPreimage || null
-                            },
-                            change: meltResult.change,
-                            state: normalizedMeltState,
-                            amount: meltResult.amount,
-                            fee_paid: meltResult.fee_paid,
-                            preimage: paymentPreimage
-                        },
-                        amount: meltResult.amount || meltQuote.amount,
-                        fee: meltResult.fee_paid,
-                        payment_preimage: paymentPreimage,
-                        mintUrl
-                    });
-
-                    mintProgressInfo[index].status = MintPaymentStatus.SUCCESS;
-                    mintProgressInfo[index].error = undefined;
-
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
-
-                    return { ok: true as const, payment };
-                } catch (error: any) {
-                    const errorMessage = this.isMultimintSplitRejectedError(
-                        error
-                    )
-                        ? MULTIMINT_SPLIT_REJECTED_MESSAGE
-                        : error?.message ||
-                          localeString('stores.CashuStore.errorPayingInvoice');
-
-                    mintProgressInfo[index].status = MintPaymentStatus.FAILED;
-                    mintProgressInfo[index].error = errorMessage;
-
-                    onProgress?.({
-                        step: MultinutPaymentStep.PROCESSING,
-                        mints: [...mintProgressInfo],
-                        totalSelectedBalance,
-                        isProcessing: true
-                    });
-
-                    return {
-                        ok: false as const,
-                        mintUrl,
-                        reason: errorMessage
-                    };
-                }
-            })
-        );
-
-        const segmentPayments = meltResults
-            .filter((result) => result.ok)
-            .map((result) => result.payment);
-        const failedMints = meltResults
-            .filter((result) => !result.ok)
-            .map((result) => ({
-                mintUrl: result.mintUrl,
-                reason: result.reason
-            }));
-
-        if (failedMints.length > 0 || segmentPayments.length === 0) {
-            const firstFailure = failedMints[0]?.reason;
-
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg =
-                    firstFailure ||
-                    localeString('stores.CashuStore.errorPayingInvoice');
-                this.loading = false;
-            });
-
-            onProgress?.({
-                step: MultinutPaymentStep.FAILED,
-                mints: [...mintProgressInfo],
-                totalSelectedBalance,
-                isProcessing: false
-            });
-
-            return;
-        }
-
-        this.payments?.push(...segmentPayments);
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-payments`,
-            this.payments
-        );
-
-        await this.syncCDKBalances(true);
-
-        const totalFeePaid = segmentPayments.reduce(
-            (sum, payment) => sum + (Number(payment.fee) || 0),
-            0
-        );
-
-        const firstPreimage = segmentPayments
-            .map((payment) => payment?.payment_preimage)
-            .find((value) => !!value);
-
-        const usedMints = segmentPayments
-            .map((payment) => this.normalizeMintUrl(payment.mintUrl))
-            .filter((mintUrl, index, list) => list.indexOf(mintUrl) === index);
-
-        runInAction(() => {
-            this.lastMultiMintUsedMints = usedMints;
-
-            if (!isDonationPayment) {
-                this.paymentPreimage = firstPreimage || '';
-                this.paymentSuccess = true;
-                this.paymentFee = totalFeePaid;
-                this.noteKey = segmentPayments[0]?.getNoteKey;
-                this.loading = false;
-            }
-
-            if (this.paymentStartTime) {
-                this.paymentDuration =
-                    (Date.now() - this.paymentStartTime) / 1000;
-            }
-        });
-
-        onProgress?.({
-            step: MultinutPaymentStep.COMPLETE,
-            mints: [...mintProgressInfo],
-            totalSelectedBalance,
-            isProcessing: false
-        });
-
-        return segmentPayments[0];
     };
 
     /**
@@ -2393,23 +2054,8 @@ export default class CashuStore {
     @action
     public setSelectedMint = async (mintUrl: string) => {
         this.clearInvoice();
-        await Promise.all([
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-selectedMintUrl`,
-                mintUrl
-            ),
-            Storage.setItem(
-                `${this.getLndDir()}-cashu-selectedMintUrls`,
-                JSON.stringify([mintUrl])
-            )
-        ]);
-
-        runInAction(() => {
-            this.selectedMintUrl = mintUrl;
-            this.selectedMintUrls = [mintUrl];
-        });
-
-        return mintUrl;
+        const selectedMintUrls = await this.setSelectedMintUrls([mintUrl]);
+        return selectedMintUrls[0] || mintUrl;
     };
 
     @action
@@ -3858,16 +3504,7 @@ export default class CashuStore {
                 ? normalizedMultiMintPaymentAmt || 0
                 : rawPaymentAmt;
 
-            let singleMeltQuote:
-                | {
-                      quote: string;
-                      amount: number;
-                      fee_reserve: number;
-                      state: string;
-                      expiry: number;
-                      payment_preimage?: string | null;
-                  }
-                | undefined;
+            let singleMeltQuote: typeof this.meltQuote;
 
             let totalFeeEstimate = 0;
 
@@ -3892,7 +3529,8 @@ export default class CashuStore {
                     }
 
                     const totalAllocated = preparedQuotes.reduce(
-                        (sum, { meltQuote }) => sum + (meltQuote.amount || 0),
+                        (sum, { meltQuote }) =>
+                            sum + (Number(meltQuote.amount) || 0),
                         0
                     );
 
@@ -3904,7 +3542,7 @@ export default class CashuStore {
 
                     totalFeeEstimate = preparedQuotes.reduce(
                         (sum, { meltQuote }) =>
-                            sum + (meltQuote.fee_reserve || 0),
+                            sum + (Number(meltQuote.fee_reserve) || 0),
                         0
                     );
                 } else {
@@ -3937,7 +3575,7 @@ export default class CashuStore {
                     payment_preimage: cdkQuote.payment_preimage
                 };
 
-                totalFeeEstimate = singleMeltQuote.fee_reserve || 0;
+                totalFeeEstimate = Number(singleMeltQuote.fee_reserve) || 0;
                 this.meltQuotes = [];
             }
 
@@ -3954,9 +3592,7 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log('getPayReq: Error caught', e?.message || e);
             }
-            const errorMsg = this.isMultimintSplitRejectedError(e)
-                ? MULTIMINT_SPLIT_REJECTED_MESSAGE
-                : errorToUserFriendly(e);
+            const errorMsg = errorToUserFriendly(e);
             runInAction(() => {
                 this.payReq = undefined;
                 this.meltQuotes = [];
@@ -3996,7 +3632,6 @@ export default class CashuStore {
             this.paymentSuccess = false;
             this.paymentError = false;
             this.paymentErrorMsg = '';
-            this.lastMultiMintUsedMints = [];
             this.paymentStartTime = Date.now();
         }
 
@@ -4103,7 +3738,6 @@ export default class CashuStore {
                     this.paymentSuccess = true;
                     this.paymentFee = realFee;
                     this.noteKey = payment.getNoteKey;
-                    this.lastMultiMintUsedMints = [mintUrl];
                     this.loading = false;
 
                     if (this.paymentStartTime) {
@@ -4130,6 +3764,282 @@ export default class CashuStore {
             }
             return;
         }
+    };
+
+    private payLnInvoiceFromEcashMultiMint = async ({
+        paymentAmt,
+        isDonationPayment,
+        onProgress
+    }: {
+        paymentAmt: number;
+        isDonationPayment: boolean;
+        onProgress?: MultimintProgressCallback;
+    }): Promise<CashuPayment | undefined> => {
+        const paymentRequest = this.paymentRequest;
+        const emptyMints: MintProgressInfo[] = [];
+        const plannedMeltQuotes = [...this.meltQuotes];
+        console.log('planned', JSON.stringify(plannedMeltQuotes));
+
+        if (!paymentRequest) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = 'No payment request available';
+                this.loading = false;
+            });
+            onProgress?.({
+                step: MultinutPaymentStep.FAILED,
+                mints: emptyMints,
+                totalSelectedBalance: 0,
+                isProcessing: false
+            });
+            return;
+        }
+
+        if (plannedMeltQuotes.length === 0) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.notEnoughFunds'
+                );
+                this.loading = false;
+            });
+            onProgress?.({
+                step: MultinutPaymentStep.FAILED,
+                mints: emptyMints,
+                totalSelectedBalance: 0,
+                isProcessing: false
+            });
+            return;
+        }
+
+        const totalPlannedAmount =
+            this.getTotalAllocatedFromMeltQuotes(plannedMeltQuotes);
+
+        if (totalPlannedAmount < paymentAmt) {
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.notEnoughFunds'
+                );
+                this.loading = false;
+            });
+            onProgress?.({
+                step: MultinutPaymentStep.FAILED,
+                mints: emptyMints,
+                totalSelectedBalance: 0,
+                isProcessing: false
+            });
+            return;
+        }
+
+        const mintProgressInfo: MintProgressInfo[] = plannedMeltQuotes.map(
+            ({ mintUrl, meltQuote }) => ({
+                mintUrl,
+                mintName: this.getMintName(mintUrl),
+                balance:
+                    this.mintBalances[mintUrl] ||
+                    this.mintBalances[this.normalizeMintUrl(mintUrl)] ||
+                    0,
+                selected: true,
+                status: MintPaymentStatus.IDLE,
+                allocatedAmount: Number(meltQuote.amount) || 0,
+                error: undefined
+            })
+        );
+
+        const totalSelectedBalance = mintProgressInfo.reduce(
+            (sum, mint) => sum + mint.balance,
+            0
+        );
+
+        onProgress?.({
+            step: MultinutPaymentStep.PROCESSING,
+            mints: [...mintProgressInfo],
+            totalSelectedBalance,
+            isProcessing: true
+        });
+
+        console.log('before promise');
+        const meltResults = await Promise.all(
+            plannedMeltQuotes.map(async ({ mintUrl, meltQuote }, index) => {
+                try {
+                    mintProgressInfo[index].status =
+                        MintPaymentStatus.REQUESTING;
+                    mintProgressInfo[index].error = undefined;
+
+                    onProgress?.({
+                        step: MultinutPaymentStep.PROCESSING,
+                        mints: [...mintProgressInfo],
+                        totalSelectedBalance,
+                        isProcessing: true
+                    });
+
+                    await this.ensureMintAdded(mintUrl);
+
+                    mintProgressInfo[index].status = MintPaymentStatus.PAYING;
+
+                    onProgress?.({
+                        step: MultinutPaymentStep.PROCESSING,
+                        mints: [...mintProgressInfo],
+                        totalSelectedBalance,
+                        isProcessing: true
+                    });
+                    console.log('before melt');
+                    const meltResult = await CashuDevKit.melt(
+                        mintUrl,
+                        meltQuote.id
+                    );
+                    console.log('melt result', meltResult);
+                    const meltState = (
+                        meltResult.state ||
+                        meltQuote.state ||
+                        ''
+                    ).toString();
+                    const normalizedMeltState =
+                        meltState.length > 0 ? meltState.toUpperCase() : 'PAID';
+
+                    if (normalizedMeltState !== 'PAID') {
+                        throw new Error(
+                            localeString('stores.CashuStore.errorPayingInvoice')
+                        );
+                    }
+
+                    const paymentPreimage =
+                        meltResult.preimage || meltQuote.payment_preimage || '';
+
+                    const payment = new CashuPayment({
+                        ...this.payReq,
+                        bolt11: this.paymentRequest,
+                        meltResponse: {
+                            quote: {
+                                quote: meltQuote.id,
+                                amount: meltQuote.amount,
+                                fee_reserve: meltQuote.fee_reserve,
+                                state: normalizedMeltState,
+                                expiry: meltQuote.expiry,
+                                payment_preimage: paymentPreimage || null
+                            },
+                            change: meltResult.change,
+                            state: normalizedMeltState,
+                            amount: meltResult.amount,
+                            fee_paid: meltResult.fee_paid,
+                            preimage: paymentPreimage
+                        },
+                        amount:
+                            Number(meltResult.amount) ||
+                            Number(meltQuote.amount) ||
+                            0,
+                        fee: meltResult.fee_paid,
+                        payment_preimage: paymentPreimage,
+                        mintUrl
+                    });
+
+                    mintProgressInfo[index].status = MintPaymentStatus.SUCCESS;
+                    mintProgressInfo[index].error = undefined;
+
+                    onProgress?.({
+                        step: MultinutPaymentStep.PROCESSING,
+                        mints: [...mintProgressInfo],
+                        totalSelectedBalance,
+                        isProcessing: true
+                    });
+
+                    return { ok: true as const, payment };
+                } catch (error: any) {
+                    const errorMessage =
+                        error?.message ||
+                        localeString('stores.CashuStore.errorPayingInvoice');
+
+                    mintProgressInfo[index].status = MintPaymentStatus.FAILED;
+                    mintProgressInfo[index].error = errorMessage;
+
+                    onProgress?.({
+                        step: MultinutPaymentStep.PROCESSING,
+                        mints: [...mintProgressInfo],
+                        totalSelectedBalance,
+                        isProcessing: true
+                    });
+
+                    return {
+                        ok: false as const,
+                        mintUrl,
+                        reason: errorMessage
+                    };
+                }
+            })
+        );
+
+        const segmentPayments = meltResults
+            .filter((result) => result.ok)
+            .map((result) => result.payment);
+        const failedMints = meltResults
+            .filter((result) => !result.ok)
+            .map((result) => ({
+                mintUrl: result.mintUrl,
+                reason: result.reason
+            }));
+
+        if (segmentPayments.length === 0) {
+            const firstFailure = failedMints[0]?.reason;
+
+            runInAction(() => {
+                this.paymentError = true;
+                this.paymentErrorMsg =
+                    firstFailure ||
+                    localeString('stores.CashuStore.errorPayingInvoice');
+                this.loading = false;
+            });
+
+            onProgress?.({
+                step: MultinutPaymentStep.FAILED,
+                mints: [...mintProgressInfo],
+                totalSelectedBalance,
+                isProcessing: false
+            });
+
+            return;
+        }
+
+        this.payments?.push(...segmentPayments);
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-payments`,
+            this.payments
+        );
+
+        await this.syncCDKBalances(true);
+
+        const totalFeePaid = segmentPayments.reduce(
+            (sum, payment) => sum + (Number(payment.fee) || 0),
+            0
+        );
+
+        const firstPreimage = segmentPayments
+            .map((payment) => payment?.payment_preimage)
+            .find((value) => !!value);
+
+        runInAction(() => {
+            if (!isDonationPayment) {
+                this.paymentPreimage = firstPreimage || '';
+                this.paymentSuccess = true;
+                this.paymentFee = totalFeePaid;
+                this.noteKey = segmentPayments[0]?.getNoteKey;
+                this.loading = false;
+            }
+
+            if (this.paymentStartTime) {
+                this.paymentDuration =
+                    (Date.now() - this.paymentStartTime) / 1000;
+            }
+        });
+
+        onProgress?.({
+            step: MultinutPaymentStep.COMPLETE,
+            mints: [...mintProgressInfo],
+            totalSelectedBalance,
+            isProcessing: false
+        });
+
+        return segmentPayments[0];
     };
 
     @action

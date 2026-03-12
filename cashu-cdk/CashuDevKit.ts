@@ -43,65 +43,49 @@ function mapCDKError(error: any): CDKError {
         normalizedMessage.includes('11000') &&
         normalizedMessage.includes('quote amount not as requested')
     ) {
-        return {
-            type: CDKErrorType.MultiMintQuoteRejected,
-            message:
-                'A selected mint rejected the split amount; try fewer mints.'
-        };
+        return { type: CDKErrorType.MultiMintQuoteRejected, message };
     }
 
     if (
         message.includes('Insufficient funds') ||
-        normalizedMessage.includes('insufficient')
+        message.includes('insufficient')
     ) {
         return { type: CDKErrorType.InsufficientFunds, message };
     }
     if (message.includes('Payment failed')) {
         return { type: CDKErrorType.PaymentFailed, message };
     }
-    if (
-        message.includes('Payment pending') ||
-        normalizedMessage.includes('pending')
-    ) {
+    if (message.includes('Payment pending') || message.includes('pending')) {
         return { type: CDKErrorType.PaymentPending, message };
     }
     if (
         message.includes('Invalid token') ||
-        normalizedMessage.includes('invalid token')
+        message.includes('invalid token')
     ) {
         return { type: CDKErrorType.InvalidToken, message };
     }
-    if (
-        normalizedMessage.includes('network') ||
-        normalizedMessage.includes('connection')
-    ) {
+    if (message.includes('network') || message.includes('connection')) {
         return { type: CDKErrorType.Network, message };
     }
-    if (
-        normalizedMessage.includes('database') ||
-        normalizedMessage.includes('sqlite')
-    ) {
+    if (message.includes('database') || message.includes('sqlite')) {
         return { type: CDKErrorType.Database, message };
     }
-    if (normalizedMessage.includes('mnemonic')) {
+    if (message.includes('mnemonic')) {
         return { type: CDKErrorType.InvalidMnemonic, message };
     }
-    if (normalizedMessage.includes('url')) {
+    if (message.includes('url') || message.includes('URL')) {
         return { type: CDKErrorType.InvalidUrl, message };
     }
-    if (normalizedMessage.includes('keyset')) {
+    if (message.includes('keyset')) {
         return { type: CDKErrorType.KeysetUnknown, message };
     }
-    if (normalizedMessage.includes('unit')) {
+    if (message.includes('unit')) {
         return { type: CDKErrorType.UnitNotSupported, message };
     }
-    if (normalizedMessage.includes('expired')) {
+    if (message.includes('expired')) {
         return { type: CDKErrorType.QuoteExpired, message };
     }
-    if (
-        normalizedMessage.includes('not paid') ||
-        normalizedMessage.includes('unpaid')
-    ) {
+    if (message.includes('not paid') || message.includes('unpaid')) {
         return { type: CDKErrorType.QuoteNotPaid, message };
     }
 
@@ -208,7 +192,14 @@ class CashuDevKit {
     async getBalances(): Promise<Record<string, number>> {
         try {
             const json = await CashuDevKitModule.getBalances();
-            return JSON.parse(json);
+            const parsed = JSON.parse(json) as Record<string, string | number>;
+
+            return Object.fromEntries(
+                Object.entries(parsed).map(([mintUrl, balance]) => [
+                    mintUrl,
+                    Number(balance)
+                ])
+            );
         } catch (error) {
             throw mapCDKError(error);
         }
