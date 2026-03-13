@@ -69,9 +69,19 @@ import KeyIcon from '../../assets/images/SVG/Key.svg';
 
 import Storage from '../../storage';
 
+export interface SwapRouteParams {
+    initialInvoice?: string;
+    initialAmountSats?: string | number;
+    initialReverse?: boolean;
+}
+
+export type SwapParamList = {
+    Swaps: SwapRouteParams | undefined;
+};
+
 interface SwapProps {
     navigation: StackNavigationProp<any, 'Swaps'>;
-    route: RouteProp<any, 'Swaps'>;
+    route: RouteProp<SwapParamList, 'Swaps'>;
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;
     InvoicesStore: InvoicesStore;
