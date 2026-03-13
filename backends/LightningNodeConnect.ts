@@ -66,38 +66,42 @@ export default class LightningNodeConnect {
 
     connect = async () => await this.lnc.connect();
     checkPerms = async () => {
-        // ZEUS-3642: we are temporarily returning all perms
-        // as true until resolved
-        // https://github.com/ZeusLN/zeus/issues/3642
-        //
-        // this.permOpenChannel = await this.lnc.hasPerms(
-        //     'lnrpc.Lightning.OpenChannel'
-        // );
-        // this.permSendCoins = await this.lnc.hasPerms(
-        //     'lnrpc.Lightning.SendCoins'
-        // );
-        // this.permSendLN = await this.lnc.hasPerms(
-        //     'routerrpc.Router.SendPaymentV2'
-        // );
-        // this.permNewAddress = await this.lnc.hasPerms(
-        //     'lnrpc.Lightning.NewAddress'
-        // );
-        // this.permImportAccount = await this.lnc.hasPerms(
-        //     'walletrpc.WalletKit.ImportAccount'
-        // );
-        // this.permForwardingHistory = await this.lnc.hasPerms(
-        //     'lnrpc.Lightning.ForwardingHistory'
-        // );
-        // this.permSignMessage = await this.lnc.hasPerms(
-        //     'signrpc.Signer.SignMessage'
-        // );
-        this.permOpenChannel = true;
-        this.permSendCoins = true;
-        this.permSendLN = true;
-        this.permNewAddress = true;
-        this.permImportAccount = true;
-        this.permForwardingHistory = true;
-        this.permSignMessage = true;
+        // ZEUS-3642: hasPerms is broken in Embedded LND v0.20.0 (returns false always).
+        // Workaround: Use isReadOnly() to infer permissions.
+        try {
+            const isReadOnly = await this.lnc.isReadOnly();
+
+            if (isReadOnly) {
+                // Read-Only Session
+                this.permOpenChannel = false;
+                this.permSendCoins = false;
+                this.permSendLN = false;
+                this.permNewAddress = false;
+                this.permImportAccount = false;
+                this.permSignMessage = false;
+                // Forwarding history is often allowed in read-only for accounting
+                this.permForwardingHistory = true;
+            } else {
+                // Admin (or Custom) Session -> Assume True for now to fix broken Admin access
+                this.permOpenChannel = true;
+                this.permSendCoins = true;
+                this.permSendLN = true;
+                this.permNewAddress = true;
+                this.permImportAccount = true;
+                this.permSignMessage = true;
+                this.permForwardingHistory = true;
+            }
+        } catch (e) {
+            console.error('LNC checkPerms error:', e);
+            // Fallback to safe defaults (ReadOnly) if check fails
+            this.permOpenChannel = false;
+            this.permSendCoins = false;
+            this.permSendLN = false;
+            this.permNewAddress = false;
+            this.permImportAccount = false;
+            this.permSignMessage = false;
+            this.permForwardingHistory = true;
+        }
     };
     isConnected = async () => await this.lnc.isConnected();
     disconnect = () => this.lnc && this.lnc.disconnect();
@@ -201,9 +205,9 @@ export default class LightningNodeConnect {
             maxPayments?: number;
             reversed?: boolean;
         } = {
-            maxPayments: 500,
-            reversed: true
-        }
+                maxPayments: 500,
+                reversed: true
+            }
     ) =>
         await this.lnc.lnd.lightning
             .listPayments({
@@ -421,12 +425,12 @@ export default class LightningNodeConnect {
                         }),
                         ...(data.fee_rate_inbound !== '' &&
                             data.fee_rate_inbound !== undefined && {
-                                fee_rate_ppm: `${new BigNumber(
-                                    data.fee_rate_inbound
-                                )
-                                    .multipliedBy(10000)
-                                    .toFixed(0)}`
-                            })
+                            fee_rate_ppm: `${new BigNumber(
+                                data.fee_rate_inbound
+                            )
+                                .multipliedBy(10000)
+                                .toFixed(0)}`
+                        })
                     }
                 }),
 
@@ -451,12 +455,12 @@ export default class LightningNodeConnect {
                         }),
                         ...(data.fee_rate_inbound !== '' &&
                             data.fee_rate_inbound !== undefined && {
-                                fee_rate_ppm: `${new BigNumber(
-                                    data.fee_rate_inbound
-                                )
-                                    .multipliedBy(10000)
-                                    .toFixed(0)}`
-                            })
+                            fee_rate_ppm: `${new BigNumber(
+                                data.fee_rate_inbound
+                            )
+                                .multipliedBy(10000)
+                                .toFixed(0)}`
+                        })
                     }
                 }),
                 chan_point: {
