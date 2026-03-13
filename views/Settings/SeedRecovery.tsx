@@ -149,7 +149,7 @@ export default class SeedRecovery extends React.PureComponent<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
 
-            const clipboardSeedArray = clipboard.split(' ');
+            const clipboardSeedArray = clipboard.trim().split(/\s+/);
             if (clipboardSeedArray.length === 24) {
                 this.setState({
                     showClipboardPrompt: true,
