@@ -335,6 +335,7 @@ export default class NostrContacts extends React.Component<
                 >
                     {item.picture && (
                         <ContactAvatar
+                            name={item?.display_name || item?.name}
                             contactId={`${item.npub}`}
                             imageUrl={item.picture}
                             style={{

@@ -212,6 +212,7 @@ export default class ChannelView extends React.Component<
                 >
                     <ContactAvatar
                         size="small"
+                        name={contact.name}
                         contactId={contact.contactId}
                         imageUrl={getPhoto(contact.photo)}
                         style={{ marginRight: 10 }}

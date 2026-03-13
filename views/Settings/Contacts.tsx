@@ -234,6 +234,7 @@ export default class Contacts extends React.Component<
                     <ContactAvatar
                         contactId={item.contactId || item.id}
                         size="medium"
+                        name={contact.name}
                         imageUrl={contact.getPhoto}
                         style={{ marginRight: 10 }}
                         contactHasOnlyCashuPubkey={contact.hasOnlyCashuPubkey}

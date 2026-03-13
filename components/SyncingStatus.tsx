@@ -20,6 +20,7 @@ import PauseIcon from '../assets/images/SVG/Pause.svg';
 
 interface SyncingStatusProps {
     navigation: NativeStackNavigationProp<ParamListBase>;
+    ConnectivityStore?: ConnectivityStore;
     SyncStore?: SyncStore;
     style?: StyleProp<ViewStyle>;
 }
