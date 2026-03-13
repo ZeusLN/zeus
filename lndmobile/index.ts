@@ -755,9 +755,7 @@ export const listPayments = async (params?: {
         method: 'ListPayments',
         options: {
             include_incomplete: true,
-            ...(params?.maxPayments && {
-                max_payments: Long.fromValue(params.maxPayments)
-            }),
+            max_payments: Long.fromValue(params?.maxPayments ?? 1000),
             ...(params?.reversed && { reversed: params.reversed })
         }
     });
