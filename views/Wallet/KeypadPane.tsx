@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import EcashMintPicker from '../../components/EcashMintPicker';
@@ -48,7 +48,7 @@ import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
 import MintToken from './../../assets/images/SVG/MintToken.svg';
 
 interface KeypadPaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore?: CashuStore;
     ChannelsStore?: ChannelsStore;
     FiatStore?: FiatStore;

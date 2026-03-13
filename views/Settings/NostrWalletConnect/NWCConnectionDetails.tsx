@@ -7,7 +7,7 @@ import {
     Text
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
 import Screen from '../../../components/Screen';
@@ -34,7 +34,7 @@ import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
 import ClockIcon from '../../../assets/images/SVG/Clock.svg';
 
 interface NWCConnectionDetailsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'NWCConnectionDetails', { connectionId: string }>;
     NostrWalletConnectStore: NostrWalletConnectStore;
     ModalStore: ModalStore;

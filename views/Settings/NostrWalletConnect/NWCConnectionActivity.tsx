@@ -1,5 +1,5 @@
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 import React from 'react';
 import {
@@ -44,7 +44,7 @@ export const NWC_DEFAULT_FILTERS: NWCFilterState = {
 };
 
 interface ConnectionActivityProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'NWCConnectionActivity', { connectionId: string }>;
     NostrWalletConnectStore: NostrWalletConnectStore;
     SettingsStore: SettingsStore;

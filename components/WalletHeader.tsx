@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AlertStore from '../stores/AlertStore';
 import CashuStore from '../stores/CashuStore';
@@ -133,7 +133,7 @@ const NWCAnimated = () => {
 const ActivityButton = ({
     navigation
 }: {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
         onPress={() =>
@@ -151,7 +151,7 @@ const ActivityButton = ({
 const TempleButton = ({
     navigation
 }: {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
         onPress={() => protectedNavigation(navigation, 'Wallet', true)}
@@ -168,7 +168,7 @@ const TempleButton = ({
 const MenuBadge = ({
     navigation
 }: {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }) => (
     <TouchableOpacity
         onPress={() =>
@@ -187,7 +187,7 @@ const ClipboardBadge = ({
     navigation,
     clipboard
 }: {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     clipboard: string;
 }) => (
     <TouchableOpacity
@@ -204,7 +204,7 @@ const ClipboardBadge = ({
 const PendingHtlcBadge = ({
     navigation
 }: {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     clipboard: string;
 }) => (
     <TouchableOpacity
@@ -221,7 +221,7 @@ const PendingHtlcBadge = ({
 const UnredeemedTokensBadge = ({
     navigation
 }: {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     clipboard: string;
 }) => (
     <TouchableOpacity
@@ -264,7 +264,7 @@ interface WalletHeaderProps {
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     NostrWalletConnectStore?: NostrWalletConnectStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     connecting?: boolean;
     loading?: boolean;
     title?: string;
@@ -563,7 +563,7 @@ export default class WalletHeader extends React.Component<
         const SyncBadge = ({
             navigation
         }: {
-            navigation: StackNavigationProp<any, any>;
+            navigation: NativeStackNavigationProp<any, any>;
         }) => {
             const [spinAnim] = useState(new Animated.Value(0));
 

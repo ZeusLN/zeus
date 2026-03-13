@@ -5,7 +5,7 @@ import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -26,7 +26,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ArrowLeft from '../../assets/images/SVG/Arrow_left.svg';
 
 interface NostrRelaysProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
     route: Route<'NostrRelays', { setup: boolean; relays: string[] }>;

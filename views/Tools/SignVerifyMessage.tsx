@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 
 import Button from '../../components/Button';
@@ -31,7 +31,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import MessageSignStore from '../../stores/MessageSignStore';
 
 interface SignVerifyMessageProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: RouteProp<any, any>;
     MessageSignStore: MessageSignStore;
 }

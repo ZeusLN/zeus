@@ -1,7 +1,7 @@
 import * as React from 'react';
 import moment from 'moment';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { View, FlatList, TouchableOpacity, Text } from 'react-native';
 
 import Header from '../../components/Header';
@@ -22,7 +22,7 @@ import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 interface OrdersPaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     LSPStore: LSPStore;
     NodeInfoStore: NodeInfoStore;
 }

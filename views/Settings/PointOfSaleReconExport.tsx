@@ -2,7 +2,7 @@ import * as React from 'react';
 import { View, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ClipboardSVG from '../../assets/images/SVG/Clipboard.svg';
 
@@ -14,7 +14,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface PointOfSaleReconExportProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     PosStore: PosStore;
 }
 

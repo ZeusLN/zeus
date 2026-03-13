@@ -2,7 +2,7 @@ import * as React from 'react';
 import { inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -24,7 +24,7 @@ import QR from '../assets/images/SVG/QR.svg';
 
 interface WithdrawalRequestInfoProps {
     InvoicesStore: InvoicesStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'WithdrawalRequestInfo', { bolt12: string }>;
 }
 

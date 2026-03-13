@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ScrollView } from 'react-native';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import CollapsedQR from '../components/CollapsedQR';
@@ -11,7 +11,7 @@ import Screen from '../components/Screen';
 import SettingsStore from '../stores/SettingsStore';
 
 interface QRProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
     route: Route<
         'QR',

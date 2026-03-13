@@ -11,7 +11,7 @@ import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from '@rneui/themed';
 import clone from 'lodash/clone';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { runInAction } from 'mobx';
 
 const bitcoin = require('bitcoinjs-lib');
@@ -38,7 +38,7 @@ import TransactionsStore from '../stores/TransactionsStore';
 import SettingsStore from '../stores/SettingsStore';
 
 interface TxHexProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;

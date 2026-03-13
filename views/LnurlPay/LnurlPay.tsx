@@ -5,7 +5,7 @@ import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../../components/Amount';
 import AmountInput from '../../components/AmountInput';
@@ -32,7 +32,7 @@ import { getUnformattedAmount, getSatAmount } from '../../utils/AmountUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ContactStore: ContactStore;
     InvoicesStore: InvoicesStore;

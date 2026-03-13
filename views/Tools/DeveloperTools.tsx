@@ -9,7 +9,7 @@ import {
     ActivityIndicator
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import MaterialIcons from '@react-native-vector-icons/material-icons';
 
 import Header from '../../components/Header';
@@ -24,7 +24,7 @@ import BackendUtils from '../../utils/BackendUtils';
 import SettingsStore, { Implementations } from '../../stores/SettingsStore';
 
 interface DeveloperToolsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

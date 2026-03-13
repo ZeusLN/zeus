@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, View } from 'react-native';
 import { Header } from '@rneui/themed';
 import { observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import LoadingIndicator from '../../components/LoadingIndicator';
 import QRCodeScanner from '../../components/QRCodeScanner';
@@ -11,7 +11,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 export interface BaseQRScannerProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 export interface BaseQRScannerState {

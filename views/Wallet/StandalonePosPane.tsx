@@ -12,7 +12,7 @@ import { SearchBar } from '@rneui/themed';
 
 import { inject, observer } from 'mobx-react';
 import moment from 'moment';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import OrderList from '../POS/OrderList';
@@ -34,7 +34,7 @@ import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 import { getFormattedAmount, getAmountFromSats } from '../../utils/AmountUtils';
 
 interface StandalonePosPaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ActivityStore?: ActivityStore;
     FiatStore?: FiatStore;
     NodeInfoStore?: NodeInfoStore;

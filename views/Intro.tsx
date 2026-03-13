@@ -6,7 +6,7 @@ import Carousel, {
     Pagination,
     ICarouselInstance
 } from 'react-native-reanimated-carousel';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import { settingsStore } from '../stores/Stores';
@@ -32,7 +32,7 @@ const Four = require('../assets/images/intro/4.png');
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface IntroProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 const Intro: React.FC<IntroProps> = (props) => {

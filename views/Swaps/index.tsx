@@ -7,7 +7,7 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';
 import { initEccLib } from 'bitcoinjs-lib';
@@ -70,7 +70,7 @@ import KeyIcon from '../../assets/images/SVG/Key.svg';
 import Storage from '../../storage';
 
 interface SwapProps {
-    navigation: StackNavigationProp<any, 'Swaps'>;
+    navigation: NativeStackNavigationProp<any, 'Swaps'>;
     route: RouteProp<any, 'Swaps'>;
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;

@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AmountInput, { getSatAmount } from '../../components/AmountInput';
 import Button from '../../components/Button';
@@ -24,7 +24,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Icon } from '@rneui/themed';
 
 interface CreateWithdrawalRequestProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     BalanceStore: BalanceStore;
     UnitsStore: UnitsStore;

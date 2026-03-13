@@ -3,7 +3,7 @@ import { TouchableOpacity } from 'react-native';
 
 import { observer, inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -20,7 +20,7 @@ import Checkmark from '../../assets/images/SVG/Checkmark.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 
 interface CurrencyConverterProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     FiatStore?: FiatStore;
     route: Route<'CurrencyConverter', { selectedCurrency: string }>;
 }

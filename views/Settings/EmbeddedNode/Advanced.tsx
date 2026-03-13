@@ -3,7 +3,7 @@ import { Platform, ScrollView, Text, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import DropdownSetting from '../../../components/DropdownSetting';
@@ -24,7 +24,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { stopLnd } from '../../../utils/LndMobileUtils';
 
 interface EmbeddedNodeAdvancedSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

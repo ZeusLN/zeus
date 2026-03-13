@@ -13,7 +13,7 @@ import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Divider } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -31,7 +31,7 @@ import ArrowLeft from '../../assets/images/SVG/Arrow_left.svg';
 import DeleteIcon from '../../assets/images/SVG/Delete.svg';
 
 interface ProductCategoryProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
     PosStore: PosStore;
     route: Route<'ProductCategoryDetails', { categoryId: string }>;

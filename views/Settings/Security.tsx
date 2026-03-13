@@ -3,7 +3,7 @@ import * as React from 'react';
 import { FlatList, ScrollView, View } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
 import { Icon, ListItem } from '@rneui/themed';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -17,7 +17,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface SecurityProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
     route: { params?: { enableBiometrics?: boolean } };

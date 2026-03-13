@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
     Alert,
     FlatList,
-    Image,
     Text,
     TouchableOpacity,
     View,
@@ -13,7 +12,9 @@ import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from '@rneui/themed';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import { SharedText } from '../components/SharedTransition';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
@@ -35,9 +36,10 @@ import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
+import { ContactAvatar } from '../components/ContactAvatar';
 
 interface NostrContactsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ContactStore: ContactStore;
 }
 
@@ -251,6 +253,7 @@ export default class NostrContacts extends React.Component<
             lud06: string;
             lud16: string;
             banner: string;
+            npub?: string;
         };
     }) => {
         const { isSelectionMode } = this.state;
@@ -292,7 +295,10 @@ export default class NostrContacts extends React.Component<
                         navigation.navigate('ContactDetails', {
                             nostrContact:
                                 await ContactUtils.transformContactData(item),
-                            isNostrContact: true
+                            isNostrContact: true,
+                            contactId: item.npub,
+                            contactName: item.display_name || item.name,
+                            contactPhoto: item.picture
                         });
                     }
                 }}
@@ -328,25 +334,25 @@ export default class NostrContacts extends React.Component<
                     }}
                 >
                     {item.picture && (
-                        <Image
-                            source={{ uri: item.picture }}
+                        <ContactAvatar
+                            name={item?.display_name || item?.name}
+                            contactId={`${item.npub}`}
+                            imageUrl={item.picture}
                             style={{
-                                width: 40,
-                                height: 40,
-                                borderRadius: 20,
                                 marginRight: 10
                             }}
                         />
                     )}
                     <View>
-                        <Text
+                        <SharedText
+                            tag={`contact-name-${item.npub}`}
                             style={{
                                 fontSize: 16,
                                 color: themeColor('text')
                             }}
                         >
                             {item?.display_name || item?.name}
-                        </Text>
+                        </SharedText>
                         {item.lud06 && (
                             <Text
                                 style={{

@@ -1,5 +1,5 @@
 import { Linking, Platform, NativeModules } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
@@ -13,7 +13,7 @@ import { settingsStore } from '../stores/Stores';
 class LinkingUtils {
     private shareIntentProcessed = false;
 
-    handleInitialUrl = (navigation: StackNavigationProp<any, any>) =>
+    handleInitialUrl = (navigation: NativeStackNavigationProp<any, any>) =>
         Linking.getInitialURL().then(async (url) => {
             this.shareIntentProcessed = false;
 
@@ -62,7 +62,7 @@ class LinkingUtils {
         });
     handleDeepLink = (
         url: string,
-        navigation: StackNavigationProp<any, any>
+        navigation: NativeStackNavigationProp<any, any>
     ) => {
         if (url.startsWith('nostr:')) {
             Linking.openURL(url);
@@ -85,7 +85,7 @@ class LinkingUtils {
     };
 
     processPendingShareIntent = (
-        navigation: StackNavigationProp<any, any>
+        navigation: NativeStackNavigationProp<any, any>
     ): boolean => {
         try {
             if (hasPendingShareIntent()) {

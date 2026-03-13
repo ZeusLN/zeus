@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, ScrollView, Modal } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CheckBox } from '@rneui/themed';
 
 import Button from '../../components/Button';
@@ -24,7 +24,7 @@ interface CustodialWalletWarningState {
 
 interface CustodialWalletWarningProps {
     SettingsStore: SettingsStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 @inject('SettingsStore')

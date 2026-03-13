@@ -10,7 +10,7 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -50,7 +50,7 @@ import Header from '../../components/Header';
 import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
 
 interface CashuSendingLightningProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;

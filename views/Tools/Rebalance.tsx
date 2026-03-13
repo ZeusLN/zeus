@@ -10,7 +10,7 @@ import {
     EmitterSubscription
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import Slider from '@react-native-community/slider';
 import BigNumber from 'bignumber.js';
@@ -134,7 +134,7 @@ interface RebalanceResultData {
 }
 
 interface RebalanceProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'Rebalance',
         { restoreRebalanceState?: Partial<RebalanceState> }

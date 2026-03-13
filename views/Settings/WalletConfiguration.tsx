@@ -15,7 +15,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
@@ -72,7 +72,7 @@ import {
 } from '../../utils/LndMobileUtils';
 
 interface WalletConfigurationProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;

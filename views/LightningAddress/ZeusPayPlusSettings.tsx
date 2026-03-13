@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Pill from '../../components/Pill';
 
@@ -11,7 +11,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface ZeusPayPlusSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     LightningAddressStore?: LightningAddressStore;
     hidePills?: boolean;
     showPerks?: boolean;

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Divider, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import { Row } from '../../components/layout/Row';
@@ -23,7 +23,7 @@ import NostrichNotFound from '../../assets/images/SVG/Nostrich_not-found.svg';
 import Receive from '../../assets/images/SVG/Receive.svg';
 
 interface ZaplockerInfoProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
 }
 

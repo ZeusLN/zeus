@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import StealthIcon from '../../assets/images/SVG/Hidden.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
@@ -18,7 +18,7 @@ import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 interface PrivacyProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
 }
 

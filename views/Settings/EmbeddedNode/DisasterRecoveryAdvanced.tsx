@@ -3,7 +3,7 @@ import { FlatList, Text, View } from 'react-native';
 import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import moment from 'moment';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
@@ -17,7 +17,7 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface DisasterRecoveryAdvancedProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ChannelBackupStore: ChannelBackupStore;
 }
 

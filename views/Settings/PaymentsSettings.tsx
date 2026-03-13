@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Platform, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Slider from '@react-native-community/slider';
 
 import DropdownSetting from '../../components/DropdownSetting';
@@ -21,7 +21,7 @@ import TextInput from '../../components/TextInput';
 import AmountInput from '../../components/AmountInput';
 
 interface PaymentsSettingsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
 }

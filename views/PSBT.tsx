@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from '@rneui/themed';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -24,7 +24,7 @@ import ChannelsStore from '../stores/ChannelsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 interface PSBTProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     route: Route<'PSBT', { psbt: string }>;

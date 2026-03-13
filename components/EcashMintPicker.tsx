@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
 import { inject, observer } from 'mobx-react';
 
 import Amount from './Amount';
@@ -18,7 +19,7 @@ import Dice from '../assets/images/SVG/Dice.svg';
 interface EcashMintPickerProps {
     title?: string;
     CashuStore?: CashuStore;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     hideAmount?: boolean;
     disabled?: boolean;
     disableRandom?: boolean;

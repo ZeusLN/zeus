@@ -4,7 +4,7 @@ import { Animated, Text } from 'react-native';
 import { SearchBar } from '@rneui/themed';
 
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Layout from '../../views/POS/Layout';
 
@@ -20,7 +20,7 @@ import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 interface SquarePosPaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ActivityStore?: ActivityStore;
     FiatStore?: FiatStore;
     NodeInfoStore?: NodeInfoStore;

@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Animated, View, Text, TouchableOpacity } from 'react-native';
 import { ButtonGroup, ButtonGroupProps } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -18,7 +18,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { version } from '../../package.json';
 
 interface LayoutProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
     NodeInfoStore?: NodeInfoStore;
     FiatStore?: FiatStore;

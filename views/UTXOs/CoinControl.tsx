@@ -3,7 +3,7 @@ import { FlatList, View } from 'react-native';
 import { Button, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AccountFilter from './../../components/AccountFilter';
 import Amount from './../../components/Amount';
@@ -21,7 +21,7 @@ import storage from '../../storage';
 import { reaction } from 'mobx';
 
 interface CoinControlProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
     route: Route<'CoinControl', { account: string }>;
 }

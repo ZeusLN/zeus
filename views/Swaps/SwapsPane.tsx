@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View, FlatList } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import moment from 'moment';
 
 import { WarningMessage } from '../../components/SuccessErrorMessage';
@@ -21,7 +21,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import Swap from '../../models/Swap';
 
 interface SwapsPaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SwapStore?: SwapStore;
     SettingsStore?: SettingsStore;
     NodeInfoStore?: NodeInfoStore;

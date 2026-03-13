@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
 import { RectButton, Swipeable } from 'react-native-gesture-handler';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -26,7 +26,7 @@ import Receive from '../../assets/images/SVG/Receive.svg';
 import Send from '../../assets/images/SVG/Send.svg';
 
 interface EcashSwipeableRowProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     lightning?: string;
     lnurlParams?: LNURLWithdrawParams | undefined;
     value?: string;

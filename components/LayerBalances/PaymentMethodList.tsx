@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { FlatList, StyleSheet, Text, View, I18nManager } from 'react-native';
 import LinearGradient from '../LinearGradient';
 import { RectButton } from 'react-native-gesture-handler';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LNURLWithdrawParams } from 'js-lnurl';
 
 import { Spacer } from '../layout/Spacer';
@@ -22,7 +22,7 @@ import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
 import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 
 interface PaymentMethodListProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     value?: string;
     satAmount?: number | string;
     feeRate?: string;
@@ -170,7 +170,7 @@ const SwipeableRow = ({
 }: {
     item: DataRow;
     index: number;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     value?: string;
     satAmount?: number;
     feeRate?: string;

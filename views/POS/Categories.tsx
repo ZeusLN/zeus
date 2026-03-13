@@ -2,7 +2,7 @@ import * as React from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -18,7 +18,7 @@ import ProductCategory from '../../models/ProductCategory';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
 interface ProductCategoriesProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     InventoryStore: InventoryStore;
 }
 
@@ -88,7 +88,7 @@ export default class ProductCategories extends React.Component<
         const Add = ({
             navigation
         }: {
-            navigation: StackNavigationProp<any, any>;
+            navigation: NativeStackNavigationProp<any, any>;
         }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('ProductCategoryDetails')}

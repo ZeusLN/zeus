@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Slider from '@react-native-community/slider';
 import { ButtonGroup } from '@rneui/themed';
 
@@ -58,7 +58,7 @@ const zaplockerDestinations = [
 
 interface CashuPaymentRequestProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     CashuStore: CashuStore;
     TransactionsStore: TransactionsStore;

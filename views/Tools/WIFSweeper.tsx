@@ -2,7 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 import InvoicesStore from '../../stores/InvoicesStore';
@@ -26,7 +26,7 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 
 interface WIFSweepProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     SweepStore: SweepStore;
     route: Route<'WIFSweeper', { wif: string }>;

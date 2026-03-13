@@ -11,10 +11,10 @@ import {
 
 import { observer, inject } from 'mobx-react';
 import Svg, { Text } from 'react-native-svg';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from '@rneui/themed';
 import isEmpty from 'lodash/isEmpty';
-import { StackNavigationProp } from '@react-navigation/stack';
 
 import LoadingIndicator from './LoadingIndicator';
 import TextInput from './TextInput';
@@ -44,7 +44,7 @@ interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
 }
 
 interface CurrencyConverterContentProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     FiatStore?: FiatStore;
     showToolbar?: boolean;
     fromModal?: boolean;

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View, TouchableOpacity } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { LnurlPayTransaction } from './../../stores/LnurlPayStore';
 import LnurlPayMetadata from './Metadata';
@@ -8,7 +8,7 @@ import LnurlPaySuccess from './Success';
 import { themeColor } from './../../utils/ThemeUtils';
 
 interface LnurlPayHistoricalProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     lnurlpaytx: LnurlPayTransaction;
     preimage: string;
 }

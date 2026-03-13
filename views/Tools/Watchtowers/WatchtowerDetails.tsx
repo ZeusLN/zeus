@@ -1,7 +1,7 @@
 import React from 'react';
 import { Text, View, StyleSheet, ScrollView } from 'react-native';
 import { observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 
 import Button from '../../../components/Button';
@@ -19,7 +19,7 @@ import Base64Utils from '../../../utils/Base64Utils';
 import { Watchtower } from './WatchtowerList';
 
 interface WatchtowerDetailsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: RouteProp<
         {
             WatchtowerDetails: {

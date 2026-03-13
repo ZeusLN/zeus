@@ -12,7 +12,7 @@ import {
 import RNFS from 'react-native-fs';
 import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 
 import { Row } from '../../components/layout/Row';
@@ -42,7 +42,7 @@ import Skull from '../../assets/images/SVG/Skull.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
 interface SeedProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     route: Route<
         'Seed',

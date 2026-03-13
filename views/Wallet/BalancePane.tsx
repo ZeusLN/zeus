@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
@@ -39,7 +39,7 @@ import LockIcon from '../../assets/images/SVG/Lock.svg';
 const ErrorZeus = require('../../assets/images/errorZeus.png');
 
 interface BalancePaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     CashuStore: CashuStore;
     NodeInfoStore: NodeInfoStore;

@@ -21,8 +21,8 @@ import NfcManager, {
     TagEvent,
     Ndef
 } from 'react-native-nfc-manager';
-import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { ParamListBase, Route } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
@@ -70,7 +70,7 @@ import BigNumber from 'bignumber.js';
 
 interface SendProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<ParamListBase>;
     BalanceStore: BalanceStore;
     ContactStore: ContactStore;
     InvoicesStore: InvoicesStore;

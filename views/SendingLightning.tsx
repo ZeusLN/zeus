@@ -9,7 +9,7 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { getRouteStack } from '../NavigationService';
@@ -53,7 +53,7 @@ import PaymentDetailsSheet from '../components/PaymentDetailsSheet';
 import { getFeePercentage } from '../utils/AmountUtils';
 
 interface SendingLightningProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;

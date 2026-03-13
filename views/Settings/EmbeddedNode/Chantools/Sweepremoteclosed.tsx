@@ -7,7 +7,7 @@ import {
     Platform,
     KeyboardAvoidingView
 } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import lndMobile from '../../../../lndmobile/LndMobileInjection';
@@ -63,7 +63,7 @@ const API_URL_KEYS = [
 ];
 
 interface SweepremoteclosedProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }

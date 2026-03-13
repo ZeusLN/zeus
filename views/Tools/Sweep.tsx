@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import BalanceStore from '../../stores/BalanceStore';
 import InvoicesStore from '../../stores/InvoicesStore';
@@ -34,7 +34,7 @@ import TransactionRequest from '../../models/TransactionRequest';
 
 interface SweepProps {
     exitSetup: any;
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;

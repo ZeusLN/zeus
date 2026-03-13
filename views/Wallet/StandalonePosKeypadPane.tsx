@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Animated, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import KeypadAmountDisplay from '../../components/KeypadAmountDisplay';
@@ -28,7 +28,7 @@ import { SATS_PER_BTC, getDecimalPlaceholder } from '../../utils/UnitsUtils';
 import { PricedIn } from '../../models/Product';
 
 interface PosKeypadPaneProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     FiatStore?: FiatStore;
     PosStore?: PosStore;
     SettingsStore?: SettingsStore;

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import TextInput from '../../../components/TextInput';
 import Text from '../../../components/Text';
 import Button from '../../../components/Button';
@@ -20,7 +20,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import Scan from '../../../assets/images/SVG/Scan.svg';
 
 interface AddWatchtowerProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 interface AddWatchtowerState {

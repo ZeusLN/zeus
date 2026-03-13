@@ -12,7 +12,7 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
@@ -26,7 +26,7 @@ import Button from '../../components/Button';
 import { localeString } from '../../utils/LocaleUtils';
 
 interface SetWalletPictureProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<'SetWalletPicture', { implementation: string }>;
 }
 

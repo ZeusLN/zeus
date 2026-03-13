@@ -8,8 +8,12 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import {
+    SharedText,
+    sharedTransitionEntering
+} from '../components/SharedTransition';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
 
 import Screen from '../components/Screen';
@@ -17,6 +21,7 @@ import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 import { Row } from '../components/layout/Row';
+import { ContactAvatar } from '../components/ContactAvatar';
 
 import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
@@ -60,12 +65,15 @@ const AddressRow: React.FC<{
 );
 
 interface ContactDetailsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     route: Route<
         'ContactDetails',
         {
             isNostrContact: boolean;
             contactId: string;
+            contactName?: string;
+            contactPhoto?: string;
+            contactHasOnlyCashuPubkey?: boolean;
             nostrContact: any;
             cashuLockData?: any;
         }
@@ -85,6 +93,7 @@ export default class ContactDetails extends React.Component<
     ContactDetailsProps,
     ContactDetailsState
 > {
+    private focusListener?: () => void;
     constructor(props: ContactDetailsProps) {
         super(props);
 
@@ -113,49 +122,51 @@ export default class ContactDetails extends React.Component<
 
     async componentDidMount() {
         try {
+            const isNostrContact = this.props.route.params?.isNostrContact;
+            this.setState({ isNostrContact });
+
             await this.fetchContact();
 
-            const isNostrContact = this.props.route.params?.isNostrContact;
-
-            this.setState({ isNostrContact });
+            this.focusListener = this.props.navigation.addListener(
+                'focus',
+                async () => {
+                    await this.fetchContact();
+                }
+            );
         } catch (error) {
             console.error(error);
         }
     }
 
+    componentWillUnmount() {
+        if (this.focusListener) {
+            this.focusListener();
+        }
+    }
+
     fetchContact = async () => {
-        this.props.navigation.addListener('focus', async () => {
-            try {
-                const { contactId, nostrContact, isNostrContact } =
-                    this.props.route.params ?? {};
-                const contactsString: any = await Storage.getItem(CONTACTS_KEY);
+        try {
+            const { contactId, nostrContact, isNostrContact } =
+                this.props.route.params ?? {};
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
-                if (contactsString && contactId) {
-                    const existingContact = JSON.parse(contactsString);
-                    const contact = existingContact.find(
-                        (contact: Contact) =>
-                            contact.contactId === contactId ||
-                            contact.id === contactId
-                    );
+            const storedContact =
+                contactsString && contactId
+                    ? JSON.parse(contactsString).find(
+                          (c: Contact) =>
+                              c.contactId === contactId || c.id === contactId
+                      )
+                    : undefined;
 
-                    // Store the found contact in the component's state
-                    this.setState({
-                        contact,
-                        isNostrContact,
-                        isLoading: false
-                    });
-                } else {
-                    this.setState({
-                        contact: nostrContact,
-                        isNostrContact,
-                        isLoading: false
-                    });
-                }
-            } catch (error) {
-                console.log('Error fetching contact:', error);
-                this.setState({ isLoading: false });
-            }
-        });
+            this.setState({
+                contact: storedContact ?? nostrContact,
+                isNostrContact,
+                isLoading: false
+            });
+        } catch (error) {
+            console.log('Error fetching contact:', error);
+            this.setState({ isLoading: false });
+        }
     };
 
     sendAddress = (address: string) => {
@@ -347,35 +358,12 @@ export default class ContactDetails extends React.Component<
             );
         };
 
-        const avatarCircle = contact.photo ? (
-            <Image
-                source={{ uri: contact.getPhoto }}
-                style={styles.avatarContainer}
-            />
-        ) : (
-            <View
-                style={[
-                    styles.avatarContainer,
-                    styles.avatarView,
-                    { backgroundColor: themeColor('secondary') }
-                ]}
-            >
-                {contact.getAvatarInitials ? (
-                    <Text
-                        style={[
-                            styles.avatarInitials,
-                            { color: themeColor('text') }
-                        ]}
-                    >
-                        {contact.getAvatarInitials}
-                    </Text>
-                ) : contact.hasOnlyCashuPubkey ? (
-                    <Ecash fill="#FACC15" width={64} height={64} />
-                ) : (
-                    <Text style={{ fontSize: 64 }}>⚡</Text>
-                )}
-            </View>
-        );
+        // Get params for shared element transition during loading
+        const contactId = this.props.route.params?.contactId;
+        const contactName = this.props.route.params?.contactName;
+        const contactPhoto = this.props.route.params?.contactPhoto;
+        const contactHasOnlyCashuPubkey =
+            this.props.route.params?.contactHasOnlyCashuPubkey;
 
         return (
             <>
@@ -388,8 +376,32 @@ export default class ContactDetails extends React.Component<
                             }}
                             navigation={navigation}
                         />
-                        <View style={{ marginTop: 60 }}>
-                            <LoadingIndicator />
+                        <View style={{ alignItems: 'center', marginTop: 20 }}>
+                            <ContactAvatar
+                                contactId={contactId}
+                                imageUrl={contactPhoto}
+                                name={contactName}
+                                size="large"
+                                contactHasOnlyCashuPubkey={
+                                    contactHasOnlyCashuPubkey
+                                }
+                            />
+                            {contactName && (
+                                <SharedText
+                                    tag={`contact-name-${contactId}`}
+                                    style={{
+                                        fontSize: 40,
+                                        fontWeight: 'bold',
+                                        marginBottom: 10,
+                                        color: 'white'
+                                    }}
+                                >
+                                    {contactName}
+                                </SharedText>
+                            )}
+                            <View style={{ marginTop: 40 }}>
+                                <LoadingIndicator />
+                            </View>
                         </View>
                     </Screen>
                 ) : (
@@ -414,24 +426,43 @@ export default class ContactDetails extends React.Component<
                         <ScrollView
                             contentContainerStyle={styles.scrollContent}
                         >
-                            {contact.banner ? (
-                                <View style={styles.bannerContainer}>
-                                    <Image
-                                        source={{ uri: contact.getBanner }}
-                                        style={styles.bannerImage}
-                                    />
-                                    <View style={styles.bannerAvatarOverlay}>
-                                        {avatarCircle}
-                                    </View>
-                                </View>
-                            ) : (
-                                <View style={{ marginBottom: 20 }}>
-                                    {avatarCircle}
-                                </View>
+                            {contact.banner && (
+                                <Image
+                                    source={{ uri: contact.getBanner }}
+                                    style={{
+                                        width: '100%',
+                                        height: 150,
+                                        marginBottom: 20
+                                    }}
+                                />
                             )}
-                            <Text style={styles.contactName}>
+                            <ContactAvatar
+                                size="large"
+                                sharedTransitionEntering={
+                                    sharedTransitionEntering
+                                }
+                                style={{ marginTop: contact.banner ? -100 : 0 }}
+                                contactId={contactId}
+                                contactHasOnlyCashuPubkey={
+                                    contactHasOnlyCashuPubkey
+                                }
+                                name={contactName || contact.name}
+                                imageUrl={contactPhoto || contact.getPhoto}
+                            />
+                            <SharedText
+                                tag={`contact-name-${
+                                    contactId || contact.contactId || contact.id
+                                }`}
+                                style={{
+                                    fontSize: 40,
+                                    fontWeight: 'bold',
+                                    marginBottom: 10,
+                                    color: themeColor('text')
+                                }}
+                                entering={sharedTransitionEntering}
+                            >
                                 {contact.name}
-                            </Text>
+                            </SharedText>
                             <Text
                                 style={{
                                     ...styles.contactDescription,
@@ -644,12 +675,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 75,
         alignSelf: 'center'
-    },
-    contactName: {
-        fontSize: 40,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        color: 'white'
     },
     contactDescription: {
         fontSize: 20,

@@ -9,7 +9,7 @@ import {
 import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -32,7 +32,7 @@ import { ReconHeader } from './PointOfSaleReconHeader';
 import OrderItem from '../../views/Wallet/OrderItem';
 
 interface PointOfSaleReconProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     FiatStore: FiatStore;
     PosStore: PosStore;
 }
@@ -127,7 +127,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         const ExportBadge = ({
             navigation
         }: {
-            navigation: StackNavigationProp<any, any>;
+            navigation: NativeStackNavigationProp<any, any>;
         }) => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('PointOfSaleReconExport')}

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 import BigNumber from 'bignumber.js';
 
@@ -56,7 +56,7 @@ import ModalBox from '../../components/ModalBox';
 import { reaction } from 'mobx';
 
 interface ChannelsProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
     LSPStore?: LSPStore;
     NodeInfoStore?: NodeInfoStore;
@@ -510,11 +510,19 @@ export default class ChannelsPane extends React.PureComponent<
             animation: 'shift' as const
         });
 
+        const isChannelsView =
+            ChannelsStore?.channelsView === ChannelsView.Channels;
+
+        const viewContainerStyle = (visible: boolean) =>
+            visible ? { flex: 1 } : HIDDEN_VIEW_STYLE;
+
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader navigation={navigation} peers={true} channels />
-                {ChannelsStore?.channelsView === ChannelsView.Channels &&
-                this.state.activeTab === 0 ? (
+                <View
+                    style={viewContainerStyle(isChannelsView)}
+                    collapsable={false}
+                >
                     <>
                         <ChannelsHeader
                             totalInbound={totalInbound}
@@ -620,7 +628,11 @@ export default class ChannelsPane extends React.PureComponent<
                             />
                         )}
                     </>
-                ) : (
+                </View>
+                <View
+                    style={viewContainerStyle(!isChannelsView)}
+                    collapsable={false}
+                >
                     <View style={{ flex: 1 }}>
                         <SafeAreaView
                             style={{ flex: 1 }}
@@ -820,11 +832,24 @@ export default class ChannelsPane extends React.PureComponent<
                             </View>
                         </ModalBox>
                     </View>
-                )}
+                </View>
             </View>
         );
     }
 }
+
+// Keeps view mounted but invisible/non-interactive. Prevents freeze when
+// switching to Peers (unmounting NavigationContainer causes native view issues).
+const HIDDEN_VIEW_STYLE = {
+    position: 'absolute' as const,
+    opacity: 0,
+    pointerEvents: 'none' as const,
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    zIndex: -1
+};
 
 const styles = StyleSheet.create({
     button: {

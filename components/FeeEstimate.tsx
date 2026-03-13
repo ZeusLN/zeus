@@ -6,7 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 import { LNURLWithdrawParams } from 'js-lnurl';
 
@@ -34,7 +34,7 @@ interface FeeEstimateProps {
     showOnchainFeeInput?: boolean;
     onFeeChange?: (fee: string) => void;
     feeRate?: string;
-    navigation?: StackNavigationProp<any, any>;
+    navigation?: NativeStackNavigationProp<any, any>;
     InvoicesStore?: InvoicesStore;
     CashuStore?: CashuStore;
 }

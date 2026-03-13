@@ -8,7 +8,7 @@ import {
     RefreshControl
 } from 'react-native';
 import { observer } from 'mobx-react';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SearchBar, Icon, Divider } from '@rneui/themed';
 
 import Header from '../../../components/Header';
@@ -23,7 +23,7 @@ import Base64Utils from '../../../utils/Base64Utils';
 
 import Add from '../../../assets/images/SVG/Add.svg';
 interface WatchtowersProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 export interface Watchtower {

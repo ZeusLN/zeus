@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Amount from './../../components/Amount';
 import Header from '../../components/Header';
 import KeyValue from './../../components/KeyValue';
@@ -23,7 +23,7 @@ import NodeInfoStore from './../../stores/NodeInfoStore';
 import storage from '../../storage';
 
 interface UTXOProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     route: Route<'UTXO', { utxo: Utxo; onLabelUpdate?: () => void }>;
 }

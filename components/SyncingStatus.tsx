@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ParamListBase } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ConnectivityStore from '../stores/ConnectivityStore';
 import SyncStore from '../stores/SyncStore';
@@ -19,7 +19,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import PauseIcon from '../assets/images/SVG/Pause.svg';
 
 interface SyncingStatusProps {
-    navigation: StackNavigationProp<ParamListBase>;
+    navigation: NativeStackNavigationProp<ParamListBase>;
     ConnectivityStore?: ConnectivityStore;
     SyncStore?: SyncStore;
     style?: StyleProp<ViewStyle>;

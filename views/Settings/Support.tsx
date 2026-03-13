@@ -3,7 +3,7 @@ import * as React from 'react';
 import { FlatList, Platform, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -16,7 +16,7 @@ import { openStoreForReview } from '../../utils/RatingUtils';
 import { nodeInfoStore } from '../../stores/Stores';
 
 interface SupportProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
 }
 
 function Support(props: SupportProps) {

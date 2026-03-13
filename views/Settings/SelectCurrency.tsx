@@ -3,7 +3,7 @@ import { FlatList, TouchableOpacity, View, Text } from 'react-native';
 import { Icon, ListItem, SearchBar } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
@@ -24,7 +24,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Star from '../../assets/images/SVG/Star.svg';
 
 interface SelectCurrencyProps {
-    navigation: StackNavigationProp<any, any>;
+    navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     route: Route<
