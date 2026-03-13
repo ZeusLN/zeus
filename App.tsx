@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
     BackHandler,
     NativeEventSubscription,
+    Platform,
     StatusBar,
     AppState
 } from 'react-native';
@@ -348,9 +349,11 @@ export default class App extends React.PureComponent {
         if (nextAppState === 'active' && this.navigation) {
             LinkingUtils.resetShareIntentFlag();
 
-            setTimeout(() => {
-                LinkingUtils.handleInitialUrl(this.navigation);
-            }, 100);
+            if (Platform.OS === 'android') {
+                setTimeout(() => {
+                    LinkingUtils.handleAndroidIntents(this.navigation);
+                }, 100);
+            }
         }
 
         // Apply stealth mode when app goes to background
