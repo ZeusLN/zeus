@@ -4,7 +4,10 @@ import NetInfo, {
     NetInfoSubscription
 } from '@react-native-community/netinfo';
 
+import SettingsStore from './SettingsStore';
+
 const REACHABILITY_POLL_INTERVAL = 15000; // 15s
+const DEFAULT_REACHABILITY_HOST = 'mempool.space';
 
 export default class ConnectivityStore {
     @observable public isOffline: boolean = false;
@@ -12,6 +15,28 @@ export default class ConnectivityStore {
     private netInfoUnsubscribe: NetInfoSubscription | null = null;
     private reachabilityInterval: ReturnType<typeof setInterval> | null = null;
     private reconnectCallbacks: Array<() => void> = [];
+    private settingsStore: SettingsStore;
+
+    constructor(settingsStore: SettingsStore) {
+        this.settingsStore = settingsStore;
+    }
+
+    private getReachabilityUrl = (): string => {
+        const { privacy } = this.settingsStore.settings;
+        const custom = privacy?.defaultBlockExplorer === 'Custom';
+        const host =
+            custom && privacy?.customBlockExplorer
+                ? privacy.customBlockExplorer
+                : privacy?.defaultBlockExplorer || DEFAULT_REACHABILITY_HOST;
+
+        // Custom host may include scheme (e.g. http://mynode:3006#mempool.space)
+        if (custom && host.indexOf('://') !== -1) {
+            const hostUrl = host.split('#')[0];
+            return `${hostUrl}/api/blocks/tip/height`;
+        }
+
+        return `https://${host}/api/blocks/tip/height`;
+    };
 
     public onReconnect = (callback: () => void) => {
         this.reconnectCallbacks.push(callback);
@@ -34,6 +59,12 @@ export default class ConnectivityStore {
     @action
     public start = () => {
         if (this.netInfoUnsubscribe) return;
+
+        NetInfo.configure({
+            reachabilityUrl: this.getReachabilityUrl(),
+            reachabilityTest: async (response) => response.status === 200
+        });
+
         this.netInfoUnsubscribe = NetInfo.addEventListener(this.updateState);
         // Poll every 15s so isInternetReachable gets re-evaluated
         // after reconnect (the listener alone can leave it stale)

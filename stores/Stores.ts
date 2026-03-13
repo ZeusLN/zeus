@@ -29,8 +29,8 @@ import UTXOsStore from './UTXOsStore';
 import SweepStore from './SweepStore';
 import NostrWalletConnectStore from './NostrWalletConnectStore';
 
-export const connectivityStore = new ConnectivityStore();
 export const settingsStore = new SettingsStore();
+export const connectivityStore = new ConnectivityStore(settingsStore);
 export const modalStore = new ModalStore();
 export const offersStore = new OffersStore();
 export const fiatStore = new FiatStore(settingsStore);
