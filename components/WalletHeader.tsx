@@ -25,6 +25,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AlertStore from '../stores/AlertStore';
 import CashuStore from '../stores/CashuStore';
 import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
+import ConnectivityStore from '../stores/ConnectivityStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import ModalStore from '../stores/ModalStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
@@ -255,6 +256,7 @@ interface WalletHeaderProps {
     AlertStore?: AlertStore;
     CashuStore?: CashuStore;
     ChannelsStore?: ChannelsStore;
+    ConnectivityStore?: ConnectivityStore;
     SettingsStore?: SettingsStore;
     ModalStore?: ModalStore;
     NodeInfoStore?: NodeInfoStore;
@@ -278,6 +280,7 @@ interface WalletHeaderState {
     'AlertStore',
     'CashuStore',
     'ChannelsStore',
+    'ConnectivityStore',
     'LightningAddressStore',
     'ModalStore',
     'SettingsStore',
@@ -337,6 +340,7 @@ export default class WalletHeader extends React.Component<
             channels,
             AlertStore,
             CashuStore,
+            ConnectivityStore,
             SettingsStore,
             NodeInfoStore,
             ChannelsStore,
@@ -481,11 +485,27 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
+        const OfflineBadge = () => {
+            return ConnectivityStore?.isOffline ? (
+                <Badge
+                    value={localeString('general.offline')}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('error'),
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale
+                    }}
+                    textStyle={styles.badgeTextStyle}
+                />
+            ) : null;
+        };
+
         const StatusBadges = () => (
             <>
                 <CustodialBadge />
                 <NetworkBadge />
                 <ReadOnlyBadge />
+                <OfflineBadge />
                 <TorBadge />
             </>
         );
@@ -705,11 +725,15 @@ export default class WalletHeader extends React.Component<
                                         />
                                     </View>
                                 )}
-                                {!connecting && isSyncing && (
-                                    <View style={{ marginRight: 15 }}>
-                                        <SyncBadge navigation={navigation} />
-                                    </View>
-                                )}
+                                {!connecting &&
+                                    isSyncing &&
+                                    !ConnectivityStore?.isOffline && (
+                                        <View style={{ marginRight: 15 }}>
+                                            <SyncBadge
+                                                navigation={navigation}
+                                            />
+                                        </View>
+                                    )}
                                 {!connecting && AlertStore?.hasError && (
                                     <AlertButton />
                                 )}

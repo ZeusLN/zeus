@@ -18,6 +18,7 @@ import {
     cashuStore,
     channelBackupStore,
     channelsStore,
+    connectivityStore,
     contactStore,
     feeStore,
     fiatStore,
@@ -381,6 +382,7 @@ export default class App extends React.PureComponent {
                 CashuStore={cashuStore}
                 ChannelBackupStore={channelBackupStore}
                 ChannelsStore={channelsStore}
+                ConnectivityStore={connectivityStore}
                 ContactStore={contactStore}
                 FeeStore={feeStore}
                 FiatStore={fiatStore}

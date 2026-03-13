@@ -153,6 +153,7 @@ const MintIcons = ({ mints }: { mints?: MintInfo[] }) => {
                     <MintAvatar
                         iconUrl={mint.iconUrl}
                         name={mint.name}
+                        mintUrl={mint.url}
                         size="small"
                     />
                 </View>

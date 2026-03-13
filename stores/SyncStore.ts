@@ -8,6 +8,7 @@ import { sleep } from '../utils/SleepUtils';
 
 import NodeInfo from '../models/NodeInfo';
 
+import ConnectivityStore from './ConnectivityStore';
 import SettingsStore from './SettingsStore';
 
 export default class SyncStore {
@@ -31,9 +32,23 @@ export default class SyncStore {
 
     nodeInfo: any;
     settingsStore: SettingsStore;
+    connectivityStore: ConnectivityStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        connectivityStore: ConnectivityStore
+    ) {
         this.settingsStore = settingsStore;
+        this.connectivityStore = connectivityStore;
+        // Resume syncing when connectivity is restored (embedded-lnd only)
+        connectivityStore.onReconnect(() => {
+            if (
+                !this.isSyncing &&
+                this.settingsStore.implementation === 'embedded-lnd'
+            ) {
+                this.startSyncing();
+            }
+        });
     }
 
     @action
@@ -129,8 +144,19 @@ export default class SyncStore {
     @action
     public startSyncing = async () => {
         this.isSyncing = true;
+        this.error = false;
+        this.bestBlockHeight = 0;
+        this.numBlocksUntilSynced = 1;
 
-        await this.getBestBlockHeight();
+        // Fetch best block height, retrying until successful
+        while (!this.bestBlockHeight) {
+            if (!this.isSyncing) return;
+            try {
+                await this.getBestBlockHeight();
+            } catch {
+                await sleep(3000);
+            }
+        }
 
         // initial fetch
         while (!this.nodeInfo?.block_height) {
@@ -157,7 +183,9 @@ export default class SyncStore {
                 i++;
             }
 
-            if (queryMempool) this.getBestBlockHeight();
+            if (queryMempool) {
+                this.getBestBlockHeight().catch(() => {});
+            }
         }
     };
 

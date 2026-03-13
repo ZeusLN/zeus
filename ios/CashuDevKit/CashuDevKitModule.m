@@ -175,4 +175,13 @@ RCT_EXTERN_METHOD(listTransactions:(NSString * _Nullable)direction
                   resolver:(RCTPromiseResolveBlock)resolve
                   rejecter:(RCTPromiseRejectBlock)reject)
 
+// Direct Proof Access (Offline Send)
+RCT_EXTERN_METHOD(getUnspentProofs:(NSString *)mintUrl
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
+RCT_EXTERN_METHOD(removeProofs:(NSString *)proofsYJson
+                  resolver:(RCTPromiseResolveBlock)resolve
+                  rejecter:(RCTPromiseRejectBlock)reject)
+
 @end
