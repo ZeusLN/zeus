@@ -2565,7 +2565,9 @@ export default class WalletConfiguration extends React.Component<
                                                         'SeedRecovery',
                                                         {
                                                             network:
-                                                                embeddedLndNetwork
+                                                                embeddedLndNetwork,
+                                                            nickname,
+                                                            photo
                                                         }
                                                     )
                                                 }
