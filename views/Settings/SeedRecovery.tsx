@@ -94,6 +94,7 @@ interface SeedRecoveryState {
     invalidInput: boolean;
     showClipboardPrompt: boolean;
     clipboardSeedArray: string[];
+    showValidation: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -134,7 +135,8 @@ export default class SeedRecovery extends React.PureComponent<
             customRescueHost: settings.swaps?.customHost || '',
             invalidInput: false,
             showClipboardPrompt: false,
-            clipboardSeedArray: []
+            clipboardSeedArray: [],
+            showValidation: false
         };
     }
 
@@ -239,8 +241,18 @@ export default class SeedRecovery extends React.PureComponent<
             restoreSwaps,
             restoreRescueKey,
             rescueHost,
-            customRescueHost
+            customRescueHost,
+            showValidation
         } = this.state;
+
+        const invalidWordIndices: number[] = showValidation
+            ? seedArray.reduce((acc: number[], word, i) => {
+                  if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
+                      acc.push(i);
+                  }
+                  return acc;
+              }, [])
+            : [];
 
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
 
@@ -318,7 +330,13 @@ export default class SeedRecovery extends React.PureComponent<
                         marginLeft: 6,
                         marginRight: 6,
                         flexDirection: 'row',
-                        maxHeight: type === 'scb' ? 60 : undefined
+                        maxHeight: type === 'scb' ? 60 : undefined,
+                        ...(!showSuggestions &&
+                            index != null &&
+                            invalidWordIndices.includes(index) && {
+                                borderWidth: 1,
+                                borderColor: themeColor('warning')
+                            })
                     }}
                 >
                     {!showSuggestions && index != null && (
@@ -479,6 +497,15 @@ export default class SeedRecovery extends React.PureComponent<
                     navigation={navigation}
                 />
                 {errorMsg && <ErrorMessage message={errorMsg} />}
+                {invalidWordIndices.length > 0 && (
+                    <ErrorMessage
+                        message={`${localeString(
+                            'views.Settings.NodeConfiguration.invalidSeedWord'
+                        )}: #${invalidWordIndices
+                            .map((i) => i + 1)
+                            .join(', #')}`}
+                    />
+                )}
                 {loading && <LoadingIndicator />}
                 {!loading && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
@@ -978,9 +1005,23 @@ export default class SeedRecovery extends React.PureComponent<
                                             ? (rescueHost === 'Custom' &&
                                                   !customRescueHost) ||
                                               seedArray.length !== 12 ||
-                                              seedArray.some((seed) => !seed)
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                             : seedArray.length !== 24 ||
-                                              seedArray.some((seed) => !seed)
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                     }
                                 />
                             </View>
@@ -1024,9 +1065,13 @@ export default class SeedRecovery extends React.PureComponent<
                                     onPress={() =>
                                         this.setState({
                                             seedArray:
-                                                this.state.clipboardSeedArray,
+                                                this.state.clipboardSeedArray.map(
+                                                    (w) =>
+                                                        w.toLowerCase().trim()
+                                                ),
                                             showClipboardPrompt: false,
-                                            clipboardSeedArray: []
+                                            clipboardSeedArray: [],
+                                            showValidation: true
                                         })
                                     }
                                     tertiary
