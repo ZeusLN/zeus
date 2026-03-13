@@ -10,7 +10,7 @@ import { inject, observer } from 'mobx-react';
 import { ParamListBase } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import CashuStore from '../stores/CashuStore';
+import ConnectivityStore from '../stores/ConnectivityStore';
 import SyncStore from '../stores/SyncStore';
 import StatusCard from './StatusCard';
 import { localeString } from '../utils/LocaleUtils';
@@ -20,26 +20,26 @@ import PauseIcon from '../assets/images/SVG/Pause.svg';
 
 interface SyncingStatusProps {
     navigation: StackNavigationProp<ParamListBase>;
-    CashuStore?: CashuStore;
+    ConnectivityStore?: ConnectivityStore;
     SyncStore?: SyncStore;
     style?: StyleProp<ViewStyle>;
 }
 
-@inject('CashuStore', 'SyncStore')
+@inject('ConnectivityStore', 'SyncStore')
 @observer
 export default class SyncingStatus extends React.PureComponent<
     SyncingStatusProps,
     {}
 > {
     render() {
-        const { navigation, CashuStore, SyncStore, style } = this.props;
+        const { navigation, ConnectivityStore, SyncStore, style } = this.props;
         const { currentBlockHeight, bestBlockHeight, isSyncing } = SyncStore!;
 
         if (!isSyncing) {
             return null;
         }
 
-        if (CashuStore!.isOffline) {
+        if (ConnectivityStore!.isOffline) {
             return (
                 <TouchableOpacity
                     onPress={() => navigation.navigate('Sync')}

@@ -40,7 +40,11 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import { activityStore, lightningAddressStore } from './Stores';
+import {
+    activityStore,
+    connectivityStore,
+    lightningAddressStore
+} from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -54,11 +58,6 @@ import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
-
-import NetInfo, {
-    NetInfoState,
-    NetInfoSubscription
-} from '@react-native-community/netinfo';
 
 import NavigationService from '../NavigationService';
 
@@ -229,13 +228,14 @@ export default class CashuStore {
     private originalSeedVersion: string | undefined;
 
     // Offline support
-    @observable public isOffline: boolean = false;
+    public get isOffline(): boolean {
+        return connectivityStore.isOffline;
+    }
     @observable public offlinePendingTokens: Array<CashuToken> = [];
     @observable public offlinePendingBalance: number = 0;
     @observable public offlineSpentTokens: Array<CashuToken> = [];
     @observable public showOfflineSpentAlert: boolean = false;
     private isSweeping: boolean = false;
-    private netInfoUnsubscribe: NetInfoSubscription | null = null;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -1109,37 +1109,21 @@ export default class CashuStore {
     // End CDK Integration Methods
     // =========================================================================
 
-    @action
     public startConnectivityMonitoring = () => {
-        if (this.netInfoUnsubscribe) return;
-        this.netInfoUnsubscribe = NetInfo.addEventListener(
-            (state: NetInfoState) => {
-                const wasOffline = this.isOffline;
-                runInAction(() => {
-                    // isInternetReachable can be null (unknown) initially;
-                    // treat null as "not offline" to avoid false positives
-                    this.isOffline =
-                        state.isConnected === false ||
-                        state.isInternetReachable === false;
-                });
-                // offline → online transition: sweep pending tokens
-                // delay briefly to let the network stabilize
-                if (wasOffline && !this.isOffline && !this.isSweeping) {
-                    setTimeout(() => {
-                        this.sweepOfflinePendingTokens();
-                        this.checkPendingItems();
-                    }, 3000);
-                }
+        connectivityStore.start();
+        connectivityStore.onReconnect(() => {
+            // delay briefly to let the network stabilize
+            if (!this.isSweeping) {
+                setTimeout(() => {
+                    this.sweepOfflinePendingTokens();
+                    this.checkPendingItems();
+                }, 3000);
             }
-        );
+        });
     };
 
-    @action
     public stopConnectivityMonitoring = () => {
-        if (this.netInfoUnsubscribe) {
-            this.netInfoUnsubscribe();
-            this.netInfoUnsubscribe = null;
-        }
+        connectivityStore.stop();
     };
 
     @action
@@ -1164,7 +1148,6 @@ export default class CashuStore {
         this.offlinePendingBalance = 0;
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
-        this.isOffline = false;
         this.isSweeping = false;
         this.stopConnectivityMonitoring();
     };
