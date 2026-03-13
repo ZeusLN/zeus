@@ -375,6 +375,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // If select wallet on startup is enabled and this is initial start,
                 // navigate to wallet selection screen without activating any wallet
                 if (settings.selectNodeOnStartup && initialStart) {
+                    SettingsStore.setInitialStart(false);
                     // Update UI state but don't connect to any wallet yet
                     if (!this.state.unlocked) {
                         this.setState({ unlocked: true });
