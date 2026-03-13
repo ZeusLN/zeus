@@ -56,6 +56,7 @@ import NewChannelModal from './components/Modals/NewChannelModal';
 import GraphSyncPromptModal from './components/Modals/GraphSyncPromptModal';
 import NWCPendingPaymentsModal from './components/Modals/NWCPendingPaymentsModal';
 import RatingModal from './components/Modals/RatingModal';
+import RestoreChannelModal from './components/Modals/RestoreChannelModal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -1564,6 +1565,8 @@ export default class App extends React.PureComponent {
                             <InfoModal />
                             {/* @ts-ignore:next-line */}
                             <RatingModal />
+                            {/* @ts-ignore:next-line */}
+                            <RestoreChannelModal />
                         </GestureHandlerRootView>
                     </PushNotificationManager>
                 </AppContainer>

@@ -35,7 +35,9 @@ export enum LndErrorCode {
     /** Invalid response from LND stream */
     STREAM_INVALID_RESPONSE = 'STREAM_INVALID_RESPONSE',
     /** Stream ended normally (EOF) - not an error */
-    STREAM_EOF = 'STREAM_EOF'
+    STREAM_EOF = 'STREAM_EOF',
+    /** LND is scanning chain for wallet recovery - cannot stop yet */
+    WALLET_RECOVERY_IN_PROGRESS = 'WALLET_RECOVERY_IN_PROGRESS'
 }
 
 /**  messages for display in UI */
@@ -64,7 +66,9 @@ export const LND_ERROR_MESSAGES: Record<LndErrorCode, string> = {
     [LndErrorCode.STOP_LND_EXPECTED]: 'LND stopped (expected state).',
     [LndErrorCode.STREAM_INVALID_RESPONSE]:
         'Invalid response from LND. Please try again.',
-    [LndErrorCode.STREAM_EOF]: 'Stream ended (expected).'
+    [LndErrorCode.STREAM_EOF]: 'Stream ended (expected).',
+    [LndErrorCode.WALLET_RECOVERY_IN_PROGRESS]:
+        'Wallet recovery scan in progress. Please wait.'
 };
 
 /** Raw message patterns that map to each error code (for matching native/stream errors) */
@@ -110,7 +114,8 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
         'EOF',
         'error reading from server: EOF',
         'channel event store shutting down'
-    ]
+    ],
+    [LndErrorCode.WALLET_RECOVERY_IN_PROGRESS]: ['wallet recovery in progress']
 };
 
 /** Match a raw error message to an LndErrorCode (returns first match) */
@@ -155,7 +160,8 @@ export function isStopLndExpectedError(msg: string): boolean {
 const TRANSIENT_RPC_ERROR_CODES: LndErrorCode[] = [
     LndErrorCode.RPC_CONNECTION_CLOSED,
     LndErrorCode.RPC_NOT_READY,
-    LndErrorCode.MACAROON_STORE_LOCKED
+    LndErrorCode.MACAROON_STORE_LOCKED,
+    LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
 ];
 
 /** Check if error message is a transient RPC error (retryable) */
