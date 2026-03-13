@@ -62,7 +62,8 @@ export default class ConnectivityStore {
 
         NetInfo.configure({
             reachabilityUrl: this.getReachabilityUrl(),
-            reachabilityTest: async (response) => response.status === 200
+            reachabilityTest: async (response) => response.status === 200,
+            useNativeReachability: false
         });
 
         this.netInfoUnsubscribe = NetInfo.addEventListener(this.updateState);
