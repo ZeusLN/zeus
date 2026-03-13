@@ -12,6 +12,7 @@ export declare enum SessionState {
     STATE_IN_USE = "STATE_IN_USE",
     STATE_REVOKED = "STATE_REVOKED",
     STATE_EXPIRED = "STATE_EXPIRED",
+    STATE_RESERVED = "STATE_RESERVED",
     UNRECOGNIZED = "UNRECOGNIZED"
 }
 export interface AddSessionRequest {

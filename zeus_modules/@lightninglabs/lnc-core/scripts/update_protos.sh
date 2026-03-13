@@ -34,6 +34,8 @@ curl ${LND_URL}/${LND_RELEASE_TAG}/lnrpc/signrpc/signer.proto --create-dirs -o p
 curl ${LND_URL}/${LND_RELEASE_TAG}/lnrpc/walletrpc/walletkit.proto --create-dirs -o protos/lnd/${LND_RELEASE_TAG}/walletrpc/walletkit.proto
 curl ${LND_URL}/${LND_RELEASE_TAG}/lnrpc/watchtowerrpc/watchtower.proto --create-dirs -o protos/lnd/${LND_RELEASE_TAG}/watchtowerrpc/watchtower.proto
 curl ${LND_URL}/${LND_RELEASE_TAG}/lnrpc/wtclientrpc/wtclient.proto --create-dirs -o protos/lnd/${LND_RELEASE_TAG}/wtclientrpc/wtclient.proto
+curl ${LND_URL}/${LND_RELEASE_TAG}/lnrpc/peersrpc/peers.proto --create-dirs -o protos/lnd/${LND_RELEASE_TAG}/peersrpc/peers.proto
+curl ${LND_URL}/${LND_RELEASE_TAG}/lnrpc/stateservice.proto --create-dirs -o protos/lnd/${LND_RELEASE_TAG}/stateservice.proto
 
 curl ${LOOP_URL}/${LOOP_RELEASE_TAG}/looprpc/client.proto --create-dirs -o protos/loop/${LOOP_RELEASE_TAG}/client.proto
 curl ${LOOP_URL}/${LOOP_RELEASE_TAG}/looprpc/debug.proto --create-dirs -o protos/loop/${LOOP_RELEASE_TAG}/debug.proto
@@ -46,10 +48,16 @@ curl ${POOL_URL}/${POOL_RELEASE_TAG}/auctioneerrpc/hashmail.proto --create-dirs 
 
 curl ${FARADAY_URL}/${FARADAY_RELEASE_TAG}/frdrpc/faraday.proto --create-dirs -o protos/faraday/${FARADAY_RELEASE_TAG}/faraday.proto
 
+curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/tapcommon.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/tapcommon.proto
 curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/taprootassets.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/taprootassets.proto
 curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/assetwalletrpc/assetwallet.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/assetwalletrpc/assetwallet.proto
 curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/mintrpc/mint.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/mintrpc/mint.proto
+curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/priceoraclerpc/price_oracle.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/priceoraclerpc/price_oracle.proto
+curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/rfqrpc/rfq.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/rfqrpc/rfq.proto
+curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/tapchannelrpc/tapchannel.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/tapchannelrpc/tapchannel.proto
+curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/tapdevrpc/tapdev.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/tapdevrpc/tapdev.proto
 curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/universerpc/universe.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/universerpc/universe.proto
+curl ${TAPD_URL}/${TAPD_RELEASE_TAG}/taprpc/authmailboxrpc/mailbox.proto --create-dirs -o protos/tapd/${TAPD_RELEASE_TAG}/authmailboxrpc/mailbox.proto
 
 curl ${LIT_URL}/${LIT_RELEASE_TAG}/litrpc/firewall.proto --create-dirs -o protos/lit/${LIT_RELEASE_TAG}/firewall.proto
 curl ${LIT_URL}/${LIT_RELEASE_TAG}/litrpc/lit-sessions.proto --create-dirs -o protos/lit/${LIT_RELEASE_TAG}/lit-sessions.proto
