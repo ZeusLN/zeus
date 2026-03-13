@@ -32,10 +32,14 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { clearAllData } from '../../utils/DataClearUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { exportChannelDb } from '../../utils/ChannelMigrationUtils';
+import {
+    exportChannelDb,
+    uploadChannelBackupToOlympus
+} from '../../utils/ChannelMigrationUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SyncStore from '../../stores/SyncStore';
 
 import { Icon } from '@rneui/themed';
 import Feather from '@react-native-vector-icons/feather';
@@ -45,13 +49,14 @@ interface ToolsProps {
     route: RouteProp<{ Tools: { showClearDataModal?: boolean } }, 'Tools'>;
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
+    SyncStore: SyncStore;
 }
 
 interface ToolsState {
     isLoading: boolean;
 }
 
-@inject('SettingsStore', 'NodeInfoStore')
+@inject('SettingsStore', 'NodeInfoStore', 'SyncStore')
 @observer
 export default class Tools extends React.Component<ToolsProps, ToolsState> {
     focusListener: any = null;
@@ -112,6 +117,22 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
     };
 
     handleExportChannels = () => {
+        const { SettingsStore, NodeInfoStore, SyncStore } = this.props;
+        const { isSyncing } = SyncStore;
+
+        if (isSyncing) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Tools.migration.export.syncInProgress')
+            );
+            return;
+        }
+
+        const isTestnet = NodeInfoStore.nodeInfo.isTestNet;
+        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
+        const lndDir = () => SettingsStore.lndDir || 'lnd';
+        const seedPhrase = SettingsStore.seedPhrase.join(' ');
+
         Alert.alert(
             localeString('views.Tools.migration.export.title'),
 
@@ -123,14 +144,22 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     style: 'cancel'
                 },
                 {
-                    text: localeString('views.Tools.migration.export.confirm'),
+                    text: localeString('views.Tools.migration.export.olympus'),
                     style: 'default',
                     onPress: async () => {
-                        const { NodeInfoStore } = this.props;
-                        const isTestnet = NodeInfoStore!.nodeInfo.isTestNet;
-                        const lndDir = () =>
-                            this.props.SettingsStore.lndDir || 'lnd';
-
+                        await uploadChannelBackupToOlympus(
+                            lndDir(),
+                            isTestnet,
+                            pubkey,
+                            seedPhrase,
+                            (loading) => this.setState({ isLoading: loading })
+                        );
+                    }
+                },
+                {
+                    text: localeString('views.Tools.migration.export.local'),
+                    style: 'default',
+                    onPress: async () => {
                         await exportChannelDb(lndDir(), isTestnet, (loading) =>
                             this.setState({ isLoading: loading })
                         );
@@ -142,7 +171,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { settings, isChannelMigrating } = SettingsStore;
+        const { settings, isChannelMigrating, implementation } = SettingsStore;
 
         const selectedNode: any =
             (settings &&
@@ -676,7 +705,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             </View>
                         </TouchableOpacity>
                     </View>
-                    {!isChannelMigrating && (
+                    {implementation === 'embedded-lnd' && !isChannelMigrating && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
