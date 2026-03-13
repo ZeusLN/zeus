@@ -380,6 +380,22 @@ export default class SeedRecovery extends React.PureComponent<
         );
 
         const restore = async () => {
+            // Validate all seed words against BIP39 wordlist before attempting restore
+            const invalidWords: number[] = [];
+            seedArray.forEach((word: string, i: number) => {
+                if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
+                    invalidWords.push(i + 1); // 1-based index to match UI
+                }
+            });
+            if (invalidWords.length > 0) {
+                this.setState({
+                    errorMsg: `${localeString(
+                        'views.Settings.NodeConfiguration.invalidSeedWord'
+                    )}: #${invalidWords.join(', #')}`
+                });
+                return;
+            }
+
             this.setState({ loading: true });
 
             await stopLnd();
@@ -482,6 +498,7 @@ export default class SeedRecovery extends React.PureComponent<
                                         alignSelf: 'center'
                                     }}
                                     autoCapitalize="none"
+                                    autoCorrect={false}
                                     autoFocus
                                     onChangeText={(text: string) => {
                                         this.setState({
