@@ -298,7 +298,8 @@ export default class App extends React.PureComponent {
         'SendingLightning',
         'SendingOnChain',
         'CashuSendingLightning',
-        'IntroSplash'
+        'IntroSplash',
+        'NostrContacts'
     ];
 
     private handleBackPress = (navigation: any) => {
