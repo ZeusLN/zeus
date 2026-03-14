@@ -182,6 +182,52 @@ export const getAmountFontSize = (
     }
 };
 
+/**
+ * Creates and starts the shake animation sequence.
+ * Used to provide visual feedback when invalid input is entered.
+ */
+export const startShakeAnimation = (
+    shakeAnimation: Animated.Value,
+    textAnimation: Animated.Value
+): void => {
+    Animated.parallel([
+        Animated.sequence([
+            Animated.timing(textAnimation, {
+                toValue: 1,
+                duration: 100,
+                useNativeDriver: false
+            }),
+            Animated.timing(textAnimation, {
+                toValue: 0,
+                duration: 1000,
+                useNativeDriver: false
+            })
+        ]),
+        Animated.sequence([
+            Animated.timing(shakeAnimation, {
+                toValue: 10,
+                duration: 100,
+                useNativeDriver: true
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: -10,
+                duration: 100,
+                useNativeDriver: true
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: 10,
+                duration: 100,
+                useNativeDriver: true
+            }),
+            Animated.timing(shakeAnimation, {
+                toValue: 0,
+                duration: 100,
+                useNativeDriver: true
+            })
+        ])
+    ]).start();
+};
+
 export interface KeypadAnimationRefs {
     textAnimationRef: Animated.CompositeAnimation | null;
     shakeAnimationRef: Animated.CompositeAnimation | null;

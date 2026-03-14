@@ -92,6 +92,7 @@ export default class KeypadPane extends React.PureComponent<
         shakeAnimationRef: null
     };
     amountInput = '0';
+    private clearValueTimeout: ReturnType<typeof setTimeout> | null = null;
     focusListener: any = null;
 
     constructor(props: KeypadPaneProps) {
@@ -141,6 +142,9 @@ export default class KeypadPane extends React.PureComponent<
     componentWillUnmount() {
         if (this.focusListener) {
             this.focusListener();
+        }
+        if (this.clearValueTimeout) {
+            clearTimeout(this.clearValueTimeout);
         }
         resetAllKeypadAnimations(
             this.shakeAnimation,
@@ -207,6 +211,7 @@ export default class KeypadPane extends React.PureComponent<
 
     clearValue = (delayed?: boolean) => {
         resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        if (this.clearValueTimeout) clearTimeout(this.clearValueTimeout);
         const clear = () => {
             this.amountInput = '0';
             this.setState({
@@ -217,7 +222,7 @@ export default class KeypadPane extends React.PureComponent<
             });
         };
         if (delayed) {
-            setTimeout(clear, CLEAR_VALUE_DELAY);
+            this.clearValueTimeout = setTimeout(clear, CLEAR_VALUE_DELAY);
         } else {
             clear();
         }
