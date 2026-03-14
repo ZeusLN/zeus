@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { ScrollView } from 'react-native';
+import { Platform, ScrollView } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
+import NfcManager from 'react-native-nfc-manager';
 
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
@@ -35,6 +36,7 @@ interface QRState {
     labelBottom: boolean;
     logo: any;
     satAmount?: string | number;
+    nfcSupported: boolean;
 }
 
 @inject('SettingsStore')
@@ -56,8 +58,22 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
             hideText,
             labelBottom,
             logo,
-            satAmount
+            satAmount,
+            nfcSupported: false
         };
+    }
+
+    async componentDidMount() {
+        if (Platform.OS !== 'android') {
+            return;
+        }
+
+        try {
+            const nfcSupported = await NfcManager.isSupported();
+            this.setState({ nfcSupported });
+        } catch {
+            this.setState({ nfcSupported: false });
+        }
     }
 
     render() {
@@ -69,7 +85,8 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
             hideText,
             labelBottom,
             logo,
-            satAmount
+            satAmount,
+            nfcSupported
         } = this.state;
 
         return (
@@ -99,6 +116,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         labelBottom={labelBottom ? label || value : undefined}
                         showShare={true}
                         iconOnly={true}
+                        nfcSupported={nfcSupported}
                     />
                 </ScrollView>
             </Screen>
