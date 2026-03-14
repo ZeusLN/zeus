@@ -4,29 +4,31 @@ import {
     Dimensions,
     InteractionManager,
     NativeEventSubscription,
-    StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { loadDonationLnurl } from '../../utils/DonationUtils';
 
 import LnurlPaySuccess from '../LnurlPay/Success';
 
 import Button from '../../components/Button';
-import LightningLoadingPattern from '../../components/LightningLoadingPattern';
-import PaidIndicator from '../../components/PaidIndicator';
 import Screen from '../../components/Screen';
-import SuccessAnimation from '../../components/SuccessAnimation';
 import { Row } from '../../components/layout/Row';
+import PaymentSuccessView from '../../components/PaymentSuccessView';
+import PaymentErrorView from '../../components/PaymentErrorView';
+import DonationInfoModal from '../../components/DonationInfoModal';
+import DonationGiftIcon from '../../components/DonationGiftIcon';
+import SendingLoadingView from '../../components/SendingLoadingView';
+import { sendingStyles } from '../../components/sendingStyles';
 
 import CashuStore from '../../stores/CashuStore';
 import ContactStore from '../../stores/ContactStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
-import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import ContactUtils from '../../utils/ContactUtils';
@@ -37,15 +39,9 @@ import UrlUtils from '../../utils/UrlUtils';
 import Storage from '../../storage';
 
 import Clock from '../../assets/images/SVG/Clock.svg';
-import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
-import Gift from '../../assets/images/SVG/gift.svg';
 
-import CopyBox from '../../components/CopyBox';
-import KeyValue from '../../components/KeyValue';
-import Amount from '../../components/Amount';
 import ModalBox from '../../components/ModalBox';
-import LoadingIndicator from '../../components/LoadingIndicator';
 import Header from '../../components/Header';
 import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
 
@@ -54,7 +50,6 @@ interface CashuSendingLightningProps {
     CashuStore: CashuStore;
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
-    SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     route: Route<
         'CashuSendingLightning',
@@ -169,7 +164,7 @@ export default class CashuSendingLightning extends React.Component<
         this.setState({ payingDonation: true, paymentType: 'donation' });
 
         try {
-            const paymentRequest = await this.loadLnurl(donationAmount);
+            const paymentRequest = await loadDonationLnurl(donationAmount);
             if (!paymentRequest) {
                 this.setState({ payingDonation: false });
                 return;
@@ -189,10 +184,7 @@ export default class CashuSendingLightning extends React.Component<
                 isDonationPayment
             });
 
-            if (
-                !donationPayment ||
-                donationPayment?.meltResponse?.quote?.state !== 'PAID'
-            ) {
+            if (!donationPayment || !donationPayment.payment_preimage) {
                 console.log('Donation payment failed.');
                 this.setState({ donationHandled: false });
                 return;
@@ -213,156 +205,6 @@ export default class CashuSendingLightning extends React.Component<
         } finally {
             this.setState({ payingDonation: false });
         }
-    };
-
-    loadLnurl = async (donationAmount: string) => {
-        const donationAddress = 'tips@pay.zeusln.app';
-        const [username, bolt11Domain] = donationAddress.split('@');
-        const url = bolt11Domain.includes('.onion')
-            ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
-            : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
-
-        try {
-            const response = await ReactNativeBlobUtil.fetch('GET', url);
-            const lnurlData = response.json();
-            const amount = parseFloat(donationAmount) * 1000;
-            const callbackUrl = `${lnurlData.callback}?amount=${amount}`;
-
-            const invoiceResponse = await ReactNativeBlobUtil.fetch(
-                'GET',
-                callbackUrl
-            );
-            const invoiceData = invoiceResponse.json();
-
-            return invoiceData.pr;
-        } catch (err) {
-            console.error('loadLnurl error:', err);
-            return null;
-        }
-    };
-
-    renderInfoModal = () => {
-        const {
-            showDonationInfo,
-            donationHandled,
-            amountDonated,
-            donationPreimage
-        } = this.state;
-
-        return (
-            <ModalBox
-                isOpen={showDonationInfo}
-                style={{
-                    backgroundColor: 'transparent'
-                }}
-                onClosed={() => {
-                    this.setState({
-                        showDonationInfo: false
-                    });
-                }}
-                position="center"
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 24,
-                            padding: 20,
-                            alignItems: 'center',
-                            width: '90%'
-                        }}
-                    >
-                        {donationHandled ? (
-                            <>
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        color: themeColor('text'),
-                                        marginBottom: 12,
-                                        fontSize: 18,
-                                        textAlign: 'center'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.PaymentRequest.thankYouForDonation'
-                                    )}
-                                </Text>
-                                <View
-                                    style={{
-                                        width: '100%',
-                                        marginBottom: -10
-                                    }}
-                                >
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.PaymentRequest.amountDonated'
-                                        )}
-                                        value={
-                                            <Amount
-                                                sats={amountDonated?.toString()}
-                                                sensitive
-                                                toggleable
-                                            />
-                                        }
-                                    />
-                                </View>
-                                {donationPreimage && (
-                                    <View
-                                        style={{
-                                            width: '100%',
-                                            marginTop: 16
-                                        }}
-                                    >
-                                        <CopyBox
-                                            heading={localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )}
-                                            headingCopied={`${localeString(
-                                                'views.Payment.paymentPreimage'
-                                            )} ${localeString(
-                                                'components.ExternalLinkModal.copied'
-                                            )}`}
-                                            theme="dark"
-                                            URL={donationPreimage}
-                                        />
-                                    </View>
-                                )}
-                            </>
-                        ) : (
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('text'),
-                                    fontSize: 18,
-                                    marginBottom: 20,
-                                    textAlign: 'center'
-                                }}
-                            >
-                                {localeString(
-                                    'views.SendingLightning.donationFailed'
-                                )}
-                            </Text>
-                        )}
-                        <Button
-                            title={localeString('general.close')}
-                            onPress={() =>
-                                this.setState({ showDonationInfo: false })
-                            }
-                            containerStyle={{
-                                marginTop: 18
-                            }}
-                            tertiary
-                        />
-                    </View>
-                </View>
-            </ModalBox>
-        );
     };
 
     renderZaplockerWarningModal = () => {
@@ -478,7 +320,6 @@ export default class CashuSendingLightning extends React.Component<
 
         const success = this.successfullySent(CashuStore);
         const windowSize = Dimensions.get('window');
-        const amountFontSize = windowSize.width * windowSize.scale * 0.013;
 
         // Show loading animation until we have a result (success or error)
         const showLoading = !paymentSuccess && !paymentError;
@@ -486,26 +327,7 @@ export default class CashuSendingLightning extends React.Component<
         if (showLoading) {
             return (
                 <Screen>
-                    <View
-                        style={{
-                            flex: 1,
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                        }}
-                    >
-                        <LightningLoadingPattern />
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                paddingBottom: windowSize.height / 10,
-                                fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
-                            }}
-                        >
-                            {localeString('views.SendingLightning.sending')}
-                        </Text>
-                    </View>
+                    <SendingLoadingView />
                 </Screen>
             );
         }
@@ -533,42 +355,27 @@ export default class CashuSendingLightning extends React.Component<
                     />
                 )}
                 {this.renderZaplockerWarningModal()}
-                {this.renderInfoModal()}
+                <DonationInfoModal
+                    isOpen={this.state.showDonationInfo}
+                    onClose={() => this.setState({ showDonationInfo: false })}
+                    donationHandled={donationHandled}
+                    amountDonated={this.state.amountDonated}
+                    donationPreimage={this.state.donationPreimage}
+                />
                 {paymentType === 'donation' && (
-                    <View
-                        style={{
-                            position: 'absolute',
-                            top: 10,
-                            right: 10,
-                            zIndex: 1
-                        }}
-                    >
-                        {payingDonation ? (
-                            <LoadingIndicator />
-                        ) : (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.setState({ showDonationInfo: true })
-                                }
-                            >
-                                <Gift
-                                    fill={
-                                        donationHandled
-                                            ? themeColor('highlight')
-                                            : themeColor('error')
-                                    }
-                                    width={30}
-                                    height={30}
-                                />
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                    <DonationGiftIcon
+                        payingDonation={payingDonation}
+                        donationHandled={donationHandled}
+                        onPress={() =>
+                            this.setState({ showDonationInfo: true })
+                        }
+                    />
                 )}
                 {!loading && (
                     <>
                         <View
                             style={{
-                                ...styles.content,
+                                ...sendingStyles.content,
                                 paddingTop: windowSize.height * 0.05
                             }}
                         >
@@ -580,152 +387,19 @@ export default class CashuSendingLightning extends React.Component<
                                 />
                             )}
                             {!paymentError && (
-                                <>
-                                    <PaidIndicator />
-                                    <View style={{ alignItems: 'center' }}>
-                                        <SuccessAnimation />
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                paddingTop:
-                                                    windowSize.height * 0.03,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize:
-                                                    windowSize.width *
-                                                    windowSize.scale *
-                                                    0.017
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.SendingLightning.success'
-                                            )}
-                                        </Text>
-                                        {paymentAmount != null && (
-                                            <Row
-                                                style={{
-                                                    marginTop: 10,
-                                                    alignItems: 'baseline'
-                                                }}
-                                            >
-                                                <Amount
-                                                    sats={paymentAmount}
-                                                    sensitive
-                                                    toggleable
-                                                    fontSize={amountFontSize}
-                                                />
-                                                {paymentFee != null && (
-                                                    <Row
-                                                        style={{
-                                                            alignItems:
-                                                                'baseline'
-                                                        }}
-                                                    >
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book',
-                                                                fontSize:
-                                                                    amountFontSize
-                                                            }}
-                                                        >
-                                                            {' (+'}
-                                                        </Text>
-                                                        <Amount
-                                                            sats={paymentFee}
-                                                            sensitive
-                                                            toggleable
-                                                            fontSize={
-                                                                amountFontSize
-                                                            }
-                                                        />
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontFamily:
-                                                                    'PPNeueMontreal-Book',
-                                                                fontSize:
-                                                                    amountFontSize
-                                                            }}
-                                                        >
-                                                            {` ${localeString(
-                                                                'views.Payment.fee'
-                                                            ).toLowerCase()})`}
-                                                        </Text>
-                                                    </Row>
-                                                )}
-                                            </Row>
-                                        )}
-                                        {paymentDuration !== undefined && (
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    marginTop: 10,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.SendingLightning.paymentSettled',
-                                                    {
-                                                        seconds:
-                                                            paymentDuration.toFixed(
-                                                                2
-                                                            )
-                                                    }
-                                                )}
-                                            </Text>
-                                        )}
-                                    </View>
-                                </>
+                                <PaymentSuccessView
+                                    paymentAmount={paymentAmount}
+                                    feeAmount={paymentFee}
+                                    paymentDuration={paymentDuration}
+                                />
                             )}
                             {(!!paymentError || !!paymentErrorMsg) &&
                                 !LnurlPayStore.isZaplocker && (
-                                    <View style={{ alignItems: 'center' }}>
-                                        <ErrorIcon
-                                            width={windowSize.height * 0.13}
-                                            height={windowSize.height * 0.13}
-                                        />
-                                        <Text
-                                            style={{
-                                                color: themeColor('warning'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize: 32,
-                                                marginTop:
-                                                    windowSize.height * 0.07
-                                            }}
-                                        >
-                                            {localeString('general.error')}
-                                        </Text>
-                                        {(paymentErrorMsg || error_msg) && (
-                                            <Text
-                                                style={{
-                                                    color: themeColor('text'),
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    fontSize:
-                                                        windowSize.width *
-                                                        windowSize.scale *
-                                                        0.014,
-                                                    textAlign: 'center',
-                                                    marginTop:
-                                                        windowSize.height *
-                                                        0.025,
-                                                    padding: 5
-                                                }}
-                                            >
-                                                {paymentErrorMsg || error_msg}
-                                            </Text>
-                                        )}
-                                    </View>
+                                    <PaymentErrorView
+                                        errorMessage={
+                                            paymentErrorMsg || error_msg
+                                        }
+                                    />
                                 )}
                             {!paymentError &&
                                 !!paymentPreimage &&
@@ -804,114 +478,103 @@ export default class CashuSendingLightning extends React.Component<
                             )}
                         </Row>
 
-                        <View
-                            style={[
-                                styles.buttons,
-                                !noteKey && { marginTop: 14 }
-                            ]}
-                        >
-                            {(paymentErrorMsg == 'FAILURE_REASON_NO_ROUTE' ||
-                                paymentErrorMsg ==
-                                    localeString(
-                                        'error.failureReasonNoRoute'
-                                    )) && (
-                                <Text
-                                    style={{
-                                        textAlign: 'center',
-                                        color: 'white',
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        padding: 20,
-                                        fontSize: 14
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.SendingLightning.lowFeeLimitMessage'
-                                    )}
-                                </Text>
-                            )}
-                            {(!!paymentErrorMsg || !!paymentError) && (
-                                <>
-                                    <Button
-                                        title={localeString(
-                                            'views.SendingLightning.tryAgain'
+                        <SafeAreaView edges={['bottom']}>
+                            <View
+                                style={[
+                                    sendingStyles.buttons,
+                                    !noteKey && { marginTop: 14 }
+                                ]}
+                            >
+                                {(paymentErrorMsg ==
+                                    'FAILURE_REASON_NO_ROUTE' ||
+                                    paymentErrorMsg ==
+                                        localeString(
+                                            'error.failureReasonNoRoute'
+                                        )) && (
+                                    <Text
+                                        style={{
+                                            textAlign: 'center',
+                                            color: 'white',
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            padding: 20,
+                                            fontSize: 14
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.SendingLightning.lowFeeLimitMessage'
                                         )}
-                                        icon={{
-                                            name: 'rotate-ccw',
-                                            type: 'feather',
-                                            size: 25
-                                        }}
-                                        onPress={() => navigation.goBack()}
-                                        buttonStyle={{
-                                            backgroundColor: 'white',
-                                            height: 40
-                                        }}
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 3
-                                        }}
-                                    />
-                                    <Button
-                                        title={localeString(
-                                            'views.Settings.Ecash.cashuTroubleshooting'
-                                        )}
-                                        icon={{
-                                            name: 'life-buoy',
-                                            type: 'feather',
-                                            size: 25
-                                        }}
-                                        onPress={() => {
-                                            UrlUtils.goToUrl(
-                                                'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
-                                            );
-                                        }}
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 3
-                                        }}
-                                        secondary
-                                    />
-                                </>
-                            )}
-
-                            <Button
-                                title={localeString(
-                                    'views.SendingLightning.goToWallet'
+                                    </Text>
                                 )}
-                                icon={{
-                                    name: 'list',
-                                    size: 25,
-                                    color: themeColor('background')
-                                }}
-                                onPress={() => {
-                                    navigation.popTo('Wallet');
-                                }}
-                                buttonStyle={{ height: 40 }}
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
-                                containerStyle={{ width: '100%', margin: 3 }}
-                            />
-                        </View>
+                                {(!!paymentErrorMsg || !!paymentError) && (
+                                    <>
+                                        <Button
+                                            title={localeString(
+                                                'views.SendingLightning.tryAgain'
+                                            )}
+                                            icon={{
+                                                name: 'rotate-ccw',
+                                                type: 'feather',
+                                                size: 25
+                                            }}
+                                            onPress={() => navigation.goBack()}
+                                            buttonStyle={{
+                                                backgroundColor: 'white',
+                                                height: 40
+                                            }}
+                                            containerStyle={{
+                                                width: '100%',
+                                                margin: 3
+                                            }}
+                                        />
+                                        <Button
+                                            title={localeString(
+                                                'views.Settings.Ecash.cashuTroubleshooting'
+                                            )}
+                                            icon={{
+                                                name: 'life-buoy',
+                                                type: 'feather',
+                                                size: 25
+                                            }}
+                                            onPress={() => {
+                                                UrlUtils.goToUrl(
+                                                    'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
+                                                );
+                                            }}
+                                            containerStyle={{
+                                                width: '100%',
+                                                margin: 3
+                                            }}
+                                            secondary
+                                        />
+                                    </>
+                                )}
+
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.goToWallet'
+                                    )}
+                                    icon={{
+                                        name: 'list',
+                                        size: 25,
+                                        color: themeColor('background')
+                                    }}
+                                    onPress={() => {
+                                        navigation.popTo('Wallet');
+                                    }}
+                                    buttonStyle={{ height: 40 }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    containerStyle={{
+                                        width: '100%',
+                                        margin: 3
+                                    }}
+                                />
+                            </View>
+                        </SafeAreaView>
                     </>
                 )}
             </Screen>
         );
     }
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    },
-    content: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'space-evenly',
-        height: '100%'
-    },
-    buttons: {
-        width: '100%',
-        justifyContent: 'space-between',
-        gap: 15
-    }
-});
