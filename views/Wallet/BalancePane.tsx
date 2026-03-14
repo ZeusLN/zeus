@@ -101,8 +101,7 @@ export default class BalancePane extends React.PureComponent<
             totalBlockchainBalance,
             unconfirmedBlockchainBalance,
             lightningBalance,
-            pendingOpenBalance,
-            balancesCollapsed
+            pendingOpenBalance
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const cashuOfflinePendingBalance = CashuStore.offlinePendingBalance;
@@ -955,7 +954,7 @@ export default class BalancePane extends React.PureComponent<
                                 navigation={navigation}
                                 onRefresh={() => {}}
                                 consolidated
-                                collapsed={balancesCollapsed}
+                                collapsed
                             />
                         </View>
                     </View>

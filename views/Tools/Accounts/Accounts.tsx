@@ -149,48 +149,44 @@ export default class Accounts extends React.Component<
                     }
                     navigation={navigation}
                 />
+                <LayerBalances
+                    navigation={navigation}
+                    BalanceStore={BalanceStore}
+                    UnitsStore={UnitsStore}
+                    onRefresh={async () =>
+                        await Promise.all(
+                            BackendUtils.supportsAccounts()
+                                ? [
+                                      BalanceStore.getBlockchainBalance(
+                                          true,
+                                          false
+                                      ),
+                                      BalanceStore.getLightningBalance(true),
+                                      UTXOsStore.listAccounts()
+                                  ]
+                                : [
+                                      BalanceStore.getBlockchainBalance(
+                                          true,
+                                          false
+                                      ),
+                                      BalanceStore.getLightningBalance(true)
+                                  ]
+                        )
+                    }
+                    refreshing={
+                        BalanceStore?.loadingLightningBalance ||
+                        BalanceStore?.loadingBlockchainBalance ||
+                        UTXOsStore?.loadingAccounts
+                    }
+                    // for payment method selection
+                    value={value}
+                    satAmount={satAmount}
+                    lightning={lightning}
+                    offer={offer}
+                    locked={locked}
+                    editMode={editMode}
+                />
                 {loadingAccounts && <LoadingIndicator />}
-                {!loadingAccounts && (
-                    <LayerBalances
-                        navigation={navigation}
-                        BalanceStore={BalanceStore}
-                        UnitsStore={UnitsStore}
-                        onRefresh={async () =>
-                            await Promise.all(
-                                BackendUtils.supportsAccounts()
-                                    ? [
-                                          BalanceStore.getBlockchainBalance(
-                                              true,
-                                              false
-                                          ),
-                                          BalanceStore.getLightningBalance(
-                                              true
-                                          ),
-                                          UTXOsStore.listAccounts()
-                                      ]
-                                    : [
-                                          BalanceStore.getBlockchainBalance(
-                                              true,
-                                              false
-                                          ),
-                                          BalanceStore.getLightningBalance(true)
-                                      ]
-                            )
-                        }
-                        refreshing={
-                            BalanceStore?.loadingLightningBalance ||
-                            BalanceStore?.loadingBlockchainBalance ||
-                            UTXOsStore?.loadingAccounts
-                        }
-                        // for payment method selection
-                        value={value}
-                        satAmount={satAmount}
-                        lightning={lightning}
-                        offer={offer}
-                        locked={locked}
-                        editMode={editMode}
-                    />
-                )}
                 {!loadingAccounts && !!value && !!lightning && (
                     <Button
                         title={localeString('views.Accounts.fetchTxFees')}

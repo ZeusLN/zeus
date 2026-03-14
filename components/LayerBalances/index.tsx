@@ -1,19 +1,12 @@
 import React, { Component } from 'react';
 import {
-    FlatList,
+    Image,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
     I18nManager
 } from 'react-native';
-import Animated, {
-    ZoomIn,
-    ZoomOut,
-    SlideInDown,
-    SlideOutUp,
-    LinearTransition
-} from 'react-native-reanimated';
 import LinearGradient from '../LinearGradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import BigNumber from 'bignumber.js';
@@ -28,7 +21,15 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import { Row as LayoutRow } from '../layout/Row';
 import Pill from '../Pill';
 
-import { balanceStore, cashuStore, utxosStore } from '../../stores/Stores';
+import Animated from 'react-native-reanimated';
+import { sharedTransition } from '../SharedTransition';
+
+const LightningPng = require('../../assets/images/lightning-white.png');
+const OnchainPng = require('../../assets/images/onchain-white.png');
+const EcashPng = require('../../assets/images/ecash-white.png');
+const MatiPng = require('../../assets/images/mati-white.png');
+
+import { cashuStore, utxosStore } from '../../stores/Stores';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -43,10 +44,6 @@ import { blendHexColors, themeColor } from '../../utils/ThemeUtils';
 import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
 import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
 import MintAvatar from '../MintAvatar';
-import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
-import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
-import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
 
 interface LayerBalancesProps {
     BalanceStore?: BalanceStore;
@@ -185,10 +182,6 @@ const MintIcons = ({ mints }: { mints?: MintInfo[] }) => {
 const Row = ({ item }: { item: DataRow }) => {
     const moreAccounts =
         item.layer === localeString('components.LayerBalances.moreAccounts');
-    const collapseBalances =
-        item.layer ===
-        localeString('components.LayerBalances.collapseBalances');
-    const miniRow = moreAccounts || collapseBalances;
     const ecashRowColors = getEcashRowColors();
     const isEcash = item.layer === 'Ecash';
 
@@ -201,17 +194,13 @@ const Row = ({ item }: { item: DataRow }) => {
             ? [themeColor('buttonBackground'), themeColor('buttonBackground')]
             : [themeColor('secondary'), themeColor('secondary')];
 
-    const finalGradientColors = collapseBalances
-        ? [themeColor('secondary'), themeColor('secondary')]
-        : gradientColors;
-
     return (
         <LinearGradient
-            colors={finalGradientColors}
-            style={[styles.rectButton, miniRow && { height: 40 }]}
+            colors={gradientColors}
+            style={[styles.rectButton, moreAccounts && { height: 40 }]}
         >
             <View style={styles.left}>
-                {!miniRow && (
+                {!moreAccounts && (
                     <LayerIcon
                         layer={item.layer}
                         watchOnly={item.watchOnly}
@@ -222,16 +211,15 @@ const Row = ({ item }: { item: DataRow }) => {
                 <View
                     style={{
                         flexDirection: 'column',
-                        left: miniRow ? 5 : 0,
+                        left: moreAccounts ? 5 : 0,
                         flex: 1
                     }}
                 >
                     <Text
                         style={{
                             ...styles.layerText,
-                            color: collapseBalances
-                                ? themeColor('text')
-                                : themeColor('buttonText') || themeColor('text')
+                            color:
+                                themeColor('buttonText') || themeColor('text')
                         }}
                     >
                         {item.layer === 'Lightning'
@@ -244,10 +232,9 @@ const Row = ({ item }: { item: DataRow }) => {
                         <Text
                             style={{
                                 ...styles.layerText,
-                                color: collapseBalances
-                                    ? themeColor('text')
-                                    : themeColor('buttonTextSecondary') ||
-                                      themeColor('secondaryText')
+                                color:
+                                    themeColor('buttonTextSecondary') ||
+                                    themeColor('secondaryText')
                             }}
                         >
                             {item.subtitle}
@@ -286,7 +273,7 @@ const Row = ({ item }: { item: DataRow }) => {
                 </View>
             </View>
 
-            {collapseBalances ? null : !moreAccounts ? (
+            {!moreAccounts ? (
                 <>
                     {!item.needsConfig && (
                         <View style={styles.rightContent}>
@@ -325,6 +312,15 @@ const Row = ({ item }: { item: DataRow }) => {
     );
 };
 
+const layerPngSource: Record<string, any> = {
+    Lightning: LightningPng,
+    'On-chain': OnchainPng,
+    Ecash: EcashPng
+};
+
+// Only tag main layers that appear on both collapsed and expanded screens
+const sharedLayers = new Set(['Lightning', 'On-chain', 'Ecash']);
+
 const LayerIcon = ({
     layer,
     watchOnly,
@@ -334,25 +330,52 @@ const LayerIcon = ({
     watchOnly?: boolean;
     size?: number;
 }) => {
-    if (watchOnly) return <MatiSvg width={size} height={size} />;
-    if (layer === 'Ecash') return <EcashSvg width={size} height={size} />;
-    if (layer === 'On-chain') return <OnChainSvg width={size} height={size} />;
-    if (layer === 'Lightning')
-        return <LightningSvg width={size} height={size} />;
-    return <OnChainSvg width={size} height={size} />;
+    const useSharedTransition = !watchOnly && sharedLayers.has(layer);
+    const pngSource = watchOnly ? MatiPng : layerPngSource[layer] || OnchainPng;
+    const circleSize = size * 0.8;
+    const iconSize = size * 0.45;
+
+    const imageStyle = { width: iconSize, height: iconSize };
+
+    return (
+        <View
+            style={{
+                width: size,
+                height: size,
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}
+        >
+            <View
+                style={{
+                    width: circleSize,
+                    height: circleSize,
+                    borderRadius: circleSize / 2,
+                    backgroundColor: themeColor('background'),
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}
+            >
+                {useSharedTransition ? (
+                    <Animated.Image
+                        source={pngSource}
+                        sharedTransitionTag={`layer-icon-${layer}`}
+                        sharedTransitionStyle={sharedTransition}
+                        style={imageStyle}
+                    />
+                ) : (
+                    <Image source={pngSource} style={imageStyle} />
+                )}
+            </View>
+        </View>
+    );
 };
 
 const CollapsedItem = ({ item }: { item: DataRow }) => {
     if (Number(item.balance) === 0) return null;
 
     return (
-        <View style={{ flex: 1, flexDirection: 'row' }}>
-            <LayerIcon
-                layer={item.layer}
-                watchOnly={item.watchOnly}
-                size={50}
-            />
-        </View>
+        <LayerIcon layer={item.layer} watchOnly={item.watchOnly} size={50} />
     );
 };
 
@@ -417,16 +440,6 @@ const SwipeableRow = ({
     if (item.layer === localeString('components.LayerBalances.moreAccounts')) {
         return (
             <TouchableOpacity onPress={() => navigation.navigate('Accounts')}>
-                <Row item={item} />
-            </TouchableOpacity>
-        );
-    }
-
-    if (
-        item.layer === localeString('components.LayerBalances.collapseBalances')
-    ) {
-        return (
-            <TouchableOpacity onPress={() => balanceStore?.toggleCollapse()}>
                 <Row item={item} />
             </TouchableOpacity>
         );
@@ -497,8 +510,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         } = this.props;
 
         const { settings } = SettingsStore!;
-        const { totalBlockchainBalance, lightningBalance, toggleCollapse } =
-            BalanceStore!;
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
         const { totalBalanceSats, mintUrls, mintInfos } = CashuStore!;
 
         const otherAccounts = editMode
@@ -624,21 +636,10 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             });
         }
 
-        if (!collapsed) {
-            DATA.push({
-                layer: localeString(
-                    'components.LayerBalances.collapseBalances'
-                ),
-                balance: 0,
-                collapsed
-            });
-        }
-
         if (collapsed && DATA.length === 0) return null;
 
         return (
-            <Animated.View
-                layout={LinearTransition.duration(300)}
+            <View
                 style={{
                     flex: 1,
                     width: '100%',
@@ -656,72 +657,47 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                 )}
 
                 {collapsed ? (
-                    <Animated.View
-                        key="collapsed"
-                        entering={ZoomIn.duration(300).springify()}
-                        exiting={ZoomOut.duration(200)}
+                    <TouchableOpacity
                         style={{
                             marginTop: 10,
-                            alignItems: 'center',
-                            width: '100%'
+                            justifyContent: 'center',
+                            alignItems: 'center'
                         }}
+                        onPress={() => navigation.navigate('Accounts')}
                     >
-                        <TouchableOpacity
+                        <View
                             style={{
-                                justifyContent: 'center',
-                                alignItems: 'center'
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 60,
+                                paddingVertical: 4,
+                                paddingHorizontal: 4,
+                                alignItems: 'center',
+                                height: 58,
+                                flexDirection: 'row'
                             }}
-                            onPress={() => toggleCollapse()}
                         >
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 60,
-                                    paddingVertical: 4,
-                                    paddingHorizontal: 4,
-                                    alignItems: 'center',
-                                    height: 58
-                                }}
-                            >
-                                <FlatList
-                                    data={DATA}
-                                    horizontal={true}
-                                    showsHorizontalScrollIndicator={false}
-                                    scrollEnabled={false}
-                                    renderItem={({ item }) => (
-                                        <CollapsedItem item={item} />
-                                    )}
-                                    keyExtractor={(_item, index) =>
-                                        `collapsed-${index}`
-                                    }
-                                    refreshing={refreshing ? refreshing : false}
+                            {DATA.map((item, index) => (
+                                <CollapsedItem
+                                    key={`collapsed-${index}`}
+                                    item={item}
                                 />
-                            </View>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontSize: 14,
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    marginTop: 6
-                                }}
-                            >
-                                {localeString('general.tapToExpand')}
-                            </Text>
-                        </TouchableOpacity>
-                    </Animated.View>
+                            ))}
+                        </View>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontSize: 14,
+                                fontFamily: 'PPNeueMontreal-Book',
+                                marginTop: 6
+                            }}
+                        >
+                            {localeString('general.tapToViewAccounts')}
+                        </Text>
+                    </TouchableOpacity>
                 ) : (
-                    <Animated.View
-                        key="expanded"
-                        entering={SlideInDown.duration(300).springify()}
-                        exiting={SlideOutUp.duration(200)}
-                        style={{ flex: 1, width: '100%' }}
-                    >
-                        <FlatList
-                            data={DATA}
-                            ItemSeparatorComponent={() => (
-                                <View style={styles.separator} />
-                            )}
-                            renderItem={({ item }) => (
+                    <View style={{ flex: 1, width: '100%', marginTop: 20 }}>
+                        {DATA.map((item, index) => (
+                            <React.Fragment key={`expanded-${index}`}>
                                 <SwipeableRow
                                     item={item}
                                     navigation={navigation}
@@ -732,15 +708,14 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                                     locked={locked || editMode}
                                     editMode={editMode}
                                 />
-                            )}
-                            keyExtractor={(_item, index) => `expanded-${index}`}
-                            style={{ marginTop: 20 }}
-                            onRefresh={() => onRefresh()}
-                            refreshing={refreshing ? refreshing : false}
-                        />
-                    </Animated.View>
+                                {index < DATA.length - 1 && (
+                                    <View style={styles.separator} />
+                                )}
+                            </React.Fragment>
+                        ))}
+                    </View>
                 )}
-            </Animated.View>
+            </View>
         );
     }
 }
