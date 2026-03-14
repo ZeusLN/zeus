@@ -223,6 +223,8 @@ export const startKeypadInvalidInputAnimation = (
     resetKeypadTextAnimation(textAnimation, refs);
     stopKeypadShakeAnimation(refs);
 
+    // This animates text color (text -> red), and color is not supported
+    // by the RN Animated native driver. This is why useNativeDriver is false.
     refs.textAnimationRef = Animated.sequence([
         Animated.timing(textAnimation, {
             toValue: 1,
@@ -259,12 +261,12 @@ export const startKeypadInvalidInputAnimation = (
         })
     ]);
 
-    refs.textAnimationRef.start(() => {
-        refs.textAnimationRef = null;
-    });
-    refs.shakeAnimationRef.start(() => {
-        refs.shakeAnimationRef = null;
-    });
+    Animated.parallel([refs.textAnimationRef, refs.shakeAnimationRef]).start(
+        () => {
+            refs.textAnimationRef = null;
+            refs.shakeAnimationRef = null;
+        }
+    );
 };
 
 /**

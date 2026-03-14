@@ -61,6 +61,10 @@ export default class AmountKeypad extends React.Component<
         textAnimationRef: null,
         shakeAnimationRef: null
     };
+    /*
+     Use this as the latest amount between setState updates.
+     Fast taps can use old state and show wrong red/shake animation.
+    */
     amountInput = '0';
     private currencySelectorModalRef = React.createRef<CurrencySelectorModal>();
 

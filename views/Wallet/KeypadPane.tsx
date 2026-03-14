@@ -91,6 +91,10 @@ export default class KeypadPane extends React.PureComponent<
         textAnimationRef: null,
         shakeAnimationRef: null
     };
+    /*
+     Use this as the latest amount between setState updates.
+     Fast taps can use old state and show wrong red/shake animation.
+    */
     amountInput = '0';
     private clearValueTimeout: ReturnType<typeof setTimeout> | null = null;
     focusListener: any = null;
@@ -210,9 +214,9 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     clearValue = (delayed?: boolean) => {
-        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
         if (this.clearValueTimeout) clearTimeout(this.clearValueTimeout);
         const clear = () => {
+            resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
             this.amountInput = '0';
             this.setState({
                 amount: '0',
