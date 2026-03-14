@@ -3,6 +3,7 @@ import SpliceScriptBuilder from '../utils/SpliceScriptBuilder';
 import BackendUtils from '../utils/BackendUtils';
 import {
     SpliceOutRequest,
+    SpliceInRequest,
     SpliceDryrunResult,
     SpliceExecutionResult
 } from '../models/SpliceRequest';
@@ -11,6 +12,10 @@ import {
     SpliceOperationType,
     SpliceStatus
 } from '../models/SpliceOperation';
+import TransactionsStore from './TransactionsStore';
+import ChannelsStore from './ChannelsStore';
+
+const SPLICE_CLEANUP_INTERVAL = 5000;
 
 export default class SpliceStore {
     @observable public activeSplices: Map<string, SpliceOperation> = new Map();
@@ -18,22 +23,76 @@ export default class SpliceStore {
     @observable public error: string | null = null;
     @observable public currentDryrunResult: SpliceDryrunResult | null = null;
 
+    private transactionsStore: TransactionsStore;
+    private channelsStore: ChannelsStore;
+
+    constructor(
+        transactionsStore: TransactionsStore,
+        channelsStore: ChannelsStore
+    ) {
+        this.transactionsStore = transactionsStore;
+        this.channelsStore = channelsStore;
+    }
+
     @action
     public initiateSpliceOut = async (
         request: SpliceOutRequest
+    ): Promise<SpliceDryrunResult | null> => {
+        const channelStateCheck = this.validateChannelState(request.channelId);
+        if (!channelStateCheck.isValid) {
+            runInAction(() => {
+                this.error = channelStateCheck.error;
+                this.loading = false;
+            });
+            return null;
+        }
+
+        return this.initiateSpliceDryrun(
+            SpliceScriptBuilder.buildSpliceOut(request),
+            request.forceFeerate || false,
+            'splice-out'
+        );
+    };
+
+    @action
+    public initiateSpliceIn = async (
+        request: SpliceInRequest
+    ): Promise<SpliceDryrunResult | null> => {
+        const channelStateCheck = this.validateChannelState(request.channelId);
+        if (!channelStateCheck.isValid) {
+            runInAction(() => {
+                this.error = channelStateCheck.error;
+                this.loading = false;
+            });
+            return null;
+        }
+
+        return this.initiateSpliceDryrun(
+            SpliceScriptBuilder.buildSpliceIn(request),
+            request.forceFeerate || false,
+            'splice-in'
+        );
+    };
+
+    @action
+    private initiateSpliceDryrun = async (
+        script: string,
+        forceFeerate: boolean,
+        type: 'splice-out' | 'splice-in'
     ): Promise<SpliceDryrunResult | null> => {
         this.loading = true;
         this.error = null;
 
         try {
-            const script = SpliceScriptBuilder.buildSpliceOut(request);
-            console.log('[SpliceStore] Generated script:', script);
+            console.log(`[SpliceStore] Generated ${type} script:`, script);
 
             const response = await BackendUtils.devSplice(
                 script,
                 true,
-                request.forceFeerate || false
+                forceFeerate
             );
+
+            console.log(`[SpliceStore] ${type} dryrun response:`, response);
 
             const fee = this.extractFeeFromResponse(response);
 
@@ -53,7 +112,7 @@ export default class SpliceStore {
 
             return dryrunResult;
         } catch (error: any) {
-            console.log('[SpliceStore] initiateSpliceOut error:', error);
+            console.log(`[SpliceStore] ${type} error:`, error);
 
             const errorMessage = this.parseErrorMessage(error);
 
@@ -77,6 +136,26 @@ export default class SpliceStore {
     ): Promise<SpliceExecutionResult | null> => {
         this.loading = true;
         this.error = null;
+
+        const channelStateCheck = this.validateChannelState(channelId);
+        if (!channelStateCheck.isValid) {
+            runInAction(() => {
+                this.error = channelStateCheck.error;
+                this.loading = false;
+            });
+            return null;
+        }
+
+        if (this.transactionsStore) {
+            runInAction(() => {
+                this.transactionsStore.loading = true;
+                this.transactionsStore.crafting = false;
+                this.transactionsStore.error = false;
+                this.transactionsStore.error_msg = null;
+                this.transactionsStore.txid = null;
+                this.transactionsStore.publishSuccess = false;
+            });
+        }
 
         try {
             const response = await BackendUtils.devSplice(
@@ -110,6 +189,10 @@ export default class SpliceStore {
                 this.activeSplices.set(channelId, spliceOp);
                 this.currentDryrunResult = null;
                 this.loading = false;
+
+                this.transactionsStore.txid = executionResult.txid;
+                this.transactionsStore.publishSuccess = true;
+                this.transactionsStore.loading = false;
             });
 
             return executionResult;
@@ -121,6 +204,10 @@ export default class SpliceStore {
             runInAction(() => {
                 this.error = errorMessage;
                 this.loading = false;
+
+                this.transactionsStore.error = true;
+                this.transactionsStore.error_msg = errorMessage;
+                this.transactionsStore.loading = false;
 
                 const failedOp: SpliceOperation = {
                     channelId,
@@ -153,32 +240,33 @@ export default class SpliceStore {
                 splice.status === SpliceStatus.CONFIRMING
             ) {
                 splice.status = SpliceStatus.COMPLETED;
+                setTimeout(() => {
+                    this.clearSplice(channelId);
+                }, SPLICE_CLEANUP_INTERVAL);
             }
         }
     };
 
     @action
-    public completeSplice = (channelId: string) => {
-        const splice = this.activeSplices.get(channelId);
-        if (splice) {
-            splice.status = SpliceStatus.COMPLETED;
+    public checkTransactionConfirmations = (transactions: any[]) => {
+        for (const [channelId, splice] of this.activeSplices.entries()) {
+            if (splice.status === SpliceStatus.CONFIRMING && splice.txid) {
+                const tx = transactions.find(
+                    (t: any) =>
+                        (t.txid === splice.txid || t.tx_hash === splice.txid) &&
+                        t.num_confirmations > 0
+                );
+
+                if (tx) {
+                    this.updateConfirmations(channelId, tx.num_confirmations);
+                }
+            }
         }
     };
 
     @action
     public clearSplice = (channelId: string) => {
         this.activeSplices.delete(channelId);
-    };
-
-    @action
-    public revertFailedSplice = (channelId: string): string | null => {
-        const splice = this.activeSplices.get(channelId);
-        if (splice && splice.status === SpliceStatus.FAILED) {
-            const previousBalance = splice.previousLocalBalance || null;
-            this.activeSplices.delete(channelId);
-            return previousBalance;
-        }
-        return null;
     };
 
     public isChannelSplicing = (channelId: string): boolean => {
@@ -205,6 +293,31 @@ export default class SpliceStore {
 
     public getSpliceOperation = (channelId: string): SpliceOperation | null => {
         return this.activeSplices.get(channelId) || null;
+    };
+
+    private validateChannelState = (
+        channelId: string
+    ): { isValid: boolean; error: string } => {
+        const channel = this.channelsStore.channels.find(
+            (ch) => ch.channelId === channelId || ch.chan_id === channelId
+        );
+
+        if (!channel) {
+            return { isValid: false, error: 'Channel not found' };
+        }
+
+        if (
+            channel.state === 'CLOSED' ||
+            channel.state === 'NONE' ||
+            channel.state === 'ONCHAIN'
+        ) {
+            return {
+                isValid: false,
+                error: 'Channel is not available for splicing'
+            };
+        }
+
+        return { isValid: true, error: '' };
     };
 
     private extractFeeFromResponse = (response: any): number => {
