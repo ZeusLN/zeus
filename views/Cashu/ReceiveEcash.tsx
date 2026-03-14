@@ -218,8 +218,16 @@ export default class ReceiveEcash extends React.Component<
             loading: false
         });
 
-        const nfcSupported = await NfcManager.isSupported();
-        this.setState({ nfcSupported });
+        if (Platform.OS !== 'android') {
+            return;
+        }
+
+        try {
+            const nfcSupported = await NfcManager.isSupported();
+            this.setState({ nfcSupported });
+        } catch {
+            this.setState({ nfcSupported: false });
+        }
     }
 
     componentWillUnmount() {

@@ -445,8 +445,16 @@ export default class Receive extends React.Component<
             this.autoGenerateOnChainAddress(account, addressType);
         }
 
-        const nfcSupported = await NfcManager.isSupported();
-        this.setState({ nfcSupported });
+        if (Platform.OS !== 'android') {
+            return;
+        }
+
+        try {
+            const nfcSupported = await NfcManager.isSupported();
+            this.setState({ nfcSupported });
+        } catch {
+            this.setState({ nfcSupported: false });
+        }
     }
 
     async componentDidUpdate(prevProps: ReceiveProps) {
