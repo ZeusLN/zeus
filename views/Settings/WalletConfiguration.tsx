@@ -903,7 +903,7 @@ export default class WalletConfiguration extends React.Component<
                     walletPassword: randomBase64,
                     embeddedLndNetwork: network,
                     lndDir,
-                    isSqlite: true,
+                    isSqlite: false,
                     creatingWallet: false
                 },
                 () => {
