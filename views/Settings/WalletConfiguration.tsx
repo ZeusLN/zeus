@@ -1017,10 +1017,12 @@ export default class WalletConfiguration extends React.Component<
         network: string
     ) => {
         const { SettingsStore, navigation } = this.props;
-        const { ldkPassphrase } = this.state;
+        const { nickname, photo, ldkPassphrase } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
         const node = {
+            nickname,
+            photo,
             implementation: 'embedded-ldk-node',
             embeddedLdkNetwork: network,
             ldkNodeDir: nodeDir,
@@ -2773,7 +2775,9 @@ export default class WalletConfiguration extends React.Component<
                                                                 network:
                                                                     embeddedLdkNetwork,
                                                                 implementation:
-                                                                    'embedded-ldk-node'
+                                                                    'embedded-ldk-node',
+                                                                nickname,
+                                                                photo
                                                             }
                                                         )
                                                     }
