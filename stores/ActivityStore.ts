@@ -124,6 +124,8 @@ export default class ActivityStore {
     @observable public error = false;
     @observable public activity: Array<ActivityItem> = [];
     @observable public filteredActivity: Array<ActivityItem> = [];
+    @observable public recentActivity: Array<ActivityItem> = [];
+    @observable public loadingRecentActivity = false;
     @observable public filters: Filter = DEFAULT_FILTERS;
     settingsStore: SettingsStore;
     paymentsStore: PaymentsStore;
@@ -469,6 +471,36 @@ export default class ActivityStore {
             }
         });
         Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
+    };
+
+    @action
+    public getRecentActivity = async (count: number = 3) => {
+        this.loadingRecentActivity = true;
+        try {
+            // Fetch all sources in parallel
+            const fetches: Promise<any>[] = [
+                this.paymentsStore.getPayments(),
+                this.invoicesStore.getInvoices()
+            ];
+            if (BackendUtils.supportsOnchainSends()) {
+                fetches.push(this.transactionsStore.getTransactions());
+            }
+            await Promise.all(fetches);
+
+            const sortedActivity = await this.getSortedActivity();
+
+            runInAction(() => {
+                this.recentActivity = sortedActivity.slice(0, count);
+                // Also update the full activity list since we fetched everything
+                this.activity = sortedActivity;
+                this.filteredActivity = sortedActivity;
+                this.loadingRecentActivity = false;
+            });
+        } catch {
+            runInAction(() => {
+                this.loadingRecentActivity = false;
+            });
+        }
     };
 
     public getActivityAndFilter = async (

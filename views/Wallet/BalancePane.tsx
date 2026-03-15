@@ -19,14 +19,18 @@ import Conversion from '../../components/Conversion';
 import SyncingStatus from '../../components/SyncingStatus';
 import RecoveryStatus from '../../components/RecoveryStatus';
 import RescanStatus from '../../components/RescanStatus';
+import ActivityItem from '../../components/ActivityItem';
 import LayerBalances from '../../components/LayerBalances';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import { LSPOrderState } from '../../models/LSP';
+
 import Storage from '../../storage';
 
+import ActivityStore from '../../stores/ActivityStore';
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -41,6 +45,7 @@ const ErrorZeus = require('../../assets/images/errorZeus.png');
 
 interface BalancePaneProps {
     navigation: NativeStackNavigationProp<any, any>;
+    ActivityStore?: ActivityStore;
     BalanceStore: BalanceStore;
     CashuStore: CashuStore;
     NodeInfoStore: NodeInfoStore;
@@ -56,6 +61,7 @@ interface BalancePaneState {
 }
 
 @inject(
+    'ActivityStore',
     'BalanceStore',
     'CashuStore',
     'NodeInfoStore',
@@ -80,10 +86,69 @@ export default class BalancePane extends React.PureComponent<
                 showBackupPrompt: true
             });
         }
+        this.props.ActivityStore?.getRecentActivity();
     }
+
+    handleItemPress = (item: any) => {
+        const { navigation } = this.props;
+        if (item.model === localeString('views.Swaps.title')) {
+            navigation.navigate('SwapDetails', {
+                swapData: item,
+                keys: item.keys,
+                endpoint: item.endpoint,
+                invoice: item.invoice
+            });
+            return;
+        }
+        if (item.model === 'LSPS1Order') {
+            const orderShouldUpdate =
+                item.state === LSPOrderState.FAILED ||
+                item.state === LSPOrderState.COMPLETED;
+            navigation.navigate('LSPS1Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
+        if (item.model === 'LSPS7Order') {
+            const orderShouldUpdate =
+                item.state === LSPOrderState.FAILED ||
+                item.state === LSPOrderState.COMPLETED;
+            navigation.navigate('LSPS7Order', {
+                orderId: item.id,
+                orderShouldUpdate
+            });
+            return;
+        }
+        if (item.model === localeString('views.Invoice.title')) {
+            navigation.navigate('Invoice', { invoice: item });
+            return;
+        }
+        if (item.model === localeString('views.Cashu.CashuInvoice.title')) {
+            navigation.navigate('CashuInvoice', { invoice: item });
+            return;
+        }
+        if (item.model === localeString('views.Cashu.CashuPayment.title')) {
+            navigation.navigate('CashuPayment', { payment: item });
+            return;
+        }
+        if (item.model === localeString('cashu.token')) {
+            navigation.navigate('CashuToken', { decoded: item });
+            return;
+        }
+        if (item.model === localeString('general.transaction')) {
+            navigation.navigate('Transaction', { transaction: item });
+            return;
+        }
+        if (item.model === localeString('views.Payment.title')) {
+            navigation.navigate('Payment', { payment: item });
+            return;
+        }
+    };
 
     render() {
         const {
+            ActivityStore,
             NodeInfoStore,
             BalanceStore,
             CashuStore,
@@ -957,6 +1022,27 @@ export default class BalancePane extends React.PureComponent<
                                 collapsed
                             />
                         </View>
+                        {ActivityStore!.recentActivity.length > 0 && (
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                {ActivityStore!.recentActivity.map(
+                                    (item: any, index: number) => (
+                                        <TouchableOpacity
+                                            key={`recent-${index}`}
+                                            onPress={() =>
+                                                this.handleItemPress(item)
+                                            }
+                                        >
+                                            <ActivityItem item={item} />
+                                        </TouchableOpacity>
+                                    )
+                                )}
+                            </View>
+                        )}
                     </View>
                 </View>
             );
@@ -1010,6 +1096,7 @@ const styles = StyleSheet.create({
         minHeight: 200
     },
     contentContainer: {
+        flex: 1,
         marginBottom: 20
     },
     card: {
