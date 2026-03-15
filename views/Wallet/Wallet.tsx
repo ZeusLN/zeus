@@ -792,8 +792,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SyncStore.checkRecoveryStatus();
                 await NodeInfoStore.getNodeInfo();
                 NodeInfoStore.getNetworkInfo();
-                await UTXOsStore.listAccounts();
-                await BalanceStore.getCombinedBalance(false);
+                if (BackendUtils.supportsAccounts())
+                    await UTXOsStore.listAccounts();
+                await BalanceStore.getCombinedBalance();
                 ChannelsStore.getChannelsWithPolling().then(() => {
                     // Check for sweep to self-custody threshold after channels are online
                     if (settings?.ecash?.enableCashu) {
@@ -901,15 +902,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
             if (!error) {
                 try {
-                    await BackendUtils.checkPerms();
-                    await NodeInfoStore.getNodeInfo();
-                    if (BackendUtils.supportsAccounts())
-                        await UTXOsStore.listAccounts();
-                    await BalanceStore.getCombinedBalance();
-                    if (BackendUtils.supportsChannelManagement())
-                        await ChannelsStore.getChannels();
+                    await this.fetchNodeData({ checkPerms: true });
                 } catch (connectionError) {
                     console.log('LNC connection failed:', connectionError);
+                    setConnectingStatus(false);
                     return;
                 }
             }
@@ -928,12 +924,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else {
             try {
-                await NodeInfoStore.getNodeInfo();
-                if (BackendUtils.supportsAccounts()) {
-                    await UTXOsStore.listAccounts();
-                }
-                await BalanceStore.getCombinedBalance();
-                await ChannelsStore.getChannels();
+                await this.fetchNodeData();
             } catch (connectionError) {
                 console.log('Node connection failed:', connectionError);
                 NodeInfoStore.handleGetNodeInfoError();
@@ -1050,6 +1041,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         // Process pending graph sync payment after wallet is fully loaded and synced
         this.processPendingGraphSyncPayment();
     }
+
+    private fetchNodeData = async (opts: { checkPerms?: boolean } = {}) => {
+        const { NodeInfoStore, BalanceStore, ChannelsStore, UTXOsStore } =
+            this.props;
+        if (opts.checkPerms) await BackendUtils.checkPerms();
+        await NodeInfoStore.getNodeInfo();
+        if (BackendUtils.supportsAccounts()) await UTXOsStore.listAccounts();
+        await BalanceStore.getCombinedBalance();
+        if (BackendUtils.supportsChannelManagement())
+            await ChannelsStore.getChannels();
+    };
 
     processPendingShareIntent = () => {
         if (this.state.pendingShareIntent) {
