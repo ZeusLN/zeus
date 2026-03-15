@@ -16,7 +16,6 @@ import type {
     Nip47LookupInvoiceRequest,
     Nip47ListTransactionsRequest,
     Nip47ListTransactionsResponse,
-    Nip47PayKeysendRequest,
     Nip47Transaction,
     Nip47SignMessageResponse,
     Nip47SignMessageRequest,
@@ -34,7 +33,9 @@ import {
     relayInit,
     getEventHash,
     getSignature,
-    UnsignedEvent
+    UnsignedEvent,
+    validateEvent,
+    verifySignature
 } from 'nostr-tools';
 import * as nip04 from '@nostr/tools/nip04';
 
@@ -114,7 +115,6 @@ enum ErrorCodes {
     FAILED_TO_CREATE_INVOICE = 'FAILED_TO_CREATE_INVOICE',
     NOT_FOUND = 'NOT_FOUND',
     NOT_IMPLEMENTED = 'NOT_IMPLEMENTED',
-    SEND_KEYSEND_FAILED = 'SEND_KEYSEND_FAILED',
     INSUFFICIENT_BALANCE = 'INSUFFICIENT_BALANCE',
     INVOICE_EXPIRED = 'INVOICE_EXPIRED'
 }
@@ -130,9 +130,12 @@ interface WalletServiceKeys {
 
 interface NostrEvent {
     kind: number;
+    tags: string[][];
+    created_at: number;
     pubkey: string;
     content: string;
     id: string;
+    sig: string;
 }
 interface RestoreResponse {
     connections: { relay: string; pubkey: string }[];
@@ -142,6 +145,14 @@ interface NWCRequest {
     id: string;
     method: Nip47SingleMethod;
     params: any;
+}
+
+interface InvoiceEventType {
+    eventStr: string;
+    request: NWCRequest;
+    connection: NWCConnection;
+    eventId: string;
+    amount: number;
 }
 
 export interface PendingPayment {
@@ -1026,7 +1037,7 @@ export default class NostrWalletConnectStore {
                     if (activity.payment_source === 'cashu') {
                         const cashuInvoices = this.cashuStore.invoices || [];
                         const findCashuInvoice = cashuInvoices.find(
-                            async (inv) =>
+                            (inv) =>
                                 inv.getPaymentRequest ===
                                 activity.invoice?.getPaymentRequest
                         );
@@ -1214,13 +1225,6 @@ export default class NostrWalletConnectStore {
                 ) =>
                     this.withGlobalHandler(connection.id, () =>
                         this.handleListTransactions(connection, request)
-                    );
-            }
-
-            if (connection.hasPermission('pay_keysend')) {
-                handler.payKeysend = (request: Nip47PayKeysendRequest) =>
-                    this.withGlobalHandler(connection.id, () =>
-                        this.handlePayKeysend(connection, request)
                     );
             }
 
@@ -1728,16 +1732,31 @@ export default class NostrWalletConnectStore {
         try {
             if (this.isCashuConfigured) {
                 const cashuInvoices = this.cashuStore.invoices || [];
-                const matchingInvoice = cashuInvoices.find(async (inv) => {
-                    const decodedInvoice =
-                        await NostrConnectUtils.decodeInvoiceTags(
-                            inv.getPaymentRequest
-                        );
-                    return (
-                        inv.getPaymentRequest === request.invoice ||
-                        decodedInvoice.paymentHash === request.payment_hash
-                    );
-                });
+                let matchingInvoice: CashuInvoice | undefined;
+
+                for (const inv of cashuInvoices) {
+                    if (inv.getPaymentRequest === request.invoice) {
+                        matchingInvoice = inv;
+                        break;
+                    }
+                    if (request.payment_hash) {
+                        try {
+                            const decodedInvoice =
+                                await NostrConnectUtils.decodeInvoiceTags(
+                                    inv.getPaymentRequest
+                                );
+                            if (
+                                decodedInvoice.paymentHash ===
+                                request.payment_hash
+                            ) {
+                                matchingInvoice = inv;
+                                break;
+                            }
+                        } catch {
+                            // Skip malformed/undecodable invoices and continue lookup.
+                        }
+                    }
+                }
                 if (
                     matchingInvoice &&
                     matchingInvoice instanceof CashuInvoice
@@ -1892,119 +1911,6 @@ export default class NostrWalletConnectStore {
         }
     }
 
-    private async handlePayKeysend(
-        connection: NWCConnection,
-        request: Nip47PayKeysendRequest,
-        skipNotification: boolean = false
-    ): NWCWalletServiceResponsePromise<Nip47Transaction> {
-        try {
-            const amountSats = millisatsToSats(request.amount);
-
-            if (this.isCashuConfigured) {
-                return this.handleError(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.keysendNotSupportedForCashu'
-                    ),
-                    ErrorCodes.NOT_IMPLEMENTED
-                );
-            }
-            const budgetCheck = this.validateBudgetBeforePayment(
-                connection,
-                amountSats,
-                ErrorCodes.SEND_KEYSEND_FAILED,
-                localeString(
-                    'stores.NostrWalletConnectStore.error.keysendFailed'
-                )
-            );
-            if (!budgetCheck.success) {
-                return { result: undefined, error: budgetCheck.error };
-            }
-            this.transactionsStore.reset();
-            this.transactionsStore.sendPayment({
-                pubkey: request.pubkey,
-                amount: request.amount.toString()
-            });
-
-            await this.waitForPaymentCompletion();
-
-            if (this.transactionsStore.payment_error) {
-                return this.handleError(
-                    this.transactionsStore.payment_error,
-                    ErrorCodes.SEND_KEYSEND_FAILED
-                );
-            }
-
-            if (
-                this.transactionsStore.error &&
-                this.transactionsStore.error_msg
-            ) {
-                return this.handleError(
-                    this.transactionsStore.error_msg,
-                    ErrorCodes.SEND_KEYSEND_FAILED
-                );
-            }
-
-            const preimage = this.transactionsStore.payment_preimage;
-            const payment_hash = this.transactionsStore.payment_hash;
-            const fee = this.transactionsStore.payment_fee;
-
-            if (!preimage || !payment_hash) {
-                if (this.transactionsStore.loading) {
-                    return this.handleError(
-                        localeString('views.SendingLightning.paymentTimedOut'),
-                        ErrorCodes.SEND_KEYSEND_FAILED
-                    );
-                }
-                return this.handleError(
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.keysendFailed'
-                    ),
-                    ErrorCodes.SEND_KEYSEND_FAILED
-                );
-            }
-            await this.paymentsStore.getPayments();
-            const payment = this.paymentsStore.payments.find(
-                (payment) => payment.preimage === preimage
-            );
-            if (payment) {
-                await this.finalizePayment({
-                    id: payment_hash,
-                    connection,
-                    decoded: payment,
-                    skipNotification,
-                    payment_source: 'lightning',
-                    type: 'pay_keysend'
-                });
-            }
-            return {
-                result: NostrConnectUtils.createNip47Transaction({
-                    type: 'outgoing',
-                    state: 'settled',
-                    invoice: '',
-                    payment_hash,
-                    amount: request.amount,
-                    description: localeString(
-                        'stores.NostrWalletConnectStore.keysendPayment'
-                    ),
-                    preimage,
-                    fees_paid: satsToMillisats(Number(fee) || 0),
-                    expires_at:
-                        dateTimeUtils.getCurrentTimestamp() +
-                        DEFAULT_INVOICE_EXPIRY_SECONDS
-                }),
-                error: undefined
-            };
-        } catch (error: any) {
-            return this.handleError(
-                (error instanceof Error ? error.message : String(error)) ||
-                    localeString(
-                        'stores.NostrWalletConnectStore.error.keysendFailed'
-                    ),
-                ErrorCodes.SEND_KEYSEND_FAILED
-            );
-        }
-    }
-
     private async handleSignMessage(
         request: Nip47SignMessageRequest
     ): NWCWalletServiceResponsePromise<Nip47SignMessageResponse> {
@@ -2148,6 +2054,7 @@ export default class NostrWalletConnectStore {
                 decoded: payment,
                 payment_source: 'lightning',
                 connection,
+                amountSats,
                 skipNotification
             });
 
@@ -2234,7 +2141,6 @@ export default class NostrWalletConnectStore {
                 ErrorCodes.INVALID_INVOICE
             );
         }
-
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amount,
@@ -2305,6 +2211,7 @@ export default class NostrWalletConnectStore {
                 decoded: payment,
                 type: 'pay_invoice',
                 payment_source: 'cashu',
+                amountSats: amount,
                 skipNotification,
                 connection
             });
@@ -2488,6 +2395,7 @@ export default class NostrWalletConnectStore {
         payment_source,
         decoded,
         connection,
+        amountSats,
         skipNotification = false
     }: {
         id: string;
@@ -2495,10 +2403,11 @@ export default class NostrWalletConnectStore {
         payment_source: ConnectionPaymentSourceType;
         decoded: Payment | CashuPayment | null;
         connection: NWCConnection;
+        amountSats: number;
         skipNotification?: boolean;
     }): Promise<void> {
         runInAction(() => {
-            connection.trackSpending(Number(decoded?.getAmount));
+            connection.trackSpending(amountSats);
             connection.activity.push({
                 id,
                 type,
@@ -2513,10 +2422,7 @@ export default class NostrWalletConnectStore {
         });
         await this.saveConnections();
         if (!skipNotification) {
-            this.showPaymentSentNotification(
-                Number(decoded?.getAmount),
-                connection.name
-            );
+            this.showPaymentSentNotification(amountSats, connection.name);
         }
     }
 
@@ -3168,9 +3074,7 @@ export default class NostrWalletConnectStore {
             }
             const data = await this.retryWithBackoff(
                 async (): Promise<RestoreResponse | void> => {
-                    const response = await ReactNativeBlobUtil.config({
-                        trusty: true
-                    }).fetch(
+                    const response = await ReactNativeBlobUtil.fetch(
                         'GET',
                         `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/restore?device_token=${encodeURIComponent(
                             deviceToken
@@ -3206,59 +3110,41 @@ export default class NostrWalletConnectStore {
     private async validatingPendingPaymentEvents(
         events: string[]
     ): Promise<void> {
-        if (!events || !Array.isArray(events) || events.length === 0) {
+        if (!events?.length) {
             console.info('NWC: No pending events to process');
             return;
         }
-        const payInvoiceEvents: Array<{
-            eventStr: string;
-            request: NWCRequest;
-            connection: NWCConnection;
-            eventId: string;
-            amount: number;
-        }> = [];
-        const payKeysendEvents: Array<{
-            request: NWCRequest;
-            connection: NWCConnection;
-            eventId: string;
-        }> = [];
-        const eventProcessingResults = await Promise.allSettled(
+
+        const results = await Promise.all(
             events.map(async (eventStr) => {
                 try {
                     const { request, connection, eventId } =
                         await this.retryWithBackoff(
-                            async () =>
-                                await this.validateAndParsePendingEvent(
-                                    eventStr
-                                ),
+                            () => this.validateAndParsePendingEvent(eventStr),
                             3
                         );
-                    // Only process pay_invoice and pay_keysend methods
+
+                    if (request.method === 'pay_keysend') {
+                        return null;
+                    }
+
                     if (request.method === 'pay_invoice') {
-                        const invoice = request.params?.invoice;
-
                         const { isExpired, amount } =
-                            await NostrConnectUtils.decodeInvoiceTags(invoice);
-                        console.log('isExpired', isExpired);
-
-                        if (!isExpired) {
-                            return {
-                                type: 'pay_invoice',
-                                eventStr,
-                                request,
-                                connection,
-                                eventId,
-                                amount
-                            };
+                            await NostrConnectUtils.decodeInvoiceTags(
+                                request.params?.invoice
+                            );
+                        if (isExpired) {
+                            return null;
                         }
-                    } else if (request.method === 'pay_keysend') {
                         return {
-                            type: 'pay_keysend',
+                            eventStr,
                             request,
                             connection,
-                            eventId
+                            eventId,
+                            amount
                         };
                     }
+
                     return null;
                 } catch (error) {
                     console.warn('NWC: PROCESS PENDING EVENTS ERROR', {
@@ -3269,78 +3155,38 @@ export default class NostrWalletConnectStore {
                 }
             })
         );
-        // Collect results
-        for (const result of eventProcessingResults) {
-            if (result.status === 'fulfilled' && result.value) {
-                if (result.value.type === 'pay_invoice') {
-                    payInvoiceEvents.push({
-                        eventStr: result.value.eventStr || '',
-                        request: result.value.request,
-                        connection: result.value.connection,
-                        eventId: result.value.eventId,
-                        amount: result.value.amount || 0
-                    });
-                } else if (result.value.type === 'pay_keysend') {
-                    payKeysendEvents.push({
-                        request: result.value.request,
-                        connection: result.value.connection,
-                        eventId: result.value.eventId
-                    });
-                }
-            }
-        }
 
-        await Promise.allSettled(
-            payKeysendEvents.map(async (event) => {
-                try {
-                    const result = await this.handleEventRequest(
-                        event.connection,
-                        event.request,
-                        event.eventId,
-                        true // skipNotification for pending events
-                    );
-                    if (!result.success && result.errorMessage) {
-                        console.warn(
-                            'NWC: Failed to process pay_keysend event',
-                            {
-                                error: result.errorMessage,
-                                eventId: event.eventId
-                            }
-                        );
-                    }
-                } catch (error) {
-                    console.warn('NWC: Failed to process pay_keysend event', {
-                        error,
-                        eventId: event.eventId
-                    });
-                }
-            })
-        );
-        // If there are pay_invoice events, show modal
-        if (payInvoiceEvents.length > 0) {
-            const totalAmount = payInvoiceEvents.reduce(
-                (sum, event) => sum + event.amount,
-                0
-            );
-            const pendingEventsData = payInvoiceEvents.map((event) => ({
-                eventStr: event.eventStr,
-                request: event.request,
-                connection: event.connection,
-                eventId: event.eventId,
+        const pendingEvents = results
+            .filter((r): r is InvoiceEventType => r !== null)
+            .map((event) => ({
+                ...event,
                 connectionName: event.connection.name,
-                amount: event.amount,
                 status: false,
                 isProcessed: false
             }));
-            this.savePendingPayments(pendingEventsData);
-            if (!this.isInNWCPendingPaymentsView)
-                this.modalStore.toggleNWCPendingPaymentsModal({
-                    pendingEvents: pendingEventsData,
-                    totalAmount
-                });
+
+        const dedupedPendingEvents = Array.from(
+            new Map(
+                pendingEvents.map((event) => [event.eventId, event])
+            ).values()
+        );
+
+        if (!dedupedPendingEvents.length) return;
+
+        const totalAmount = dedupedPendingEvents.reduce(
+            (sum, e) => sum + e.amount,
+            0
+        );
+
+        this.savePendingPayments(dedupedPendingEvents);
+
+        if (!this.isInNWCPendingPaymentsView) {
+            this.modalStore.toggleNWCPendingPaymentsModal({
+                pendingEvents: dedupedPendingEvents,
+                totalAmount
+            });
         }
     }
-
     private async validateAndParsePendingEvent(eventStr: string): Promise<{
         request: NWCRequest;
         connection: NWCConnection;
@@ -3349,19 +3195,28 @@ export default class NostrWalletConnectStore {
         let event: NostrEvent;
         try {
             event = JSON.parse(eventStr);
-            if (
-                event.kind !== 23194 ||
-                !event.content ||
-                !event.pubkey ||
-                !event.id
-            ) {
-                console.warn('NWC: Invalid event format, skipping', {
-                    event
-                });
-                throw new Error('Invalid event format');
-            }
         } catch (error) {
-            throw new Error('Failed to parse event');
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.pendingEventParseFailed'
+                )
+            );
+        }
+        if (
+            event.kind !== 23194 ||
+            !event.content ||
+            !event.pubkey ||
+            !event.id ||
+            !event.sig
+        ) {
+            console.warn('NWC: Invalid event format, skipping', {
+                event
+            });
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.pendingEventInvalidFormat'
+                )
+            );
         }
         const connection = this.activeConnections.find(
             (c) => c.pubkey === event.pubkey
@@ -3400,6 +3255,46 @@ export default class NostrWalletConnectStore {
             throw error;
         }
 
+        if (!validateEvent(event)) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.pendingEventInvalidPayload'
+                )
+            );
+        }
+
+        const recomputedEventId = getEventHash({
+            kind: event.kind,
+            tags: event.tags,
+            content: event.content,
+            created_at: event.created_at,
+            pubkey: event.pubkey
+        });
+        if (event.id !== recomputedEventId) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.pendingEventIdHashMismatch'
+                )
+            );
+        }
+        if (!verifySignature(event)) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.pendingEventInvalidSignature'
+                )
+            );
+        }
+
+        if (
+            request.method === 'pay_invoice' &&
+            !connection.hasPermission('pay_invoice')
+        ) {
+            throw new Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
+                )
+            );
+        }
         return { request, connection, eventId: event.id };
     }
 
@@ -3616,14 +3511,15 @@ export default class NostrWalletConnectStore {
         try {
             switch (request.method) {
                 case 'pay_invoice':
+                    if (!connection.hasPermission('pay_invoice')) {
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.NostrWalletConnectStore.error.connectionMissingPayInvoicePermission'
+                            )
+                        };
+                    }
                     response = await this.handlePayInvoice(
-                        connection,
-                        request.params,
-                        skipNotification
-                    );
-                    break;
-                case 'pay_keysend':
-                    response = await this.handlePayKeysend(
                         connection,
                         request.params,
                         skipNotification
@@ -3747,9 +3643,7 @@ export default class NostrWalletConnectStore {
                     name: conn.name
                 }))
             };
-            const response = await ReactNativeBlobUtil.config({
-                trusty: true
-            }).fetch(
+            const response = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${NWC_IOS_EVENTS_LISTENER_SERVER_URL}/handoff`,
                 {

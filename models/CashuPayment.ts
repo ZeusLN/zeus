@@ -1,4 +1,5 @@
 import { computed } from 'mobx';
+import bolt11 from 'bolt11';
 
 import Payment from './Payment';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -89,7 +90,12 @@ export default class CashuPayment extends Payment {
 
     @computed public get getAmount(): number {
         if (this.fromCDK) return this.cdkAmount || 0;
-        return Number(this.value_sat) || Number(this.value) || 0;
+        return (
+            Number(this.value_sat) ||
+            Number(this.value) ||
+            Number(this.amount) ||
+            0
+        );
     }
 
     @computed public get getFee(): string {
@@ -97,12 +103,42 @@ export default class CashuPayment extends Payment {
             if (this.fee === 0) return '';
             return this.fee.toString();
         }
-        return super.getFee;
+        const feeMsat = Number(this.fee_msat);
+        if (!Number.isNaN(feeMsat) && feeMsat !== 0) {
+            return (feeMsat / 1000).toString();
+        }
+
+        const feeSat = Number(this.fee_sat);
+        if (!Number.isNaN(feeSat) && feeSat !== 0) {
+            return feeSat.toString();
+        }
+
+        const fee = Number(this.fee);
+        if (!Number.isNaN(fee) && fee !== 0) {
+            return fee.toString();
+        }
+
+        const feesPaid = Number(this.fees_paid);
+        if (!Number.isNaN(feesPaid) && feesPaid !== 0) {
+            return feesPaid.toString();
+        }
+
+        return '0';
     }
 
     @computed public get getMemo(): string | undefined {
         if (this.fromCDK) return this.cdkMemo;
-        return super.getMemo;
+        const payReq = this.payment_request || this.bolt11;
+        if (payReq) {
+            try {
+                const decoded: any = bolt11.decode(payReq);
+                for (let i = 0; i < decoded.tags.length; i++) {
+                    const tag = decoded.tags[i];
+                    if (tag.tagName === 'description') return tag.data;
+                }
+            } catch {}
+        }
+        return undefined;
     }
 
     @computed public get getMintUrl(): string {
@@ -120,16 +156,12 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get getDisplayTime(): string {
-        if (this.fromCDK) {
-            return DateTimeUtils.listFormattedDate(this.cdkTimestamp || 0);
-        }
-        return super.getDisplayTime;
+        const ts = this.fromCDK ? this.cdkTimestamp || 0 : this.getTimestamp;
+        return DateTimeUtils.listFormattedDate(ts);
     }
 
     @computed public get getDisplayTimeShort(): string {
-        if (this.fromCDK) {
-            return DateTimeUtils.listFormattedDateShort(this.cdkTimestamp || 0);
-        }
-        return super.getDisplayTimeShort;
+        const ts = this.fromCDK ? this.cdkTimestamp || 0 : this.getTimestamp;
+        return DateTimeUtils.listFormattedDateShort(ts);
     }
 }
