@@ -8,12 +8,7 @@ import {
     View
 } from 'react-native';
 
-import {
-    Button as ElementButton,
-    Divider,
-    Icon,
-    ListItem
-} from '@rneui/themed';
+import { Button as ElementButton, Divider } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -897,43 +892,41 @@ export default class ChannelView extends React.Component<
                             />
                         )}
                     {!!pending_htlcs && pending_htlcs.length > 0 && (
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                marginLeft: -13,
-                                marginRight: -20
-                            }}
+                        <TouchableOpacity
                             onPress={() =>
                                 navigation.navigate('PendingHTLCs', {
                                     pending_htlcs
                                 })
                             }
                         >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('highlight'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    <View style={{ flexDirection: 'row' }}>
+                            <View style={styles.tappableRow}>
+                                <Row justify="space-between">
+                                    <Row>
                                         <HourglassIcon
                                             fill={themeColor('highlight')}
                                             width={17}
                                             height={17}
                                             style={{ marginRight: 5 }}
                                         />
-                                    </View>
-                                    {`${localeString(
-                                        'views.PendingHTLCs.title'
-                                    )} (${pending_htlcs.length})`}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
+                                        <Text
+                                            style={{
+                                                ...styles.tappableRowText,
+                                                color: themeColor('highlight')
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.PendingHTLCs.title'
+                                            )} (${pending_htlcs.length})`}
+                                        </Text>
+                                    </Row>
+                                    <CaretRight
+                                        fill={themeColor('secondaryText')}
+                                        width="20"
+                                        height="20"
+                                    />
+                                </Row>
+                            </View>
+                        </TouchableOpacity>
                     )}
 
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
@@ -1102,35 +1095,38 @@ export default class ChannelView extends React.Component<
                             NodeInfoStore.nodeInfo?.version
                         ) &&
                         channelId && (
-                            <ListItem
-                                containerStyle={{
-                                    backgroundColor: 'transparent',
-                                    marginLeft: -13,
-                                    marginRight: -20
-                                }}
-                                onPress={() =>
-                                    navigation.navigate('Routing', {
-                                        filterChanIdIn: channelId
-                                    })
-                                }
-                            >
-                                <ListItem.Content>
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Channel.routingHistory'
-                                        )}
-                                    </ListItem.Title>
-                                </ListItem.Content>
-                                <Icon
-                                    name="keyboard-arrow-right"
-                                    color={themeColor('secondaryText')}
+                            <>
+                                <Divider
+                                    orientation="horizontal"
+                                    style={{ margin: 20 }}
                                 />
-                            </ListItem>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('Routing', {
+                                            filterChanIdIn: channelId
+                                        })
+                                    }
+                                >
+                                    <View style={styles.tappableRow}>
+                                        <Row justify="space-between">
+                                            <Text
+                                                style={styles.tappableRowText}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.routingHistory'
+                                                )}
+                                            </Text>
+                                            <CaretRight
+                                                fill={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                width="20"
+                                                height="20"
+                                            />
+                                        </Row>
+                                    </View>
+                                </TouchableOpacity>
+                            </>
                         )}
                     {BackendUtils.supportsBumpFee() && pendingOpen && (
                         <View style={styles.button}>
@@ -1350,7 +1346,7 @@ const styles = StyleSheet.create({
     },
     status: {
         fontFamily: 'PPNeueMontreal-Book',
-        margin: 18,
+        marginVertical: 18,
         flex: 1,
         flexDirection: 'row',
         textAlign: 'center'
@@ -1381,5 +1377,11 @@ const styles = StyleSheet.create({
         height: 50,
         borderRadius: 25,
         marginRight: 14
+    },
+    tappableRow: {
+        paddingVertical: 10
+    },
+    tappableRowText: {
+        fontSize: 16
     }
 });
