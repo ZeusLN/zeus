@@ -312,13 +312,6 @@ export default class Lockscreen extends React.Component<
                     navigation.replace('Wallets', { fromStartup: true });
                 }
                 return;
-            } else if (
-                !(
-                    SettingsStore.settings.selectNodeOnStartup &&
-                    SettingsStore.initialStart
-                )
-            ) {
-                LinkingUtils.handleInitialUrl(navigation);
             }
             if (!SettingsStore.settings.selectNodeOnStartup) {
                 if (
@@ -339,14 +332,6 @@ export default class Lockscreen extends React.Component<
             (duressPin && pinAttempt === duressPin)
         ) {
             SettingsStore.setLoginStatus(true);
-            if (
-                !(
-                    SettingsStore.settings.selectNodeOnStartup &&
-                    SettingsStore.initialStart
-                )
-            ) {
-                LinkingUtils.handleInitialUrl(navigation);
-            }
             this.deleteNodes();
         } else {
             // need to fetch updated settings to get incremented value of
@@ -362,14 +347,6 @@ export default class Lockscreen extends React.Component<
             });
             if (authenticationAttempts >= maxAuthenticationAttempts) {
                 SettingsStore.setLoginStatus(true);
-                if (
-                    !(
-                        SettingsStore.settings.selectNodeOnStartup &&
-                        SettingsStore.initialStart
-                    )
-                ) {
-                    LinkingUtils.handleInitialUrl(navigation);
-                }
                 // wipe node configs, passwords, and pins
                 this.authenticationFailure();
             } else {

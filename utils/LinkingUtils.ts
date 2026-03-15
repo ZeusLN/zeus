@@ -22,44 +22,50 @@ class LinkingUtils {
                 return;
             }
             if (Platform.OS === 'android') {
-                const nfcData =
-                    await NativeModules.MobileTools.getIntentNfcData();
-                if (nfcData) {
-                    this.handleDeepLink(nfcData, navigation);
-                    return;
-                }
-
-                if (!this.shareIntentProcessed) {
-                    const shareIntentResult = await processSharedQRImageFast();
-
-                    if (shareIntentResult && shareIntentResult.success) {
-                        this.shareIntentProcessed = true;
-
-                        const requiresAuth = settingsStore.loginRequired();
-                        const requiresWalletSelection =
-                            settingsStore.settings?.selectNodeOnStartup;
-
-                        // Clear the Android share intent immediately to prevent reprocessing
-                        try {
-                            await NativeModules.MobileTools.clearSharedIntent();
-                        } catch (clearError) {
-                            console.warn(
-                                '[LinkingUtils] Failed to clear share intent:',
-                                clearError
-                            );
-                        }
-
-                        // Always show processing screen immediately for share intents
-                        // Background sync and authentication will be handled by the processing screen
-                        navigation.navigate('ShareIntentProcessing', {
-                            ...shareIntentResult.params,
-                            requiresAuth,
-                            requiresWalletSelection
-                        });
-                    }
-                }
+                await this.handleAndroidIntents(navigation);
             }
         });
+
+    handleAndroidIntents = async (
+        navigation: StackNavigationProp<any, any>
+    ) => {
+        const nfcData = await NativeModules.MobileTools.getIntentNfcData();
+        if (nfcData) {
+            this.handleDeepLink(nfcData, navigation);
+            return;
+        }
+
+        if (!this.shareIntentProcessed) {
+            const shareIntentResult = await processSharedQRImageFast();
+
+            if (shareIntentResult && shareIntentResult.success) {
+                this.shareIntentProcessed = true;
+
+                const requiresAuth = settingsStore.loginRequired();
+                const requiresWalletSelection =
+                    settingsStore.settings?.selectNodeOnStartup;
+
+                // Clear the Android share intent immediately to prevent reprocessing
+                try {
+                    await NativeModules.MobileTools.clearSharedIntent();
+                } catch (clearError) {
+                    console.warn(
+                        '[LinkingUtils] Failed to clear share intent:',
+                        clearError
+                    );
+                }
+
+                // Always show processing screen immediately for share intents
+                // Background sync and authentication will be handled by the processing screen
+                navigation.navigate('ShareIntentProcessing', {
+                    ...shareIntentResult.params,
+                    requiresAuth,
+                    requiresWalletSelection
+                });
+            }
+        }
+    };
+
     handleDeepLink = (
         url: string,
         navigation: NativeStackNavigationProp<any, any>
