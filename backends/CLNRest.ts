@@ -590,6 +590,7 @@ export default class CLNRest {
 
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
+    supportsMessageVerification = () => true;
     supportsAddressMessageSigning = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
@@ -598,6 +599,7 @@ export default class CLNRest {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsForceClose = () => false;
     supportsPendingChannels = () => false;
     supportsClosedChannels = () => true;
     supportsMPP = () => false;
@@ -628,6 +630,9 @@ export default class CLNRest {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => true;
+    supportsListingOffers = () => true;
+    supportsBolt12Address = () => true;
+    supportsCustomFeeLimit = () => false;
     isLNDBased = () => false;
     supportsForwardingHistory = () => true;
     supportInboundFees = () => false;

@@ -1,0 +1,156 @@
+import * as React from 'react';
+import { ScrollView, Text, View } from 'react-native';
+import { inject, observer } from 'mobx-react';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+
+import Button from '../../../components/Button';
+import Header from '../../../components/Header';
+import Screen from '../../../components/Screen';
+import TextInput from '../../../components/TextInput';
+
+import SettingsStore from '../../../stores/SettingsStore';
+
+import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
+import { getDefaultRgsServer } from '../../../utils/EmbeddedLdkNodeUtils';
+
+interface RapidGossipSyncProps {
+    navigation: NativeStackNavigationProp<any, any>;
+    SettingsStore: SettingsStore;
+}
+
+interface RapidGossipSyncState {
+    rgsServer: string;
+    savedRgsServer: string;
+}
+
+@inject('SettingsStore')
+@observer
+export default class RapidGossipSync extends React.Component<
+    RapidGossipSyncProps,
+    RapidGossipSyncState
+> {
+    state = {
+        rgsServer: this.props.SettingsStore.ldkRgsServer || '',
+        savedRgsServer: this.props.SettingsStore.ldkRgsServer || ''
+    };
+
+    render() {
+        const { navigation, SettingsStore } = this.props;
+        const { rgsServer } = this.state;
+        const { embeddedLdkNetwork, updateSettings }: any = SettingsStore;
+
+        const defaultServer = getDefaultRgsServer(
+            (embeddedLdkNetwork?.toLowerCase() as
+                | 'mainnet'
+                | 'testnet'
+                | 'signet'
+                | 'regtest') || 'mainnet'
+        );
+
+        const showReset = rgsServer !== '' && rgsServer !== defaultServer;
+
+        return (
+            <Screen>
+                <View style={{ flex: 1 }}>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.Settings.EmbeddedNode.RapidGossipSync.title'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
+                    <ScrollView style={{ margin: 10 }}>
+                        <View style={{ marginBottom: 20 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginBottom: 10
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.EmbeddedNode.RapidGossipSync.subtitle'
+                                )}
+                            </Text>
+                        </View>
+
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.EmbeddedNode.RapidGossipSync.serverUrl'
+                            )}
+                        </Text>
+                        <TextInput
+                            value={rgsServer}
+                            placeholder={defaultServer || ''}
+                            onChangeText={(text: string) => {
+                                this.setState({
+                                    rgsServer: text
+                                });
+                            }}
+                            onBlur={async () => {
+                                if (rgsServer !== this.state.savedRgsServer) {
+                                    await updateSettings({
+                                        ldkRgsServer: rgsServer
+                                    });
+                                    this.setState({
+                                        savedRgsServer: rgsServer
+                                    });
+                                    restartNeeded();
+                                }
+                            }}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+
+                        <View style={{ marginTop: 10 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 12
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.EmbeddedNode.defaultServer'
+                                )}
+                                : {defaultServer || 'None'}
+                            </Text>
+                        </View>
+
+                        {showReset && (
+                            <View style={{ marginTop: 20 }}>
+                                <Button
+                                    title={localeString('general.reset')}
+                                    accessibilityLabel={localeString(
+                                        'general.reset'
+                                    )}
+                                    onPress={async () => {
+                                        this.setState({
+                                            rgsServer: defaultServer || ''
+                                        });
+                                        await updateSettings({
+                                            ldkRgsServer: defaultServer || ''
+                                        });
+                                        restartNeeded();
+                                    }}
+                                />
+                            </View>
+                        )}
+                    </ScrollView>
+                </View>
+            </Screen>
+        );
+    }
+}

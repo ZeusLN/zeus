@@ -45,6 +45,11 @@ export default class PayCodeView extends React.Component<
         };
     }
 
+    componentDidMount() {
+        this.props.OffersStore.error_msg = '';
+        this.props.OffersStore.error = false;
+    }
+
     render() {
         const { navigation, OffersStore } = this.props;
         const { payCode } = this.state;

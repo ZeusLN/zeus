@@ -892,9 +892,9 @@ export default class Rebalance extends React.Component<
         if (result && result.status === PaymentStatus.COMPLETE) {
             this.handleSuccessfulPayment(result);
         } else if (result && result.status === 'failed') {
-            const errorMessage = `${localeString(
-                'views.Rebalance.error.paymentFailed'
-            )}: ${result.failure_reason || localeString('general.unknown')}`;
+            const errorMessage = `${localeString('error.paymentFailed')}: ${
+                result.failure_reason || localeString('general.unknown')
+            }`;
             const rebalanceData = this.createRebalanceResult(
                 false,
                 errorMessage,
@@ -930,7 +930,7 @@ export default class Rebalance extends React.Component<
                     failure_reason:
                         result.failure_reason ||
                         result.failure_string ||
-                        localeString('views.Rebalance.error.paymentFailed')
+                        localeString('error.paymentFailed')
                 });
                 break;
 
@@ -1588,7 +1588,7 @@ export default class Rebalance extends React.Component<
                                         new Error(
                                             result.failure_reason ||
                                                 localeString(
-                                                    'views.Rebalance.error.paymentFailed'
+                                                    'error.paymentFailed'
                                                 )
                                         )
                                     );
