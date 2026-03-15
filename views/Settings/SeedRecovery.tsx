@@ -272,9 +272,12 @@ export default class SeedRecovery extends React.PureComponent<
         nodeDir: string,
         network: string
     ) => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const { ldkPassphrase } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+
+        const nickname = route.params?.nickname;
+        const photo = route.params?.photo;
 
         const networkType = network as
             | 'mainnet'
@@ -283,6 +286,8 @@ export default class SeedRecovery extends React.PureComponent<
             | 'regtest';
 
         const node = {
+            nickname,
+            photo,
             implementation: 'embedded-ldk-node',
             embeddedLdkNetwork: network,
             ldkNodeDir: nodeDir,
