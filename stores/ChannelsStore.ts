@@ -717,7 +717,7 @@ export default class ChannelsStore {
         this.channelRequest = undefined;
         if (!silent) this.connectingToPeer = true;
 
-        if (!request.host) {
+        if (!request.host && !connectPeerOnly) {
             return await new Promise((resolve) => {
                 this.channelRequest = request;
                 resolve(true);
