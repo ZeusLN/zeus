@@ -63,7 +63,13 @@ interface SeedRecoveryProps {
     SwapStore: SwapStore;
     route: Route<
         'SeedRecovery',
-        { network: string; restoreSwaps?: boolean; restoreRescueKey?: boolean }
+        {
+            network: string;
+            restoreSwaps?: boolean;
+            restoreRescueKey?: boolean;
+            nickname?: string;
+            photo?: string;
+        }
     >;
 }
 
@@ -162,7 +168,7 @@ export default class SeedRecovery extends React.PureComponent<
     }
 
     saveWalletConfiguration = (recoveryCipherSeed?: string) => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const {
             walletPassword,
             adminMacaroon,
@@ -177,7 +183,12 @@ export default class SeedRecovery extends React.PureComponent<
             embeddedLndStarted
         } = SettingsStore;
 
+        const nickname = route.params?.nickname;
+        const photo = route.params?.photo;
+
         const node = {
+            nickname,
+            photo,
             seedPhrase,
             walletPassword,
             adminMacaroon,
