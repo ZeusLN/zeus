@@ -238,7 +238,9 @@ export default class ChannelsPane extends React.PureComponent<
         const { largestChannelSats, channelsType } = ChannelsStore!;
 
         const getStatus = () => {
-            if (item.isActive) {
+            if (item.isSplicing) {
+                return Status.Splicing;
+            } else if (item.isActive) {
                 return Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
