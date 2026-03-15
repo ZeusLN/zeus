@@ -113,13 +113,25 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
     ]
 };
 
+/**
+ * Normalize punctuation variants from native/platform error strings so pattern
+ * matching is resilient across locales/typographic quotes.
+ */
+export function normalizeForMatch(input: string): string {
+    return input
+        .normalize('NFKC')
+        .replace(/[’‘`]/g, "'")
+        .replace(/[“”]/g, '"')
+        .toLowerCase();
+}
+
 /** Match a raw error message to an LndErrorCode (returns first match) */
 export function matchRawErrorToCode(msg: string): LndErrorCode | null {
-    const normalized = msg.toLowerCase();
+    const normalized = normalizeForMatch(msg);
     for (const [code, patterns] of Object.entries(LND_ERROR_PATTERNS)) {
         if (
             patterns.length > 0 &&
-            patterns.some((p) => normalized.includes(p.toLowerCase()))
+            patterns.some((p) => normalized.includes(normalizeForMatch(p)))
         ) {
             return code as LndErrorCode;
         }
@@ -131,8 +143,8 @@ export function matchRawErrorToCode(msg: string): LndErrorCode | null {
 export function matchesLndErrorCode(msg: string, code: LndErrorCode): boolean {
     const patterns = LND_ERROR_PATTERNS[code];
     if (!patterns.length) return false;
-    const normalized = msg.toLowerCase();
-    return patterns.some((p) => normalized.includes(p.toLowerCase()));
+    const normalized = normalizeForMatch(msg);
+    return patterns.some((p) => normalized.includes(normalizeForMatch(p)));
 }
 
 /** Codes that indicate expected state when stopping LND  */
