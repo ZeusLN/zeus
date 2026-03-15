@@ -182,50 +182,91 @@ export const getAmountFontSize = (
     }
 };
 
-/**
- * Creates and starts the shake animation sequence.
- * Used to provide visual feedback when invalid input is entered.
- */
-export const startShakeAnimation = (
-    shakeAnimation: Animated.Value,
-    textAnimation: Animated.Value
+export interface KeypadAnimationRefs {
+    textAnimationRef: Animated.CompositeAnimation | null;
+    shakeAnimationRef: Animated.CompositeAnimation | null;
+}
+
+export const resetKeypadTextAnimation = (
+    textAnimation: Animated.Value,
+    refs: KeypadAnimationRefs
 ): void => {
-    Animated.parallel([
-        Animated.sequence([
-            Animated.timing(textAnimation, {
-                toValue: 1,
-                duration: 100,
-                useNativeDriver: false
-            }),
-            Animated.timing(textAnimation, {
-                toValue: 0,
-                duration: 1000,
-                useNativeDriver: false
-            })
-        ]),
-        Animated.sequence([
-            Animated.timing(shakeAnimation, {
-                toValue: 10,
-                duration: 100,
-                useNativeDriver: true
-            }),
-            Animated.timing(shakeAnimation, {
-                toValue: -10,
-                duration: 100,
-                useNativeDriver: true
-            }),
-            Animated.timing(shakeAnimation, {
-                toValue: 10,
-                duration: 100,
-                useNativeDriver: true
-            }),
-            Animated.timing(shakeAnimation, {
-                toValue: 0,
-                duration: 100,
-                useNativeDriver: true
-            })
-        ])
-    ]).start();
+    if (refs.textAnimationRef) {
+        refs.textAnimationRef.stop();
+        refs.textAnimationRef = null;
+    }
+    textAnimation.setValue(0);
+};
+
+export const stopKeypadShakeAnimation = (refs: KeypadAnimationRefs): void => {
+    if (refs.shakeAnimationRef) {
+        refs.shakeAnimationRef.stop();
+        refs.shakeAnimationRef = null;
+    }
+};
+
+export const resetAllKeypadAnimations = (
+    shakeAnimation: Animated.Value,
+    textAnimation: Animated.Value,
+    refs: KeypadAnimationRefs
+): void => {
+    resetKeypadTextAnimation(textAnimation, refs);
+    stopKeypadShakeAnimation(refs);
+    shakeAnimation.setValue(0);
+};
+
+export const startKeypadInvalidInputAnimation = (
+    shakeAnimation: Animated.Value,
+    textAnimation: Animated.Value,
+    refs: KeypadAnimationRefs
+): void => {
+    resetKeypadTextAnimation(textAnimation, refs);
+    stopKeypadShakeAnimation(refs);
+
+    // This animates text color (text -> red), and color is not supported
+    // by the RN Animated native driver. This is why useNativeDriver is false.
+    refs.textAnimationRef = Animated.sequence([
+        Animated.timing(textAnimation, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: false
+        }),
+        Animated.timing(textAnimation, {
+            toValue: 0,
+            duration: 1000,
+            useNativeDriver: false
+        })
+    ]);
+
+    refs.shakeAnimationRef = Animated.sequence([
+        Animated.timing(shakeAnimation, {
+            toValue: 10,
+            duration: 100,
+            useNativeDriver: true
+        }),
+        Animated.timing(shakeAnimation, {
+            toValue: -10,
+            duration: 100,
+            useNativeDriver: true
+        }),
+        Animated.timing(shakeAnimation, {
+            toValue: 10,
+            duration: 100,
+            useNativeDriver: true
+        }),
+        Animated.timing(shakeAnimation, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true
+        })
+    ]);
+
+    Animated.parallel([refs.textAnimationRef, refs.shakeAnimationRef]).start(
+        () => {
+            refs.textAnimationRef = null;
+            refs.shakeAnimationRef = null;
+        }
+    );
 };
 
 /**

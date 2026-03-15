@@ -15,10 +15,13 @@ import SettingsStore from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import {
+    KeypadAnimationRefs,
     validateKeypadInput,
-    startShakeAnimation,
     getAmountFontSize,
-    deleteLastCharacter
+    deleteLastCharacter,
+    resetKeypadTextAnimation,
+    resetAllKeypadAnimations,
+    startKeypadInvalidInputAnimation
 } from '../../utils/KeypadUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -47,12 +50,38 @@ export default class PosKeypadPane extends React.PureComponent<
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
+    animationRefs: KeypadAnimationRefs = {
+        textAnimationRef: null,
+        shakeAnimationRef: null
+    };
+    /*
+     Use this as the latest amount between setState updates.
+     Fast taps can use old state and show wrong red/shake animation.
+    */
+    amountInput = '0';
     state = {
         amount: '0'
     };
 
+    componentDidUpdate(
+        _prevProps: PosKeypadPaneProps,
+        prevState: PosKeypadPaneState
+    ) {
+        if (prevState.amount !== this.state.amount) {
+            this.amountInput = this.state.amount;
+        }
+    }
+
+    componentWillUnmount() {
+        resetAllKeypadAnimations(
+            this.shakeAnimation,
+            this.textAnimation,
+            this.animationRefs
+        );
+    }
+
     appendValue = (value: string): boolean => {
-        const { amount } = this.state;
+        const amount = this.amountInput;
         const { FiatStore, SettingsStore, UnitsStore } = this.props;
         const { units } = UnitsStore!;
 
@@ -69,6 +98,9 @@ export default class PosKeypadPane extends React.PureComponent<
             return false;
         }
 
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = newAmount;
+
         this.setState({
             amount: newAmount
         });
@@ -77,19 +109,24 @@ export default class PosKeypadPane extends React.PureComponent<
     };
 
     clearValue = () => {
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = '0';
         this.setState({
             amount: '0'
         });
     };
 
     deleteValue = () => {
-        const { amount } = this.state;
+        const amount = this.amountInput;
         if (amount === '0') {
             this.startShake();
             return;
         }
+
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = deleteLastCharacter(amount);
         this.setState({
-            amount: deleteLastCharacter(amount)
+            amount: this.amountInput
         });
     };
 
@@ -101,7 +138,11 @@ export default class PosKeypadPane extends React.PureComponent<
     };
 
     startShake = () => {
-        startShakeAnimation(this.shakeAnimation, this.textAnimation);
+        startKeypadInvalidInputAnimation(
+            this.shakeAnimation,
+            this.textAnimation,
+            this.animationRefs
+        );
     };
 
     private createCustomOrder = () => {

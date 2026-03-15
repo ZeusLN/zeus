@@ -18,10 +18,13 @@ import UnitsStore from '../stores/UnitsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
 import {
+    KeypadAnimationRefs,
     validateKeypadInput,
-    startShakeAnimation,
     getAmountFontSize,
-    deleteLastCharacter
+    deleteLastCharacter,
+    resetKeypadTextAnimation,
+    resetAllKeypadAnimations,
+    startKeypadInvalidInputAnimation
 } from '../utils/KeypadUtils';
 import { getDecimalPlaceholder } from '../utils/UnitsUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -54,14 +57,41 @@ export default class AmountKeypad extends React.Component<
 > {
     shakeAnimation = new Animated.Value(0);
     textAnimation = new Animated.Value(0);
+    animationRefs: KeypadAnimationRefs = {
+        textAnimationRef: null,
+        shakeAnimationRef: null
+    };
+    /*
+     Use this as the latest amount between setState updates.
+     Fast taps can use old state and show wrong red/shake animation.
+    */
+    amountInput = '0';
     private currencySelectorModalRef = React.createRef<CurrencySelectorModal>();
 
     constructor(props: AmountKeypadProps) {
         super(props);
         const initialAmount = props.route.params?.initialAmount || '0';
+        this.amountInput = initialAmount;
         this.state = {
             amount: initialAmount
         };
+    }
+
+    componentDidUpdate(
+        _prevProps: AmountKeypadProps,
+        prevState: AmountKeypadState
+    ) {
+        if (prevState.amount !== this.state.amount) {
+            this.amountInput = this.state.amount;
+        }
+    }
+
+    componentWillUnmount() {
+        resetAllKeypadAnimations(
+            this.shakeAnimation,
+            this.textAnimation,
+            this.animationRefs
+        );
     }
 
     getEffectiveUnits = (): string => {
@@ -70,7 +100,7 @@ export default class AmountKeypad extends React.Component<
     };
 
     appendValue = (value: string): boolean => {
-        const { amount } = this.state;
+        const amount = this.amountInput;
         const { FiatStore, SettingsStore } = this.props;
         const units = this.getEffectiveUnits();
 
@@ -87,25 +117,35 @@ export default class AmountKeypad extends React.Component<
             return false;
         }
 
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = newAmount;
         this.setState({ amount: newAmount });
         return true;
     };
 
     clearValue = () => {
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = '0';
         this.setState({ amount: '0' });
     };
 
     deleteValue = () => {
-        const { amount } = this.state;
+        const amount = this.amountInput;
         if (amount === '0') {
             this.startShake();
             return;
         }
-        this.setState({ amount: deleteLastCharacter(amount) });
+        resetKeypadTextAnimation(this.textAnimation, this.animationRefs);
+        this.amountInput = deleteLastCharacter(amount);
+        this.setState({ amount: this.amountInput });
     };
 
     startShake = () => {
-        startShakeAnimation(this.shakeAnimation, this.textAnimation);
+        startKeypadInvalidInputAnimation(
+            this.shakeAnimation,
+            this.textAnimation,
+            this.animationRefs
+        );
     };
 
     handleConfirm = () => {
