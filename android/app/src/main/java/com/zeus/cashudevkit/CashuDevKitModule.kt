@@ -70,6 +70,41 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         )
     }
 
+    private fun readPositiveLong(json: JSONObject, key: String): Long {
+        return when (val raw = json.opt(key)) {
+            is Number -> raw.toLong()
+            is String -> raw.toLongOrNull() ?: 0L
+            else -> 0L
+        }.coerceAtLeast(0L)
+    }
+
+    private fun parseMeltOptions(optionsJson: String?): MeltOptions? {
+        if (optionsJson.isNullOrBlank()) return null
+
+        return try {
+            val parsed = JSONObject(optionsJson)
+
+            parsed.optJSONObject("mpp")?.let { mpp ->
+                val amount = readPositiveLong(mpp, "amount")
+                if (amount > 0) {
+                    return MeltOptions.Mpp(Amount(amount.toULong()))
+                }
+            }
+
+            parsed.optJSONObject("amountless")?.let { amountless ->
+                val amountMsat = readPositiveLong(amountless, "amount_msat")
+                if (amountMsat > 0) {
+                    return MeltOptions.Amountless(Amount(amountMsat.toULong()))
+                }
+            }
+
+            null
+        } catch (e: Exception) {
+            Log.w(TAG, "parseMeltOptions: invalid options JSON", e)
+            null
+        }
+    }
+
     /**
      * Returns the initialized wallet or rejects with NO_WALLET error and returns null
      */
@@ -807,7 +842,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val url = MintUrl(mintUrl)
-                val quote = wallet!!.meltQuote(url, request, null)
+                val options = parseMeltOptions(optionsJson)
+                val quote = wallet!!.meltQuote(url, request, options)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())
@@ -1323,7 +1359,8 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         scope.launch {
             try {
                 val url = MintUrl(mintUrl)
-                val quote = wallet!!.meltQuote(url, request, null)
+                val options = parseMeltOptions(optionsJson)
+                val quote = wallet!!.meltQuote(url, request, options)
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMeltQuote(quote).toString())

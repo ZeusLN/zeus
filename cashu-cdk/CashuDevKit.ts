@@ -37,6 +37,14 @@ const { CashuDevKitModule } = NativeModules as unknown as {
  */
 function mapCDKError(error: any): CDKError {
     const message = error?.message || String(error);
+    const normalizedMessage = message.toLowerCase();
+
+    if (
+        normalizedMessage.includes('11000') &&
+        normalizedMessage.includes('quote amount not as requested')
+    ) {
+        return { type: CDKErrorType.MultiMintQuoteRejected, message };
+    }
 
     if (
         message.includes('Insufficient funds') ||
@@ -184,7 +192,14 @@ class CashuDevKit {
     async getBalances(): Promise<Record<string, number>> {
         try {
             const json = await CashuDevKitModule.getBalances();
-            return JSON.parse(json);
+            const parsed = JSON.parse(json) as Record<string, string | number>;
+
+            return Object.fromEntries(
+                Object.entries(parsed).map(([mintUrl, balance]) => [
+                    mintUrl,
+                    Number(balance)
+                ])
+            );
         } catch (error) {
             throw mapCDKError(error);
         }

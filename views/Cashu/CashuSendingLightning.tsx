@@ -189,17 +189,25 @@ export default class CashuSendingLightning extends React.Component<
                 isDonationPayment
             });
 
-            if (
-                !donationPayment ||
-                donationPayment?.meltResponse?.quote?.state !== 'PAID'
-            ) {
+            const payment = Array.isArray(donationPayment)
+                ? donationPayment[0]
+                : donationPayment;
+
+            const donationState = (
+                payment?.meltResponse?.quote?.state ||
+                payment?.meltResponse?.state
+            )
+                ?.toString()
+                ?.toUpperCase();
+
+            if (!payment || donationState !== 'PAID') {
                 console.log('Donation payment failed.');
                 this.setState({ donationHandled: false });
                 return;
             }
 
-            const amountDonated = donationPayment?.amount;
-            const paymentPreimage = donationPayment?.payment_preimage;
+            const amountDonated = payment?.amount;
+            const paymentPreimage = payment?.payment_preimage;
 
             this.setState({
                 donationHandled: true,
