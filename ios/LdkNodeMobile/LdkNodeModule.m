@@ -74,7 +74,6 @@ RCT_EXTERN_METHOD(listPeers:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromise
 
 // Event Methods
 RCT_EXTERN_METHOD(nextEvent:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
-RCT_EXTERN_METHOD(waitNextEvent:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(eventHandled:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // LSPS1 Methods

@@ -1124,19 +1124,6 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(waitNextEvent:rejecter:)
-    func waitNextEvent(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-        guard let node = self.getNode() else {
-            reject("error", "Node not initialized", nil)
-            return
-        }
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            let event = node.waitNextEvent()
-            resolve(["event": self.serializeEvent(event)])
-        }
-    }
-
     @objc(eventHandled:rejecter:)
     func eventHandled(_ resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {

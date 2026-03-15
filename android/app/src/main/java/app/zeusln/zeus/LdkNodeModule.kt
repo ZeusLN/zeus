@@ -1289,26 +1289,6 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun waitNextEvent(promise: Promise) {
-        moduleScope.launch {
-            try {
-                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val event = node.waitNextEvent()
-                val response = Arguments.createMap().apply {
-                    putMap("event", eventToMap(event))
-                }
-                withContext(Dispatchers.Main) {
-                    promise.resolve(response)
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    promise.reject("error", e.message, e)
-                }
-            }
-        }
-    }
-
-    @ReactMethod
     fun eventHandled(promise: Promise) {
         try {
             val node = this.node ?: throw Exception("Node not initialized")

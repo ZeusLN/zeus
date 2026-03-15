@@ -1320,13 +1320,6 @@ export default class EmbeddedLdkNode {
     };
 
     /**
-     * Wait for next event (blocking)
-     */
-    waitNextEvent = async (): Promise<LdkNodeEvent> => {
-        return await LdkNode.events.waitNextEvent();
-    };
-
-    /**
      * Mark event as handled
      */
     eventHandled = async (): Promise<void> => {

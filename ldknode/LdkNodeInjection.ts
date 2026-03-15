@@ -521,11 +521,6 @@ const nextEvent = async (): Promise<LdkNodeEvent | null> => {
     return result.event;
 };
 
-const waitNextEvent = async (): Promise<LdkNodeEvent> => {
-    const result: any = await LdkNodeModule.waitNextEvent();
-    return result.event;
-};
-
 const eventHandled = async (): Promise<void> => {
     return await LdkNodeModule.eventHandled();
 };
@@ -906,7 +901,6 @@ export interface ILdkNodeInjections {
     };
     events: {
         nextEvent: () => Promise<LdkNodeEvent | null>;
-        waitNextEvent: () => Promise<LdkNodeEvent>;
         eventHandled: () => Promise<void>;
     };
     lsps1: {
@@ -1031,7 +1025,6 @@ const LdkNodeInjection: ILdkNodeInjections = {
     },
     events: {
         nextEvent,
-        waitNextEvent,
         eventHandled
     },
     lsps1: {

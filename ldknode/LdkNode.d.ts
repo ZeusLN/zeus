@@ -573,7 +573,6 @@ export interface ILdkNodeModule {
 
     // Event Methods
     nextEvent(): Promise<LdkNodeEvent | null>;
-    waitNextEvent(): Promise<LdkNodeEvent>;
     eventHandled(): Promise<void>;
 
     // LSPS1 Methods
