@@ -560,7 +560,15 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                                         resetGraphLoading:
                                                             false,
                                                         resetGraphSuccess: true,
-                                                        resetGraphResult: `${graphInfo.channelCount} channels, ${graphInfo.nodeCount} nodes`
+                                                        resetGraphResult: `${
+                                                            graphInfo.channelCount
+                                                        } ${localeString(
+                                                            'views.Wallet.Wallet.channels'
+                                                        ).toLowerCase()}, ${
+                                                            graphInfo.nodeCount
+                                                        } ${localeString(
+                                                            'general.nodes'
+                                                        ).toLowerCase()}`
                                                     });
                                                     setTimeout(() => {
                                                         this.setState({
