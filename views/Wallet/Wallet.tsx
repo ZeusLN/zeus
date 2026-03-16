@@ -1048,10 +1048,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.props;
         if (opts.checkPerms) await BackendUtils.checkPerms();
         await NodeInfoStore.getNodeInfo();
-        if (BackendUtils.supportsAccounts()) await UTXOsStore.listAccounts();
-        await BalanceStore.getCombinedBalance();
+        const dataFetchPromises: Promise<unknown>[] = [
+            BalanceStore.getCombinedBalance()
+        ];
+        if (BackendUtils.supportsAccounts())
+            dataFetchPromises.push(UTXOsStore.listAccounts());
         if (BackendUtils.supportsChannelManagement())
-            await ChannelsStore.getChannels();
+            dataFetchPromises.push(ChannelsStore.getChannels());
+        await Promise.all(dataFetchPromises);
     };
 
     processPendingShareIntent = () => {
