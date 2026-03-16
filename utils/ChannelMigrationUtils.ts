@@ -144,7 +144,15 @@ export const uploadChannelBackupToOlympus = async (
                     if (e?.message?.includes?.('closed')) {
                         console.log('LND stopped successfully.');
                     } else {
-                        console.log('LND Stop Error', e);
+                        console.error('Failed to stop LND:', e.message);
+                        if (setLoading) setLoading(false);
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString(
+                                'views.Tools.migration.export.failedToStopLnd'
+                            )
+                        );
+                        return;
                     }
                 }
 
@@ -228,7 +236,14 @@ export const uploadChannelBackupToOlympus = async (
                         json.error ||
                             localeString(
                                 'views.Tools.migration.export.failedToUpload'
-                            )
+                            ),
+                        [
+                            {
+                                text: localeString('views.Wallet.restart'),
+                                onPress: () => RNRestart.Restart()
+                            }
+                        ],
+                        { cancelable: false }
                     );
                 }
             } catch (e) {
@@ -236,7 +251,14 @@ export const uploadChannelBackupToOlympus = async (
                 if (setLoading) setLoading(false);
                 Alert.alert(
                     localeString('general.error'),
-                    localeString('views.Tools.migration.export.failedToUpload')
+                    localeString('views.Tools.migration.export.failedToUpload'),
+                    [
+                        {
+                            text: localeString('views.Wallet.restart'),
+                            onPress: () => RNRestart.Restart()
+                        }
+                    ],
+                    { cancelable: false }
                 );
             }
         };
@@ -420,8 +442,16 @@ export const restoreChannelBackupFromOlympus = async (
         try {
             console.log('Stopping LND for restore...');
             await stopLnd();
-        } catch (e) {
-            console.log('LND Stop Error', e);
+            await sleep(5000);
+        } catch (e: any) {
+            if (e?.message?.includes?.('closed')) {
+                console.log('LND stopped successfully.');
+            } else {
+                console.error('Failed to stop LND:', e.message);
+                throw new Error(
+                    localeString('views.Tools.migration.export.failedToStopLnd')
+                );
+            }
         }
 
         // 6. Build the destination path
@@ -489,6 +519,7 @@ export const exportChannelDb = async (
         }
 
         try {
+            console.log('Stopping LND for export...');
             await stopLnd();
             await sleep(5000);
         } catch (e: any) {
@@ -497,7 +528,10 @@ export const exportChannelDb = async (
             } else {
                 console.error('Failed to stop LND:', e.message);
                 if (setLoading) setLoading(false);
-                Alert.alert(localeString('general.error'));
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Tools.migration.export.failedToStopLnd')
+                );
                 return;
             }
         }
@@ -573,6 +607,17 @@ export const exportChannelDb = async (
 
             if (isDismissed) {
                 await RNFS.unlink(stagingPath);
+                Alert.alert(
+                    localeString('views.Tools.migration.export.cancelled'),
+                    localeString('views.Tools.migration.export.cancelled.text'),
+                    [
+                        {
+                            text: localeString('views.Wallet.restart'),
+                            onPress: () => RNRestart.Restart()
+                        }
+                    ],
+                    { cancelable: false }
+                );
                 return;
             }
 
@@ -588,6 +633,17 @@ export const exportChannelDb = async (
                 errorMsg.includes('User did not share') ||
                 errorMsg.includes('cancel')
             ) {
+                Alert.alert(
+                    localeString('views.Tools.migration.export.cancelled'),
+                    localeString('views.Tools.migration.export.cancelled.text'),
+                    [
+                        {
+                            text: localeString('views.Wallet.restart'),
+                            onPress: () => RNRestart.Restart()
+                        }
+                    ],
+                    { cancelable: false }
+                );
                 return;
             }
 
@@ -596,7 +652,17 @@ export const exportChannelDb = async (
     } catch (error) {
         console.error('Export Failed:', error);
         if (setLoading) setLoading(false);
-        Alert.alert(localeString('general.error'));
+        Alert.alert(
+            localeString('general.error'),
+            undefined,
+            [
+                {
+                    text: localeString('views.Wallet.restart'),
+                    onPress: () => RNRestart.Restart()
+                }
+            ],
+            { cancelable: false }
+        );
     }
 };
 

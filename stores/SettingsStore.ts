@@ -1692,6 +1692,7 @@ export default class SettingsStore {
         this.lndFolderMissing = status;
     };
 
+    @action
     public setChannelMigrating = (status: boolean) => {
         this.isChannelMigrating = status;
     };
