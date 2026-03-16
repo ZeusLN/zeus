@@ -27,7 +27,9 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import ModalBox from '../../components/ModalBox';
 import Screen from '../../components/Screen';
+import ZeusText from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
@@ -96,6 +98,9 @@ interface SeedRecoveryState {
     rescueHost: string;
     customRescueHost: string;
     invalidInput: boolean;
+    showClipboardPrompt: boolean;
+    clipboardSeedArray: string[];
+    showValidation: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -134,7 +139,10 @@ export default class SeedRecovery extends React.PureComponent<
                 ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
                 : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
             customRescueHost: settings.swaps?.customHost || '',
-            invalidInput: false
+            invalidInput: false,
+            showClipboardPrompt: false,
+            clipboardSeedArray: [],
+            showValidation: false
         };
     }
 
@@ -147,9 +155,12 @@ export default class SeedRecovery extends React.PureComponent<
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
 
-            const seedArray = clipboard.split(' ');
-            if (seedArray.length === 24) {
-                this.setState({ seedArray });
+            const clipboardSeedArray = clipboard.trim().split(/\s+/);
+            if (clipboardSeedArray.length === 24) {
+                this.setState({
+                    showClipboardPrompt: true,
+                    clipboardSeedArray
+                });
             }
         }
     }
@@ -241,8 +252,18 @@ export default class SeedRecovery extends React.PureComponent<
             restoreSwaps,
             restoreRescueKey,
             rescueHost,
-            customRescueHost
+            customRescueHost,
+            showValidation
         } = this.state;
+
+        const invalidWordIndices: number[] = showValidation
+            ? seedArray.reduce((acc: number[], word, i) => {
+                  if (!BIP39_WORD_LIST.includes(word?.toLowerCase()?.trim())) {
+                      acc.push(i);
+                  }
+                  return acc;
+              }, [])
+            : [];
 
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
 
@@ -320,7 +341,13 @@ export default class SeedRecovery extends React.PureComponent<
                         marginLeft: 6,
                         marginRight: 6,
                         flexDirection: 'row',
-                        maxHeight: type === 'scb' ? 60 : undefined
+                        maxHeight: type === 'scb' ? 60 : undefined,
+                        ...(!showSuggestions &&
+                            index != null &&
+                            invalidWordIndices.includes(index) && {
+                                borderWidth: 1,
+                                borderColor: themeColor('warning')
+                            })
                     }}
                 >
                     {!showSuggestions && index != null && (
@@ -480,7 +507,16 @@ export default class SeedRecovery extends React.PureComponent<
                     }}
                     navigation={navigation}
                 />
-                {errorMsg && <ErrorMessage message={errorMsg} dismissable />}
+                {errorMsg && <ErrorMessage message={errorMsg} />}
+                {invalidWordIndices.length > 0 && (
+                    <ErrorMessage
+                        message={`${localeString(
+                            'views.Settings.NodeConfiguration.invalidSeedWord'
+                        )}: #${invalidWordIndices
+                            .map((i) => i + 1)
+                            .join(', #')}`}
+                    />
+                )}
                 {loading && <LoadingIndicator />}
                 {!loading && (
                     <View style={{ flex: 1, justifyContent: 'center' }}>
@@ -980,15 +1016,89 @@ export default class SeedRecovery extends React.PureComponent<
                                             ? (rescueHost === 'Custom' &&
                                                   !customRescueHost) ||
                                               seedArray.length !== 12 ||
-                                              seedArray.some((seed) => !seed)
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                             : seedArray.length !== 24 ||
-                                              seedArray.some((seed) => !seed)
+                                              seedArray.some(
+                                                  (seed) =>
+                                                      !BIP39_WORD_LIST.includes(
+                                                          seed
+                                                              ?.toLowerCase()
+                                                              ?.trim()
+                                                      )
+                                              )
                                     }
                                 />
                             </View>
                         )}
                     </View>
                 )}
+                <ModalBox
+                    isOpen={this.state.showClipboardPrompt}
+                    style={{ backgroundColor: 'transparent' }}
+                    swipeToClose
+                    backButtonClose
+                    onClosed={() =>
+                        this.setState({
+                            showClipboardPrompt: false,
+                            clipboardSeedArray: []
+                        })
+                    }
+                >
+                    <View style={styles.modalWrapper}>
+                        <View
+                            style={{
+                                backgroundColor: themeColor('modalBackground'),
+                                borderRadius: 30,
+                                padding: 30,
+                                width: '85%'
+                            }}
+                        >
+                            <ZeusText style={styles.modalTitle}>
+                                {localeString(
+                                    'views.Settings.SeedRecovery.clipboardSeedWords'
+                                )}
+                            </ZeusText>
+                            <ZeusText style={styles.modalBody}>
+                                {localeString(
+                                    'views.Settings.SeedRecovery.clipboardSeedWordsPrompt'
+                                )}
+                            </ZeusText>
+                            <View style={{ marginBottom: 12 }}>
+                                <Button
+                                    title={localeString('general.yes')}
+                                    onPress={() =>
+                                        this.setState({
+                                            seedArray:
+                                                this.state.clipboardSeedArray.map(
+                                                    (w) =>
+                                                        w.toLowerCase().trim()
+                                                ),
+                                            showClipboardPrompt: false,
+                                            clipboardSeedArray: [],
+                                            showValidation: true
+                                        })
+                                    }
+                                    tertiary
+                                />
+                            </View>
+                            <Button
+                                title={localeString('general.cancel')}
+                                onPress={() =>
+                                    this.setState({
+                                        showClipboardPrompt: false
+                                    })
+                                }
+                            />
+                        </View>
+                    </View>
+                </ModalBox>
             </Screen>
         );
     }
@@ -1046,5 +1156,20 @@ const styles = StyleSheet.create({
         marginTop: 8,
         width: '100%',
         lineHeight: 1
+    },
+    modalWrapper: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    modalTitle: {
+        textAlign: 'center',
+        fontSize: 20,
+        marginBottom: 12
+    },
+    modalBody: {
+        textAlign: 'center',
+        fontSize: 16,
+        marginBottom: 24
     }
 });
