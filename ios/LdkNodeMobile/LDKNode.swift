@@ -1631,6 +1631,10 @@ public protocol BuilderProtocol : AnyObject {
     
     func build(nodeEntropy: NodeEntropy) throws  -> Node
     
+    func buildWithDualStoreAndFixedHeaders(nodeEntropy: NodeEntropy, vssUrl: String, storeId: String, fixedHeaders: [String: String]) throws  -> Node
+    
+    func buildWithDualStoreAndHeaderProvider(nodeEntropy: NodeEntropy, vssUrl: String, storeId: String, headerProvider: VssHeaderProvider) throws  -> Node
+    
     func buildWithFsStore(nodeEntropy: NodeEntropy) throws  -> Node
     
     func buildWithVssStore(nodeEntropy: NodeEntropy, vssUrl: String, storeId: String, lnurlAuthServerUrl: String, fixedHeaders: [String: String]) throws  -> Node
@@ -1748,6 +1752,28 @@ open func build(nodeEntropy: NodeEntropy)throws  -> Node {
     return try  FfiConverterTypeNode.lift(try rustCallWithError(FfiConverterTypeBuildError.lift) {
     uniffi_ldk_node_fn_method_builder_build(self.uniffiClonePointer(),
         FfiConverterTypeNodeEntropy.lower(nodeEntropy),$0
+    )
+})
+}
+    
+open func buildWithDualStoreAndFixedHeaders(nodeEntropy: NodeEntropy, vssUrl: String, storeId: String, fixedHeaders: [String: String])throws  -> Node {
+    return try  FfiConverterTypeNode.lift(try rustCallWithError(FfiConverterTypeBuildError.lift) {
+    uniffi_ldk_node_fn_method_builder_build_with_dual_store_and_fixed_headers(self.uniffiClonePointer(),
+        FfiConverterTypeNodeEntropy.lower(nodeEntropy),
+        FfiConverterString.lower(vssUrl),
+        FfiConverterString.lower(storeId),
+        FfiConverterDictionaryStringString.lower(fixedHeaders),$0
+    )
+})
+}
+    
+open func buildWithDualStoreAndHeaderProvider(nodeEntropy: NodeEntropy, vssUrl: String, storeId: String, headerProvider: VssHeaderProvider)throws  -> Node {
+    return try  FfiConverterTypeNode.lift(try rustCallWithError(FfiConverterTypeBuildError.lift) {
+    uniffi_ldk_node_fn_method_builder_build_with_dual_store_and_header_provider(self.uniffiClonePointer(),
+        FfiConverterTypeNodeEntropy.lower(nodeEntropy),
+        FfiConverterString.lower(vssUrl),
+        FfiConverterString.lower(storeId),
+        FfiConverterTypeVssHeaderProvider.lower(headerProvider),$0
     )
 })
 }
@@ -12938,6 +12964,12 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_builder_build() != 64768) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_builder_build_with_dual_store_and_fixed_headers() != 21660) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_builder_build_with_dual_store_and_header_provider() != 46196) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_builder_build_with_fs_store() != 42069) {

@@ -336,7 +336,7 @@ class LdkNodeModule: RCTEventEmitter {
                 var vssError: String? = nil
 
                 if let vssUrl = self.storedVssUrl, let vssStoreId = self.storedVssStoreId {
-                    NSLog("LdkNodeModule: Building node with VSS store: \(vssUrl)")
+                    NSLog("LdkNodeModule: Building node with dual store (VSS + local): \(vssUrl)")
 
                     let semaphore = DispatchSemaphore(value: 0)
                     var buildResult: Node?
@@ -345,48 +345,47 @@ class LdkNodeModule: RCTEventEmitter {
 
                     let workItem = DispatchWorkItem {
                         do {
-                            let vssBuilder = Builder.fromConfig(config: config)
-                            self.applyBuilderSettings(vssBuilder)
-                            buildResult = try vssBuilder.buildWithVssStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: self.storedVssHeaders)
+                            let dualBuilder = Builder.fromConfig(config: config)
+                            self.applyBuilderSettings(dualBuilder)
+                            buildResult = try dualBuilder.buildWithDualStoreAndFixedHeaders(nodeEntropy: nodeEntropy, vssUrl: vssUrl, storeId: vssStoreId, fixedHeaders: self.storedVssHeaders)
                         } catch {
                             buildError = error
                         }
                         semaphore.signal()
 
                         // If we timed out, the caller already moved on to the
-                        // filesystem fallback. Stop the orphaned node so it
-                        // doesn't leak resources.
+                        // fallback. Stop the orphaned node so it doesn't leak resources.
                         if timedOut, let orphan = buildResult {
-                            NSLog("LdkNodeModule: Stopping orphaned VSS node after timeout")
+                            NSLog("LdkNodeModule: Stopping orphaned dual-store node after timeout")
                             do { try orphan.stop() } catch {}
                         }
                     }
 
                     DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
-                    let timeout = semaphore.wait(timeout: .now() + 60)
+                    let timeout = semaphore.wait(timeout: .now() + 15)
 
                     if timeout == .timedOut {
                         timedOut = true
                         workItem.cancel()
-                        vssError = "VSS server at \(vssUrl) did not respond within 60s"
+                        vssError = "VSS server at \(vssUrl) did not respond within 15s"
                         NSLog("LdkNodeModule: \(vssError!)")
                     } else if let error = buildError {
-                        vssError = "VSS setup failed: \(error.localizedDescription)"
+                        vssError = "Dual store setup failed: \(error.localizedDescription)"
                         NSLog("LdkNodeModule: \(vssError!)")
                     } else {
                         self.setNode(buildResult)
-                        NSLog("LdkNodeModule: Node built with VSS store successfully")
+                        NSLog("LdkNodeModule: Node built with dual store successfully")
                     }
                 }
 
-                // Fall back to local filesystem store if VSS failed or was not configured
+                // Fall back to local SQLite store if dual store failed or VSS was not configured
                 if self.getNode() == nil {
                     if vssError != nil {
-                        NSLog("LdkNodeModule: Falling back to local filesystem store")
+                        NSLog("LdkNodeModule: Falling back to local SQLite store")
                     }
-                    let fsBuilder = Builder.fromConfig(config: config)
-                    self.applyBuilderSettings(fsBuilder)
-                    self.setNode(try fsBuilder.buildWithFsStore(nodeEntropy: nodeEntropy))
+                    let localBuilder = Builder.fromConfig(config: config)
+                    self.applyBuilderSettings(localBuilder)
+                    self.setNode(try localBuilder.build(nodeEntropy: nodeEntropy))
                 }
 
                 self.builder = nil // Builder is consumed

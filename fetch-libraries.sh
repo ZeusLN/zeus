@@ -12,9 +12,9 @@ ANDROID_LINK=$FILE_PATH$ANDROID_FILE
 IOS_LINK=$FILE_PATH$IOS_FILE.zip
 
 # LDK Node
-LDK_NODE_VERSION=v0.7.0-zeus-closed-channels
+LDK_NODE_VERSION=v0.7.0-zeus-dual-store
 LDK_NODE_IOS_FILE=LDKNodeFFI.xcframework
-LDK_NODE_IOS_SHA256='ad730bbb30d1bfb96a4152ee15e705332b34e39886d6eeefb6a48fcd11346f8a'
+LDK_NODE_IOS_SHA256='ff9a1505502317b04db28961f6d6979b919bdd4efe6a0983e94bfe5ddb1d1e1d'
 LDK_NODE_IOS_LINK=https://github.com/ZeusLN/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_IOS_FILE.zip
 
 # test that curl and unzip are installed
