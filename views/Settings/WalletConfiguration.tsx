@@ -363,6 +363,13 @@ export default class WalletConfiguration extends React.Component<
     async initFromProps(props: WalletConfigurationProps) {
         const { route } = props;
 
+        // When returning from SetWalletPicture, only update the photo
+        // to avoid overwriting unsaved edits (e.g. nickname) from node
+        if (route.params.photo && !route.params.node) {
+            this.setState({ photo: route.params.photo });
+            return;
+        }
+
         const node = route.params.node ?? this.state.node;
         const index = route.params.index ?? this.state.index;
         const active = route.params.active ?? this.state.active;
