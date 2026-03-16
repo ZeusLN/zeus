@@ -117,7 +117,7 @@ export const LND_ERROR_PATTERNS: Record<LndErrorCode, readonly string[]> = {
  * Normalize punctuation variants from native/platform error strings so pattern
  * matching is resilient across locales/typographic quotes.
  */
-function normalizeForMatch(input: string): string {
+export function normalizeForMatch(input: string): string {
     return input
         .normalize('NFKC')
         .replace(/[’‘`]/g, "'")
