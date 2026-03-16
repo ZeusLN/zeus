@@ -2968,10 +2968,12 @@ export default class CashuStore {
             };
 
             runInAction(() => {
-                this.payReq = new Invoice(data);
-                this.getPayReqError = undefined;
+                if (!isDonationPayment) {
+                    this.payReq = new Invoice(data);
+                    this.getPayReqError = undefined;
+                    this.feeEstimate = meltQuote.fee_reserve || 0;
+                }
                 this.meltQuote = meltQuote;
-                this.feeEstimate = meltQuote.fee_reserve || 0;
             });
             if (__DEV__) {
                 console.log('getPayReq: Success, setting loading = false');
@@ -2981,10 +2983,12 @@ export default class CashuStore {
                 console.log('getPayReq: Error caught', e?.message || e);
             }
             const errorMsg = errorToUserFriendly(e);
-            runInAction(() => {
-                this.payReq = undefined;
-                this.getPayReqError = errorMsg;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.payReq = undefined;
+                    this.getPayReqError = errorMsg;
+                });
+            }
         } finally {
             // ALWAYS set loading = false when done
             if (__DEV__) {
@@ -3022,11 +3026,13 @@ export default class CashuStore {
         const mintUrl = this.selectedMintUrl;
 
         if (!this.meltQuote) {
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = 'No melt quote available';
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = 'No melt quote available';
+                    this.loading = false;
+                });
+            }
             return;
         }
 
@@ -3042,13 +3048,15 @@ export default class CashuStore {
                 : paymentAmt;
 
             if (balance < amountToPay) {
-                runInAction(() => {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.notEnoughFunds'
-                    );
-                    this.loading = false;
-                });
+                if (!isDonationPayment) {
+                    runInAction(() => {
+                        this.paymentError = true;
+                        this.paymentErrorMsg = localeString(
+                            'stores.CashuStore.notEnoughFunds'
+                        );
+                        this.loading = false;
+                    });
+                }
                 return;
             }
 
@@ -3091,11 +3099,11 @@ export default class CashuStore {
                     this.paymentSuccess = true;
                     this.noteKey = payment.getNoteKey;
                     this.loading = false;
-                }
 
-                if (this.paymentStartTime) {
-                    this.paymentDuration =
-                        (Date.now() - this.paymentStartTime) / 1000;
+                    if (this.paymentStartTime) {
+                        this.paymentDuration =
+                            (Date.now() - this.paymentStartTime) / 1000;
+                    }
                 }
             });
 
@@ -3107,11 +3115,13 @@ export default class CashuStore {
         } catch (err: any) {
             const errorMsg = String(err?.message);
             console.error('CDK payLnInvoiceFromEcash error:', err);
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = errorMsg;
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = errorMsg;
+                    this.loading = false;
+                });
+            }
             return;
         }
     };
