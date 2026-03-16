@@ -330,7 +330,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                         var dualNode: Node? = null
                         var dualBuildError: Exception? = null
                         val latch = java.util.concurrent.CountDownLatch(1)
-                        @Volatile var dualTimedOut = false
+                        val dualTimedOut = java.util.concurrent.atomic.AtomicBoolean(false)
 
                         val dualThread = Thread {
                             try {
@@ -342,7 +342,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
                             // If we timed out, the caller already moved on to the
                             // fallback. Stop the orphaned node so it doesn't leak resources.
-                            if (dualTimedOut && dualNode != null) {
+                            if (dualTimedOut.get() && dualNode != null) {
                                 Log.w("LdkNodeModule", "Stopping orphaned dual-store node after timeout")
                                 try { dualNode?.stop() } catch (_: Exception) {}
                             }
@@ -351,7 +351,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
                         val completed = latch.await(15, java.util.concurrent.TimeUnit.SECONDS)
                         if (!completed) {
-                            dualTimedOut = true
+                            dualTimedOut.set(true)
                             vssError = "VSS server at $vssUrl did not respond within 15s"
                             Log.e("LdkNodeModule", "buildNode: $vssError")
                         } else if (dualBuildError != null) {
