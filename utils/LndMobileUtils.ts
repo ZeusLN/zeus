@@ -1,4 +1,5 @@
 import {
+    Alert,
     DeviceEventEmitter,
     NativeEventEmitter,
     NativeModules,
@@ -1218,7 +1219,21 @@ export async function createLndWallet({
 
     if (hasChannelDb) {
         console.log('Stopping LND to import graph data');
-        await stopLnd();
+        try {
+            await stopLnd();
+            await sleep(5000);
+        } catch (e: any) {
+            if (e?.message?.includes?.('closed')) {
+                console.log('LND stopped successfully.');
+            } else {
+                console.error('Failed to stop LND:', e.message);
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.Tools.migration.export.failedToStopLnd')
+                );
+                throw e;
+            }
+        }
 
         console.log('Importing graph data');
         await importChannelDb(
