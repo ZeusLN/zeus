@@ -272,7 +272,7 @@ export default class SeedRecovery extends React.PureComponent<
     };
 
     saveWalletConfiguration = (recoveryCipherSeed?: string) => {
-        const { SettingsStore, navigation, route } = this.props;
+        const { SettingsStore, route } = this.props;
         const {
             walletPassword,
             adminMacaroon,
