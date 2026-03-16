@@ -321,61 +321,60 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
                 if (vssUrl != null && vssStoreId != null) {
                     try {
-                        Log.d("LdkNodeModule", "Building node with VSS store: $vssUrl")
-                        val vssBuilder = Builder.fromConfig(config)
-                        applyBuilderSettings(vssBuilder)
+                        Log.d("LdkNodeModule", "Building node with dual store (VSS + local): $vssUrl")
+                        val dualBuilder = Builder.fromConfig(config)
+                        applyBuilderSettings(dualBuilder)
 
                         // Use a real thread + CountDownLatch since the native JNI call
                         // blocks and doesn't cooperate with coroutine cancellation
-                        var vssNode: Node? = null
-                        var vssBuildError: Exception? = null
+                        var dualNode: Node? = null
+                        var dualBuildError: Exception? = null
                         val latch = java.util.concurrent.CountDownLatch(1)
-                        @Volatile var vssTimedOut = false
+                        @Volatile var dualTimedOut = false
 
-                        val vssThread = Thread {
+                        val dualThread = Thread {
                             try {
-                                vssNode = vssBuilder.buildWithVssStoreAndFixedHeaders(nodeEntropy, vssUrl, vssStoreId, this@LdkNodeModule.storedVssHeaders)
+                                dualNode = dualBuilder.buildWithDualStoreAndFixedHeaders(nodeEntropy, vssUrl, vssStoreId, this@LdkNodeModule.storedVssHeaders)
                             } catch (e: Exception) {
-                                vssBuildError = e
+                                dualBuildError = e
                             }
                             latch.countDown()
 
                             // If we timed out, the caller already moved on to the
-                            // filesystem fallback. Stop the orphaned node so it
-                            // doesn't leak resources.
-                            if (vssTimedOut && vssNode != null) {
-                                Log.w("LdkNodeModule", "Stopping orphaned VSS node after timeout")
-                                try { vssNode?.stop() } catch (_: Exception) {}
+                            // fallback. Stop the orphaned node so it doesn't leak resources.
+                            if (dualTimedOut && dualNode != null) {
+                                Log.w("LdkNodeModule", "Stopping orphaned dual-store node after timeout")
+                                try { dualNode?.stop() } catch (_: Exception) {}
                             }
                         }
-                        vssThread.start()
+                        dualThread.start()
 
-                        val completed = latch.await(60, java.util.concurrent.TimeUnit.SECONDS)
+                        val completed = latch.await(15, java.util.concurrent.TimeUnit.SECONDS)
                         if (!completed) {
-                            vssTimedOut = true
-                            vssError = "VSS server at $vssUrl did not respond within 60s"
+                            dualTimedOut = true
+                            vssError = "VSS server at $vssUrl did not respond within 15s"
                             Log.e("LdkNodeModule", "buildNode: $vssError")
-                        } else if (vssBuildError != null) {
-                            throw vssBuildError!!
+                        } else if (dualBuildError != null) {
+                            throw dualBuildError!!
                         } else {
-                            synchronized(nodeLock) { this@LdkNodeModule.node = vssNode }
-                            Log.d("LdkNodeModule", "Node built with VSS store successfully")
+                            synchronized(nodeLock) { this@LdkNodeModule.node = dualNode }
+                            Log.d("LdkNodeModule", "Node built with dual store successfully")
                         }
                     } catch (e: Exception) {
-                        vssError = "VSS setup failed: ${e.message}"
+                        vssError = "Dual store setup failed: ${e.message}"
                         Log.e("LdkNodeModule", "buildNode: $vssError", e)
                     }
                 }
 
-                // Fall back to local filesystem store if VSS failed or was not configured
+                // Fall back to local SQLite store if dual store failed or VSS was not configured
                 if (this@LdkNodeModule.node == null) {
                     if (vssError != null) {
-                        Log.w("LdkNodeModule", "Falling back to local filesystem store")
+                        Log.w("LdkNodeModule", "Falling back to local SQLite store")
                     }
-                    val fsBuilder = Builder.fromConfig(config)
-                    applyBuilderSettings(fsBuilder)
+                    val localBuilder = Builder.fromConfig(config)
+                    applyBuilderSettings(localBuilder)
                     synchronized(nodeLock) {
-                        this@LdkNodeModule.node = fsBuilder.buildWithFsStore(nodeEntropy)
+                        this@LdkNodeModule.node = localBuilder.build(nodeEntropy)
                     }
                 }
 
