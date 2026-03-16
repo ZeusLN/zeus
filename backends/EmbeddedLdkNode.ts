@@ -293,9 +293,17 @@ export default class EmbeddedLdkNode {
                     new BigNumber(channel.inboundCapacityMsat).dividedBy(1000)
                 );
             } else {
-                pendingOpenBalance = pendingOpenBalance.plus(
-                    channel.channelValueSats
-                );
+                // Only count our side: if we opened the channel, our
+                // pending balance is the capacity minus the remote reserve.
+                // If they opened it, we have no pending balance.
+                if (channel.isOutbound) {
+                    pendingOpenBalance = pendingOpenBalance.plus(
+                        new BigNumber(channel.channelValueSats).minus(
+                            channel.counterpartyUnspendablePunishmentReserve ||
+                                0
+                        )
+                    );
+                }
             }
         }
 
