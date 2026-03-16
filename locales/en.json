@@ -110,6 +110,7 @@
     "general.selected": "Selected",
     "general.unselect": "Unselect",
     "general.removeSelected": "Remove the selected item",
+    "general.none": "None",
     "general.noneSelected": "None selected",
     "general.zeusDefaults": "Using Zeus defaults",
     "general.restartZeusChanges": "Restart Zeus for changes to take effect",
