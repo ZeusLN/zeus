@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "No funds found on the legacy seed format for this mint.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "錢包復原",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "匯出站點 HD 根金鑰",
     "views.Settings.SeedQRExport.pleaseWait": "正在產生 yprv 和 zprv 代碼，不會花太久的時間。",
     "views.Settings.SeedQRExport.warning": "警告：千萬不可加速管道開啟交易，可能會造成不可回復的損失！",
