@@ -27,7 +27,7 @@ class LinkingUtils {
         });
 
     handleAndroidIntents = async (
-        navigation: StackNavigationProp<any, any>
+        navigation: NativeStackNavigationProp<any, any>
     ) => {
         const nfcData = await NativeModules.MobileTools.getIntentNfcData();
         if (nfcData) {
