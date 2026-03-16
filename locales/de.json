@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "No funds found on the legacy seed format for this mint.",
     "views.Cashu.LegacySeedRecovery.recovered": "Wiederhergestellt",
     "views.Settings.SeedRecovery.title": "Wallet-Wiederherstellung",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Export HD node root keys",
     "views.Settings.SeedQRExport.pleaseWait": "Generiere yprv und zprv. Dauert nur einen kurzen Moment.",
     "views.Settings.SeedQRExport.warning": "WARNUNG: Keine Gebührerhöhung für die Kanal-Öffnungs-Transaktion senden! Dadurch könnte das Guthaben verloren gehen!",
