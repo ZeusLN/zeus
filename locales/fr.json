@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "Aucun fonds trouvé sur le format de graine hérité pour cette monnaie.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "Récupération du portefeuille",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Exporter les clés HD racine du nœud",
     "views.Settings.SeedQRExport.pleaseWait": "Génération de yprv et zprv. Cela ne prendra que quelques instants.",
     "views.Settings.SeedQRExport.warning": "AVERTISSEMENT : NE PAS annuler une transaction d'ouverture de canal. Cela peut vous faire perdre des fonds !",
