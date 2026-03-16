@@ -1050,9 +1050,9 @@ export default class WalletConfiguration extends React.Component<
             selectedNode: nodes.length - 1
         }).then(async () => {
             this.setState({ saved: true });
+            setConnectingStatus(true);
 
             if (nodes.length === 1) {
-                setConnectingStatus(true);
                 navigation.popTo('Wallet');
             } else {
                 navigation.popTo('Wallets');
