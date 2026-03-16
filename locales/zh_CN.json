@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "该铸币厂未在传统助记词格式中找到任何资金。",
     "views.Cashu.LegacySeedRecovery.recovered": "已恢复",
     "views.Settings.SeedRecovery.title": "钱包恢复",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "导出（HD）分层确定性节点根密钥",
     "views.Settings.SeedQRExport.pleaseWait": "正在生成 yprv 和 zprv，整个过程只需几秒钟。",
     "views.Settings.SeedQRExport.warning": "警告：请勿提升通道开启交易。这样可能导致资金损失！",

@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "No se encontraron fondos en el formato de semilla heredado para este mint",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "Recuperación de billetera",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Exportar claves HD raíz del nodo",
     "views.Settings.SeedQRExport.pleaseWait": "Generando yprv y zprv. Esto tomará solo unos minutos.",
     "views.Settings.SeedQRExport.warning": "ADVERTENCIA: NO bloquee una transacción de apertura de canal. ¡Esto puede provocar la pérdida de fondos!",

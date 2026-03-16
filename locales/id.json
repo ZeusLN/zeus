@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "Tidak ada dana yang ditemukan untuk format seed legacy di mint ini.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "Pemulihan dompet",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Ekspor kunci root node HD",
     "views.Settings.SeedQRExport.pleaseWait": "Sedang menyiapkan yprv dan zprv. Hal ini mungkin perlu beberapa saat. ",
     "views.Settings.SeedQRExport.warning": "PERINGATAN: Jangan ganggu transaksi pembukaan saluran. Hal ini bisa menyebabkan Anda kehilangan dana!",

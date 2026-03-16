@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "Nu s-au găsit fonduri în formatul seed vechi pentru această monetărie.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "Recuperarea portofelului",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Exportați cheile HD rădăcină de nod",
     "views.Settings.SeedQRExport.pleaseWait": "Se generează yprv și zprv. Acest lucru va dura doar câteva momente.",
     "views.Settings.SeedQRExport.warning": "AVERTISMENT: NU blocați o tranzacție de deschidere a canalului. Acest lucru vă poate face să pierdeți fonduri!",

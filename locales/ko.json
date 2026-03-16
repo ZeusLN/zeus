@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "이 민트의 레거시 시드 형식에서 자금을 찾지 못했습니다.",
     "views.Cashu.LegacySeedRecovery.recovered": "복구됨",
     "views.Settings.SeedRecovery.title": "지갑 복구",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "HD 노드 루트키 내보내기",
     "views.Settings.SeedQRExport.pleaseWait": "yprv 및 zprv 생성 중입니다. 잠시만 기다려 주세요.",
     "views.Settings.SeedQRExport.warning": "경고: 채널 개설 트랜잭션을 절대 재전송하지 마세요. 이는 자금 손실로 이어질 수 있습니다!",

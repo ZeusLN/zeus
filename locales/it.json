@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "Nessun fondo trovato nel formato legacy seed per questa zecca.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "Recupero del portafoglio",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Esportazione chiavi HD radice nodo",
     "views.Settings.SeedQRExport.pleaseWait": "Generazione di yprv e zprv. Ci vorranno solo pochi istanti.",
     "views.Settings.SeedQRExport.warning": "ATTENZIONE: NON urtare una transazione di apertura canale. Questo può causare la perdita di fondi!",

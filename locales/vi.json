@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "No funds found on the legacy seed format for this mint.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "Hồi phục ví",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Export HD node root keys",
     "views.Settings.SeedQRExport.pleaseWait": "Khởi tạo yprv và zprv. Hãy đợi trong giây lát.",
     "views.Settings.SeedQRExport.warning": "WARNING: DO NOT bump a channel opening transaction. This can cause you to lose funds!",

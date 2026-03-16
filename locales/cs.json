@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "V tomto mintu nebyly pro legacy seed formát nalezeny žádné prostředky.",
     "views.Cashu.LegacySeedRecovery.recovered": "Obnoveno",
     "views.Settings.SeedRecovery.title": "Obnova peněženky",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "Exportovat root klíče HD uzlu",
     "views.Settings.SeedQRExport.pleaseWait": "Generují se yprv a zprv klíče. Bude to trvat jen chvilku.",
     "views.Settings.SeedQRExport.warning": "VAROVÁNÍ: NEnavyšujte transakci otevření kanálu. Může dojít ke ztrátě vašich prostředků!",
