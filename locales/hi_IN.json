@@ -1189,6 +1189,8 @@
     "views.Cashu.LegacySeedRecovery.noFundsFound": "No funds found on the legacy seed format for this mint.",
     "views.Cashu.LegacySeedRecovery.recovered": "Recovered",
     "views.Settings.SeedRecovery.title": "वॉलेट रिकवरी",
+    "views.Settings.SeedRecovery.clipboardSeedWords": "Seed words detected in clipboard",
+    "views.Settings.SeedRecovery.clipboardSeedWordsPrompt": "Would you like to use them for wallet recovery?",
     "views.Settings.SeedQRExport.title": "HD नोड रूट कुंजियां निर्यात करें",
     "views.Settings.SeedQRExport.pleaseWait": "yprv और zprv उत्पन्न कर रहा है। यह सिर्फ कुछ क्षण लेगा।",
     "views.Settings.SeedQRExport.warning": "चेतावनी: चैनल खोलने वाले लेनदेन को बंप न करें। इससे आप फंड खो सकते हैं!",
