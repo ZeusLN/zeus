@@ -390,9 +390,23 @@ export async function stopLnd(
         } else {
             log.d('Force stop: skipping status check (Go state mismatch)');
         }
-        // Initiate graceful shutdown - both can throw; continue even if one fails
+        // Initiate graceful shutdown - proceed to killLnd even if stopLnd fails
         log.d('Stopping LND...');
-        await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
+        try {
+            await runWithExpectedErrorHandling(() => stopLnd(), 'stopLnd');
+        } catch (stopError) {
+            const stopMsg = getErrorMessage(stopError);
+            if (
+                matchesLndErrorCode(
+                    stopMsg,
+                    LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                )
+            ) {
+                log.d('Wallet recovery in progress - proceeding to force kill');
+            } else {
+                throw stopError;
+            }
+        }
         const killResult = await runWithExpectedErrorHandling(
             () => NativeModules.LndMobileTools.killLnd(),
             'killLnd'
@@ -557,6 +571,7 @@ async function startLndWithRetry({
             matchesLndErrorCode(errorMessage, LndErrorCode.LND_ALREADY_RUNNING)
         ) {
             log.d('LND already started - force stop (Go thinks running)');
+            const MAX_RECOVERY_WAIT_ATTEMPTS = 60; // ~5 minutes
             for (let attempt = 1; ; attempt++) {
                 try {
                     await stopLnd(
@@ -573,8 +588,16 @@ async function startLndWithRetry({
                             LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
                         )
                     ) {
+                        if (attempt >= MAX_RECOVERY_WAIT_ATTEMPTS) {
+                            log.e(
+                                `Wallet recovery still in progress after ${attempt} attempts, giving up`
+                            );
+                            throw createLndError(
+                                LndErrorCode.WALLET_RECOVERY_IN_PROGRESS
+                            );
+                        }
                         log.d(
-                            `Wallet recovery in progress, waiting 5s before retry (attempt ${attempt})...`
+                            `Wallet recovery in progress, waiting 5s before retry (attempt ${attempt}/${MAX_RECOVERY_WAIT_ATTEMPTS})...`
                         );
                         await sleep(5000);
                         continue;
