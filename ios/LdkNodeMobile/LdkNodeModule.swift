@@ -758,6 +758,100 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(openChannelFundMax:address:pushToCounterpartyMsat:announceChannel:utxos:resolver:rejecter:)
+    func openChannelFundMax(_ nodeId: String, address: String, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, utxos: NSArray?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
+
+            var outpoints: [OutPoint]? = nil
+            if let utxosArray = utxos {
+                var parsed: [OutPoint] = []
+                for item in utxosArray {
+                    if let dict = item as? [String: Any],
+                       let txid = dict["txid"] as? String,
+                       let vout = dict["vout"] as? NSNumber {
+                        parsed.append(OutPoint(txid: txid, vout: vout.uint32Value))
+                    }
+                }
+                if !parsed.isEmpty {
+                    outpoints = parsed
+                }
+            }
+
+            let userChannelId: UserChannelId
+            if announceChannel {
+                userChannelId = try node.openAnnouncedChannelFundMax(
+                    nodeId: nodeId,
+                    address: address,
+                    pushToCounterpartyMsat: pushMsat,
+                    channelConfig: nil,
+                    utxos: outpoints
+                )
+            } else {
+                userChannelId = try node.openChannelFundMax(
+                    nodeId: nodeId,
+                    address: address,
+                    pushToCounterpartyMsat: pushMsat,
+                    channelConfig: nil,
+                    utxos: outpoints
+                )
+            }
+            resolve(["userChannelId": userChannelId])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(openChannelWithUtxos:address:channelAmountSats:pushToCounterpartyMsat:announceChannel:utxos:resolver:rejecter:)
+    func openChannelWithUtxos(_ nodeId: String, address: String, channelAmountSats: NSNumber, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, utxos: NSArray, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
+
+            var outpoints: [OutPoint] = []
+            for item in utxos {
+                if let dict = item as? [String: Any],
+                   let txid = dict["txid"] as? String,
+                   let vout = dict["vout"] as? NSNumber {
+                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
+                }
+            }
+
+            let userChannelId: UserChannelId
+            if announceChannel {
+                userChannelId = try node.openAnnouncedChannelWithUtxos(
+                    nodeId: nodeId,
+                    address: address,
+                    channelAmountSats: channelAmountSats.uint64Value,
+                    pushToCounterpartyMsat: pushMsat,
+                    channelConfig: nil,
+                    utxos: outpoints
+                )
+            } else {
+                userChannelId = try node.openChannelWithUtxos(
+                    nodeId: nodeId,
+                    address: address,
+                    channelAmountSats: channelAmountSats.uint64Value,
+                    pushToCounterpartyMsat: pushMsat,
+                    channelConfig: nil,
+                    utxos: outpoints
+                )
+            }
+            resolve(["userChannelId": userChannelId])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     @objc(closeChannel:counterpartyNodeId:resolver:rejecter:)
     func closeChannel(_ userChannelId: String, counterpartyNodeId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
@@ -832,6 +926,79 @@ class LdkNodeModule: RCTEventEmitter {
         do {
             let onchain = node.onchainPayment()
             let txid = try onchain.sendAllToAddress(address: address, retainReserve: retainReserve, feeRate: nil)
+            resolve(["txid": txid])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(listUtxos:rejecter:)
+    func listUtxos(resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let onchain = node.onchainPayment()
+            let utxos = try onchain.listUtxos()
+            let utxoList = utxos.map { utxo -> [String: Any] in
+                return [
+                    "txid": utxo.txid,
+                    "vout": utxo.vout,
+                    "value_sats": utxo.valueSats,
+                    "address": utxo.address,
+                    "is_spent": utxo.isSpent
+                ]
+            }
+            resolve(["utxos": utxoList])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(sendToOnchainAddressWithUtxos:amountSats:utxos:resolver:rejecter:)
+    func sendToOnchainAddressWithUtxos(_ address: String, amountSats: NSNumber, utxos: NSArray, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let onchain = node.onchainPayment()
+            var outpoints: [OutPoint] = []
+            for item in utxos {
+                if let dict = item as? [String: Any],
+                   let txid = dict["txid"] as? String,
+                   let vout = dict["vout"] as? NSNumber {
+                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
+                }
+            }
+            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amountSats.uint64Value, utxos: outpoints, feeRate: nil)
+            resolve(["txid": txid])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(sendAllToOnchainAddressWithUtxos:retainReserve:utxos:resolver:rejecter:)
+    func sendAllToOnchainAddressWithUtxos(_ address: String, retainReserve: Bool, utxos: NSArray, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let onchain = node.onchainPayment()
+            var outpoints: [OutPoint] = []
+            for item in utxos {
+                if let dict = item as? [String: Any],
+                   let txid = dict["txid"] as? String,
+                   let vout = dict["vout"] as? NSNumber {
+                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
+                }
+            }
+            let txid = try onchain.sendAllToAddressWithUtxos(address: address, retainReserves: retainReserve, utxos: outpoints, feeRate: nil)
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)

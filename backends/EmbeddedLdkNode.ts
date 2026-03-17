@@ -774,15 +774,48 @@ export default class EmbeddedLdkNode {
      * Open a channel
      */
     openChannelSync = async (data: OpenChannelRequest): Promise<any> => {
-        const userChannelId = await LdkNode.channel.openChannel({
-            nodeId: data.node_pubkey_string,
-            address: data.host || '',
-            channelAmountSats: Number(data.local_funding_amount),
-            pushToCounterpartyMsat: data.push_sat
-                ? Number(data.push_sat) * 1000
-                : undefined,
-            announceChannel: !data.privateChannel
-        });
+        let userChannelId: string;
+
+        const utxoOutpoints =
+            data.utxos && data.utxos.length > 0
+                ? data.utxos.map((s: string) => {
+                      const [utxoTxid, vout] = s.split(':');
+                      return { txid: utxoTxid, vout: parseInt(vout) };
+                  })
+                : null;
+
+        if (data.fundMax) {
+            userChannelId = await LdkNode.channel.openChannelFundMax({
+                nodeId: data.node_pubkey_string,
+                address: data.host || '',
+                pushToCounterpartyMsat: data.push_sat
+                    ? Number(data.push_sat) * 1000
+                    : undefined,
+                announceChannel: !data.privateChannel,
+                utxos: utxoOutpoints
+            });
+        } else if (utxoOutpoints) {
+            userChannelId = await LdkNode.channel.openChannelWithUtxos({
+                nodeId: data.node_pubkey_string,
+                address: data.host || '',
+                channelAmountSats: Number(data.local_funding_amount),
+                pushToCounterpartyMsat: data.push_sat
+                    ? Number(data.push_sat) * 1000
+                    : undefined,
+                announceChannel: !data.privateChannel,
+                utxos: utxoOutpoints
+            });
+        } else {
+            userChannelId = await LdkNode.channel.openChannel({
+                nodeId: data.node_pubkey_string,
+                address: data.host || '',
+                channelAmountSats: Number(data.local_funding_amount),
+                pushToCounterpartyMsat: data.push_sat
+                    ? Number(data.push_sat) * 1000
+                    : undefined,
+                announceChannel: !data.privateChannel
+            });
+        }
 
         // Wait for either channelPending (success) or channelClosed
         // (rejection) event matching this userChannelId
@@ -962,12 +995,48 @@ export default class EmbeddedLdkNode {
     };
 
     /**
+     * Get UTXOs for coin control
+     */
+    getUTXOs = async (): Promise<any> => {
+        const utxos = await LdkNode.onchain.listUtxos();
+        return {
+            utxos: utxos.map((u) => ({
+                outpoint: {
+                    txid_str: u.txid,
+                    output_index: u.vout
+                },
+                address: u.address,
+                amount_sat: u.value_sats,
+                confirmations: u.is_spent ? '0' : '1'
+            }))
+        };
+    };
+
+    /**
      * Send coins on-chain
      */
     sendCoins = async (data: any): Promise<any> => {
         let txid: string;
 
-        if (data.send_all) {
+        if (data.utxos?.length > 0) {
+            const outpoints = data.utxos.map((s: string) => {
+                const [utxoTxid, vout] = s.split(':');
+                return { txid: utxoTxid, vout: parseInt(vout) };
+            });
+            if (data.send_all) {
+                txid = await LdkNode.onchain.sendAllToOnchainAddressWithUtxos({
+                    address: data.addr,
+                    retainReserve: false,
+                    utxos: outpoints
+                });
+            } else {
+                txid = await LdkNode.onchain.sendToOnchainAddressWithUtxos({
+                    address: data.addr,
+                    amountSats: Number(data.amount),
+                    utxos: outpoints
+                });
+            }
+        } else if (data.send_all) {
             txid = await LdkNode.onchain.sendAllToOnchainAddress(data.addr);
         } else {
             txid = await LdkNode.onchain.sendToOnchainAddress({
@@ -1860,8 +1929,8 @@ export default class EmbeddedLdkNode {
     supportsClosedChannels = () => true;
     supportsMPP = () => true;
     supportsAMP = () => false;
-    supportsCoinControl = () => false;
-    supportsChannelCoinControl = () => false;
+    supportsCoinControl = () => true;
+    supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => false;
@@ -1880,7 +1949,7 @@ export default class EmbeddedLdkNode {
     supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
-    supportsChannelFundMax = () => false;
+    supportsChannelFundMax = () => true;
     supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => true; // Use REST API for LSPS1 (Olympus supports this)
     supportsLSPS1native = () => false; // Disabled - Olympus doesn't support native LSPS1 over custom messages

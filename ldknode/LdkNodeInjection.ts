@@ -219,6 +219,55 @@ const openChannel = async ({
     return result.userChannelId;
 };
 
+const openChannelFundMax = async ({
+    nodeId,
+    address,
+    pushToCounterpartyMsat,
+    announceChannel = false,
+    utxos
+}: {
+    nodeId: string;
+    address: string;
+    pushToCounterpartyMsat?: number | null;
+    announceChannel?: boolean;
+    utxos?: Array<{ txid: string; vout: number }> | null;
+}): Promise<string> => {
+    const result: any = await LdkNodeModule.openChannelFundMax(
+        nodeId,
+        address,
+        pushToCounterpartyMsat ?? 0,
+        announceChannel,
+        utxos ?? null
+    );
+    return result.userChannelId;
+};
+
+const openChannelWithUtxos = async ({
+    nodeId,
+    address,
+    channelAmountSats,
+    pushToCounterpartyMsat,
+    announceChannel = false,
+    utxos
+}: {
+    nodeId: string;
+    address: string;
+    channelAmountSats: number;
+    pushToCounterpartyMsat?: number | null;
+    announceChannel?: boolean;
+    utxos: Array<{ txid: string; vout: number }>;
+}): Promise<string> => {
+    const result: any = await LdkNodeModule.openChannelWithUtxos(
+        nodeId,
+        address,
+        channelAmountSats,
+        pushToCounterpartyMsat ?? 0,
+        announceChannel,
+        utxos
+    );
+    return result.userChannelId;
+};
+
 const closeChannel = async ({
     userChannelId,
     counterpartyNodeId
@@ -275,6 +324,53 @@ const sendAllToOnchainAddress = async (
     const result: any = await LdkNodeModule.sendAllToOnchainAddress(
         address,
         retainReserve
+    );
+    return result.txid;
+};
+
+export interface WalletUtxo {
+    txid: string;
+    vout: number;
+    value_sats: number;
+    address: string;
+    is_spent: boolean;
+}
+
+const listUtxos = async (): Promise<WalletUtxo[]> => {
+    const result: any = await LdkNodeModule.listUtxos();
+    return result.utxos;
+};
+
+const sendToOnchainAddressWithUtxos = async ({
+    address,
+    amountSats,
+    utxos
+}: {
+    address: string;
+    amountSats: number;
+    utxos: Array<{ txid: string; vout: number }>;
+}): Promise<string> => {
+    const result: any = await LdkNodeModule.sendToOnchainAddressWithUtxos(
+        address,
+        amountSats,
+        utxos
+    );
+    return result.txid;
+};
+
+const sendAllToOnchainAddressWithUtxos = async ({
+    address,
+    retainReserve = false,
+    utxos
+}: {
+    address: string;
+    retainReserve?: boolean;
+    utxos: Array<{ txid: string; vout: number }>;
+}): Promise<string> => {
+    const result: any = await LdkNodeModule.sendAllToOnchainAddressWithUtxos(
+        address,
+        retainReserve,
+        utxos
     );
     return result.txid;
 };
@@ -826,6 +922,21 @@ export interface ILdkNodeInjections {
             pushToCounterpartyMsat?: number | null;
             announceChannel?: boolean;
         }) => Promise<string>;
+        openChannelFundMax: (params: {
+            nodeId: string;
+            address: string;
+            pushToCounterpartyMsat?: number | null;
+            announceChannel?: boolean;
+            utxos?: Array<{ txid: string; vout: number }> | null;
+        }) => Promise<string>;
+        openChannelWithUtxos: (params: {
+            nodeId: string;
+            address: string;
+            channelAmountSats: number;
+            pushToCounterpartyMsat?: number | null;
+            announceChannel?: boolean;
+            utxos: Array<{ txid: string; vout: number }>;
+        }) => Promise<string>;
         closeChannel: (params: {
             userChannelId: string;
             counterpartyNodeId: string;
@@ -846,6 +957,17 @@ export interface ILdkNodeInjections {
             address: string,
             retainReserve?: boolean
         ) => Promise<string>;
+        listUtxos: () => Promise<WalletUtxo[]>;
+        sendToOnchainAddressWithUtxos: (params: {
+            address: string;
+            amountSats: number;
+            utxos: Array<{ txid: string; vout: number }>;
+        }) => Promise<string>;
+        sendAllToOnchainAddressWithUtxos: (params: {
+            address: string;
+            retainReserve?: boolean;
+            utxos: Array<{ txid: string; vout: number }>;
+        }) => Promise<string>;
     };
     bolt11: {
         receiveBolt11: (params: {
@@ -1018,13 +1140,18 @@ const LdkNodeInjection: ILdkNodeInjections = {
         listChannels,
         listClosedChannels,
         openChannel,
+        openChannelFundMax,
+        openChannelWithUtxos,
         closeChannel,
         forceCloseChannel
     },
     onchain: {
         newOnchainAddress,
         sendToOnchainAddress,
-        sendAllToOnchainAddress
+        sendAllToOnchainAddress,
+        listUtxos,
+        sendToOnchainAddressWithUtxos,
+        sendAllToOnchainAddressWithUtxos
     },
     bolt11: {
         receiveBolt11,
