@@ -2831,7 +2831,15 @@ public protocol NodeProtocol : AnyObject {
     
     func openAnnouncedChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?) throws  -> UserChannelId
     
+    func openAnnouncedChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?) throws  -> UserChannelId
+    
+    func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]) throws  -> UserChannelId
+    
     func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?) throws  -> UserChannelId
+    
+    func openChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?) throws  -> UserChannelId
+    
+    func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]) throws  -> UserChannelId
     
     func payment(paymentId: PaymentId)  -> PaymentDetails?
     
@@ -3114,6 +3122,31 @@ open func openAnnouncedChannel(nodeId: PublicKey, address: SocketAddress, channe
 })
 }
     
+open func openAnnouncedChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?)throws  -> UserChannelId {
+    return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_open_announced_channel_fund_max(self.uniffiClonePointer(),
+        FfiConverterTypePublicKey.lower(nodeId),
+        FfiConverterTypeSocketAddress.lower(address),
+        FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
+        FfiConverterOptionTypeChannelConfig.lower(channelConfig),
+        FfiConverterOptionSequenceTypeOutPoint.lower(utxos),$0
+    )
+})
+}
+    
+open func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint])throws  -> UserChannelId {
+    return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_open_announced_channel_with_utxos(self.uniffiClonePointer(),
+        FfiConverterTypePublicKey.lower(nodeId),
+        FfiConverterTypeSocketAddress.lower(address),
+        FfiConverterUInt64.lower(channelAmountSats),
+        FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
+        FfiConverterOptionTypeChannelConfig.lower(channelConfig),
+        FfiConverterSequenceTypeOutPoint.lower(utxos),$0
+    )
+})
+}
+    
 open func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_channel(self.uniffiClonePointer(),
@@ -3122,6 +3155,31 @@ open func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSa
         FfiConverterUInt64.lower(channelAmountSats),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
         FfiConverterOptionTypeChannelConfig.lower(channelConfig),$0
+    )
+})
+}
+    
+open func openChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?)throws  -> UserChannelId {
+    return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_open_channel_fund_max(self.uniffiClonePointer(),
+        FfiConverterTypePublicKey.lower(nodeId),
+        FfiConverterTypeSocketAddress.lower(address),
+        FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
+        FfiConverterOptionTypeChannelConfig.lower(channelConfig),
+        FfiConverterOptionSequenceTypeOutPoint.lower(utxos),$0
+    )
+})
+}
+    
+open func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint])throws  -> UserChannelId {
+    return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_open_channel_with_utxos(self.uniffiClonePointer(),
+        FfiConverterTypePublicKey.lower(nodeId),
+        FfiConverterTypeSocketAddress.lower(address),
+        FfiConverterUInt64.lower(channelAmountSats),
+        FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
+        FfiConverterOptionTypeChannelConfig.lower(channelConfig),
+        FfiConverterSequenceTypeOutPoint.lower(utxos),$0
     )
 })
 }
@@ -3708,11 +3766,17 @@ public func FfiConverterTypeOffer_lower(_ value: Offer) -> UnsafeMutableRawPoint
 
 public protocol OnchainPaymentProtocol : AnyObject {
     
+    func listUtxos() throws  -> [WalletUtxo]
+    
     func newAddress() throws  -> Address
     
     func sendAllToAddress(address: Address, retainReserve: Bool, feeRate: FeeRate?) throws  -> Txid
     
+    func sendAllToAddressWithUtxos(address: Address, retainReserves: Bool, utxos: [OutPoint], feeRate: FeeRate?) throws  -> Txid
+    
     func sendToAddress(address: Address, amountSats: UInt64, feeRate: FeeRate?) throws  -> Txid
+    
+    func sendToAddressWithUtxos(address: Address, amountSats: UInt64, utxos: [OutPoint], feeRate: FeeRate?) throws  -> Txid
     
 }
 
@@ -3766,6 +3830,13 @@ open class OnchainPayment:
     
 
     
+open func listUtxos()throws  -> [WalletUtxo] {
+    return try  FfiConverterSequenceTypeWalletUtxo.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_onchainpayment_list_utxos(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
 open func newAddress()throws  -> Address {
     return try  FfiConverterTypeAddress.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_onchainpayment_new_address(self.uniffiClonePointer(),$0
@@ -3783,11 +3854,33 @@ open func sendAllToAddress(address: Address, retainReserve: Bool, feeRate: FeeRa
 })
 }
     
+open func sendAllToAddressWithUtxos(address: Address, retainReserves: Bool, utxos: [OutPoint], feeRate: FeeRate?)throws  -> Txid {
+    return try  FfiConverterTypeTxid.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_onchainpayment_send_all_to_address_with_utxos(self.uniffiClonePointer(),
+        FfiConverterTypeAddress.lower(address),
+        FfiConverterBool.lower(retainReserves),
+        FfiConverterSequenceTypeOutPoint.lower(utxos),
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
+    )
+})
+}
+    
 open func sendToAddress(address: Address, amountSats: UInt64, feeRate: FeeRate?)throws  -> Txid {
     return try  FfiConverterTypeTxid.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_onchainpayment_send_to_address(self.uniffiClonePointer(),
         FfiConverterTypeAddress.lower(address),
         FfiConverterUInt64.lower(amountSats),
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
+    )
+})
+}
+    
+open func sendToAddressWithUtxos(address: Address, amountSats: UInt64, utxos: [OutPoint], feeRate: FeeRate?)throws  -> Txid {
+    return try  FfiConverterTypeTxid.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_onchainpayment_send_to_address_with_utxos(self.uniffiClonePointer(),
+        FfiConverterTypeAddress.lower(address),
+        FfiConverterUInt64.lower(amountSats),
+        FfiConverterSequenceTypeOutPoint.lower(utxos),
         FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
@@ -7511,6 +7604,96 @@ public func FfiConverterTypeRoutingFees_lower(_ value: RoutingFees) -> RustBuffe
     return FfiConverterTypeRoutingFees.lower(value)
 }
 
+
+public struct WalletUtxo {
+    public var txid: String
+    public var vout: UInt32
+    public var valueSats: UInt64
+    public var address: String
+    public var isSpent: Bool
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(txid: String, vout: UInt32, valueSats: UInt64, address: String, isSpent: Bool) {
+        self.txid = txid
+        self.vout = vout
+        self.valueSats = valueSats
+        self.address = address
+        self.isSpent = isSpent
+    }
+}
+
+
+
+extension WalletUtxo: Equatable, Hashable {
+    public static func ==(lhs: WalletUtxo, rhs: WalletUtxo) -> Bool {
+        if lhs.txid != rhs.txid {
+            return false
+        }
+        if lhs.vout != rhs.vout {
+            return false
+        }
+        if lhs.valueSats != rhs.valueSats {
+            return false
+        }
+        if lhs.address != rhs.address {
+            return false
+        }
+        if lhs.isSpent != rhs.isSpent {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(txid)
+        hasher.combine(vout)
+        hasher.combine(valueSats)
+        hasher.combine(address)
+        hasher.combine(isSpent)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeWalletUtxo: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> WalletUtxo {
+        return
+            try WalletUtxo(
+                txid: FfiConverterString.read(from: &buf), 
+                vout: FfiConverterUInt32.read(from: &buf), 
+                valueSats: FfiConverterUInt64.read(from: &buf), 
+                address: FfiConverterString.read(from: &buf), 
+                isSpent: FfiConverterBool.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: WalletUtxo, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.txid, into: &buf)
+        FfiConverterUInt32.write(value.vout, into: &buf)
+        FfiConverterUInt64.write(value.valueSats, into: &buf)
+        FfiConverterString.write(value.address, into: &buf)
+        FfiConverterBool.write(value.isSpent, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWalletUtxo_lift(_ buf: RustBuffer) throws -> WalletUtxo {
+    return try FfiConverterTypeWalletUtxo.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeWalletUtxo_lower(_ value: WalletUtxo) -> RustBuffer {
+    return FfiConverterTypeWalletUtxo.lower(value)
+}
+
 // Note that we don't yet support `indirect` for enums.
 // See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
 
@@ -11028,6 +11211,30 @@ fileprivate struct FfiConverterOptionSequenceString: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterOptionSequenceTypeOutPoint: FfiConverterRustBuffer {
+    typealias SwiftType = [OutPoint]?
+
+    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
+        guard let value = value else {
+            writeInt(&buf, Int8(0))
+            return
+        }
+        writeInt(&buf, Int8(1))
+        FfiConverterSequenceTypeOutPoint.write(value, into: &buf)
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
+        switch try readInt(&buf) as Int8 {
+        case 0: return nil
+        case 1: return try FfiConverterSequenceTypeOutPoint.read(from: &buf)
+        default: throw UniffiInternalError.unexpectedOptionalTag
+        }
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterOptionSequenceSequenceUInt8: FfiConverterRustBuffer {
     typealias SwiftType = [[UInt8]]?
 
@@ -11515,6 +11722,31 @@ fileprivate struct FfiConverterSequenceTypeLSPS7ExtendableChannel: FfiConverterR
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeOutPoint: FfiConverterRustBuffer {
+    typealias SwiftType = [OutPoint]
+
+    public static func write(_ value: [OutPoint], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeOutPoint.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [OutPoint] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [OutPoint]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeOutPoint.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypePaymentDetails: FfiConverterRustBuffer {
     typealias SwiftType = [PaymentDetails]
 
@@ -11582,6 +11814,31 @@ fileprivate struct FfiConverterSequenceTypeRouteHintHop: FfiConverterRustBuffer 
         seq.reserveCapacity(Int(len))
         for _ in 0 ..< len {
             seq.append(try FfiConverterTypeRouteHintHop.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeWalletUtxo: FfiConverterRustBuffer {
+    typealias SwiftType = [WalletUtxo]
+
+    public static func write(_ value: [WalletUtxo], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeWalletUtxo.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [WalletUtxo] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [WalletUtxo]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeWalletUtxo.read(from: &buf))
         }
         return seq
     }
@@ -13167,7 +13424,19 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_node_open_announced_channel() != 36623) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_node_open_announced_channel_fund_max() != 53906) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_open_announced_channel_with_utxos() != 5133) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_node_open_channel() != 40283) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_open_channel_fund_max() != 61872) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_open_channel_with_utxos() != 63529) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_payment() != 60296) {
@@ -13257,13 +13526,22 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_offer_supports_chain() != 2135) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_onchainpayment_list_utxos() != 10789) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_onchainpayment_new_address() != 37251) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address() != 37748) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_onchainpayment_send_all_to_address_with_utxos() != 59768) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_onchainpayment_send_to_address() != 55646) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_onchainpayment_send_to_address_with_utxos() != 58332) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_refund_absolute_expiry_seconds() != 43722) {

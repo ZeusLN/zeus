@@ -491,6 +491,21 @@ export interface ILdkNodeModule {
         pushToCounterpartyMsat?: number | null,
         announceChannel?: boolean
     ): Promise<string>;
+    openChannelFundMax(
+        nodeId: string,
+        address: string,
+        pushToCounterpartyMsat: number,
+        announceChannel: boolean,
+        utxos: Array<{ txid: string; vout: number }> | null
+    ): Promise<{ userChannelId: string }>;
+    openChannelWithUtxos(
+        nodeId: string,
+        address: string,
+        channelAmountSats: number,
+        pushToCounterpartyMsat: number,
+        announceChannel: boolean,
+        utxos: Array<{ txid: string; vout: number }>
+    ): Promise<{ userChannelId: string }>;
     closeChannel(
         userChannelId: string,
         counterpartyNodeId: string
@@ -508,6 +523,17 @@ export interface ILdkNodeModule {
         address: string,
         retainReserve: boolean
     ): Promise<string>;
+    listUtxos(): Promise<{ utxos: any[] }>;
+    sendToOnchainAddressWithUtxos(
+        address: string,
+        amountSats: number,
+        utxos: Array<{ txid: string; vout: number }>
+    ): Promise<{ txid: string }>;
+    sendAllToOnchainAddressWithUtxos(
+        address: string,
+        retainReserve: boolean,
+        utxos: Array<{ txid: string; vout: number }>
+    ): Promise<{ txid: string }>;
 
     // BOLT11 Payment Methods
     receiveBolt11(

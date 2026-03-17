@@ -978,6 +978,147 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    @ReactMethod
+    fun listUtxos(promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val onchain = node.onchainPayment()
+                val utxos = onchain.listUtxos()
+                val utxoArray = Arguments.createArray()
+                for (utxo in utxos) {
+                    val utxoMap = Arguments.createMap().apply {
+                        putString("txid", utxo.txid)
+                        putInt("vout", utxo.vout.toInt())
+                        putDouble("value_sats", utxo.valueSats.toLong().toDouble())
+                        putString("address", utxo.address)
+                        putBoolean("is_spent", utxo.isSpent)
+                    }
+                    utxoArray.pushMap(utxoMap)
+                }
+                val result = Arguments.createMap().apply {
+                    putArray("utxos", utxoArray)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    private fun parseOutPoints(utxosArray: ReadableArray): List<OutPoint> {
+        val outpoints = mutableListOf<OutPoint>()
+        for (i in 0 until utxosArray.size()) {
+            val dict = utxosArray.getMap(i)
+            if (dict != null) {
+                val txid = dict.getString("txid") ?: continue
+                val vout = dict.getInt("vout").toUInt()
+                outpoints.add(OutPoint(txid = txid, vout = vout))
+            }
+        }
+        return outpoints
+    }
+
+    @ReactMethod
+    fun sendToOnchainAddressWithUtxos(address: String, amountSats: Double, utxos: ReadableArray, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val onchain = node.onchainPayment()
+                val outpoints = parseOutPoints(utxos)
+                val txid = onchain.sendToAddressWithUtxos(address, amountSats.toLong().toULong(), outpoints, null)
+                val result = Arguments.createMap().apply {
+                    putString("txid", txid)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun sendAllToOnchainAddressWithUtxos(address: String, retainReserve: Boolean, utxos: ReadableArray, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val onchain = node.onchainPayment()
+                val outpoints = parseOutPoints(utxos)
+                val txid = onchain.sendAllToAddressWithUtxos(address, retainReserve, outpoints, null)
+                val result = Arguments.createMap().apply {
+                    putString("txid", txid)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun openChannelFundMax(nodeId: String, address: String, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray?, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
+                val outpoints = utxos?.let { parseOutPoints(it) }
+                val userChannelId = if (announceChannel) {
+                    node.openAnnouncedChannelFundMax(nodeId, address, pushMsat, null, outpoints)
+                } else {
+                    node.openChannelFundMax(nodeId, address, pushMsat, null, outpoints)
+                }
+                val result = Arguments.createMap().apply {
+                    putString("userChannelId", userChannelId)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun openChannelWithUtxos(nodeId: String, address: String, channelAmountSats: Double, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
+                val outpoints = parseOutPoints(utxos)
+                val userChannelId = if (announceChannel) {
+                    node.openAnnouncedChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints)
+                } else {
+                    node.openChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints)
+                }
+                val result = Arguments.createMap().apply {
+                    putString("userChannelId", userChannelId)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
     // BOLT11 Payment Methods
 
     @ReactMethod
