@@ -616,6 +616,27 @@ const verifySignature = async ({
 };
 
 // ============================================================================
+// Recovery Functions
+// ============================================================================
+
+const sweepRemoteClosedOutputs = async ({
+    sweepAddress,
+    feeRateSatsPerVbyte,
+    sleepSeconds
+}: {
+    sweepAddress: string;
+    feeRateSatsPerVbyte: number;
+    sleepSeconds: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.sweepRemoteClosedOutputs(
+        sweepAddress,
+        feeRateSatsPerVbyte,
+        sleepSeconds
+    );
+    return result.txHex;
+};
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -930,6 +951,13 @@ export interface ILdkNodeInjections {
             publicKey: string;
         }) => Promise<boolean>;
     };
+    recovery: {
+        sweepRemoteClosedOutputs: (params: {
+            sweepAddress: string;
+            feeRateSatsPerVbyte: number;
+            sleepSeconds: number;
+        }) => Promise<string>;
+    };
     utils: {
         initializeNode: (params: {
             network: Network;
@@ -1039,6 +1067,9 @@ const LdkNodeInjection: ILdkNodeInjections = {
     signing: {
         signMessage,
         verifySignature
+    },
+    recovery: {
+        sweepRemoteClosedOutputs
     },
     utils: {
         initializeNode

@@ -13,6 +13,8 @@ import { inject, observer } from 'mobx-react';
 import lndMobile from '../../../../lndmobile/LndMobileInjection';
 const { sweepRemoteClosed } = lndMobile.chantools;
 
+import ldkNode from '../../../../ldknode/LdkNodeInjection';
+
 import Button from '../../../../components/Button';
 import DropdownSetting from '../../../../components/DropdownSetting';
 import Header from '../../../../components/Header';
@@ -117,6 +119,9 @@ export default class Sweepremoteclosed extends React.Component<
             settingsToggle,
             error
         } = this.state;
+
+        const isLdkNode = SettingsStore?.implementation === 'embedded-ldk-node';
+
         return (
             <Screen>
                 <KeyboardAvoidingView
@@ -130,7 +135,9 @@ export default class Sweepremoteclosed extends React.Component<
                         <Header
                             leftComponent="Back"
                             centerComponent={{
-                                text: 'sweepremoteclosed',
+                                text: localeString(
+                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.title'
+                                ),
                                 style: {
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Book'
@@ -141,21 +148,36 @@ export default class Sweepremoteclosed extends React.Component<
                         {error && <ErrorMessage message={error} dismissable />}
                         {loading && <LoadingIndicator />}
                         <ScrollView style={{ margin: 10 }}>
-                            <View style={{ marginTop: 10 }}>
-                                <DropdownSetting
-                                    title={localeString(
-                                        'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seedType'
-                                    )}
-                                    selectedValue={seedType}
-                                    onValueChange={(value: string) => {
-                                        this.setState({
-                                            seedType: value
-                                        });
+                            {isLdkNode && (
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText'),
+                                        marginBottom: 15
                                     }}
-                                    values={SEED_PHRASE_KEYS}
-                                />
-                            </View>
-                            {seedType === 'externalWalletSeed' && (
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.ldkDescription'
+                                    )}
+                                </Text>
+                            )}
+                            {!isLdkNode && (
+                                <View style={{ marginTop: 10 }}>
+                                    <DropdownSetting
+                                        title={localeString(
+                                            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seedType'
+                                        )}
+                                        selectedValue={seedType}
+                                        onValueChange={(value: string) => {
+                                            this.setState({
+                                                seedType: value
+                                            });
+                                        }}
+                                        values={SEED_PHRASE_KEYS}
+                                    />
+                                </View>
+                            )}
+                            {!isLdkNode && seedType === 'externalWalletSeed' && (
                                 <>
                                     <Text
                                         style={{
@@ -265,34 +287,37 @@ export default class Sweepremoteclosed extends React.Component<
                             </TouchableOpacity>
                             {settingsToggle && (
                                 <>
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                            infoModalText={localeString(
-                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow.explainer'
-                                            )}
-                                        >
-                                            {localeString(
-                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            placeholder={'200'}
-                                            value={recoveryWindow}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    recoveryWindow: text.trim()
-                                                })
-                                            }
-                                            locked={loading}
-                                            keyboardType="numeric"
-                                        />
-                                    </>
+                                    {!isLdkNode && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                                infoModalText={localeString(
+                                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow.explainer'
+                                                )}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.recoveryWindow'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={'200'}
+                                                value={recoveryWindow}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        recoveryWindow:
+                                                            text.trim()
+                                                    })
+                                                }
+                                                locked={loading}
+                                                keyboardType="numeric"
+                                            />
+                                        </>
+                                    )}
                                     <>
                                         <Text
                                             style={{
@@ -321,50 +346,59 @@ export default class Sweepremoteclosed extends React.Component<
                                             keyboardType="numeric"
                                         />
                                     </>
-                                    <View style={{ marginTop: 10 }}>
-                                        <DropdownSetting
-                                            title={localeString(
-                                                'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl'
-                                            )}
-                                            selectedValue={apiUrl}
-                                            onValueChange={(value: string) => {
-                                                this.setState({
-                                                    apiUrl: value
-                                                });
-                                            }}
-                                            values={API_URL_KEYS}
-                                        />
-                                    </View>
-                                    {apiUrl === 'custom' && (
+                                    {!isLdkNode && (
                                         <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                value={customApiUrl}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        customApiUrl: text
-                                                            .trim()
-                                                            .replace(
-                                                                /^\s\n+|\s\n+$/g,
-                                                                ''
+                                            <View style={{ marginTop: 10 }}>
+                                                <DropdownSetting
+                                                    title={localeString(
+                                                        'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl'
+                                                    )}
+                                                    selectedValue={apiUrl}
+                                                    onValueChange={(
+                                                        value: string
+                                                    ) => {
+                                                        this.setState({
+                                                            apiUrl: value
+                                                        });
+                                                    }}
+                                                    values={API_URL_KEYS}
+                                                />
+                                            </View>
+                                            {apiUrl === 'custom' && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'secondaryText'
                                                             )
-                                                    })
-                                                }
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                locked={loading}
-                                            />
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl'
+                                                        )}
+                                                    </Text>
+                                                    <TextInput
+                                                        value={customApiUrl}
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) =>
+                                                            this.setState({
+                                                                customApiUrl:
+                                                                    text
+                                                                        .trim()
+                                                                        .replace(
+                                                                            /^\s\n+|\s\n+$/g,
+                                                                            ''
+                                                                        )
+                                                            })
+                                                        }
+                                                        autoCapitalize="none"
+                                                        autoCorrect={false}
+                                                        locked={loading}
+                                                    />
+                                                </>
+                                            )}
                                         </>
                                     )}
                                 </>
@@ -388,56 +422,76 @@ export default class Sweepremoteclosed extends React.Component<
                                             error: '',
                                             loading: true
                                         });
-                                        console.log('start sweepremoteclosed', {
-                                            seed:
-                                                seedType ===
-                                                'externalWalletSeed'
-                                                    ? externalSeed
-                                                    : SettingsStore?.seedPhrase.join(
-                                                          ' '
-                                                      ),
-                                            apiUrl,
-                                            customApiUrl,
-                                            recoveryWindow,
-                                            feeRate,
-                                            sleepSeconds
-                                        });
                                         try {
-                                            const response =
-                                                await sweepRemoteClosed({
-                                                    seed:
-                                                        seedType ===
-                                                        'externalWalletSeed'
-                                                            ? externalSeed
-                                                            : SettingsStore?.seedPhrase.join(
-                                                                  ' '
-                                                              ),
-                                                    apiUrl:
-                                                        apiUrl === 'custom'
-                                                            ? customApiUrl
-                                                            : apiUrl,
-                                                    sweepAddr,
-                                                    recoveryWindow: Number(
-                                                        recoveryWindow || 200
-                                                    ),
-                                                    feeRate: Number(
-                                                        feeRate || 2
-                                                    ),
-                                                    sleepSeconds: Number(
-                                                        sleepSeconds || 0
-                                                    ),
-                                                    publish: false, // publish
-                                                    isTestNet:
-                                                        NodeInfoStore?.nodeInfo
-                                                            ?.isTestNet // isTestNet
+                                            if (isLdkNode) {
+                                                const response =
+                                                    await ldkNode.recovery.sweepRemoteClosedOutputs(
+                                                        {
+                                                            sweepAddress:
+                                                                sweepAddr,
+                                                            feeRateSatsPerVbyte:
+                                                                Number(
+                                                                    feeRate || 2
+                                                                ),
+                                                            sleepSeconds:
+                                                                Number(
+                                                                    sleepSeconds ||
+                                                                        0
+                                                                )
+                                                        }
+                                                    );
+                                                navigation.navigate('TxHex', {
+                                                    txHex: response,
+                                                    hideWarning: true
                                                 });
-                                            navigation.navigate('TxHex', {
-                                                txHex: response,
-                                                hideWarning: true
-                                            });
+                                            } else {
+                                                const response =
+                                                    await sweepRemoteClosed({
+                                                        seed:
+                                                            seedType ===
+                                                            'externalWalletSeed'
+                                                                ? externalSeed
+                                                                : SettingsStore?.seedPhrase.join(
+                                                                      ' '
+                                                                  ),
+                                                        apiUrl:
+                                                            apiUrl === 'custom'
+                                                                ? customApiUrl
+                                                                : apiUrl,
+                                                        sweepAddr,
+                                                        recoveryWindow: Number(
+                                                            recoveryWindow ||
+                                                                200
+                                                        ),
+                                                        feeRate: Number(
+                                                            feeRate || 2
+                                                        ),
+                                                        sleepSeconds: Number(
+                                                            sleepSeconds || 0
+                                                        ),
+                                                        publish: false,
+                                                        isTestNet:
+                                                            NodeInfoStore
+                                                                ?.nodeInfo
+                                                                ?.isTestNet
+                                                    });
+                                                navigation.navigate('TxHex', {
+                                                    txHex: response,
+                                                    hideWarning: true
+                                                });
+                                            }
                                         } catch (e: any) {
+                                            const errorStr = e.toString();
+                                            const isNoFunds =
+                                                errorStr.includes(
+                                                    'InsufficientFunds'
+                                                );
                                             this.setState({
-                                                error: e.toString(),
+                                                error: isNoFunds
+                                                    ? localeString(
+                                                          'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.noUtxosFound'
+                                                      )
+                                                    : errorStr,
                                                 loading: false
                                             });
                                         }

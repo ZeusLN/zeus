@@ -474,6 +474,13 @@ export interface ILdkNodeModule {
     resetNetworkGraph(): Promise<void>;
     updateRgsSnapshot(): Promise<{ timestamp: number }>;
 
+    // Recovery Methods
+    sweepRemoteClosedOutputs(
+        sweepAddress: string,
+        feeRateSatsPerVbyte: number,
+        sleepSeconds: number
+    ): Promise<{ txHex: string }>;
+
     // Channel Methods
     listChannels(): Promise<ChannelDetails[]>;
     listClosedChannels(): Promise<{ channels: ClosedChannelDetails[] }>;
