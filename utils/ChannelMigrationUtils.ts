@@ -537,14 +537,35 @@ export const restoreChannelBackupFromOlympus = async (
         }
 
         // 5. Stop LND before overwriting the active database
-        try {
-            console.log('Stopping LND for restore...');
-            await stopLnd();
-            await sleep(5000);
-        } catch (e: any) {
-            if (e?.message?.includes?.('closed')) {
-                console.log('LND stopped successfully.');
-            } else {
+        const MAX_RECOVERY_WAIT_ATTEMPTS = 60; // ~5 minutes
+        for (let attempt = 1; ; attempt++) {
+            try {
+                console.log('Stopping LND for restore...');
+                await stopLnd();
+                await sleep(5000);
+                break;
+            } catch (e: any) {
+                if (e?.message?.includes?.('closed')) {
+                    console.log('LND stopped successfully.');
+                    break;
+                }
+                if (e?.message?.includes?.('wallet recovery in progress')) {
+                    if (attempt >= MAX_RECOVERY_WAIT_ATTEMPTS) {
+                        console.error(
+                            `Wallet recovery still in progress after ${attempt} attempts`
+                        );
+                        throw new Error(
+                            localeString(
+                                'views.Tools.migration.export.failedToStopLnd'
+                            )
+                        );
+                    }
+                    console.log(
+                        `Wallet recovery in progress, waiting 5s (attempt ${attempt}/${MAX_RECOVERY_WAIT_ATTEMPTS})...`
+                    );
+                    await sleep(5000);
+                    continue;
+                }
                 console.error('Failed to stop LND:', e.message);
                 throw new Error(
                     localeString('views.Tools.migration.export.failedToStopLnd')

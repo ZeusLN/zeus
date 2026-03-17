@@ -1022,6 +1022,8 @@
     "views.Tools.migration.import.waitingForLnd": "Waiting for LND to start...",
     "views.Tools.migration.import.downloadingFromOlympus": "Downloading channel backup from Olympus...",
     "views.Tools.migration.import.olympusRestoreFailed": "Failed to restore from Olympus: {{error}}",
+    "views.Tools.migration.import.restoreComplete": "Restore Complete",
+    "views.Tools.migration.import.restoreComplete.text": "Channel data has been restored successfully. Please restart the app to apply changes.",
     "views.WithdrawalRedemption.redeeming": "Redeeming withdrawal request",
     "views.WithdrawalRedemption.success": "Withdrawal request redemption successful",
     "views.Tools.ErrorCreateWithdrawalRequest": "Error creating withdrawal request",

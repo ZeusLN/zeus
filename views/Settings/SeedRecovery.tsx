@@ -22,6 +22,7 @@ import {
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { v4 as uuidv4 } from 'uuid';
+import RNRestart from 'react-native-restart';
 
 import {
     ErrorMessage,
@@ -229,6 +230,24 @@ export default class SeedRecovery extends React.PureComponent<
     finishRestoreWallet = (nodes: any) => {
         const { SettingsStore, navigation } = this.props;
         const { embeddedLndStarted, setConnectingStatus } = SettingsStore;
+        const { olympusRestorePending } = this.state;
+
+        if (olympusRestorePending) {
+            Alert.alert(
+                localeString('views.Tools.migration.import.restoreComplete'),
+                localeString(
+                    'views.Tools.migration.import.restoreComplete.text'
+                ),
+                [
+                    {
+                        text: localeString('views.Wallet.restart'),
+                        onPress: () => RNRestart.Restart()
+                    }
+                ],
+                { cancelable: false }
+            );
+            return;
+        }
 
         if (nodes.length === 1) {
             setConnectingStatus(true);
