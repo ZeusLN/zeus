@@ -2853,6 +2853,8 @@ public protocol NodeProtocol : AnyObject {
     
     func stop() throws 
     
+    func sweepRemoteClosedOutputs(sweepAddress: String, feeRateSatsPerVbyte: UInt64, sleepSeconds: UInt64) throws  -> String
+    
     func syncWallets() throws 
     
     func unifiedQrPayment()  -> UnifiedQrPayment
@@ -3196,6 +3198,16 @@ open func stop()throws  {try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_stop(self.uniffiClonePointer(),$0
     )
 }
+}
+    
+open func sweepRemoteClosedOutputs(sweepAddress: String, feeRateSatsPerVbyte: UInt64, sleepSeconds: UInt64)throws  -> String {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_node_sweep_remote_closed_outputs(self.uniffiClonePointer(),
+        FfiConverterString.lower(sweepAddress),
+        FfiConverterUInt64.lower(feeRateSatsPerVbyte),
+        FfiConverterUInt64.lower(sleepSeconds),$0
+    )
+})
 }
     
 open func syncWallets()throws  {try rustCallWithError(FfiConverterTypeNodeError.lift) {
@@ -13186,6 +13198,9 @@ private var initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_stop() != 42188) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_node_sweep_remote_closed_outputs() != 19581) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_sync_wallets() != 32474) {

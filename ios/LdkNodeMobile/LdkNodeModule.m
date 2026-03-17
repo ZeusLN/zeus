@@ -35,6 +35,9 @@ RCT_EXTERN_METHOD(networkGraphInfo:(RCTPromiseResolveBlock)resolve rejecter:(RCT
 RCT_EXTERN_METHOD(resetNetworkGraph:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(updateRgsSnapshot:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
+// Recovery Methods
+RCT_EXTERN_METHOD(sweepRemoteClosedOutputs:(NSString *)sweepAddress feeRateSatsPerVbyte:(nonnull NSNumber *)feeRateSatsPerVbyte sleepSeconds:(nonnull NSNumber *)sleepSeconds resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+
 // Channel Methods
 RCT_EXTERN_METHOD(listChannels:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(listClosedChannels:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)

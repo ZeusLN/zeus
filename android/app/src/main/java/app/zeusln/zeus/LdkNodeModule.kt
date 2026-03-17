@@ -720,6 +720,28 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Recovery Methods
+
+    @ReactMethod
+    fun sweepRemoteClosedOutputs(sweepAddress: String, feeRateSatsPerVbyte: Double, sleepSeconds: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val txHex = node.sweepRemoteClosedOutputs(sweepAddress, feeRateSatsPerVbyte.toLong().toULong(), sleepSeconds.toLong().toULong())
+                val result = Arguments.createMap().apply {
+                    putString("txHex", txHex)
+                }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", e.message, e)
+                }
+            }
+        }
+    }
+
     // Channel Methods
 
     @ReactMethod

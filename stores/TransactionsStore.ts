@@ -153,8 +153,8 @@ export default class TransactionsStore {
             txid = tx.getId();
         } catch (e) {}
 
-        // CLN REST does not support publishTransaction; broadcast via mempool.space
-        if (this.settingsStore.implementation === 'cln-rest') {
+        // Backends without publishTransaction fall back to mempool.space
+        if (!(BackendUtils.getClass() as any)?.publishTransaction) {
             const headers = {
                 'Access-Control-Allow-Origin': '*',
                 'Content-Type': 'text/plain'

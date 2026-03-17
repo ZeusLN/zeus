@@ -329,6 +329,33 @@ export default class EmbeddedNode extends React.Component<
                             </ListItem>
                         )}
 
+                        {/* Channel tools (LDK Node) */}
+                        {isEmbeddedLdk && (
+                            <ListItem
+                                containerStyle={{
+                                    backgroundColor: 'transparent'
+                                }}
+                                onPress={() => navigation.navigate('Chantools')}
+                            >
+                                <ListItem.Content>
+                                    <ListItem.Title
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.Chantools.title'
+                                        )}
+                                    </ListItem.Title>
+                                </ListItem.Content>
+                                <Icon
+                                    name="keyboard-arrow-right"
+                                    color={themeColor('secondaryText')}
+                                />
+                            </ListItem>
+                        )}
+
                         {/* Troubleshooting */}
                         {(isEmbeddedLnd || isEmbeddedLdk) && (
                             <ListItem

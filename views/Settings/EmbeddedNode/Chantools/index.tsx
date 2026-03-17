@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Header from '../../../../components/Header';
 import Screen from '../../../../components/Screen';
 
+import { localeString } from '../../../../utils/LocaleUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
 
 interface ChantoolsProps {
@@ -21,7 +22,9 @@ export default class Chantools extends React.Component<ChantoolsProps, {}> {
                     <Header
                         leftComponent="Back"
                         centerComponent={{
-                            text: 'chantools',
+                            text: localeString(
+                                'views.Settings.EmbeddedNode.Chantools.title'
+                            ),
                             style: {
                                 color: themeColor('text'),
                                 fontFamily: 'PPNeueMontreal-Book'
@@ -46,7 +49,9 @@ export default class Chantools extends React.Component<ChantoolsProps, {}> {
                                             fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
-                                        sweepremoteclosed
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.title'
+                                        )}
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 <Icon

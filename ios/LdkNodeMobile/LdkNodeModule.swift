@@ -600,6 +600,25 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // MARK: - Recovery Methods
+
+    @objc(sweepRemoteClosedOutputs:feeRateSatsPerVbyte:sleepSeconds:resolver:rejecter:)
+    func sweepRemoteClosedOutputs(_ sweepAddress: String, feeRateSatsPerVbyte: NSNumber, sleepSeconds: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let txHex = try node.sweepRemoteClosedOutputs(sweepAddress: sweepAddress, feeRateSatsPerVbyte: feeRateSatsPerVbyte.uint64Value, sleepSeconds: sleepSeconds.uint64Value)
+                resolve(["txHex": txHex])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
     // MARK: - Channel Methods
 
     @objc(listChannels:rejecter:)
