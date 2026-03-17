@@ -14,7 +14,7 @@ IOS_LINK=$FILE_PATH$IOS_FILE.zip
 # LDK Node
 LDK_NODE_VERSION=v0.7.0-zeus-close-fee-fix
 LDK_NODE_IOS_FILE=LDKNodeFFI.xcframework
-LDK_NODE_IOS_SHA256='4dd7b5bdbfe2425481c889486b974a0e2145c4cf03ed5ea6f35e59c0fe924c74'
+LDK_NODE_IOS_SHA256='8d163b3dc297151bc00d567f744b632c10b4ab311307935187e699e992e5517a'
 LDK_NODE_IOS_LINK=https://github.com/ZeusLN/ldk-node/releases/download/$LDK_NODE_VERSION/$LDK_NODE_IOS_FILE.zip
 
 # test that curl and unzip are installed

@@ -689,28 +689,6 @@ export default class EmbeddedLdkNode {
             ensureEntry(sb.channelId).sweepBalances.push(sb);
         }
 
-        console.log(
-            `LDK Node getClosedChannels: ${closedChannelList.length} closed channels, ` +
-                `${channelBalanceEntries.size} with balance entries, ` +
-                `lightningBalances: ${JSON.stringify(
-                    balances.lightningBalances
-                        .filter((lb) => lb.type !== 'claimableOnChannelClose')
-                        .map((lb) => ({
-                            channelId: lb.channelId,
-                            type: lb.type,
-                            amount: lb.amountSatoshis,
-                            source: lb.source
-                        }))
-                )}, ` +
-                `sweepBalances: ${JSON.stringify(
-                    balances.pendingBalancesFromChannelClosures.map((sb) => ({
-                        channelId: sb.channelId,
-                        type: sb.type,
-                        amount: sb.amountSatoshis
-                    }))
-                )}`
-        );
-
         const closedChannels: any[] = [];
 
         for (const cc of closedChannelList) {
@@ -729,23 +707,6 @@ export default class EmbeddedLdkNode {
                 Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
             const balEntry = channelBalanceEntries.get(cc.channelId);
             const hasBalanceEntries = !!balEntry;
-
-            const channelPoint = cc.fundingTxo_txid
-                ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
-                : 'unknown';
-            console.log(
-                `LDK Node getClosedChannels: channel=${cc.channelId}, ` +
-                    `channelPoint=${channelPoint}, ` +
-                    `isCoop=${isCoop}, hasBalances=${hasBalanceEntries}, ` +
-                    `reason=${cc.closureReason?.type}, ` +
-                    `lastLocalBalance=${cc.lastLocalBalanceMsat}, ` +
-                    `capacity=${cc.channelCapacitySats}, ` +
-                    `action=${
-                        hasBalanceEntries
-                            ? 'SKIP (pending)'
-                            : 'INCLUDE (closed)'
-                    }`
-            );
 
             if (isCoop && !hasBalanceEntries && ageSecs <= 10 * 60) {
                 continue; // Still showing as pending close
@@ -998,51 +959,16 @@ export default class EmbeddedLdkNode {
             );
         }
 
-        console.log(
-            `LDK Node closeChannel: forceClose=${forceClose}, ` +
-                `peer=${channel.counterpartyNodeId}, ` +
-                `isUsable=${channel.isUsable}, ` +
-                `isChannelReady=${channel.isChannelReady}, ` +
-                `channelId=${channel.userChannelId}`
-        );
-
-        // Subscribe to the channelClosed event before initiating close
-        // so we can log the closure reason
-        const unsubscribe = this.subscribeToEvents((event: LdkNodeEvent) => {
-            if (
-                event.type === 'channelClosed' &&
-                event.userChannelId === channel.userChannelId
-            ) {
-                console.log(
-                    `LDK Node channelClosed event: ` +
-                        `reason=${JSON.stringify(event.reason)}, ` +
-                        `channelId=${event.userChannelId}`
-                );
-                unsubscribe();
-            }
-        });
-
-        try {
-            if (forceClose) {
-                await LdkNode.channel.forceCloseChannel({
-                    userChannelId: channel.userChannelId,
-                    counterpartyNodeId: channel.counterpartyNodeId
-                });
-            } else {
-                await LdkNode.channel.closeChannel({
-                    userChannelId: channel.userChannelId,
-                    counterpartyNodeId: channel.counterpartyNodeId
-                });
-            }
-            console.log(
-                `LDK Node closeChannel: ${
-                    forceClose ? 'force' : 'cooperative'
-                } close request accepted`
-            );
-        } catch (e: any) {
-            unsubscribe();
-            console.error(`LDK Node closeChannel: error: ${e?.message || e}`);
-            throw e;
+        if (forceClose) {
+            await LdkNode.channel.forceCloseChannel({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId
+            });
+        } else {
+            await LdkNode.channel.closeChannel({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId
+            });
         }
 
         return { success: true };
