@@ -37,7 +37,9 @@ import ChannelsStore, {
 } from '../../stores/ChannelsStore';
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, {
+    getLspConfigForNetwork
+} from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -185,14 +187,12 @@ export default class ChannelsPane extends React.PureComponent<
     initFromProps(props: ChannelsProps) {
         const { NodeInfoStore, SettingsStore } = props;
 
-        let olympusPubkey, olympusHost;
-        if (NodeInfoStore?.nodeInfo.isTestNet) {
-            olympusPubkey = SettingsStore?.settings.lsps1PubkeyTestnet;
-            olympusHost = SettingsStore?.settings.lsps1HostTestnet;
-        } else {
-            olympusPubkey = SettingsStore?.settings.lsps1PubkeyMainnet;
-            olympusHost = SettingsStore?.settings.lsps1HostMainnet;
-        }
+        const lspConfig = getLspConfigForNetwork(
+            SettingsStore!.settings,
+            NodeInfoStore!.nodeInfo
+        );
+        const olympusPubkey = lspConfig.lsps1Pubkey;
+        const olympusHost = lspConfig.lsps1Host;
 
         this.setState({
             channelDestination: 'Olympus by ZEUS',

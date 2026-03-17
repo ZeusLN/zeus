@@ -220,7 +220,8 @@ export default class EmbeddedLdkNode {
             version: 'ldk-node v0.7.0-zeus-lsps7-rgs-troubleshoot-logobserver',
             testnet: network === 'testnet',
             regtest: network === 'regtest',
-            signet: network === 'signet',
+            signet: network === 'signet' || network === 'mutinynet',
+            mutinynet: network === 'mutinynet',
             // Additional LDK Node specific fields
             latestLightningWalletSyncTimestamp:
                 status.latestLightningWalletSyncTimestamp,

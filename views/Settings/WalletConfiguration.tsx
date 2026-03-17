@@ -58,8 +58,7 @@ import SettingsStore, {
     Settings,
     Node,
     Implementations,
-    DEFAULT_LSPS1_PUBKEY_MAINNET,
-    DEFAULT_LSPS1_PUBKEY_TESTNET
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
@@ -1076,33 +1075,26 @@ export default class WalletConfiguration extends React.Component<
                 | 'mainnet'
                 | 'testnet'
                 | 'signet'
-                | 'regtest';
+                | 'regtest'
+                | 'mutinynet';
 
             // Get LSPS1 config from settings based on network
             const { SettingsStore } = this.props;
             const { settings } = SettingsStore;
-            const isTestnet = networkType === 'testnet';
-            const lsps1Pubkey = isTestnet
-                ? settings.lsps1PubkeyTestnet
-                : settings.lsps1PubkeyMainnet;
-            const lsps1Host = isTestnet
-                ? settings.lsps1HostTestnet
-                : settings.lsps1HostMainnet;
+            const lspConfig = getLspConfigForNetwork(settings, networkType);
             const lsps1Token = settings.lsps1Token;
 
             const lsps1Config =
-                lsps1Pubkey && lsps1Host
+                lspConfig.lsps1Pubkey && lspConfig.lsps1Host
                     ? {
-                          nodeId: lsps1Pubkey,
-                          address: lsps1Host,
+                          nodeId: lspConfig.lsps1Pubkey,
+                          address: lspConfig.lsps1Host,
                           token: lsps1Token || null
                       }
                     : undefined;
 
             // Always include Flow LSP pubkey as trusted 0-conf peer
-            const flowLspPubkey = isTestnet
-                ? DEFAULT_LSPS1_PUBKEY_TESTNET
-                : DEFAULT_LSPS1_PUBKEY_MAINNET;
+            const flowLspPubkey = lspConfig.defaultPubkey;
 
             const trustedPeers = [flowLspPubkey];
             if (lsps1Config?.nodeId && lsps1Config.nodeId !== flowLspPubkey) {
@@ -1665,9 +1657,10 @@ export default class WalletConfiguration extends React.Component<
                                                             value
                                                     });
                                                 }}
-                                                values={
-                                                    EMBEDDED_NODE_NETWORK_KEYS
-                                                }
+                                                values={EMBEDDED_NODE_NETWORK_KEYS.filter(
+                                                    (k) =>
+                                                        k.value !== 'mutinynet'
+                                                )}
                                             />
                                         )}
                                         {false && (
@@ -2736,16 +2729,22 @@ export default class WalletConfiguration extends React.Component<
                                         <>
                                             <View style={styles.button}>
                                                 <Button
-                                                    title={
-                                                        embeddedLdkNetwork ===
-                                                        'mainnet'
-                                                            ? localeString(
-                                                                  'views.Settings.NodeConfiguration.createMainnetWallet'
-                                                              )
-                                                            : localeString(
-                                                                  'views.Settings.NodeConfiguration.createTestnetWallet'
-                                                              )
-                                                    }
+                                                    title={localeString(
+                                                        'views.Settings.NodeConfiguration.createWallet',
+                                                        {
+                                                            network:
+                                                                localeString(
+                                                                    EMBEDDED_NODE_NETWORK_KEYS.find(
+                                                                        (k) =>
+                                                                            k.value ===
+                                                                            (embeddedLdkNetwork ||
+                                                                                'mainnet')
+                                                                    )
+                                                                        ?.translateKey ||
+                                                                        'network.mainnet'
+                                                                )
+                                                        }
+                                                    )}
                                                     onPress={async () => {
                                                         await this.createLdkNodeNewWallet(
                                                             embeddedLdkNetwork ||
@@ -2758,16 +2757,22 @@ export default class WalletConfiguration extends React.Component<
                                             </View>
                                             <View style={styles.button}>
                                                 <Button
-                                                    title={
-                                                        embeddedLdkNetwork ===
-                                                        'mainnet'
-                                                            ? localeString(
-                                                                  'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                              )
-                                                            : localeString(
-                                                                  'views.Settings.NodeConfiguration.restoreTestnetWallet'
-                                                              )
-                                                    }
+                                                    title={localeString(
+                                                        'views.Settings.NodeConfiguration.restoreWallet',
+                                                        {
+                                                            network:
+                                                                localeString(
+                                                                    EMBEDDED_NODE_NETWORK_KEYS.find(
+                                                                        (k) =>
+                                                                            k.value ===
+                                                                            (embeddedLdkNetwork ||
+                                                                                'mainnet')
+                                                                    )
+                                                                        ?.translateKey ||
+                                                                        'network.mainnet'
+                                                                )
+                                                        }
+                                                    )}
                                                     onPress={() =>
                                                         navigation.navigate(
                                                             'SeedRecovery',
@@ -2889,16 +2894,20 @@ export default class WalletConfiguration extends React.Component<
                                     <>
                                         <View style={styles.button}>
                                             <Button
-                                                title={
-                                                    embeddedLndNetwork ===
-                                                    'mainnet'
-                                                        ? localeString(
-                                                              'views.Settings.NodeConfiguration.createMainnetWallet'
-                                                          )
-                                                        : localeString(
-                                                              'views.Settings.NodeConfiguration.createTestnetWallet'
-                                                          )
-                                                }
+                                                title={localeString(
+                                                    'views.Settings.NodeConfiguration.createWallet',
+                                                    {
+                                                        network: localeString(
+                                                            EMBEDDED_NODE_NETWORK_KEYS.find(
+                                                                (k) =>
+                                                                    k.value ===
+                                                                    (embeddedLndNetwork ||
+                                                                        'mainnet')
+                                                            )?.translateKey ||
+                                                                'network.mainnet'
+                                                        )
+                                                    }
+                                                )}
                                                 onPress={async () => {
                                                     await this.createNewWallet(
                                                         embeddedLndNetwork ===
@@ -2913,16 +2922,20 @@ export default class WalletConfiguration extends React.Component<
                                         </View>
                                         <View style={styles.button}>
                                             <Button
-                                                title={
-                                                    embeddedLndNetwork ===
-                                                    'mainnet'
-                                                        ? localeString(
-                                                              'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                                          )
-                                                        : localeString(
-                                                              'views.Settings.NodeConfiguration.restoreTestnetWallet'
-                                                          )
-                                                }
+                                                title={localeString(
+                                                    'views.Settings.NodeConfiguration.restoreWallet',
+                                                    {
+                                                        network: localeString(
+                                                            EMBEDDED_NODE_NETWORK_KEYS.find(
+                                                                (k) =>
+                                                                    k.value ===
+                                                                    (embeddedLndNetwork ||
+                                                                        'mainnet')
+                                                            )?.translateKey ||
+                                                                'network.mainnet'
+                                                        )
+                                                    }
+                                                )}
                                                 onPress={() =>
                                                     navigation.navigate(
                                                         'SeedRecovery',

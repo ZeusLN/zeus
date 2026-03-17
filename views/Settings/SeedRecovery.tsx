@@ -59,8 +59,8 @@ import SettingsStore, {
     DEFAULT_SWAP_HOST_TESTNET,
     SWAP_HOST_KEYS_MAINNET,
     SWAP_HOST_KEYS_TESTNET,
-    DEFAULT_LSPS1_PUBKEY_MAINNET,
-    DEFAULT_LSPS1_PUBKEY_TESTNET
+    EMBEDDED_NODE_NETWORK_KEYS,
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
@@ -537,28 +537,23 @@ export default class SeedRecovery extends React.PureComponent<
                     // Get LSPS1 config from settings based on network
                     const { SettingsStore } = this.props;
                     const { settings } = SettingsStore;
-                    const isTestnet = network === 'testnet';
-                    const lsps1Pubkey = isTestnet
-                        ? settings.lsps1PubkeyTestnet
-                        : settings.lsps1PubkeyMainnet;
-                    const lsps1Host = isTestnet
-                        ? settings.lsps1HostTestnet
-                        : settings.lsps1HostMainnet;
+                    const lspConfig = getLspConfigForNetwork(
+                        settings,
+                        network || 'mainnet'
+                    );
                     const lsps1Token = settings.lsps1Token;
 
                     const lsps1Config =
-                        lsps1Pubkey && lsps1Host
+                        lspConfig.lsps1Pubkey && lspConfig.lsps1Host
                             ? {
-                                  nodeId: lsps1Pubkey,
-                                  address: lsps1Host,
+                                  nodeId: lspConfig.lsps1Pubkey,
+                                  address: lspConfig.lsps1Host,
                                   token: lsps1Token || null
                               }
                             : undefined;
 
                     // Always include Flow LSP pubkey as trusted 0-conf peer
-                    const flowLspPubkey = isTestnet
-                        ? DEFAULT_LSPS1_PUBKEY_TESTNET
-                        : DEFAULT_LSPS1_PUBKEY_MAINNET;
+                    const flowLspPubkey = lspConfig.defaultPubkey;
 
                     const trustedPeers = [flowLspPubkey];
                     if (
@@ -572,7 +567,8 @@ export default class SeedRecovery extends React.PureComponent<
                         | 'mainnet'
                         | 'testnet'
                         | 'signet'
-                        | 'regtest';
+                        | 'regtest'
+                        | 'mutinynet';
 
                     await createLdkNodeWallet({
                         nodeDir,
@@ -1171,12 +1167,19 @@ export default class SeedRecovery extends React.PureComponent<
                                             ? localeString(
                                                   'views.Swaps.rescueKey.restore'
                                               )
-                                            : network === 'mainnet'
-                                            ? localeString(
-                                                  'views.Settings.NodeConfiguration.restoreMainnetWallet'
-                                              )
                                             : localeString(
-                                                  'views.Settings.NodeConfiguration.restoreTestnetWallet'
+                                                  'views.Settings.NodeConfiguration.restoreWallet',
+                                                  {
+                                                      network: localeString(
+                                                          EMBEDDED_NODE_NETWORK_KEYS.find(
+                                                              (k) =>
+                                                                  k.value ===
+                                                                  (network ||
+                                                                      'mainnet')
+                                                          )?.translateKey ||
+                                                              'network.mainnet'
+                                                      )
+                                                  }
                                               )
                                     }
                                     disabled={

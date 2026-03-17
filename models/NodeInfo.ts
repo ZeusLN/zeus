@@ -15,6 +15,7 @@ export default class NodeInfo extends BaseModel {
     @observable testnet?: boolean;
     @observable regtest?: boolean;
     @observable signet?: boolean;
+    @observable mutinynet?: boolean;
     block_hash?: string;
     @observable block_height?: number;
     best_header_timestamp?: string;
@@ -59,8 +60,17 @@ export default class NodeInfo extends BaseModel {
         );
     }
 
+    @computed public get isMutinynet(): boolean {
+        return this.mutinynet || false;
+    }
+
     @computed public get isMainNet(): boolean {
-        return !this.isTestNet && !this.isRegTest && !this.isSigNet;
+        return (
+            !this.isTestNet &&
+            !this.isRegTest &&
+            !this.isSigNet &&
+            !this.isMutinynet
+        );
     }
 
     @computed public get currentBlockHeight(): Number {
