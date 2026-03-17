@@ -20,10 +20,14 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, {
     DEFAULT_LSPS1_PUBKEY_MAINNET,
     DEFAULT_LSPS1_PUBKEY_TESTNET,
+    DEFAULT_LSPS1_PUBKEY_MUTINYNET,
     DEFAULT_LSPS1_HOST_MAINNET,
     DEFAULT_LSPS1_HOST_TESTNET,
+    DEFAULT_LSPS1_HOST_MUTINYNET,
     DEFAULT_LSPS1_REST_MAINNET,
-    DEFAULT_LSPS1_REST_TESTNET
+    DEFAULT_LSPS1_REST_TESTNET,
+    DEFAULT_LSPS1_REST_MUTINYNET,
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 
 import Olympus from '../../assets/images/SVG/Olympus.svg';
@@ -121,26 +125,39 @@ export default class LSPS1Settings extends React.Component<
     };
 
     handleReset = async () => {
-        const isTestNet = this.props.NodeInfoStore?.nodeInfo?.isTestNet;
+        const { nodeInfo } = this.props.NodeInfoStore!;
+        const { settings } = this.props.SettingsStore;
+        const defaults = getLspConfigForNetwork(
+            {
+                ...settings,
+                lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
+                lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+                lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
+                lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
+                lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+                lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+                lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
+                lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+                lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET
+            },
+            nodeInfo
+        );
         this.setState({
-            pubkey: isTestNet
-                ? DEFAULT_LSPS1_PUBKEY_TESTNET
-                : DEFAULT_LSPS1_PUBKEY_MAINNET,
-            host: isTestNet
-                ? DEFAULT_LSPS1_HOST_TESTNET
-                : DEFAULT_LSPS1_HOST_MAINNET,
-            restHost: isTestNet
-                ? DEFAULT_LSPS1_REST_TESTNET
-                : DEFAULT_LSPS1_REST_MAINNET,
+            pubkey: defaults.lsps1Pubkey,
+            host: defaults.lsps1Host,
+            restHost: defaults.lsps1Rest,
             lsps1Token: ''
         });
         await this.props.SettingsStore.updateSettings({
             lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
             lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+            lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
             lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
             lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+            lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
             lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
             lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+            lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET,
             lsps1Token: ''
         });
     };
@@ -152,29 +169,23 @@ export default class LSPS1Settings extends React.Component<
         const { updateSettings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
 
-        const isOlympusMainnetCustom =
-            !nodeInfo.isTestNet &&
-            pubkey === DEFAULT_LSPS1_PUBKEY_MAINNET &&
-            host === DEFAULT_LSPS1_HOST_MAINNET;
-        const isOlympusTestnetCustom =
-            nodeInfo?.isTestNet &&
-            pubkey === DEFAULT_LSPS1_PUBKEY_TESTNET &&
-            host === DEFAULT_LSPS1_HOST_TESTNET;
+        const lspConfig = getLspConfigForNetwork(
+            SettingsStore.settings,
+            nodeInfo
+        );
+        const isMutinynet = nodeInfo?.isMutinynet;
+        const isTestNet = nodeInfo?.isTestNet;
 
-        const isOlympusMainnetRest =
-            !nodeInfo.isTestNet && restHost === DEFAULT_LSPS1_REST_MAINNET;
-        const isOlympusTestnetRest =
-            nodeInfo.isTestNet && restHost === DEFAULT_LSPS1_REST_TESTNET;
+        const isOlympusCustom =
+            pubkey === lspConfig.defaultPubkey && host === lspConfig.lsps1Host;
+        const isOlympusRestMatch = restHost === lspConfig.lsps1Rest;
 
         const isOlympusCustomMessage =
-            BackendUtils.supportsLSPScustomMessage() &&
-            (isOlympusMainnetCustom || isOlympusTestnetCustom);
+            BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
         const isOlympusRest =
-            BackendUtils.supportsLSPS1rest() &&
-            (isOlympusMainnetRest || isOlympusTestnetRest);
+            BackendUtils.supportsLSPS1rest() && isOlympusRestMatch;
         const isOlympusNative =
-            BackendUtils.supportsLSPS1native() &&
-            (isOlympusMainnetCustom || isOlympusTestnetCustom);
+            BackendUtils.supportsLSPS1native() && isOlympusCustom;
 
         const isOlympus =
             isOlympusCustomMessage || isOlympusRest || isOlympusNative;
@@ -226,7 +237,9 @@ export default class LSPS1Settings extends React.Component<
                                         this.checkNativeSettingsChanged
                                     );
                                     await updateSettings(
-                                        nodeInfo?.isTestNet
+                                        isMutinynet
+                                            ? { lsps1PubkeyMutinynet: text }
+                                            : isTestNet
                                             ? { lsps1PubkeyTestnet: text }
                                             : { lsps1PubkeyMainnet: text }
                                     );
@@ -253,7 +266,9 @@ export default class LSPS1Settings extends React.Component<
                                         this.checkNativeSettingsChanged
                                     );
                                     await updateSettings(
-                                        nodeInfo?.isTestNet
+                                        isMutinynet
+                                            ? { lsps1HostMutinynet: text }
+                                            : isTestNet
                                             ? { lsps1HostTestnet: text }
                                             : { lsps1HostMainnet: text }
                                     );
@@ -373,21 +388,15 @@ export default class LSPS1Settings extends React.Component<
                             </Text>
                             <TextInput
                                 value={restHost}
-                                placeholder={
-                                    nodeInfo.isTestNet
-                                        ? DEFAULT_LSPS1_REST_TESTNET
-                                        : DEFAULT_LSPS1_REST_MAINNET
-                                }
+                                placeholder={lspConfig.lsps1Rest}
                                 onChangeText={async (text: string) => {
                                     this.setState({ restHost: text });
                                     await updateSettings(
-                                        nodeInfo?.isTestNet
-                                            ? {
-                                                  lsps1RestTestnet: text
-                                              }
-                                            : {
-                                                  lsps1RestMainnet: text
-                                              }
+                                        isMutinynet
+                                            ? { lsps1RestMutinynet: text }
+                                            : isTestNet
+                                            ? { lsps1RestTestnet: text }
+                                            : { lsps1RestMainnet: text }
                                     );
                                 }}
                             />

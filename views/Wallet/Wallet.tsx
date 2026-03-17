@@ -95,8 +95,7 @@ import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
     INTERFACE_KEYS,
-    DEFAULT_LSPS1_PUBKEY_MAINNET,
-    DEFAULT_LSPS1_PUBKEY_TESTNET
+    getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -564,30 +563,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
             if (ldkMnemonic && ldkNodeDir) {
                 // Get LSPS1 config from settings based on network
-                const isTestnet =
-                    embeddedLdkNetwork === 'testnet' ||
-                    embeddedLdkNetwork === 'signet';
-                const lsps1Pubkey = isTestnet
-                    ? settings.lsps1PubkeyTestnet
-                    : settings.lsps1PubkeyMainnet;
-                const lsps1Host = isTestnet
-                    ? settings.lsps1HostTestnet
-                    : settings.lsps1HostMainnet;
+                const lspConfig = getLspConfigForNetwork(
+                    settings,
+                    embeddedLdkNetwork || 'mainnet'
+                );
                 const lsps1Token = settings.lsps1Token;
 
                 const lsps1Config =
-                    lsps1Pubkey && lsps1Host
+                    lspConfig.lsps1Pubkey && lspConfig.lsps1Host
                         ? {
-                              nodeId: lsps1Pubkey,
-                              address: lsps1Host,
+                              nodeId: lspConfig.lsps1Pubkey,
+                              address: lspConfig.lsps1Host,
                               token: lsps1Token || null
                           }
                         : undefined;
 
                 // Always include Flow LSP pubkey as trusted 0-conf peer
-                const flowLspPubkey = isTestnet
-                    ? DEFAULT_LSPS1_PUBKEY_TESTNET
-                    : DEFAULT_LSPS1_PUBKEY_MAINNET;
+                const flowLspPubkey = lspConfig.defaultPubkey;
 
                 // Include both the default Flow LSP and user-configured
                 // LSP as trusted 0-conf peers (dedup if they're the same)

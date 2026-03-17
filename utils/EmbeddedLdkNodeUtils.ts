@@ -24,6 +24,8 @@ export const ESPLORA_SERVERS_TESTNET = [
 
 export const ESPLORA_SERVERS_SIGNET = ['https://mempool.space/signet/api'];
 
+export const ESPLORA_SERVERS_MUTINYNET = ['https://mutinynet.com/api'];
+
 // Default VSS (Versioned Storage Service) server
 export const DEFAULT_VSS_SERVER = 'https://vss.zeusln.com/vss';
 
@@ -61,7 +63,7 @@ export async function createLdkNodeDirectory(nodeDir: string): Promise<string> {
  * Convert network string to LDK Node network type
  */
 export function getNetworkType(
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest'
+    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet'
 ): Network {
     switch (network) {
         case 'mainnet':
@@ -69,6 +71,8 @@ export function getNetworkType(
         case 'testnet':
             return 'testnet';
         case 'signet':
+            return 'signet';
+        case 'mutinynet':
             return 'signet';
         case 'regtest':
             return 'regtest';
@@ -81,7 +85,7 @@ export function getNetworkType(
  * Get default Esplora server for network
  */
 export function getDefaultEsploraServer(
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest'
+    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet'
 ): string {
     switch (network) {
         case 'mainnet':
@@ -90,6 +94,8 @@ export function getDefaultEsploraServer(
             return ESPLORA_SERVERS_TESTNET[0];
         case 'signet':
             return ESPLORA_SERVERS_SIGNET[0];
+        case 'mutinynet':
+            return ESPLORA_SERVERS_MUTINYNET[0];
         case 'regtest':
             return 'http://localhost:3000'; // Local regtest
         default:
@@ -101,7 +107,7 @@ export function getDefaultEsploraServer(
  * Get default RGS server for network
  */
 export function getDefaultRgsServer(
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest'
+    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet'
 ): string | undefined {
     switch (network) {
         case 'mainnet':
@@ -140,7 +146,7 @@ export async function createLdkNodeWallet({
     nodeDir: string;
     seedMnemonic?: string;
     passphrase?: string;
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest';
+    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet';
     esploraServerUrl?: string;
     rgsServerUrl?: string;
     listeningAddresses?: string[];
@@ -218,7 +224,7 @@ export async function startLdkNodeWallet({
     nodeDir: string;
     seedMnemonic: string;
     passphrase?: string;
-    network: 'mainnet' | 'testnet' | 'signet' | 'regtest';
+    network: 'mainnet' | 'testnet' | 'signet' | 'regtest' | 'mutinynet';
     esploraServerUrl?: string;
     rgsServerUrl?: string;
     listeningAddresses?: string[];
@@ -365,6 +371,7 @@ export default {
     ESPLORA_SERVERS_MAINNET,
     ESPLORA_SERVERS_TESTNET,
     ESPLORA_SERVERS_SIGNET,
+    ESPLORA_SERVERS_MUTINYNET,
     RGS_SERVERS_MAINNET,
     RGS_SERVERS_TESTNET,
     DEFAULT_VSS_SERVER

@@ -17,6 +17,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
+import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
 import { lnrpc } from '../proto/lightning';
@@ -160,9 +161,9 @@ export default class TransactionsStore {
                 'Content-Type': 'text/plain'
             } as any;
 
-            const url = `https://mempool.space/${
-                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
-            }api/tx`;
+            const url = `${UrlUtils.getMempoolApiUrl(
+                this.nodeInfoStore.nodeInfo
+            )}/tx`;
 
             return ReactNativeBlobUtil.fetch('POST', url, headers, tx_hex)
                 .then((response: any) => {
@@ -821,9 +822,7 @@ export default class TransactionsStore {
         };
         return ReactNativeBlobUtil.fetch(
             'POST',
-            `https://mempool.space/${
-                this.nodeInfoStore.nodeInfo.isTestNet ? 'testnet/' : ''
-            }api/tx`,
+            `${UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)}/tx`,
             headers,
             raw_tx_hex
         )

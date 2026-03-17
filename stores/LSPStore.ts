@@ -2,12 +2,7 @@ import { action, observable, reaction, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { v4 as uuidv4 } from 'uuid';
 
-import SettingsStore, {
-    DEFAULT_LSPS1_PUBKEY_MAINNET,
-    DEFAULT_LSPS1_PUBKEY_TESTNET,
-    DEFAULT_LSPS1_REST_MAINNET,
-    DEFAULT_LSPS1_REST_TESTNET
-} from './SettingsStore';
+import SettingsStore, { getLspConfigForNetwork } from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 
@@ -129,21 +124,22 @@ export default class LSPStore {
         this.createExtensionOrderResponse = {};
     };
 
+    private getLspConfig = () =>
+        getLspConfigForNetwork(
+            this.settingsStore.settings,
+            this.nodeInfoStore!.nodeInfo
+        );
+
     public isOlympus = () => {
-        const olympusREST = this.nodeInfoStore!.nodeInfo.isTestNet
-            ? DEFAULT_LSPS1_REST_TESTNET
-            : DEFAULT_LSPS1_REST_MAINNET;
-        const olympusPubkey = this.nodeInfoStore!.nodeInfo.isTestNet
-            ? DEFAULT_LSPS1_PUBKEY_TESTNET
-            : DEFAULT_LSPS1_PUBKEY_MAINNET;
+        const config = this.getLspConfig();
         if (
             BackendUtils.supportsLSPScustomMessage() &&
-            this.getLSPSPubkey() == olympusPubkey
+            this.getLSPSPubkey() == config.defaultPubkey
         ) {
             return true;
         } else if (
             BackendUtils.supportsLSPS1rest() &&
-            this.getLSPS1Rest() === olympusREST
+            this.getLSPS1Rest() === config.lsps1Rest
         ) {
             return true;
         }
@@ -151,25 +147,13 @@ export default class LSPStore {
         return false;
     };
 
-    private getFlowHost = () =>
-        this.nodeInfoStore!.nodeInfo.isTestNet
-            ? this.settingsStore.settings.lspTestnet
-            : this.settingsStore.settings.lspMainnet;
+    private getFlowHost = () => this.getLspConfig().flowHost;
 
-    public getLSPSPubkey = () =>
-        this.nodeInfoStore!.nodeInfo.isTestNet
-            ? this.settingsStore.settings.lsps1PubkeyTestnet
-            : this.settingsStore.settings.lsps1PubkeyMainnet;
+    public getLSPSPubkey = () => this.getLspConfig().lsps1Pubkey;
 
-    public getLSPSHost = () =>
-        this.nodeInfoStore!.nodeInfo.isTestNet
-            ? this.settingsStore.settings.lsps1HostTestnet
-            : this.settingsStore.settings.lsps1HostMainnet;
+    public getLSPSHost = () => this.getLspConfig().lsps1Host;
 
-    public getLSPS1Rest = () =>
-        this.nodeInfoStore!.nodeInfo.isTestNet
-            ? this.settingsStore.settings.lsps1RestTestnet
-            : this.settingsStore.settings.lsps1RestMainnet;
+    public getLSPS1Rest = () => this.getLspConfig().lsps1Rest;
 
     private encodeMessage = (n: any) =>
         Buffer.from(JSON.stringify(n)).toString('hex');

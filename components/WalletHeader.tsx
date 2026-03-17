@@ -402,7 +402,9 @@ export default class WalletHeader extends React.Component<
         const nodeAddress = SettingsStore!.host || SettingsStore!.url;
 
         let infoValue: string;
-        if (NodeInfoStore!.nodeInfo.isTestNet) {
+        if (NodeInfoStore!.nodeInfo.isMutinynet) {
+            infoValue = localeString('network.mutinynet');
+        } else if (NodeInfoStore!.nodeInfo.isTestNet) {
             infoValue = localeString('views.Wallet.MainPane.testnet');
         } else if (NodeInfoStore!.nodeInfo.isRegTest) {
             infoValue = localeString('views.Wallet.MainPane.regnet');
