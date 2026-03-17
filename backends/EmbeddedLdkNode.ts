@@ -473,7 +473,7 @@ export default class EmbeddedLdkNode {
             });
         });
 
-        // Force closes with pending lightning balances (awaiting timelock)
+        // Force closes with pending lightning balances
         channelLightningBalances.forEach((lbs, channelId) => {
             // Skip coop closes (already handled above)
             const isCoopClose = lbs.every(
@@ -497,7 +497,6 @@ export default class EmbeddedLdkNode {
                     }
                 }
             }
-            if (blocksTilMaturity <= 0) return;
 
             const totalSats = lbs.reduce(
                 (sum, lb) => sum + lb.amountSatoshis,
@@ -527,21 +526,15 @@ export default class EmbeddedLdkNode {
                     remote_balance: '0',
                     pendingClose: true
                 },
-                blocks_til_maturity: blocksTilMaturity,
+                blocks_til_maturity: Math.max(blocksTilMaturity, 0),
                 closing_txid: closingTxid
             });
         });
 
-        // Sweep-only entries with no lightning balances and no confirmed
-        // sweeps: close tx not yet confirmed (waiting close / pending broadcast)
+        // Sweep-only entries with no lightning balances — either waiting
+        // for broadcast or waiting for sweep confirmations
         channelSweeps.forEach((sweeps, channelId) => {
             if (channelLightningBalances.has(channelId)) return;
-
-            if (
-                sweeps.some((s) => s.type === 'awaitingThresholdConfirmations')
-            ) {
-                return;
-            }
 
             const totalSats = sweeps.reduce(
                 (sum, s) => sum + s.amountSatoshis,
@@ -551,28 +544,31 @@ export default class EmbeddedLdkNode {
 
             const channel = {
                 remote_pubkey: closed?.counterpartyNodeId || '',
-                channel_point: '',
+                channel_point: closed?.fundingTxo_txid
+                    ? `${closed.fundingTxo_txid}:${closed.fundingTxo_vout || 0}`
+                    : '',
                 capacity: (closed?.channelCapacitySats || totalSats).toString(),
                 local_balance: totalSats.toString(),
-                remote_balance: '0'
+                remote_balance: '0',
+                pendingClose: true
             };
+
+            const closingTxid =
+                sweeps.find((s) => s.latestSpendingTxid)?.latestSpendingTxid ||
+                '';
 
             if (sweeps.every((s) => s.type === 'pendingBroadcast')) {
                 waitingClose.push({ channel });
             } else {
-                const closingTxid =
-                    sweeps.find((s) => s.latestSpendingTxid)
-                        ?.latestSpendingTxid || '';
-                pendingClosing.push({
+                pendingForceClosing.push({
                     channel,
+                    blocks_til_maturity: 0,
                     closing_txid: closingTxid
                 });
             }
         });
 
-        // Cooperative closes that have no balance entries at all but were
-        // closed recently (within 10 minutes) — show as pending close
-        // until the close tx has confirmed
+        // Closed channels with no balance entries that still need attention
         const channelIdsWithBalances = new Set<string>();
         channelLightningBalances.forEach((_, id) =>
             channelIdsWithBalances.add(id)
@@ -582,26 +578,57 @@ export default class EmbeddedLdkNode {
         for (const cc of closedChannels) {
             if (activeChannelIds.has(cc.channelId)) continue;
             if (channelIdsWithBalances.has(cc.channelId)) continue;
-            if (!EmbeddedLdkNode.isCooperativeReason(cc.closureReason))
+            // Skip channels that never had a funding tx broadcast
+            if (!cc.fundingTxo_txid) continue;
+
+            const isCoop = EmbeddedLdkNode.isCooperativeReason(
+                cc.closureReason
+            );
+            const localBalanceSats = cc.lastLocalBalanceMsat
+                ? Math.floor(cc.lastLocalBalanceMsat / 1000)
+                : 0;
+
+            // Cooperative closes: show as pending for 10 minutes
+            if (isCoop) {
+                const ageSecs =
+                    Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
+                if (ageSecs > 10 * 60) continue;
+
+                pendingClosing.push({
+                    channel: {
+                        remote_pubkey: cc.counterpartyNodeId || '',
+                        channel_point: cc.fundingTxo_txid
+                            ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
+                            : '',
+                        capacity: (cc.channelCapacitySats || 0).toString(),
+                        local_balance: localBalanceSats.toString(),
+                        remote_balance: '0'
+                    },
+                    closing_txid: ''
+                });
                 continue;
+            }
 
-            const ageSecs =
-                Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
-            if (ageSecs > 10 * 60) continue;
-
-            pendingClosing.push({
-                channel: {
-                    remote_pubkey: cc.counterpartyNodeId || '',
-                    channel_point: '',
-                    capacity: (cc.channelCapacitySats || 0).toString(),
-                    local_balance: (cc.lastLocalBalanceMsat
-                        ? Math.floor(cc.lastLocalBalanceMsat / 1000)
-                        : 0
-                    ).toString(),
-                    remote_balance: '0'
-                },
-                closing_txid: ''
-            });
+            // Force closes with non-zero local balance but no balance
+            // entries: commitment tx may not have been broadcast yet
+            if (localBalanceSats > 0) {
+                pendingForceClosing.push({
+                    channel: {
+                        remote_pubkey: cc.counterpartyNodeId || '',
+                        channel_point: cc.fundingTxo_txid
+                            ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
+                            : '',
+                        capacity: (
+                            cc.channelCapacitySats || localBalanceSats
+                        ).toString(),
+                        local_balance: localBalanceSats.toString(),
+                        remote_balance: '0',
+                        pendingClose: true
+                    },
+                    blocks_til_maturity: 0,
+                    closing_txid: ''
+                });
+            }
         }
 
         return {
@@ -624,15 +651,12 @@ export default class EmbeddedLdkNode {
      * Channels still in active list or shown as pending are excluded.
      */
     getClosedChannels = async (): Promise<any> => {
-        const [channels, closedChannelList, balances, status] =
-            await Promise.all([
-                LdkNode.channel.listChannels(),
-                LdkNode.channel.listClosedChannels(),
-                LdkNode.node.listBalances(),
-                LdkNode.node.status()
-            ]);
+        const [channels, closedChannelList, balances] = await Promise.all([
+            LdkNode.channel.listChannels(),
+            LdkNode.channel.listClosedChannels(),
+            LdkNode.node.listBalances()
+        ]);
 
-        const currentBlockHeight = status.currentBestBlock_height;
         const activeChannelIds = new Set(channels.map((c) => c.channelId));
 
         // Collect balance entries by channelId for non-active channels
@@ -665,11 +689,36 @@ export default class EmbeddedLdkNode {
             ensureEntry(sb.channelId).sweepBalances.push(sb);
         }
 
+        console.log(
+            `LDK Node getClosedChannels: ${closedChannelList.length} closed channels, ` +
+                `${channelBalanceEntries.size} with balance entries, ` +
+                `lightningBalances: ${JSON.stringify(
+                    balances.lightningBalances
+                        .filter((lb) => lb.type !== 'claimableOnChannelClose')
+                        .map((lb) => ({
+                            channelId: lb.channelId,
+                            type: lb.type,
+                            amount: lb.amountSatoshis,
+                            source: lb.source
+                        }))
+                )}, ` +
+                `sweepBalances: ${JSON.stringify(
+                    balances.pendingBalancesFromChannelClosures.map((sb) => ({
+                        channelId: sb.channelId,
+                        type: sb.type,
+                        amount: sb.amountSatoshis
+                    }))
+                )}`
+        );
+
         const closedChannels: any[] = [];
 
         for (const cc of closedChannelList) {
             // Skip channels still in active list
             if (activeChannelIds.has(cc.channelId)) continue;
+
+            // Skip channels that never had a funding tx broadcast
+            if (!cc.fundingTxo_txid) continue;
 
             const isCoop = EmbeddedLdkNode.isCooperativeReason(
                 cc.closureReason
@@ -681,72 +730,52 @@ export default class EmbeddedLdkNode {
             const balEntry = channelBalanceEntries.get(cc.channelId);
             const hasBalanceEntries = !!balEntry;
 
+            const channelPoint = cc.fundingTxo_txid
+                ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
+                : 'unknown';
+            console.log(
+                `LDK Node getClosedChannels: channel=${cc.channelId}, ` +
+                    `channelPoint=${channelPoint}, ` +
+                    `isCoop=${isCoop}, hasBalances=${hasBalanceEntries}, ` +
+                    `reason=${cc.closureReason?.type}, ` +
+                    `lastLocalBalance=${cc.lastLocalBalanceMsat}, ` +
+                    `capacity=${cc.channelCapacitySats}, ` +
+                    `action=${
+                        hasBalanceEntries
+                            ? 'SKIP (pending)'
+                            : 'INCLUDE (closed)'
+                    }`
+            );
+
             if (isCoop && !hasBalanceEntries && ageSecs <= 10 * 60) {
                 continue; // Still showing as pending close
             }
 
-            // Skip channels still pending in balance entries
-            // (cooperative closes with pending balance → pending tab)
+            // Skip channels that still have outstanding balances — they
+            // belong in the pending tab until fully swept/confirmed
             if (hasBalanceEntries) {
-                const coopWithPendingBalance =
-                    balEntry!.lightningBalances.length > 0 &&
-                    balEntry!.lightningBalances.every(
-                        (lb) =>
-                            lb.type === 'claimableAwaitingConfirmations' &&
-                            lb.source === 'coopClose'
-                    );
-                if (coopWithPendingBalance) continue;
+                continue;
+            }
 
-                // Skip sweep-only channels with no confirmed sweeps
-                if (
-                    balEntry!.lightningBalances.length === 0 &&
-                    balEntry!.sweepBalances.length > 0 &&
-                    !balEntry!.sweepBalances.some(
-                        (s) => s.type === 'awaitingThresholdConfirmations'
-                    )
-                ) {
-                    continue;
-                }
+            // Force closes with non-zero local balance but no balance
+            // entries may have unbroadcast commitment transactions —
+            // keep them in pending until funds are recovered
+            if (
+                !isCoop &&
+                cc.lastLocalBalanceMsat &&
+                cc.lastLocalBalanceMsat > 0
+            ) {
+                continue;
             }
 
             // Calculate capacity and balance
-            const balanceSats = hasBalanceEntries
-                ? [
-                      ...balEntry!.lightningBalances,
-                      ...balEntry!.sweepBalances
-                  ].reduce((sum, b) => sum + b.amountSatoshis, 0)
-                : cc.lastLocalBalanceMsat
+            const balanceSats = cc.lastLocalBalanceMsat
                 ? Math.floor(cc.lastLocalBalanceMsat / 1000)
                 : 0;
 
             const capacitySats = cc.channelCapacitySats || balanceSats;
 
-            const closingTxid = hasBalanceEntries
-                ? balEntry!.sweepBalances.find((s) => s.latestSpendingTxid)
-                      ?.latestSpendingTxid || ''
-                : '';
-
-            // Calculate blocks til maturity from balance data
-            let blocksTilMaturity = 0;
-            if (!isCoop && hasBalanceEntries) {
-                for (const lb of balEntry!.lightningBalances) {
-                    if (
-                        lb.type === 'claimableAwaitingConfirmations' &&
-                        lb.confirmationHeight != null
-                    ) {
-                        const remaining =
-                            lb.confirmationHeight - currentBlockHeight;
-                        if (remaining > blocksTilMaturity) {
-                            blocksTilMaturity = remaining;
-                        }
-                    }
-                }
-            }
-
-            const hasTimelock = blocksTilMaturity > 0;
-
-            // Force closes with pending timelock belong in pending list
-            if (hasTimelock) continue;
+            const closingTxid = '';
 
             const closeType = isCoop ? 'COOPERATIVE_CLOSE' : 'FORCE_CLOSE';
 
@@ -762,7 +791,10 @@ export default class EmbeddedLdkNode {
                 close_type: closeType,
                 closing_txid: closingTxid,
                 closing_tx_hash: closingTxid,
-                forceClose: !isCoop,
+                // Only mark as forceClose if there are pending balances
+                // (handled in pending list). Fully settled channels in the
+                // closed list should not show force-close UI indicators.
+                forceClose: false,
                 blocks_til_maturity: 0,
                 time_locked_balance: '0'
             });

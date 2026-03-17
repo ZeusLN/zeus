@@ -242,7 +242,12 @@ export default class ChannelsPane extends React.PureComponent<
                 return Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
-            } else if (item.pendingClose || item.forceClose || item.closing) {
+            } else if (item.pendingClose || item.closing) {
+                return Status.Closing;
+            } else if (
+                item.forceClose &&
+                channelsType !== ChannelsType.Closed
+            ) {
                 return Status.Closing;
             } else {
                 return Status.Offline;
@@ -339,7 +344,8 @@ export default class ChannelsPane extends React.PureComponent<
                         status={getStatus()}
                         pendingHTLCs={closedItem?.pending_htlcs?.length > 0}
                         pendingTimelock={
-                            closedItem.forceClose
+                            closedItem.forceClose &&
+                            closedItem.blocks_til_maturity > 0
                                 ? forceCloseTimeLabel(
                                       closedItem.blocks_til_maturity
                                   )
@@ -368,7 +374,7 @@ export default class ChannelsPane extends React.PureComponent<
                     status={getStatus()}
                     pendingHTLCs={item?.pending_htlcs?.length > 0}
                     pendingTimelock={
-                        item.forceClose
+                        item.forceClose && item.blocks_til_maturity > 0
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
                             : undefined
                     }
