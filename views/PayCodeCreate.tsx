@@ -153,7 +153,9 @@ export default class PayCodeCreateView extends React.Component<
                                     singleUse
                                 }).then((result) => {
                                     if (result) {
-                                        navigation.pop();
+                                        navigation.replace('PayCode', {
+                                            payCode: result
+                                        });
                                     }
                                 });
                             }}
