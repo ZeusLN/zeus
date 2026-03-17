@@ -966,16 +966,51 @@ export default class EmbeddedLdkNode {
             );
         }
 
-        if (forceClose) {
-            await LdkNode.channel.forceCloseChannel({
-                userChannelId: channel.userChannelId,
-                counterpartyNodeId: channel.counterpartyNodeId
-            });
-        } else {
-            await LdkNode.channel.closeChannel({
-                userChannelId: channel.userChannelId,
-                counterpartyNodeId: channel.counterpartyNodeId
-            });
+        console.log(
+            `LDK Node closeChannel: forceClose=${forceClose}, ` +
+                `peer=${channel.counterpartyNodeId}, ` +
+                `isUsable=${channel.isUsable}, ` +
+                `isChannelReady=${channel.isChannelReady}, ` +
+                `channelId=${channel.userChannelId}`
+        );
+
+        // Subscribe to the channelClosed event before initiating close
+        // so we can log the closure reason
+        const unsubscribe = this.subscribeToEvents((event: LdkNodeEvent) => {
+            if (
+                event.type === 'channelClosed' &&
+                event.userChannelId === channel.userChannelId
+            ) {
+                console.log(
+                    `LDK Node channelClosed event: ` +
+                        `reason=${JSON.stringify(event.reason)}, ` +
+                        `channelId=${event.userChannelId}`
+                );
+                unsubscribe();
+            }
+        });
+
+        try {
+            if (forceClose) {
+                await LdkNode.channel.forceCloseChannel({
+                    userChannelId: channel.userChannelId,
+                    counterpartyNodeId: channel.counterpartyNodeId
+                });
+            } else {
+                await LdkNode.channel.closeChannel({
+                    userChannelId: channel.userChannelId,
+                    counterpartyNodeId: channel.counterpartyNodeId
+                });
+            }
+            console.log(
+                `LDK Node closeChannel: ${
+                    forceClose ? 'force' : 'cooperative'
+                } close request accepted`
+            );
+        } catch (e: any) {
+            unsubscribe();
+            console.error(`LDK Node closeChannel: error: ${e?.message || e}`);
+            throw e;
         }
 
         return { success: true };
