@@ -287,7 +287,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     }
 
     async componentDidUpdate(
-        _: Readonly<SwapProps>,
+        prevProps: Readonly<SwapProps>,
         prevState: Readonly<SwapState>
     ): Promise<void> {
         const {
@@ -299,6 +299,16 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             FiatStore
         } = this.props;
         const { settings } = SettingsStore;
+
+        // Reset paramsProcessed when route params change
+        if (
+            this.state.paramsProcessed &&
+            route.params &&
+            prevProps.route.params !== route.params
+        ) {
+            this.setState({ paramsProcessed: false });
+            return;
+        }
 
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
