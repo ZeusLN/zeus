@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { RefreshControl, StyleSheet, ScrollView, View } from 'react-native';
+import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -7,8 +8,11 @@ import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Screen from '../components/Screen';
+import Text from '../components/Text';
 
 import { version } from '../package.json';
+import BackendUtils from '../utils/BackendUtils';
+import { getButtonGroupStyles } from '../utils/buttonGroupStyles';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
@@ -24,22 +28,64 @@ interface NodeInfoProps {
     CashuStore: CashuStore;
 }
 
+interface NodeInfoState {
+    selectedIndex: number;
+}
+
 @inject('NodeInfoStore', 'SettingsStore', 'CashuStore')
 @observer
-export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
+export default class NodeInfo extends React.Component<
+    NodeInfoProps,
+    NodeInfoState
+> {
+    state = {
+        selectedIndex: 0
+    };
+
+    networkInfoFields = [
+        {
+            key: 'num_channels',
+            labelKey: 'views.NetworkInfo.numChannels',
+            format: numberWithCommas
+        },
+        {
+            key: 'num_nodes',
+            labelKey: 'views.NetworkInfo.numNodes',
+            format: numberWithCommas
+        },
+        {
+            key: 'num_zombie_chans',
+            labelKey: 'views.NetworkInfo.numZombieChannels',
+            format: numberWithCommas
+        },
+        { key: 'graph_diameter', labelKey: 'views.NetworkInfo.graphDiameter' },
+        {
+            key: 'avg_out_degree',
+            labelKey: 'views.NetworkInfo.averageOutDegree'
+        },
+        { key: 'max_out_degree', labelKey: 'views.NetworkInfo.maxOutDegree' }
+    ];
+
     componentDidMount() {
         const { NodeInfoStore } = this.props;
         NodeInfoStore.getNodeInfo();
+        if (BackendUtils.supportsNetworkInfo()) {
+            NodeInfoStore.getNetworkInfo();
+        }
     }
 
     render() {
         const { navigation, NodeInfoStore, SettingsStore, CashuStore } =
             this.props;
-        const { nodeInfo } = NodeInfoStore;
+        const { selectedIndex } = this.state;
+        const { nodeInfo, networkInfo, loading } = NodeInfoStore;
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const { selectedMintPubkey } = CashuStore;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
+
+        const showNetworkInfo = BackendUtils.supportsNetworkInfo();
+        const groupStyles = getButtonGroupStyles();
 
         const URIs = (props: { uris: Array<string> }) => {
             return (
@@ -170,31 +216,100 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
             </React.Fragment>
         );
 
+        const NetworkInfoView = () => (
+            <React.Fragment>
+                {this.networkInfoFields.map(({ key, labelKey, format }) => {
+                    const value = networkInfo[key as keyof typeof networkInfo];
+                    if (value != null && value !== 0) {
+                        return (
+                            <KeyValue
+                                key={key}
+                                keyValue={localeString(labelKey)}
+                                value={format ? format(value) : value}
+                            />
+                        );
+                    }
+                    return null;
+                })}
+            </React.Fragment>
+        );
+
+        const buttonElement = (title: string, index: number) => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        selectedIndex === index
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {title}
+            </Text>
+        );
+
+        const nodeInfoButton = () =>
+            buttonElement(localeString('views.NodeInfo.title'), 0);
+        const networkInfoButton = () =>
+            buttonElement(localeString('views.NetworkInfo.title'), 1);
+
+        const buttons = [{ element: nodeInfoButton }];
+        if (showNetworkInfo) {
+            buttons.push({ element: networkInfoButton });
+        }
+
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
-                    centerComponent={{
-                        text: localeString('views.NodeInfo.title'),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }
-                    }}
+                    centerComponent={
+                        showNetworkInfo
+                            ? undefined
+                            : {
+                                  text: localeString('views.NodeInfo.title'),
+                                  style: {
+                                      color: themeColor('text'),
+                                      fontFamily: 'PPNeueMontreal-Book'
+                                  }
+                              }
+                    }
                     navigation={navigation}
                 />
+
+                {showNetworkInfo && (
+                    <View style={styles.tabContainer}>
+                        <ButtonGroup
+                            onPress={(index: number) => {
+                                this.setState({ selectedIndex: index });
+                            }}
+                            selectedIndex={selectedIndex}
+                            buttons={buttons}
+                            selectedButtonStyle={
+                                groupStyles.selectedButtonStyle
+                            }
+                            containerStyle={groupStyles.containerStyle}
+                            innerBorderStyle={groupStyles.innerBorderStyle}
+                        />
+                    </View>
+                )}
 
                 <ScrollView
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                     refreshControl={
                         <RefreshControl
-                            refreshing={NodeInfoStore.loading}
-                            onRefresh={() => NodeInfoStore.getNodeInfo()}
+                            refreshing={loading}
+                            onRefresh={() => {
+                                NodeInfoStore.getNodeInfo();
+                                if (showNetworkInfo) {
+                                    NodeInfoStore.getNetworkInfo();
+                                }
+                            }}
                         />
                     }
                 >
-                    <NodeInfoView />
+                    {selectedIndex === 0 && <NodeInfoView />}
+                    {selectedIndex === 1 && <NetworkInfoView />}
                 </ScrollView>
             </Screen>
         );
@@ -205,5 +320,8 @@ const styles = StyleSheet.create({
     content: {
         paddingLeft: 20,
         paddingRight: 20
+    },
+    tabContainer: {
+        paddingHorizontal: 20
     }
 });
