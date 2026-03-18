@@ -290,7 +290,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
         const HistoryBtn = () => (
             <TouchableOpacity
-                style={{ marginTop: -10 }}
                 onPress={() => {
                     navigation.navigate('OrdersPane');
                 }}
@@ -298,15 +297,15 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             >
                 <History
                     fill={themeColor('text')}
-                    width="40"
-                    height="40"
+                    width="30"
+                    height="30"
                     style={{ alignSelf: 'center' }}
                 />
             </TouchableOpacity>
         );
 
         const SettingsBtn = () => (
-            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
+            <TouchableOpacity style={{ marginRight: 10 }}>
                 <Icon
                     name="settings"
                     onPress={() => {
@@ -314,7 +313,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"
-                    size={33}
+                    size={30}
                 />
             </TouchableOpacity>
         );
@@ -400,12 +399,16 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     leftComponent="Back"
                     navigation={navigation}
                     rightComponent={
-                        <Row>
-                            <SettingsBtn />
-                            {!LSPStore.loadingLSPS1 && !LSPStore.error && (
-                                <HistoryBtn />
-                            )}
-                        </Row>
+                        LSPStore.loadingLSPS1 ||
+                        (createOrderResponse &&
+                            Object.keys(createOrderResponse).length > 0 &&
+                            result &&
+                            payment) ? undefined : (
+                            <Row>
+                                <SettingsBtn />
+                                {!LSPStore.error && <HistoryBtn />}
+                            </Row>
+                        )
                     }
                 />
                 <View style={{ paddingHorizontal: 18 }}>

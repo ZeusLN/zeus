@@ -160,7 +160,6 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
 
         const HistoryBtn = () => (
             <TouchableOpacity
-                style={{ marginTop: -10 }}
                 onPress={() => {
                     navigation.navigate('OrdersPane');
                 }}
@@ -168,15 +167,15 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
             >
                 <History
                     fill={themeColor('text')}
-                    width="40"
-                    height="40"
+                    width="30"
+                    height="30"
                     style={{ alignSelf: 'center' }}
                 />
             </TouchableOpacity>
         );
 
         const SettingsBtn = () => (
-            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
+            <TouchableOpacity style={{ marginRight: 10 }}>
                 <Icon
                     name="settings"
                     onPress={() => {
@@ -184,7 +183,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                     }}
                     color={themeColor('text')}
                     underlayColor="transparent"
-                    size={33}
+                    size={30}
                 />
             </TouchableOpacity>
         );
@@ -285,12 +284,17 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                     leftComponent="Back"
                     navigation={navigation}
                     rightComponent={
-                        <Row>
-                            <SettingsBtn />
-                            {!LSPStore.loadingLSPS7 && !LSPStore.error && (
-                                <HistoryBtn />
-                            )}
-                        </Row>
+                        LSPStore.loadingLSPS7 ||
+                        (createExtensionOrderResponse &&
+                            Object.keys(createExtensionOrderResponse).length >
+                                0 &&
+                            result &&
+                            payment) ? undefined : (
+                            <Row>
+                                <SettingsBtn />
+                                {!LSPStore.error && <HistoryBtn />}
+                            </Row>
+                        )
                     }
                     onBack={() => LSPStore.resetLSPS7Data()}
                 />
