@@ -108,10 +108,7 @@ export default class AmountInput extends React.Component<
         const { amount, forceUnit, onAmountChange } = this.props;
         if (amount !== prevProps.amount || forceUnit !== prevProps.forceUnit) {
             if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
-                const currentSatAmount = getSatAmount(
-                    amount || '',
-                    prevProps.forceUnit
-                );
+                const currentSatAmount = getSatAmount(amount || '', forceUnit);
                 this.setState({ satAmount: currentSatAmount });
 
                 onAmountChange(currentSatAmount.toString(), currentSatAmount);
