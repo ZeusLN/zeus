@@ -366,7 +366,10 @@ export default class WalletConfiguration extends React.Component<
         // When returning from SetWalletPicture, only update the photo
         // to avoid overwriting unsaved edits (e.g. nickname) from node
         if (route.params.photo && !route.params.node) {
-            this.setState({ photo: route.params.photo });
+            this.setState({
+                photo: route.params.photo,
+                saved: route.params.saved ?? this.state.saved
+            });
             return;
         }
 
