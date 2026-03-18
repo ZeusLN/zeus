@@ -420,13 +420,28 @@ export default class EmbeddedLdkNode {
             channelLightningBalances.set(lb.channelId, list);
         }
 
-        // Collect sweep entries by channelId for non-active channels
+        // Collect sweep entries by channelId for non-active channels.
+        // Collect sweep entries by channelId for non-active channels.
+        // Track channels whose sweeps have fully confirmed on-chain so
+        // they can be moved to the closed list instead of pending.
         const channelSweeps = new Map<
             string,
             import('../ldknode/LdkNode.d').PendingSweepBalance[]
         >();
+        const confirmedSweepChannelIds = new Set<string>();
         for (const sb of balances.pendingBalancesFromChannelClosures) {
             if (!sb.channelId || activeChannelIds.has(sb.channelId)) continue;
+
+            // Drop sweeps that have already confirmed on-chain
+            if (
+                sb.type === 'awaitingThresholdConfirmations' &&
+                sb.confirmationHeight != null &&
+                sb.confirmationHeight <= currentBlockHeight
+            ) {
+                confirmedSweepChannelIds.add(sb.channelId);
+                continue;
+            }
+
             const list = channelSweeps.get(sb.channelId) || [];
             list.push(sb);
             channelSweeps.set(sb.channelId, list);
@@ -610,8 +625,12 @@ export default class EmbeddedLdkNode {
             }
 
             // Force closes with non-zero local balance but no balance
-            // entries: commitment tx may not have been broadcast yet
-            if (localBalanceSats > 0) {
+            // entries: commitment tx may not have been broadcast yet.
+            // Skip if sweeps already confirmed — funds are recovered.
+            if (
+                localBalanceSats > 0 &&
+                !confirmedSweepChannelIds.has(cc.channelId)
+            ) {
                 pendingForceClosing.push({
                     channel: {
                         remote_pubkey: cc.counterpartyNodeId || '',
@@ -651,12 +670,15 @@ export default class EmbeddedLdkNode {
      * Channels still in active list or shown as pending are excluded.
      */
     getClosedChannels = async (): Promise<any> => {
-        const [channels, closedChannelList, balances] = await Promise.all([
-            LdkNode.channel.listChannels(),
-            LdkNode.channel.listClosedChannels(),
-            LdkNode.node.listBalances()
-        ]);
+        const [channels, closedChannelList, balances, status] =
+            await Promise.all([
+                LdkNode.channel.listChannels(),
+                LdkNode.channel.listClosedChannels(),
+                LdkNode.node.listBalances(),
+                LdkNode.node.status()
+            ]);
 
+        const currentBlockHeight = status.currentBestBlock_height;
         const activeChannelIds = new Set(channels.map((c) => c.channelId));
 
         // Collect balance entries by channelId for non-active channels
@@ -684,8 +706,20 @@ export default class EmbeddedLdkNode {
             ensureEntry(lb.channelId).lightningBalances.push(lb);
         }
 
+        const confirmedSweepChannelIds = new Set<string>();
         for (const sb of balances.pendingBalancesFromChannelClosures) {
             if (!sb.channelId || activeChannelIds.has(sb.channelId)) continue;
+
+            // Drop sweeps that have already confirmed on-chain
+            if (
+                sb.type === 'awaitingThresholdConfirmations' &&
+                sb.confirmationHeight != null &&
+                sb.confirmationHeight <= currentBlockHeight
+            ) {
+                confirmedSweepChannelIds.add(sb.channelId);
+                continue;
+            }
+
             ensureEntry(sb.channelId).sweepBalances.push(sb);
         }
 
@@ -720,11 +754,13 @@ export default class EmbeddedLdkNode {
 
             // Force closes with non-zero local balance but no balance
             // entries may have unbroadcast commitment transactions —
-            // keep them in pending until funds are recovered
+            // keep them in pending until funds are recovered.
+            // Allow through if sweeps already confirmed on-chain.
             if (
                 !isCoop &&
                 cc.lastLocalBalanceMsat &&
-                cc.lastLocalBalanceMsat > 0
+                cc.lastLocalBalanceMsat > 0 &&
+                !confirmedSweepChannelIds.has(cc.channelId)
             ) {
                 continue;
             }
