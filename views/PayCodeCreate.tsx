@@ -20,11 +20,13 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import OffersStore from '../stores/OffersStore';
+import SettingsStore from '../stores/SettingsStore';
 
 interface PayCodeCreateProps {
     navigation: NativeStackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     OffersStore: OffersStore;
+    SettingsStore: SettingsStore;
 }
 
 interface PayCodeCreateState {
@@ -33,7 +35,7 @@ interface PayCodeCreateState {
     singleUse: boolean;
 }
 
-@inject('ChannelsStore', 'OffersStore')
+@inject('ChannelsStore', 'OffersStore', 'SettingsStore')
 @observer
 export default class PayCodeCreateView extends React.Component<
     PayCodeCreateProps,
@@ -54,10 +56,13 @@ export default class PayCodeCreateView extends React.Component<
     }
 
     render() {
-        const { navigation, ChannelsStore, OffersStore } = this.props;
+        const { navigation, ChannelsStore, OffersStore, SettingsStore } =
+            this.props;
         const { description, label, singleUse } = this.state;
         const { loading, error_msg } = OffersStore;
         const hasOpenChannels = ChannelsStore.channels.length > 0;
+        const supportsLabels =
+            SettingsStore!.implementation !== 'embedded-ldk-node';
 
         return (
             <Screen>
@@ -103,24 +108,28 @@ export default class PayCodeCreateView extends React.Component<
                         locked={loading}
                     />
 
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {`${localeString(
-                            'views.PayCode.internalLabel'
-                        )} (${localeString('general.optional')})`}
-                    </Text>
-                    <TextInput
-                        placeholder={'My pay code'}
-                        value={label}
-                        onChangeText={(text: string) =>
-                            this.setState({ label: text })
-                        }
-                        locked={loading}
-                    />
+                    {supportsLabels && (
+                        <>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {`${localeString(
+                                    'views.PayCode.internalLabel'
+                                )} (${localeString('general.optional')})`}
+                            </Text>
+                            <TextInput
+                                placeholder={'My pay code'}
+                                value={label}
+                                onChangeText={(text: string) =>
+                                    this.setState({ label: text })
+                                }
+                                locked={loading}
+                            />
+                        </>
+                    )}
 
                     <>
                         <Text
@@ -154,7 +163,8 @@ export default class PayCodeCreateView extends React.Component<
                                 }).then((result) => {
                                     if (result) {
                                         navigation.replace('PayCode', {
-                                            payCode: result
+                                            payCode: result,
+                                            startOnQrTab: true
                                         });
                                     }
                                 });
