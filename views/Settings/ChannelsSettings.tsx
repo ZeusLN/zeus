@@ -1,11 +1,12 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { StyleSheet, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -129,6 +130,9 @@ export default class ChannelsSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     fontSize: 17
                                 }}
+                                infoModalText={localeString(
+                                    'views.OpenChannel.announceChannelExplainer'
+                                )}
                             >
                                 {localeString(
                                     'views.OpenChannel.announceChannel'
@@ -165,6 +169,9 @@ export default class ChannelsSettings extends React.Component<
                                         color: themeColor('secondaryText'),
                                         fontSize: 17
                                     }}
+                                    infoModalText={localeString(
+                                        'views.OpenChannel.scidAliasExplainer'
+                                    )}
                                 >
                                     {localeString(
                                         'views.OpenChannel.scidAlias'
@@ -203,6 +210,9 @@ export default class ChannelsSettings extends React.Component<
                                         color: themeColor('secondaryText'),
                                         fontSize: 17
                                     }}
+                                    infoModalText={localeString(
+                                        'views.OpenChannel.simpleTaprootChannelExplainer'
+                                    )}
                                 >
                                     {localeString(
                                         'views.OpenChannel.simpleTaprootChannel'
