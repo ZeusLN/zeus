@@ -1155,41 +1155,43 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     />
                                                 </>
                                             )}
-                                            <View
-                                                style={{
-                                                    flexDirection: 'row',
-                                                    justifyContent:
-                                                        'space-between',
-                                                    alignItems: 'center',
-                                                    marginVertical: 10
-                                                }}
-                                            >
-                                                <Text
+                                            {!isOlympus && (
+                                                <View
                                                     style={{
-                                                        fontSize: 16,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
+                                                        flexDirection: 'row',
+                                                        justifyContent:
+                                                            'space-between',
+                                                        alignItems: 'center',
+                                                        marginVertical: 10
                                                     }}
                                                 >
-                                                    {localeString(
-                                                        'views.OpenChannel.announceChannel'
-                                                    )}
-                                                </Text>
-                                                <Switch
-                                                    value={
-                                                        this.state
-                                                            .announceChannel
-                                                    }
-                                                    onValueChange={async () => {
-                                                        this.setState({
-                                                            announceChannel:
-                                                                !this.state
-                                                                    .announceChannel
-                                                        });
-                                                    }}
-                                                />
-                                            </View>
+                                                    <Text
+                                                        style={{
+                                                            fontSize: 16,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.OpenChannel.announceChannel'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={
+                                                            this.state
+                                                                .announceChannel
+                                                        }
+                                                        onValueChange={async () => {
+                                                            this.setState({
+                                                                announceChannel:
+                                                                    !this.state
+                                                                        .announceChannel
+                                                            });
+                                                        }}
+                                                    />
+                                                </View>
+                                            )}
                                         </>
                                     )}
                                 </ScrollView>
