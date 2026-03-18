@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
-import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -51,24 +50,6 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
 
         const zeusPayPlus = !!zeusPlusExpiresAt;
 
-        const InfoButton = () => (
-            <View style={{ marginLeft: 15, marginRight: 15 }}>
-                <Icon
-                    name="info"
-                    onPress={() => {
-                        if (lightningAddressType === 'zaplocker') {
-                            navigation.navigate('ZaplockerInfo');
-                        } else if (lightningAddressType === 'cashu') {
-                            navigation.navigate('CashuLightningAddressInfo');
-                        }
-                    }}
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={35}
-                />
-            </View>
-        );
-
         const SettingsButton = () => (
             <TouchableOpacity
                 onPress={() => {
@@ -101,7 +82,6 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                         rightComponent={
                             <Row>
                                 {loading && <LoadingIndicator size={35} />}
-                                {!loading && <InfoButton />}
                                 {!loading && <SettingsButton />}
                             </Row>
                         }
