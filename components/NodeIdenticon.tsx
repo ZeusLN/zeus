@@ -8,8 +8,6 @@ import PrivacyUtils from './../utils/PrivacyUtils';
 
 const hash = require('object-hash');
 
-const IDENTICON_TITLE_MAX_LENGTH = 24;
-
 export const NodeTitle = (selectedNode: any, overrideSensitivity = false) => {
     const displayName =
         selectedNode && selectedNode.nickname
@@ -38,23 +36,32 @@ export default function NodeIdenticon({
     width?: number;
     rounded?: boolean;
 }) {
-    const fullTitle = NodeTitle(selectedNode, true);
-    const title =
-        fullTitle.length > IDENTICON_TITLE_MAX_LENGTH
-            ? fullTitle.substring(0, IDENTICON_TITLE_MAX_LENGTH - 3) + '...'
-            : fullTitle;
+    // Build hash from stable connection identity fields so the identicon
+    // doesn't change when the user edits the nickname.
+    const stableIdentity = (() => {
+        if (!selectedNode) {
+            return 'unknown';
+        }
+        switch (selectedNode.implementation) {
+            case 'lndhub':
+                return `lndhub-${selectedNode.lndhubUrl || ''}-${
+                    selectedNode.username || ''
+                }`;
+            case 'nostr-wallet-connect':
+                return `nwc-${selectedNode.nostrWalletConnectUrl || ''}`;
+            case 'embedded-lnd':
+                return `embedded-lnd-${selectedNode.lndDir || 'lnd'}`;
+            default:
+                return selectedNode.url
+                    ? `${selectedNode.implementation || ''}-${selectedNode.url}`
+                    : `${selectedNode.implementation || ''}-${
+                          selectedNode.host || ''
+                      }:${selectedNode.port || ''}`;
+        }
+    })();
 
     const data = new Identicon(
-        hash.sha1(
-            selectedNode && selectedNode.implementation === 'lndhub'
-                ? `${title}-${selectedNode.username}`
-                : selectedNode &&
-                  selectedNode.implementation === 'nostr-wallet-connect'
-                ? `${title}-${selectedNode.nostrWalletConnectUrl}`
-                : selectedNode && selectedNode.implementation === 'embedded-lnd'
-                ? `${title}-${selectedNode.lndDir || 'lnd'}`
-                : title
-        ),
+        hash.sha1(stableIdentity),
         // @ts-ignore:next-line
         {
             background: [255, 255, 255, 255],
