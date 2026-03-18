@@ -157,7 +157,6 @@
 		AB5FA5F2F8004F38A35818D3 /* pay-z-white.png in Resources */ = {isa = PBXBuildFile; fileRef = 1821EDAC9D344E9E881EC74A /* pay-z-white.png */; };
 		ABBA20F3E76346C1888BE06B /* MatiSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = 7D2BC13A28374EBDA28A2CC1 /* MatiSvg.tsx */; };
 		ACEE29D4A83C4D07B0E88125 /* Nostrich_valid.svg in Resources */ = {isa = PBXBuildFile; fileRef = 91CF715432FA4467B3DB5F35 /* Nostrich_valid.svg */; };
-		AD4FA10D0AD74C48A492F993 /* Network.svg in Resources */ = {isa = PBXBuildFile; fileRef = 788BB1C90868496CA6F03853 /* Network.svg */; };
 		ADFACC45C68D482193A35A4D /* Clipboard.svg in Resources */ = {isa = PBXBuildFile; fileRef = F1ED6726DC304770BA964FB5 /* Clipboard.svg */; };
 		B12550C3F0244591990C7D61 /* Leaving.svg in Resources */ = {isa = PBXBuildFile; fileRef = 7071A1E9C60D4667809E960D /* Leaving.svg */; };
 		B12893E7C91340B081437504 /* LightningSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = 0A0C533C25024E78B08A6F4E /* LightningSvg.tsx */; };
@@ -559,7 +558,6 @@
 		74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
 		76A3D509B7E14B149257865C /* Olympus.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Olympus.svg; path = ../assets/images/SVG/Olympus.svg; sourceTree = "<group>"; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
-		788BB1C90868496CA6F03853 /* Network.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Network.svg; path = ../assets/images/SVG/Network.svg; sourceTree = "<group>"; };
 		78C398B01ACF4ADC00677621 /* RCTLinking.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = RCTLinking.xcodeproj; path = "../node_modules/react-native/Libraries/LinkingIOS/RCTLinking.xcodeproj"; sourceTree = "<group>"; };
 		7A83D58A26374236A9FD26F5 /* OnChainSvg.tsx */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = OnChainSvg.tsx; path = ../assets/images/SVG/DynamicSVG/OnChainSvg.tsx; sourceTree = "<group>"; };
 		7ABECF711E9D4F5AB912E1C0 /* Copy.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Copy.svg; path = ../assets/images/SVG/Copy.svg; sourceTree = "<group>"; };
@@ -1073,7 +1071,6 @@
 				18E41ED7967D4EC7B6CCC6C4 /* Lightning Bolt.svg */,
 				8F39D8AB5C2348B699E16A96 /* Mnemonic.svg */,
 				3C37D42473A54AD981B549B4 /* NFC.svg */,
-				788BB1C90868496CA6F03853 /* Network.svg */,
 				6934A0BCDAD94002BA8F840A /* Save.svg */,
 				B813A99762CC4756A18E0C20 /* Skull.svg */,
 				259C6F30DC5D40FF9E5DF839 /* Sweep.svg */,
@@ -1613,7 +1610,6 @@
 				338A1C5490BD4AD8A3355DDB /* Lightning Bolt.svg in Resources */,
 				0D6056C7AD2B42AE97EF31CA /* Mnemonic.svg in Resources */,
 				B20A92EA4E82493CB6D1A2F0 /* NFC.svg in Resources */,
-				AD4FA10D0AD74C48A492F993 /* Network.svg in Resources */,
 				F9767258AD2F4256A0668218 /* Save.svg in Resources */,
 				F15BCD255F194C84973AB51D /* Skull.svg in Resources */,
 				593DA4FEB1FE4C1CA721DDB1 /* Sweep.svg in Resources */,

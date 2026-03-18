@@ -24,7 +24,6 @@ import NodeOn from '../assets/images/SVG/Node On.svg';
 import Olympus from '../assets/images/SVG/Olympus.svg';
 import KeyIcon from '../assets/images/SVG/Key.svg';
 import UpgradeIcon from '../assets/images/SVG/Upgrade.svg';
-import NetworkIcon from '../assets/images/SVG/Network.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
@@ -475,48 +474,18 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.NodeInfo.title')}
+                                    {BackendUtils.supportsNetworkInfo()
+                                        ? `${localeString(
+                                              'general.node'
+                                          )} & ${localeString(
+                                              'views.NetworkInfo.title'
+                                          )}`
+                                        : localeString('views.NodeInfo.title')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
-
-                            {BackendUtils.supportsNetworkInfo() && (
-                                <>
-                                    <View style={styles.separationLine} />
-
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('NetworkInfo')
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <NetworkIcon
-                                                fill={themeColor('text')}
-                                                width={24}
-                                                height={24}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.NetworkInfo.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                </>
-                            )}
                         </View>
                     )}
 
