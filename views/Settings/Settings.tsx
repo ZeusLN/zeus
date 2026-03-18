@@ -286,48 +286,50 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsChannelManagement() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('ChannelsSettings')
-                                }
+                    {selectedNode &&
+                        BackendUtils.supportsChannelManagement() &&
+                        implementation !== 'embedded-ldk-node' && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
                             >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <ChannelsIcon
-                                            fill={themeColor('text')}
-                                            width={27}
-                                            height={27}
-                                        />
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('ChannelsSettings')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <ChannelsIcon
+                                                fill={themeColor('text')}
+                                                width={27}
+                                                height={27}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Wallet.Wallet.channels'
+                                            )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
                                     </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Wallet.Wallet.channels'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode &&
                         !BackendUtils.isLNDBased() &&

@@ -1075,6 +1075,10 @@ export default class ChannelsStore {
         if (this.settingsStore.implementation !== 'embedded-ldk-node') {
             delete request.host;
         }
+        // LDK Node doesn't support announced channels - always force private
+        if (this.settingsStore.implementation === 'embedded-ldk-node') {
+            request.privateChannel = true;
+        }
         if (!multipleChans) delete request.additionalChannels;
 
         this.peerSuccess = false;

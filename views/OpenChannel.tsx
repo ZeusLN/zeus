@@ -978,30 +978,35 @@ export default class OpenChannel extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                        <>
-                                            <Text
-                                                style={{
-                                                    top: 20,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.announceChannel'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={!privateChannel}
-                                                onValueChange={() =>
-                                                    this.setState({
-                                                        privateChannel:
-                                                            !privateChannel
-                                                    })
-                                                }
-                                                disabled={simpleTaprootChannel}
-                                            />
-                                        </>
+                                        {implementation !==
+                                            'embedded-ldk-node' && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.announceChannel'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={!privateChannel}
+                                                    onValueChange={() =>
+                                                        this.setState({
+                                                            privateChannel:
+                                                                !privateChannel
+                                                        })
+                                                    }
+                                                    disabled={
+                                                        simpleTaprootChannel
+                                                    }
+                                                />
+                                            </>
+                                        )}
 
                                         {BackendUtils.isLNDBased() && (
                                             <>
