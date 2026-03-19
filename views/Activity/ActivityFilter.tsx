@@ -713,23 +713,9 @@ export default class ActivityFilter extends React.Component<
                                             onToggle={() =>
                                                 this.toggleSection('services')
                                             }
-                                            containerStyle={{
-                                                borderRadius: 0,
-                                                overflow: 'visible',
-                                                marginBottom: 0,
-                                                shadowOpacity: 0,
-                                                shadowRadius: 0,
-                                                elevation: 0
-                                            }}
-                                            headerStyle={{
-                                                paddingHorizontal: 0,
-                                                paddingVertical: 0
-                                            }}
-                                            bodyContentStyle={{
-                                                paddingHorizontal: 0,
-                                                paddingTop: 0,
-                                                paddingBottom: 0
-                                            }}
+                                            variant="flat"
+                                            spacing="none"
+                                            bodyPadded={false}
                                             renderHeader={(isOpen) => (
                                                 <ListItem
                                                     containerStyle={{
@@ -839,24 +825,11 @@ export default class ActivityFilter extends React.Component<
                                                                                 'swaps'
                                                                             )
                                                                         }
-                                                                        containerStyle={{
-                                                                            borderRadius: 0,
-                                                                            overflow:
-                                                                                'visible',
-                                                                            marginBottom: 0,
-                                                                            shadowOpacity: 0,
-                                                                            shadowRadius: 0,
-                                                                            elevation: 0
-                                                                        }}
-                                                                        headerStyle={{
-                                                                            paddingHorizontal: 0,
-                                                                            paddingVertical: 0
-                                                                        }}
-                                                                        bodyContentStyle={{
-                                                                            paddingHorizontal: 0,
-                                                                            paddingTop: 0,
-                                                                            paddingBottom: 0
-                                                                        }}
+                                                                        variant="flat"
+                                                                        spacing="none"
+                                                                        bodyPadded={
+                                                                            false
+                                                                        }
                                                                         renderHeader={(
                                                                             isOpen
                                                                         ) => (
@@ -989,24 +962,11 @@ export default class ActivityFilter extends React.Component<
                                                                                                         subItem.section
                                                                                                     )
                                                                                                 }
-                                                                                                containerStyle={{
-                                                                                                    borderRadius: 0,
-                                                                                                    overflow:
-                                                                                                        'visible',
-                                                                                                    marginBottom: 0,
-                                                                                                    shadowOpacity: 0,
-                                                                                                    shadowRadius: 0,
-                                                                                                    elevation: 0
-                                                                                                }}
-                                                                                                headerStyle={{
-                                                                                                    paddingHorizontal: 0,
-                                                                                                    paddingVertical: 0
-                                                                                                }}
-                                                                                                bodyContentStyle={{
-                                                                                                    paddingHorizontal: 0,
-                                                                                                    paddingTop: 0,
-                                                                                                    paddingBottom: 0
-                                                                                                }}
+                                                                                                variant="flat"
+                                                                                                spacing="none"
+                                                                                                bodyPadded={
+                                                                                                    false
+                                                                                                }
                                                                                                 renderHeader={(
                                                                                                     isOpen
                                                                                                 ) => (
@@ -1194,24 +1154,11 @@ export default class ActivityFilter extends React.Component<
                                                                             child.section as any
                                                                         )
                                                                     }
-                                                                    containerStyle={{
-                                                                        borderRadius: 0,
-                                                                        overflow:
-                                                                            'visible',
-                                                                        marginBottom: 0,
-                                                                        shadowOpacity: 0,
-                                                                        shadowRadius: 0,
-                                                                        elevation: 0
-                                                                    }}
-                                                                    headerStyle={{
-                                                                        paddingHorizontal: 0,
-                                                                        paddingVertical: 0
-                                                                    }}
-                                                                    bodyContentStyle={{
-                                                                        paddingHorizontal: 0,
-                                                                        paddingTop: 0,
-                                                                        paddingBottom: 0
-                                                                    }}
+                                                                    variant="flat"
+                                                                    spacing="none"
+                                                                    bodyPadded={
+                                                                        false
+                                                                    }
                                                                     renderHeader={(
                                                                         isOpen
                                                                     ) => (
