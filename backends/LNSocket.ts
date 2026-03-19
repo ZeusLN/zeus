@@ -6,27 +6,258 @@ import BigNumber from 'bignumber.js';
 import Base64Utils from '../utils/Base64Utils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import AddressUtils from '../utils/AddressUtils';
+import VersionUtils from '../utils/VersionUtils';
 
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
-import { settingsStore } from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/Stores';
 
-const parseHostPort = (host: string, defaultPort: number = 9735) => {
-    const parts = host.split(':');
-    if (parts.length === 2) {
+const calls = new Map<string, Promise<any>>();
+
+const parseHostPort = (hostInput: string, defaultPort: number = 9735) => {
+    if (!hostInput) {
         return {
-            host: parts[0],
-            port: parseInt(parts[1], 10) || defaultPort
+            host: '',
+            port: defaultPort
         };
     }
+
+    let normalized = hostInput.trim();
+
+    const atIndex = normalized.lastIndexOf('@');
+    if (atIndex !== -1) {
+        normalized = normalized.slice(atIndex + 1);
+    }
+
+    const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(normalized);
+    if (hasScheme) {
+        try {
+            const parsed = new URL(normalized);
+            const parsedPort = parsed.port
+                ? parseInt(parsed.port, 10)
+                : defaultPort;
+            return {
+                host: parsed.hostname,
+                port:
+                    Number.isFinite(parsedPort) && parsedPort > 0
+                        ? parsedPort
+                        : defaultPort
+            };
+        } catch (e) {
+            // Fall through to manual parsing.
+        }
+    }
+
+    const slashIndex = normalized.indexOf('/');
+    if (slashIndex !== -1) {
+        normalized = normalized.slice(0, slashIndex);
+    }
+
+    const bracketedIpv6 = normalized.match(/^\[([^\]]+)\](?::(\d+))?$/);
+    if (bracketedIpv6) {
+        const parsedPort = bracketedIpv6[2]
+            ? parseInt(bracketedIpv6[2], 10)
+            : defaultPort;
+        return {
+            host: bracketedIpv6[1],
+            port:
+                Number.isFinite(parsedPort) && parsedPort > 0
+                    ? parsedPort
+                    : defaultPort
+        };
+    }
+
+    const colonCount = (normalized.match(/:/g) || []).length;
+    if (colonCount === 1) {
+        const [parsedHost, parsedPortText] = normalized.split(':');
+        const parsedPort = parseInt(parsedPortText, 10);
+        return {
+            host: parsedHost,
+            port:
+                Number.isFinite(parsedPort) && parsedPort > 0
+                    ? parsedPort
+                    : defaultPort
+        };
+    }
+
     return {
-        host,
+        host: normalized,
         port: defaultPort
     };
 };
 
+const toNumber = (value: any): number => {
+    if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === 'bigint') {
+        return Number(value);
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.endsWith('msat') ? value.slice(0, -4) : value;
+        const parsed = Number(normalized);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    return 0;
+};
+
+const msatToSat = (value: any): number => toNumber(value) / 1000;
+
 export default class LnSocket {
+    private defaultTimeout: number = 30000;
     ln: any;
+
+    getHeaders = (rune: string): any => {
+        return {
+            Rune: rune
+        };
+    };
+
+    supports = (
+        minVersion: string,
+        eosVersion?: string,
+        minApiVersion?: string
+    ) => {
+        const { nodeInfo } = nodeInfoStore;
+        const { version, api_version } = nodeInfo;
+        const { isSupportedVersion } = VersionUtils;
+        if (minApiVersion) {
+            return (
+                isSupportedVersion(version, minVersion, eosVersion) &&
+                isSupportedVersion(api_version, minApiVersion)
+            );
+        }
+        return isSupportedVersion(version, minVersion, eosVersion);
+    };
+
+    clearCachedCalls = () => calls.clear();
+
+    restReq = async (
+        _headers: Headers | any,
+        url: string,
+        _method: any,
+        data?: any,
+        _certVerification?: boolean,
+        _useTor?: boolean,
+        timeout?: number
+    ) => {
+        const id = data ? `${url}${JSON.stringify(data)}` : url;
+        if (calls.has(id)) {
+            return calls.get(id);
+        }
+
+        const requestPromise = (async () => {
+            let route = url;
+            try {
+                const parsed = new URL(url);
+                route = `${parsed.pathname}${parsed.search}`;
+            } catch (_e) {
+                // Keep as-is when URL parsing fails.
+            }
+
+            const [pathPart, queryPart = ''] = route.split('?');
+            const methodRoute = pathPart
+                .replace(/^\/v1\//, '')
+                .replace(/^\//, '');
+            const rpcMethod =
+                methodRoute === 'decode' ? 'decodepay' : methodRoute;
+
+            const queryParams = queryPart
+                .split('&')
+                .filter(Boolean)
+                .reduce((acc: any, entry: string) => {
+                    const [rawKey, rawValue = ''] = entry.split('=');
+                    const key = decodeURIComponent(rawKey);
+                    const value = decodeURIComponent(rawValue);
+                    acc[key] = value;
+                    return acc;
+                }, {});
+
+            const params = {
+                ...(data || {}),
+                ...queryParams
+            };
+
+            return this.rpc(rpcMethod, params);
+        })();
+
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(
+                () => reject(new Error('Request timeout')),
+                timeout || this.defaultTimeout
+            );
+        });
+
+        const racePromise = Promise.race([requestPromise, timeoutPromise])
+            .then((result) => {
+                calls.delete(id);
+                return result;
+            })
+            .catch((error) => {
+                calls.delete(id);
+                throw error;
+            });
+
+        calls.set(id, racePromise);
+        return racePromise;
+    };
+
+    request = (
+        route: string,
+        method: string,
+        data?: any,
+        params?: any,
+        timeout?: number
+    ) => {
+        const { host, port, rune, certVerification, enableTor } = settingsStore;
+
+        if (params) {
+            route = `${route}?${Object.keys(params)
+                .map((key: string) => key + '=' + params[key])
+                .join('&')}`;
+        }
+
+        const headers: any = this.getHeaders(rune);
+        headers['Content-Type'] = 'application/json';
+
+        const url = this.getURL(host, port, route);
+
+        return this.restReq(
+            headers,
+            url,
+            method,
+            data,
+            certVerification,
+            enableTor,
+            timeout
+        );
+    };
+
+    getURL = (
+        host: string,
+        port: string | number,
+        route: string,
+        ws?: boolean
+    ) => {
+        const hostPath = host.includes('://') ? host : `https://${host}`;
+        let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
+
+        if (ws) {
+            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
+        }
+
+        if (baseUrl[baseUrl.length - 1] === '/') {
+            baseUrl = baseUrl.slice(0, -1);
+        }
+
+        return `${baseUrl}${route}`;
+    };
+
+    postRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'post', data, null, timeout);
 
     init = async () => {
         const { pubkey, host } = settingsStore;
@@ -215,27 +446,27 @@ export default class LnSocket {
                     channel_point: peer.funding_txid,
                     chan_id: peer.channel_id,
                     short_channel_id: peer.short_channel_id,
-                    capacity: Number(peer.total_msat / 1000).toString(),
-                    local_balance: Number(peer.to_us_msat / 1000).toString(),
-                    remote_balance: Number(
-                        (peer.total_msat - peer.to_us_msat) / 1000
+                    capacity: msatToSat(peer.total_msat).toString(),
+                    local_balance: msatToSat(peer.to_us_msat).toString(),
+                    remote_balance: (
+                        msatToSat(peer.total_msat) - msatToSat(peer.to_us_msat)
                     ).toString(),
-                    total_satoshis_sent: Number(
-                        peer.out_fulfilled_msat / 1000
+                    total_satoshis_sent: msatToSat(
+                        peer.out_fulfilled_msat
                     ).toString(),
-                    total_satoshis_received: Number(
-                        peer.in_fulfilled_msat / 1000
+                    total_satoshis_received: msatToSat(
+                        peer.in_fulfilled_msat
                     ).toString(),
                     num_updates: (
                         peer.in_payments_offered + peer.out_payments_offered
                     ).toString(),
                     csv_delay: peer.our_to_self_delay,
                     private: peer.private,
-                    local_chan_reserve_sat: Number(
-                        peer.our_reserve_msat / 1000
+                    local_chan_reserve_sat: msatToSat(
+                        peer.our_reserve_msat
                     ).toString(),
-                    remote_chan_reserve_sat: Number(
-                        peer.their_reserve_msat / 1000
+                    remote_chan_reserve_sat: msatToSat(
+                        peer.their_reserve_msat
                     ).toString(),
                     close_address: peer.close_to_addr
                 };
@@ -272,10 +503,11 @@ export default class LnSocket {
             const opArray = outputs || [];
             for (let i = 0; i < opArray.length; i++) {
                 if (opArray[i].status === 'confirmed') {
-                    confBalance = confBalance + opArray[i].amount_msat / 1000;
+                    confBalance =
+                        confBalance + msatToSat(opArray[i].amount_msat);
                 } else if (opArray[i].status === 'unconfirmed') {
                     unconfBalance =
-                        unconfBalance + opArray[i].amount_msat / 1000;
+                        unconfBalance + msatToSat(opArray[i].amount_msat);
                 }
             }
 
@@ -297,13 +529,14 @@ export default class LnSocket {
                     chanArray[i].connected === true
                 ) {
                     localBalance =
-                        localBalance + chanArray[i].our_amount_msat / 1000;
+                        localBalance + msatToSat(chanArray[i].our_amount_msat);
                 } else if (
                     chanArray[i].state === 'CHANNELD_AWAITING_LOCKIN' ||
                     chanArray[i].state === 'DUALOPEND_AWAITING_LOCKIN'
                 ) {
                     pendingBalance =
-                        pendingBalance + chanArray[i].our_amount_msat / 1000;
+                        pendingBalance +
+                        msatToSat(chanArray[i].our_amount_msat);
                 }
             }
 
@@ -434,7 +667,24 @@ export default class LnSocket {
             funding_txid_str: txid
         }));
     };
-    openChannelSync = (data: OpenChannelRequest) => this.openChannel(data);
+    openChannelSync = (data: OpenChannelRequest) => {
+        let request: any;
+        const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
+            .times(1000)
+            .toString()}perkb`;
+
+        request = {
+            id: data.id,
+            amount: data.fundMax ? 'all' : data.satoshis,
+            feerate: feeRate,
+            announce: !data.privateChannel ? true : false,
+            minconf: data.min_confs
+        };
+
+        if (data.utxos && data.utxos.length > 0) request.utxos = data.utxos;
+
+        return this.postRequest('/v1/fundchannel', request);
+    };
     connectPeer = (data: any) => {
         const [host, port] = data.addr.host.split(':');
         return this.rpc('connect', {
@@ -443,22 +693,21 @@ export default class LnSocket {
             port
         });
     };
-    decodePaymentRequest = (urlParams?: Array<string>) => {
-        const invoice = urlParams?.[0];
-
-        if (!invoice) {
-            return Promise.resolve({});
-        }
-
-        return this.rpc('decodepay', { string: invoice });
-    };
-    payLightningInvoice = (data: any) =>
-        this.rpc('pay', {
-            bolt11: data.payment_request,
-            amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent,
-            retry_for: data.timeout_seconds
+    decodePaymentRequest = (urlParams?: Array<string>) =>
+        this.postRequest('/v1/decode', {
+            string: urlParams && urlParams[0]
         });
+    payLightningInvoice = (data: any) =>
+        this.postRequest(
+            '/v1/pay',
+            {
+                bolt11: data.payment_request,
+                amount_msat: Number(data.amt && data.amt * 1000),
+                maxfeepercent: data.max_fee_percent,
+                retry_for: data.timeout_seconds
+            },
+            data.timeout_seconds * 1000
+        );
     closeChannel = (urlParams?: Array<string>) => {
         const request = {
             id: urlParams && urlParams[0],
@@ -500,7 +749,7 @@ export default class LnSocket {
         this.rpc('setchannel', {
             id: data.global ? 'all' : data.channelId,
             feebase: data.base_fee_msat,
-            feeppm: data.fee_rate * 1000000
+            feeppm: data.fee_rate
         });
     getRoutes = ({
         source,
@@ -517,18 +766,18 @@ export default class LnSocket {
         maxfee_msat?: number;
         final_cltv?: number;
     }) => {
-        if (!source || !destination || !amount_msat) {
-            return Promise.resolve({ routes: [] });
-        }
-
-        return this.rpc('getroutes', {
-            source,
-            destination,
-            amount_msat,
-            layers,
-            maxfee_msat,
-            final_cltv
-        });
+        return this.postRequest(
+            '/v1/getroutes',
+            {
+                source,
+                destination,
+                amount_msat,
+                layers,
+                maxfee_msat,
+                final_cltv
+            },
+            30000
+        );
     };
 
     getClosedChannels = async () => {
@@ -536,7 +785,7 @@ export default class LnSocket {
         const formattedClosedChannels = (channels.closedchannels || []).map(
             (channel: any) => ({
                 peer_id: channel.peer_id,
-                capacity: Number(channel.total_msat / 1000).toString(),
+                capacity: msatToSat(channel.total_msat).toString(),
                 channel_id: channel.channel_id,
                 short_channel_id: channel.short_channel_id,
                 alias: channel.alias?.local || '',
@@ -545,18 +794,18 @@ export default class LnSocket {
                 private: channel.private,
                 channel_type: channel.channel_type?.names || [],
                 funding_txid: channel.funding_txid,
-                total_msat: channel.total_msat.toString(),
-                to_us_msat: channel.final_to_us_msat.toString(),
-                min_to_us_satoshis: Number(
-                    channel.min_to_us_msat / 1000
+                total_msat: toNumber(channel.total_msat).toString(),
+                to_us_msat: toNumber(channel.final_to_us_msat).toString(),
+                min_to_us_satoshis: msatToSat(
+                    channel.min_to_us_msat
                 ).toString(),
-                max_to_us_satoshis: Number(
-                    channel.max_to_us_msat / 1000
+                max_to_us_satoshis: msatToSat(
+                    channel.max_to_us_msat
                 ).toString(),
                 total_htlcs_sent: channel.total_htlcs_sent.toString(),
                 close_cause: channel.close_cause,
-                last_commitment_fee_satoshis: Number(
-                    channel.last_commitment_fee_msat / 1000
+                last_commitment_fee_satoshis: msatToSat(
+                    channel.last_commitment_fee_msat
                 ).toString(),
                 last_stable_connection: channel.last_stable_connection
             })
@@ -599,7 +848,7 @@ export default class LnSocket {
             })
         );
 
-        return { peersWithAliases };
+        return peersWithAliases;
     };
 
     disconnectPeer = async (pubkey: string) => {
@@ -720,7 +969,7 @@ export default class LnSocket {
     };
 
     askReneCreateLayer = ({ layer }: { layer: string }) => {
-        return this.rpc('askrene-create-layer', { layer });
+        return this.postRequest('/v1/askrene-create-layer', { layer }, 30000);
     };
 
     askReneUpdateChannel = ({
@@ -732,15 +981,19 @@ export default class LnSocket {
         layer: string;
         enabled?: boolean;
     }) => {
-        return this.rpc('askrene-update-channel', {
-            short_channel_id_dir,
-            layer,
-            enabled
-        });
+        return this.postRequest(
+            '/v1/askrene-update-channel',
+            {
+                short_channel_id_dir,
+                layer,
+                enabled
+            },
+            30000
+        );
     };
 
     askReneRemoveLayer = ({ layer }: { layer: string }) => {
-        return this.rpc('askrene-remove-layer', { layer });
+        return this.postRequest('/v1/askrene-remove-layer', { layer }, 30000);
     };
 
     sendPay = ({
@@ -767,7 +1020,7 @@ export default class LnSocket {
             params.bolt11 = bolt11;
         }
 
-        return this.rpc('sendpay', params);
+        return this.postRequest('/v1/sendpay', params, 30000);
     };
 
     waitSendPay = ({
@@ -785,7 +1038,7 @@ export default class LnSocket {
             params.timeout = timeout;
         }
 
-        return this.rpc('waitsendpay', params);
+        return this.postRequest('/v1/waitsendpay', params, 120000);
     };
 
     supportsPeers = () => true;
