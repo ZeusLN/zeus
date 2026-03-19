@@ -33,6 +33,12 @@ export interface AccordionProps {
     open?: boolean;
     defaultOpen?: boolean;
     duration?: number;
+    /** Visual preset for the container */
+    variant?: 'card' | 'flat';
+    /** Default vertical spacing below the accordion */
+    spacing?: 'default' | 'none';
+    /** Apply default padding to the body content */
+    bodyPadded?: boolean;
     headerStyle?: ViewStyle;
     titleStyle?: TextStyle;
     /** Styles applied to the animated body wrapper */
@@ -61,14 +67,16 @@ export function AccordionItem({
         withTiming(height.value * Number(isExpanded.value), { duration })
     );
 
-    const bodyStyle = useAnimatedStyle(() => ({
-        height: derivedHeight.value,
-        opacity: interpolate(
-            derivedHeight.value,
-            [0, height.value || 1],
-            [0, 1]
-        )
-    }));
+    const bodyStyle = useAnimatedStyle(() => {
+        const safeHeight = Math.max(height.value, 1);
+        return {
+            height: derivedHeight.value,
+            opacity:
+                height.value === 0
+                    ? 0
+                    : interpolate(derivedHeight.value, [0, safeHeight], [0, 1])
+        };
+    });
 
     const handleLayout = useCallback(
         (e: LayoutChangeEvent) => {
@@ -98,6 +106,9 @@ export function Accordion({
     open,
     defaultOpen = false,
     duration = 400,
+    variant = 'card',
+    spacing = 'default',
+    bodyPadded = true,
     headerStyle,
     titleStyle,
     bodyStyle,
@@ -120,6 +131,25 @@ export function Accordion({
 
     const viewKey = useMemo(() => id ?? title, [id, title]);
 
+    const resolvedContainerStyle = useMemo(() => {
+        const styleList: Array<StyleProp<ViewStyle>> = [styles.containerBase];
+
+        if (variant === 'flat') {
+            styleList.push(styles.containerFlat);
+        } else {
+            styleList.push(styles.containerCard);
+        }
+
+        styleList.push(
+            spacing === 'none'
+                ? styles.containerSpacingNone
+                : styles.containerSpacingDefault
+        );
+
+        if (containerStyle) styleList.push(containerStyle);
+        return styleList;
+    }, [containerStyle, spacing, variant]);
+
     const toggle = useCallback(() => {
         const next = !isOpen.value;
         isOpen.value = next;
@@ -128,7 +158,7 @@ export function Accordion({
     }, [isControlled, isOpen, onToggle]);
 
     return (
-        <View style={[styles.container, containerStyle]}>
+        <View style={resolvedContainerStyle}>
             <TouchableOpacity
                 activeOpacity={0.75}
                 onPress={toggle}
@@ -156,7 +186,14 @@ export function Accordion({
                 duration={duration}
                 style={bodyStyle}
             >
-                <View style={[styles.body, bodyContentStyle]}>{children}</View>
+                <View
+                    style={[
+                        bodyPadded ? styles.body : undefined,
+                        bodyContentStyle
+                    ]}
+                >
+                    {children}
+                </View>
             </AccordionItem>
         </View>
     );
@@ -171,15 +208,24 @@ const styles = StyleSheet.create({
         width: '100%',
         position: 'absolute'
     },
-    container: {
+    containerBase: {
+        width: '100%'
+    },
+    containerCard: {
         width: '100%',
         borderRadius: 12,
-        overflow: 'hidden',
-        marginBottom: 8,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
-        elevation: 2
+        overflow: 'hidden'
+    },
+    containerFlat: {
+        width: '100%',
+        borderRadius: 0,
+        overflow: 'visible'
+    },
+    containerSpacingDefault: {
+        marginBottom: 8
+    },
+    containerSpacingNone: {
+        marginBottom: 0
     },
     header: {
         flexDirection: 'row',
