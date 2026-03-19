@@ -914,6 +914,44 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
+        } else if (implementation === 'lnsocket') {
+            if (!connecting) {
+                try {
+                    await NodeInfoStore.getNodeInfo();
+                    await BalanceStore.getCombinedBalance();
+                    if (BackendUtils.supportsChannelManagement()) {
+                        await ChannelsStore.getChannels();
+                    }
+                } catch (connectionError) {
+                    console.log(
+                        'LNSocket data refresh failed:',
+                        connectionError
+                    );
+                }
+                return;
+            }
+
+            try {
+                await BackendUtils.init();
+                const connected = await BackendUtils.connect();
+                if (!connected) {
+                    throw new Error('LNSocket connection failed');
+                }
+
+                await NodeInfoStore.getNodeInfo();
+                if (BackendUtils.supportsAccounts()) {
+                    await UTXOsStore.listAccounts();
+                }
+                await BalanceStore.getCombinedBalance();
+                if (BackendUtils.supportsChannelManagement()) {
+                    await ChannelsStore.getChannels();
+                }
+            } catch (connectionError) {
+                console.log('LNSocket connection failed:', connectionError);
+                NodeInfoStore.handleGetNodeInfoError();
+                setConnectingStatus(false);
+                return;
+            }
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
@@ -1146,6 +1184,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const dataAvailable =
             implementation === 'lndhub' ||
+            implementation === 'lnsocket' ||
             implementation === 'nostr-wallet-connect' ||
             nodeInfo.version;
 
