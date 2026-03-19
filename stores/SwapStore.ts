@@ -161,7 +161,12 @@ export default class SwapStore {
             const status = response.info().status;
             if (status == 200) {
                 this.subInfo = response.json().BTC.BTC;
-                console.log('a', this.subInfo);
+                console.log('submarine swap fees', this.subInfo);
+            } else if (status == 403) {
+                const data = response.json();
+                this.apiError = data?.error || data?.message;
+                this.loading = false;
+                return;
             }
         } catch {}
 
@@ -174,7 +179,12 @@ export default class SwapStore {
             const status = response.info().status;
             if (status == 200) {
                 this.reverseInfo = response.json().BTC.BTC;
-                console.log('b', this.reverseInfo);
+                console.log('reverse swap fees', this.reverseInfo);
+            } else if (status == 403) {
+                const data = response.json();
+                this.apiError = data?.error || data?.message;
+                this.loading = false;
+                return;
             }
         } catch {}
         this.loading = false;
