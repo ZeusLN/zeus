@@ -52,7 +52,13 @@ function Support(props: SupportProps) {
             path: 'SocialMedia'
         },
         {
-            label: localeString('views.Settings.Support.reviewOnAppstore'),
+            label: localeString('views.Settings.Support.reviewOnAppstore', {
+                storeName: localeString(
+                    Platform.OS === 'ios'
+                        ? 'general.appStore'
+                        : 'general.playStore'
+                )
+            }),
             action: openStoreForReview
         }
     ];

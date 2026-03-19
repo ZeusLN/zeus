@@ -103,9 +103,9 @@ export default class RatingModal extends React.Component<
                 {localeString('views.Settings.Support.enjoyingZeus')}
             </Text>
             <Text style={[styles.subtitle, { color: themeColor('qr') }]}>
-                {`${localeString(
-                    'views.Settings.Support.tapToRate'
-                )} \n${storeName}.`}
+                {localeString('views.Settings.Support.tapToRate', {
+                    storeName
+                })}
             </Text>
 
             <View
