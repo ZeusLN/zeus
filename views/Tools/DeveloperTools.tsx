@@ -563,9 +563,9 @@ class Category extends React.Component<CategoryProps> {
         return (
             <Accordion
                 title={title}
+                spacing="none"
                 containerStyle={{
-                    backgroundColor: themeColor('secondary'),
-                    marginBottom: 0
+                    backgroundColor: themeColor('secondary')
                 }}
                 headerStyle={{ backgroundColor: themeColor('secondary') }}
                 titleStyle={{
