@@ -22,6 +22,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import BackendUtils from '../../utils/BackendUtils';
 
 import SettingsStore, { Implementations } from '../../stores/SettingsStore';
+import Accordion from '../../components/Accordion';
 
 interface DeveloperToolsProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -29,7 +30,6 @@ interface DeveloperToolsProps {
 }
 
 interface DeveloperToolsState {
-    expandedCategory: string | null;
     selectedCommand: string | null;
     loading: boolean;
     response: string | null;
@@ -48,9 +48,8 @@ interface CategoryProps {
         command: string,
         param?: string | Array<string | boolean | undefined>
     ) => Promise<void>;
-    expanded: boolean;
-    onToggle: () => void;
     implementation: Implementations;
+    onClose: () => void;
 }
 
 interface CommandProps {
@@ -60,8 +59,6 @@ interface CommandProps {
         param?: string | Array<string | boolean | undefined>
     ) => Promise<void>;
     selected: boolean;
-    onToggle?: () => void;
-    visible?: boolean;
 }
 
 interface CommandState {
@@ -418,13 +415,13 @@ class Command extends React.Component<CommandProps, CommandState> {
     }
 
     render() {
-        const { command, selected: isSelected, visible } = this.props;
+        const { command, selected: isSelected } = this.props;
         const { subItems, loading, selectedSubItemIndex, expanded } =
             this.state;
         const needsSubItems = this.commandsWithSubItems.includes(command);
 
         return (
-            <View style={{ display: visible ? undefined : 'none' }}>
+            <View>
                 <TouchableOpacity
                     onPress={() => this.onCommandTap(command)}
                     style={styles.commandContainer}
@@ -557,51 +554,37 @@ class Command extends React.Component<CommandProps, CommandState> {
 
 class Category extends React.Component<CategoryProps> {
     render() {
-        const {
-            title,
-            commands,
-            onCommand,
-            expanded,
-            onToggle,
-            implementation
-        } = this.props;
+        const { title, commands, onCommand, implementation } = this.props;
+
+        const filteredCommands = commands.filter((c) =>
+            c.compatibleImplementations.includes(implementation)
+        );
 
         return (
-            <View
-                style={[
-                    styles.categoryContainer,
-                    {
-                        backgroundColor: themeColor('secondary'),
-                        paddingBottom: expanded ? 16 : undefined
-                    }
-                ]}
+            <Accordion
+                title={title}
+                containerStyle={{
+                    backgroundColor: themeColor('secondary'),
+                    marginBottom: 0
+                }}
+                headerStyle={{ backgroundColor: themeColor('secondary') }}
+                titleStyle={{
+                    ...styles.categoryTitle,
+                    color: themeColor('text')
+                }}
+                onToggle={(next) => {
+                    if (!next) this.props.onClose();
+                }}
             >
-                <TouchableOpacity onPress={onToggle}>
-                    <Text
-                        style={[
-                            styles.categoryTitle,
-                            { color: themeColor('text') }
-                        ]}
-                    >
-                        {title}
-                    </Text>
-                </TouchableOpacity>
-                {commands
-                    .filter((c) =>
-                        c.compatibleImplementations.includes(implementation)
-                    )
-                    .map((command) => (
-                        <Command
-                            key={command.name}
-                            command={command.name}
-                            onTap={onCommand}
-                            selected={
-                                this.props.selectedCommand === command.name
-                            }
-                            visible={expanded}
-                        />
-                    ))}
-            </View>
+                {filteredCommands.map((command) => (
+                    <Command
+                        key={command.name}
+                        command={command.name}
+                        onTap={onCommand}
+                        selected={this.props.selectedCommand === command.name}
+                    />
+                ))}
+            </Accordion>
         );
     }
 }
@@ -616,7 +599,6 @@ export default class DeveloperTools extends React.Component<
 
     state = {
         selectedCommand: null,
-        expandedCategory: null,
         loading: false,
         response: null,
         error: null,
@@ -690,23 +672,10 @@ export default class DeveloperTools extends React.Component<
         }
     };
 
-    toggleCategory = (title: string) => {
-        this.setState((prevState) => ({
-            expandedCategory:
-                prevState.expandedCategory === title ? null : title
-        }));
-    };
-
     render() {
         const { navigation, SettingsStore } = this.props;
-        const {
-            expandedCategory,
-            loading,
-            response,
-            error,
-            showScrollTop,
-            showScrollBottom
-        } = this.state;
+        const { loading, response, error, showScrollTop, showScrollBottom } =
+            this.state;
 
         return (
             <Screen>
@@ -749,12 +718,17 @@ export default class DeveloperTools extends React.Component<
                                 title={category.title}
                                 commands={category.commands}
                                 onCommand={this.handleCommand}
-                                expanded={expandedCategory === category.title}
-                                onToggle={() =>
-                                    this.toggleCategory(category.title)
-                                }
                                 selectedCommand={this.state.selectedCommand}
                                 implementation={SettingsStore.implementation}
+                                onClose={() =>
+                                    this.setState({
+                                        response: null,
+                                        error: null,
+                                        selectedCommand: null,
+                                        showScrollTop: false,
+                                        showScrollBottom: false
+                                    })
+                                }
                             />
                         ))}
 
