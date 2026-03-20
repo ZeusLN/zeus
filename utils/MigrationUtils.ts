@@ -944,7 +944,7 @@ class MigrationsUtils {
             cashuStore.seedVersion = 'v1';
             try {
                 await Storage.setItem(
-                    `${cashuStore.getLndDir()}-cashu-seed-version`,
+                    `${cashuStore.getNodeDir()}-cashu-seed-version`,
                     'v1'
                 );
                 console.log('Cashu seed version migrated and saved as v1.');
