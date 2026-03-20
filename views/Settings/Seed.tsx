@@ -23,7 +23,7 @@ import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import ModalBox from '../../components/ModalBox';
-import LoadingIndicator from '../../components/LoadingIndicator';
+import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoadingModal';
 
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -67,6 +67,7 @@ interface SeedState {
     showModal: boolean;
     isDeleteModalVisible: boolean;
     isChannelExporting: boolean;
+    channelExportMessage: string;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -124,7 +125,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
         isDeleteModalVisible: false,
-        isChannelExporting: false
+        isChannelExporting: false,
+        channelExportMessage: ''
     };
 
     componentDidMount() {
@@ -230,6 +232,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     text: localeString('views.Tools.migration.export.olympus'),
                     style: 'default',
                     onPress: async () => {
+                        this.setState({
+                            channelExportMessage: localeString(
+                                'views.Tools.migration.export.uploading'
+                            )
+                        });
                         await uploadChannelBackupToOlympus(
                             lndDir(),
                             isTestnet,
@@ -244,6 +251,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     text: localeString('views.Tools.migration.export.local'),
                     style: 'default',
                     onPress: async () => {
+                        this.setState({
+                            channelExportMessage: localeString(
+                                'views.Tools.migration.export.exporting'
+                            )
+                        });
                         await exportChannelDb(lndDir(), isTestnet, (loading) =>
                             this.setState({ isChannelExporting: loading })
                         );
@@ -255,7 +267,12 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { understood, showModal, isChannelExporting } = this.state;
+        const {
+            understood,
+            showModal,
+            isChannelExporting,
+            channelExportMessage
+        } = this.state;
         const seedPhrase = route.params?.seedPhrase ?? SettingsStore.seedPhrase;
         const isRefundRescueKey = !!route.params?.seedPhrase;
 
@@ -325,6 +342,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         return (
             <Screen>
                 {this.renderDeleteModal()}
+                <ChannelBackupLoadingModal
+                    isOpen={isChannelExporting}
+                    message={channelExportMessage}
+                />
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -339,11 +360,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     rightComponent={
                         understood && seedPhrase ? (
                             <Row>
-                                {isChannelExporting ? (
-                                    <LoadingIndicator size={28} />
-                                ) : (
-                                    <></>
-                                )}
                                 {isRefundRescueKey ? (
                                     <DownloadRescueKey
                                         seedPhrase={seedPhrase}

@@ -961,6 +961,8 @@
     "views.Tools.migration.export.syncInProgress": "Please wait for the wallet to finish syncing before exporting channels.",
     "views.Tools.migration.export.backupFound": "backup found",
     "views.Tools.migration.import.success": "Import Successful",
+    "views.Tools.migration.export.uploading": "Uploading backup to Olympus...",
+    "views.Tools.migration.export.exporting": "Exporting channels...",
     "views.Tools.migration.export.success.text": "Your channel database has been exported. Please restart the app to apply the configuration and lock the wallet.",
     "views.Tools.migration.export.success.text.android": "Your channel database has been saved to your Downloads folder. Please restart the app to apply the configuration and lock the wallet.",
     "views.Tools.migration.import.success.text1": "Your channel database has been restored. Please restart the app to initialize your channels.",
