@@ -26,7 +26,7 @@ import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
-import LoadingIndicator from '../../components/LoadingIndicator';
+import ChannelBackupLoadingModal from '../../components/Modals/ChannelBackupLoadingModal';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -53,7 +53,8 @@ interface ToolsProps {
 }
 
 interface ToolsState {
-    isLoading: boolean;
+    isChannelExporting: boolean;
+    channelExportMessage: string;
 }
 
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore')
@@ -64,7 +65,8 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
     constructor(props: ToolsProps) {
         super(props);
         this.state = {
-            isLoading: false
+            isChannelExporting: false,
+            channelExportMessage: ''
         };
     }
 
@@ -147,12 +149,18 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.migration.export.olympus'),
                     style: 'default',
                     onPress: async () => {
+                        this.setState({
+                            channelExportMessage: localeString(
+                                'views.Tools.migration.export.uploading'
+                            )
+                        });
                         await uploadChannelBackupToOlympus(
                             lndDir(),
                             isTestnet,
                             pubkey,
                             seedPhrase,
-                            (loading) => this.setState({ isLoading: loading })
+                            (loading) =>
+                                this.setState({ isChannelExporting: loading })
                         );
                     }
                 },
@@ -160,8 +168,13 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                     text: localeString('views.Tools.migration.export.local'),
                     style: 'default',
                     onPress: async () => {
+                        this.setState({
+                            channelExportMessage: localeString(
+                                'views.Tools.migration.export.exporting'
+                            )
+                        });
                         await exportChannelDb(lndDir(), isTestnet, (loading) =>
-                            this.setState({ isLoading: loading })
+                            this.setState({ isChannelExporting: loading })
                         );
                     }
                 }
@@ -192,12 +205,11 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={
-                        this.state.isLoading ? (
-                            <LoadingIndicator size={34} />
-                        ) : undefined
-                    }
                     navigation={navigation}
+                />
+                <ChannelBackupLoadingModal
+                    isOpen={this.state.isChannelExporting}
+                    message={this.state.channelExportMessage}
                 />
                 <ScrollView
                     style={{
