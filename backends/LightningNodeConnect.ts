@@ -717,6 +717,7 @@ export default class LightningNodeConnect {
     supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
+    supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
