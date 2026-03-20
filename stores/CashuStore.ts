@@ -162,7 +162,6 @@ export default class CashuStore {
     @observable public sentTokens?: Array<CashuToken>;
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
-    @observable public cdkPayments: Array<CashuPayment> = [];
     @observable public seedVersion?: string;
     @observable public seedPhrase?: Array<string>;
     @observable public seed?: Uint8Array;
@@ -278,6 +277,7 @@ export default class CashuStore {
         this.paymentError = false;
         this.paymentErrorMsg = '';
         this.paymentStartTime = undefined;
+        this.noteKey = undefined;
     };
 
     /**
@@ -505,9 +505,6 @@ export default class CashuStore {
                 this.cdkInvoices = cdkTransactions
                     .filter((tx) => tx.direction === 'incoming')
                     .map((tx) => CashuInvoice.fromCDKTransaction(tx));
-                this.cdkPayments = cdkTransactions
-                    .filter((tx) => tx.direction === 'outgoing')
-                    .map((tx) => CashuPayment.fromCDKTransaction(tx));
             });
         } catch (e) {
             console.error('CDK: Failed to load transactions:', e);
@@ -3060,9 +3057,10 @@ export default class CashuStore {
                 return;
             }
 
-            const meltResult = await this.meltCDK(
+            // Use existing melt quote directly instead of meltCDK
+            const meltResult = await CashuDevKit.melt(
                 mintUrl,
-                this.paymentRequest!
+                this.meltQuote.quote
             );
 
             const realFee = meltResult.fee_paid;

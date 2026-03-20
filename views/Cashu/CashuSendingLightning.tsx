@@ -115,13 +115,14 @@ export default class CashuSendingLightning extends React.Component<
         });
 
         this.focusListener = navigation.addListener('focus', () => {
-            const noteKey: string = CashuStore.noteKey!!;
-            if (!noteKey) return;
+            const noteKey = CashuStore.noteKey;
+            if (!noteKey) {
+                this.setState({ storedNotes: '' });
+                return;
+            }
             Storage.getItem(noteKey)
                 .then((storedNotes) => {
-                    if (storedNotes) {
-                        this.setState({ storedNotes });
-                    }
+                    this.setState({ storedNotes: storedNotes || '' });
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);
