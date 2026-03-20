@@ -1040,23 +1040,34 @@ class MigrationsUtils {
             );
 
             if (cashuMigration !== 'true') {
-                console.log('Running Cashu Multi-Node Migration...');
+                // Only run the Cashu keychain migration if the main keychain
+                // migration actually ran this time (hasMigrated was not 'true'
+                // when we entered). If the main migration was already done from
+                // a prior launch, there can't be unmigrated Cashu data in the
+                // old keychain — skip the expensive keychain reads.
+                if (hasMigrated !== 'true') {
+                    console.log('Running Cashu Multi-Node Migration...');
 
-                const settingsJson = await Storage.getItem(STORAGE_KEY);
-                if (settingsJson) {
-                    settingsStore.isMigrating = true;
-                    const settings = JSON.parse(settingsJson);
-                    if (settings.nodes && Array.isArray(settings.nodes)) {
-                        for (const node of settings.nodes) {
-                            if (node.implementation === 'embedded-lnd') {
-                                const lndDir = node.lndDir || 'lnd';
-                                await this.migrateCashuForNode(lndDir);
+                    const settingsJson = await Storage.getItem(STORAGE_KEY);
+                    if (settingsJson) {
+                        settingsStore.isMigrating = true;
+                        const settings = JSON.parse(settingsJson);
+                        if (settings.nodes && Array.isArray(settings.nodes)) {
+                            for (const node of settings.nodes) {
+                                if (node.implementation === 'embedded-lnd') {
+                                    const lndDir = node.lndDir || 'lnd';
+                                    await this.migrateCashuForNode(lndDir);
+                                }
                             }
                         }
                     }
+                    console.log('Cashu Migration Completed.');
+                } else {
+                    console.log(
+                        'Skipping Cashu migration - main keychain migration was already done.'
+                    );
                 }
                 await EncryptedStorage.setItem(CASHU_MIGRATION_KEY, 'true');
-                console.log('Cashu Migration Completed.');
             }
         } catch (error) {
             console.error('Error during keychain cloud sync migration:', error);
