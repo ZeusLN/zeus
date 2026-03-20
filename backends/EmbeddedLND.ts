@@ -429,6 +429,7 @@ export default class EmbeddedLND extends LND {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;

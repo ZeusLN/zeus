@@ -198,6 +198,8 @@ class BackendUtils {
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
+    supportsCircularRebalancing = () =>
+        this.call('supportsCircularRebalancing');
     supportsForceClose = () => this.call('supportsForceClose');
     supportsPendingChannels = () => this.call('supportsPendingChannels');
     supportsClosedChannels = () => this.call('supportsClosedChannels');

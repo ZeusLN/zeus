@@ -1954,6 +1954,7 @@ export default class EmbeddedLdkNode {
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
+    supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
