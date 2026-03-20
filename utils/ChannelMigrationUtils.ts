@@ -343,14 +343,7 @@ export const uploadChannelBackupToOlympus = async (
         if (setLoading) setLoading(false);
         Alert.alert(
             localeString('general.error'),
-            localeString('views.Tools.migration.export.failedToUpload'),
-            [
-                {
-                    text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
-                }
-            ],
-            { cancelable: false }
+            localeString('views.Tools.migration.export.failedToUpload')
         );
     }
 };
