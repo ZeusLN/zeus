@@ -300,9 +300,7 @@ export default class CashuTokenView extends React.Component<
                                 toggleable
                                 credit={received && !pendingClaim && !isSpent}
                                 pending={pendingClaim && !isSpent}
-                                debit={
-                                    isSpent || (sent && spent && !pendingClaim)
-                                }
+                                debit={sent && isSpent && !pendingClaim}
                             />
                         </View>
                     )}
