@@ -534,7 +534,7 @@ export default class CashuTokenView extends React.Component<
                             />
                         </View>
                     )}
-                {infoIndex === 0 && isSpent && (
+                {infoIndex === 0 && pendingClaim && (
                     <View style={{ bottom: 15 }}>
                         <Button
                             title={localeString('general.delete')}
