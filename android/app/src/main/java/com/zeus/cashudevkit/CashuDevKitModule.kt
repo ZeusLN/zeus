@@ -926,6 +926,105 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
+    @ReactMethod
+    fun meltMpp(bolt11: String, optionsJson: String?, maxFee: Double, promise: Promise) {
+        val wallet = getInitializedWallet(promise) ?: return
+
+        scope.launch {
+            try {
+                val options = parseMeltOptions(optionsJson)
+                val fee = if (maxFee > 0) Amount(maxFee.toULong()) else null
+                val melted = wallet!!.melt(bolt11, options, fee)
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(encodeMelted(melted).toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "meltMpp error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "meltMpp error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("MELT_MPP_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
+    @ReactMethod
+    fun meltPartial(mintUrl: String, quoteId: String, amount: Double, promise: Promise) {
+        val wallet = getInitializedWallet(promise) ?: return
+
+        scope.launch {
+            try {
+                val url = MintUrl(mintUrl)
+                val targetAmount = amount.toLong().toULong()
+                val normalizedUrl = mintUrl.trimEnd('/')
+
+                // Get all proofs and find those for this mint
+                val allProofs = wallet!!.listProofs()
+                var mintProofs = mutableListOf<org.cashudevkit.Proof>()
+                for ((key, proofs) in allProofs) {
+                    if (key.trimEnd('/') == normalizedUrl) {
+                        mintProofs.addAll(proofs)
+                        break
+                    }
+                }
+
+                if (mintProofs.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("NO_PROOFS", "No proofs found for mint $mintUrl")
+                    }
+                    return@launch
+                }
+
+                // Sort proofs largest first for efficient selection
+                mintProofs.sortByDescending { it.amount.value }
+
+                // Select proofs that cover the target amount
+                val selected = mutableListOf<org.cashudevkit.Proof>()
+                var total = 0UL
+                for (proof in mintProofs) {
+                    if (total >= targetAmount) break
+                    selected.add(proof)
+                    total += proof.amount.value
+                }
+
+                if (total < targetAmount) {
+                    withContext(Dispatchers.Main) {
+                        promise.reject("INSUFFICIENT_PROOFS",
+                            "Selected $total sats but need $targetAmount")
+                    }
+                    return@launch
+                }
+
+                // Execute the melt with the selected proofs
+                val melted = wallet!!.meltProofs(url, quoteId, selected)
+
+                // Restore to sync CDK's proof database after direct melt
+                try { wallet!!.restore(url) } catch (_: Exception) {}
+
+                withContext(Dispatchers.Main) {
+                    promise.resolve(encodeMelted(melted).toString())
+                }
+            } catch (e: FfiException) {
+                val (code, message) = mapFfiException(e)
+                Log.e(TAG, "meltPartial error: $message", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject(code, message, e)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "meltPartial error", e)
+                withContext(Dispatchers.Main) {
+                    promise.reject("MELT_PARTIAL_ERROR", e.message, e)
+                }
+            }
+        }
+    }
+
     // ========================================================================
     // Token Operations
     // ========================================================================
