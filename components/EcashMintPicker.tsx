@@ -26,6 +26,7 @@ interface EcashMintPickerProps {
     disableRandom?: boolean;
     overrideMintUrl?: string;
     isReceiveView?: boolean;
+    isMultiMintView?: boolean;
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -43,20 +44,25 @@ export default class EcashMintPicker extends React.Component<
             disableRandom,
             navigation,
             overrideMintUrl,
-            isReceiveView
+            isReceiveView,
+            isMultiMintView
         } = this.props;
         const {
             cashuWallets,
             mintUrls,
             selectedMintUrl,
-            selectedMintUrls,
+            multiMintSelectedUrls,
             mintInfos,
             mintBalances,
             randomizeMintSelection
         } = CashuStore!!;
         const multiMintEnabled =
-            !!SettingsStore?.settings?.ecash?.enableMultiMint;
-        const openMints = () => navigation.navigate('Mints');
+            !!SettingsStore?.settings?.ecash?.enableMultiMint &&
+            !!isMultiMintView;
+        const openMints = () =>
+            navigation.navigate('Mints', {
+                isMultiMintView: multiMintEnabled
+            });
         const pickerTouchableStyle = {
             opacity: disabled ? 0.25 : 1,
             backgroundColor: themeColor('secondary'),
@@ -115,7 +121,7 @@ export default class EcashMintPicker extends React.Component<
             </Row>
         );
 
-        const selectedMints = selectedMintUrls || [];
+        const selectedMints = multiMintSelectedUrls || [];
         const selectedMintBalance = selectedMints.reduce(
             (total: number, mintUrl: string) =>
                 total + Number(mints[mintUrl]?.mintBalance || 0),
