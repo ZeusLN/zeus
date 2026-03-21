@@ -57,7 +57,7 @@ export default class MultimintPayment extends React.Component<
         super(props);
 
         const { CashuStore, route } = props;
-        const selectedMintUrls = CashuStore?.selectedMintUrls || [];
+        const selectedMintUrls = CashuStore?.multiMintSelectedUrls || [];
         const selectedMintSet = new Set(selectedMintUrls);
         const availableMints = CashuStore?.getMultimintInfo() || [];
 
