@@ -15,6 +15,7 @@ export interface MintProgressInfo {
     selected: boolean;
     status: MintPaymentStatus;
     allocatedAmount?: number;
+    feePaid?: number;
     error?: string;
 }
 
