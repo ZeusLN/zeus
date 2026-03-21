@@ -268,7 +268,7 @@ export default class MultimintPayment extends React.Component<
                         {getSubtitle()}
                     </ListItem.Subtitle>
                 </ListItem.Content>
-                <Amount sats={item.balance} sensitive />
+                <Amount sats={item.allocatedAmount || item.balance} sensitive />
             </ListItem>
         );
     };
